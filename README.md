@@ -70,28 +70,16 @@ We provide a first script for sampling from our unconditional models. Start it v
 CUDA_VISIBLE_DEVICES=<GPU_ID> python scripts/sample_diffusion.py -r models/ldm/<model_spec>/model.ckpt -l <logdir> -n <\#samples> --batch_size <batch_size> -c <\#ddim steps> -e <\#eta> 
 ```
 
-# Inpainting
+## Coming Soon...
+
 ![inpainting](assets/inpainting.png)
-
-Download the pre-trained weights
-```
-wget XXX
-```
-
-and sample with
-```
-python scripts/inpaint.py --indir data/inpainting_examples/ --outdir outputs/inpainting_results
-```
-`indir` should contain images `*.png` and masks `<image_fname>_mask.png` like
-the examples provided in `data/inpainting_examples`.
-
-
-## Comin Soon...
 
 * Code for training LDMs and the corresponding compression models.
 * Inference scripts for conditional LDMs for various conditioning modalities.
 * In the meantime, you can play with our colab notebook https://colab.research.google.com/drive/1xqzUi2iXQXDqXBHQGP9Mqt2YrYW6cx-J?usp=sharing
 * We will also release some further pretrained models.
+
+
 ## Comments 
 
 - Our codebase for the diffusion models builds heavily on [OpenAI's codebase](https://github.com/openai/guided-diffusion)
