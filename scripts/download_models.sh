@@ -8,7 +8,7 @@ wget -O models/ldm/cin256/model.zip https://ommer-lab.com/files/latent-diffusion
 wget -O models/ldm/semantic_synthesis512/model.zip https://ommer-lab.com/files/latent-diffusion/semantic_synthesis.zip
 wget -O models/ldm/bsr_sr/model.zip https://ommer-lab.com/files/latent-diffusion/sr_bsr.zip
 wget -O models/ldm/layout2img-openimages256/model.zip https://ommer-lab.com/files/latent-diffusion/layout2img_model.zip
-wget -O models/ldm/inpainting_big/model.zip #TODO @patrick add path
+wget -O models/ldm/inpainting_big/last.ckpt https://heibox.uni-heidelberg.de/f/4d9ac7ea40c64582b7c9/?dl=1
 
 
 
@@ -37,9 +37,6 @@ cd ../bsr_sr
 unzip -o model.zip
 
 cd ../layout2img-openimages256
-unzip -o model.zip
-
-cd ../inpainting_big
 unzip -o model.zip
 
 cd ../..

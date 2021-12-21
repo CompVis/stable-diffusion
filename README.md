@@ -70,9 +70,22 @@ We provide a first script for sampling from our unconditional models. Start it v
 CUDA_VISIBLE_DEVICES=<GPU_ID> python scripts/sample_diffusion.py -r models/ldm/<model_spec>/model.ckpt -l <logdir> -n <\#samples> --batch_size <batch_size> -c <\#ddim steps> -e <\#eta> 
 ```
 
-## Coming Soon...
-
+# Inpainting
 ![inpainting](assets/inpainting.png)
+
+Download the pre-trained weights
+```
+wget -O models/ldm/inpainting_big/last.ckpt https://heibox.uni-heidelberg.de/f/4d9ac7ea40c64582b7c9/?dl=1
+```
+
+and sample with
+```
+python scripts/inpaint.py --indir data/inpainting_examples/ --outdir outputs/inpainting_results
+```
+`indir` should contain images `*.png` and masks `<image_fname>_mask.png` like
+the examples provided in `data/inpainting_examples`.
+
+## Coming Soon...
 
 * Code for training LDMs and the corresponding compression models.
 * Inference scripts for conditional LDMs for various conditioning modalities.
