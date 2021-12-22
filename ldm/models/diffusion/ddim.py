@@ -5,8 +5,7 @@ import numpy as np
 from tqdm import tqdm
 from functools import partial
 
-from ldm.models.diffusion.ddpm import noise_like
-from ldm.modules.diffusionmodules.util import make_ddim_sampling_parameters, make_ddim_timesteps
+from ldm.modules.diffusionmodules.util import make_ddim_sampling_parameters, make_ddim_timesteps, noise_like
 
 
 class DDIMSampler(object):
@@ -27,8 +26,7 @@ class DDIMSampler(object):
                                                   num_ddpm_timesteps=self.ddpm_num_timesteps,verbose=verbose)
         alphas_cumprod = self.model.alphas_cumprod
         assert alphas_cumprod.shape[0] == self.ddpm_num_timesteps, 'alphas have to be defined for each timestep'
-
-        to_torch = partial(torch.tensor, dtype=torch.float32, device=self.model.device)
+        to_torch = lambda x: x.clone().detach().to(torch.float32).to(self.model.device)
 
         self.register_buffer('betas', to_torch(self.model.betas))
         self.register_buffer('alphas_cumprod', to_torch(alphas_cumprod))
@@ -73,7 +71,8 @@ class DDIMSampler(object):
                corrector_kwargs=None,
                verbose=True,
                x_T=None,
-               log_every_t=100
+               log_every_t=100,
+               **kwargs
                ):
         if conditioning is not None:
             if isinstance(conditioning, dict):

@@ -45,7 +45,7 @@ model:
       params:
         embed_dim: 4
         monitor: "val/rec_loss"
-        ckpt_path: "/export/compvis-nfs/user/ablattma/logs/braket/2021-11-26T11-25-56_lsun_churches-convae-f8-ft_from_oi/checkpoints/step=000180071-fidfrechet_inception_distance=2.335.ckpt"
+        ckpt_path: "models/first_stage_models/kl-f8/model.ckpt"
         ddconfig:
           double_z: True
           z_channels: 4
@@ -65,7 +65,7 @@ model:
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 24  # TODO: was 96 in our experiments
+    batch_size: 96
     num_workers: 5
     wrap: False
     train:
@@ -82,14 +82,10 @@ lightning:
     image_logger:
       target: main.ImageLogger
       params:
-        batch_frequency: 1000 # TODO 5000
+        batch_frequency: 5000
         max_images: 8
         increase_log_steps: False
 
-    metrics_over_trainsteps_checkpoint:
-      target: pytorch_lightning.callbacks.ModelCheckpoint
-      params:
-        every_n_train_steps: 20000
 
   trainer:
     benchmark: True

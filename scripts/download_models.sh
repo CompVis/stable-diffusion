@@ -6,9 +6,10 @@ wget -O models/ldm/lsun_beds256/lsun_beds-256.zip https://ommer-lab.com/files/la
 wget -O models/ldm/text2img256/model.zip https://ommer-lab.com/files/latent-diffusion/text2img.zip
 wget -O models/ldm/cin256/model.zip https://ommer-lab.com/files/latent-diffusion/cin.zip
 wget -O models/ldm/semantic_synthesis512/model.zip https://ommer-lab.com/files/latent-diffusion/semantic_synthesis.zip
+wget -O models/ldm/semantic_synthesis256/model.zip https://ommer-lab.com/files/latent-diffusion/semantic_synthesis256.zip
 wget -O models/ldm/bsr_sr/model.zip https://ommer-lab.com/files/latent-diffusion/sr_bsr.zip
 wget -O models/ldm/layout2img-openimages256/model.zip https://ommer-lab.com/files/latent-diffusion/layout2img_model.zip
-wget -O models/ldm/inpainting_big/last.ckpt https://heibox.uni-heidelberg.de/f/4d9ac7ea40c64582b7c9/?dl=1
+wget -O models/ldm/inpainting_big/model.zip https://ommer-lab.com/files/latent-diffusion/inpainting_big.zip
 
 
 
@@ -33,10 +34,16 @@ unzip -o model.zip
 cd ../semantic_synthesis512
 unzip -o model.zip
 
+cd ../semantic_synthesis256
+unzip -o model.zip
+
 cd ../bsr_sr
 unzip -o model.zip
 
 cd ../layout2img-openimages256
+unzip -o model.zip
+
+cd ../inpainting_big
 unzip -o model.zip
 
 cd ../..
