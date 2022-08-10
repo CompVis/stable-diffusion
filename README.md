@@ -48,10 +48,10 @@ then finetuned on 512x512 images.
 *Note: Stable Diffusion v1 is a general text-to-image diffusion model and therefore mirrors biases and (mis-)conceptions that are present
 in its training data. 
 Details on the training procedure and data, as well as the intended use of the model can be found in the corresponding [model card](https://huggingface.co/CompVis/stable-diffusion).
-Research into the safe deployment of general text-to-image models is an ongoing effort. To prevent misuse and harm, we currently provide access to the checkpoints only for [academic research purposes upon request](TODO).
+Research into the safe deployment of general text-to-image models is an ongoing effort. To prevent misuse and harm, we currently provide access to the checkpoints only for [academic research purposes upon request](https://stability.ai/academia-access-form).
 **This is an experiment in safe and community-driven publication of a capable and general text-to-image model. We are working on a public release with a more permissive license that also incorporates ethical considerations.***
 
-[Request access to Stable Diffusion v1 checkpoints for academic research](TODO) 
+[Request access to Stable Diffusion v1 checkpoints for academic research](https://stability.ai/academia-access-form) 
 
 ### Weights
 
