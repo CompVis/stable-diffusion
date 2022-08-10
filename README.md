@@ -1,11 +1,5 @@
-# Latent Diffusion Models
-[arXiv](https://arxiv.org/abs/2112.10752) | [BibTeX](#bibtex)
-
-<p align="center">
-<img src=assets/results.gif />
-</p>
-
-
+# Stable Diffusion
+*Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
 
 [**High-Resolution Image Synthesis with Latent Diffusion Models**](https://arxiv.org/abs/2112.10752)<br/>
 [Robin Rombach](https://github.com/rromb)\*,
@@ -13,12 +7,19 @@
 [Dominik Lorenz](https://github.com/qp-qp)\,
 [Patrick Esser](https://github.com/pesser),
 [Björn Ommer](https://hci.iwr.uni-heidelberg.de/Staff/bommer)<br/>
-\* equal contribution
 
-<p align="center">
-<img src=assets/modelfigure.png />
-</p>
+which is available on [GitHub](https://github.com/CompVis/latent-diffusion).
 
+![txt2img-stable2](assets/stable-samples/txt2img/merged-0006.png)
+[Stable Diffusion](#stable-diffusion-v1) is a latent text-to-image diffusion
+model.
+Thanks to a generous compute donation from [Stability AI](https://stability.ai/) and support from [LAION](https://laion.ai/), we were able to train a Latent Diffusion Model on 512x512 images from a subset of the [LAION-5B](https://laion.ai/blog/laion-5b/) database. 
+Similar to Google's [Imagen](https://arxiv.org/abs/2205.11487), 
+this model uses a frozen CLIP ViT-L/14 text encoder to condition the model on text prompts.
+With its 860M UNet and 123M text encoder, the model is relatively lightweight and runs on a GPU with at least 10GB VRAM.
+See [this section](#stable-diffusion-v1) below and the [model card](https://huggingface.co/CompVis/stable-diffusion).
+
+  
 ## Requirements
 A suitable [conda](https://conda.io/) environment named `ldm` can be created
 and activated with:
@@ -28,176 +29,135 @@ conda env create -f environment.yaml
 conda activate ldm
 ```
 
-# Model Zoo 
-
-## Pretrained Autoencoding Models
-![rec2](assets/reconstruction2.png)
-
-All models were trained until convergence (no further substantial improvement in rFID).
-
-| Model                   | rFID vs val | train steps           |PSNR           | PSIM          | Link                                                                                                                                                  | Comments              
-|-------------------------|------------|----------------|----------------|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------|
-| f=4, VQ (Z=8192, d=3)   | 0.58       | 533066 | 27.43  +/- 4.26 | 0.53 +/- 0.21 |     https://ommer-lab.com/files/latent-diffusion/vq-f4.zip                   |  |
-| f=4, VQ (Z=8192, d=3)   | 1.06       | 658131 | 25.21 +/-  4.17 | 0.72 +/- 0.26 | https://heibox.uni-heidelberg.de/f/9c6681f64bb94338a069/?dl=1  | no attention          |
-| f=8, VQ (Z=16384, d=4)  | 1.14       | 971043 | 23.07 +/- 3.99 | 1.17 +/- 0.36 |       https://ommer-lab.com/files/latent-diffusion/vq-f8.zip                     |                       |
-| f=8, VQ (Z=256, d=4)    | 1.49       | 1608649 | 22.35 +/- 3.81 | 1.26 +/- 0.37 |   https://ommer-lab.com/files/latent-diffusion/vq-f8-n256.zip |  
-| f=16, VQ (Z=16384, d=8) | 5.15       | 1101166 | 20.83 +/- 3.61 | 1.73 +/- 0.43 |             https://heibox.uni-heidelberg.de/f/0e42b04e2e904890a9b6/?dl=1                        |                       |
-|                         |            |  |                |               |                                                                                                                                                    |                       |
-| f=4, KL                 | 0.27       | 176991 | 27.53 +/- 4.54 | 0.55 +/- 0.24 |     https://ommer-lab.com/files/latent-diffusion/kl-f4.zip                                   |                       |
-| f=8, KL                 | 0.90       | 246803 | 24.19 +/- 4.19 | 1.02 +/- 0.35 |             https://ommer-lab.com/files/latent-diffusion/kl-f8.zip                            |                       |
-| f=16, KL     (d=16)     | 0.87       | 442998 | 24.08 +/- 4.22 | 1.07 +/- 0.36 |      https://ommer-lab.com/files/latent-diffusion/kl-f16.zip                                  |                       |
- | f=32, KL     (d=64)     | 2.04       | 406763 | 22.27 +/- 3.93 | 1.41 +/- 0.40 |             https://ommer-lab.com/files/latent-diffusion/kl-f32.zip                            |                       |
-
-### Get the models
-
-Running the following script downloads und extracts all available pretrained autoencoding models.   
-```shell script
-bash scripts/download_first_stages.sh
-```
-
-The first stage models can then be found in `models/first_stage_models/<model_spec>`
-
-
-
-## Pretrained LDMs
-| Datset                          |   Task    | Model        | FID           | IS              | Prec | Recall | Link                                                                                                                                                                                   | Comments                                        
-|---------------------------------|------|--------------|---------------|-----------------|------|------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------|
-| CelebA-HQ                       | Unconditional Image Synthesis    |  LDM-VQ-4 (200 DDIM steps, eta=0)| 5.11 (5.11)          | 3.29            | 0.72    | 0.49 |    https://ommer-lab.com/files/latent-diffusion/celeba.zip     |                                                 |  
-| FFHQ                            | Unconditional Image Synthesis    |  LDM-VQ-4 (200 DDIM steps, eta=1)| 4.98 (4.98)  | 4.50 (4.50)   | 0.73 | 0.50 |              https://ommer-lab.com/files/latent-diffusion/ffhq.zip                                              |                                                 |
-| LSUN-Churches                   | Unconditional Image Synthesis   |  LDM-KL-8 (400 DDIM steps, eta=0)| 4.02 (4.02) | 2.72 | 0.64 | 0.52 |         https://ommer-lab.com/files/latent-diffusion/lsun_churches.zip        |                                                 |  
-| LSUN-Bedrooms                   | Unconditional Image Synthesis   |  LDM-VQ-4 (200 DDIM steps, eta=1)| 2.95 (3.0)          | 2.22 (2.23)| 0.66 | 0.48 | https://ommer-lab.com/files/latent-diffusion/lsun_bedrooms.zip |                                                 |  
-| ImageNet                        | Class-conditional Image Synthesis | LDM-VQ-8 (200 DDIM steps, eta=1) | 7.77(7.76)* /15.82** | 201.56(209.52)* /78.82** | 0.84* / 0.65** | 0.35* / 0.63** |   https://ommer-lab.com/files/latent-diffusion/cin.zip                                                                   | *: w/ guiding, classifier_scale 10  **: w/o guiding, scores in bracket calculated with script provided by [ADM](https://github.com/openai/guided-diffusion) |   
-| Conceptual Captions             |  Text-conditional Image Synthesis | LDM-VQ-f4 (100 DDIM steps, eta=0) | 16.79         | 13.89           | N/A | N/A |              https://ommer-lab.com/files/latent-diffusion/text2img.zip                                | finetuned from LAION                            |   
-| OpenImages                      | Super-resolution   | LDM-VQ-4     | N/A            | N/A               | N/A    | N/A    |                                    https://ommer-lab.com/files/latent-diffusion/sr_bsr.zip                                    | BSR image degradation                           |
-| OpenImages                      | Layout-to-Image Synthesis    | LDM-VQ-4 (200 DDIM steps, eta=0) | 32.02         | 15.92           | N/A    | N/A    |                  https://ommer-lab.com/files/latent-diffusion/layout2img_model.zip                                           |                                                 | 
-| Landscapes      |  Semantic Image Synthesis   | LDM-VQ-4  | N/A             | N/A               | N/A    | N/A    |           https://ommer-lab.com/files/latent-diffusion/semantic_synthesis256.zip                                    |                                                 |
-| Landscapes       |  Semantic Image Synthesis   | LDM-VQ-4  | N/A             | N/A               | N/A    | N/A    |           https://ommer-lab.com/files/latent-diffusion/semantic_synthesis.zip                                    |             finetuned on resolution 512x512                                     |
-
-
-### Get the models
-
-The LDMs listed above can jointly be downloaded and extracted via
-
-```shell script
-bash scripts/download_models.sh
-```
-
-The models can then be found in `models/ldm/<model_spec>`.
-
-### Sampling with unconditional models
-
-We provide a first script for sampling from our unconditional models. Start it via
-
-```shell script
-CUDA_VISIBLE_DEVICES=<GPU_ID> python scripts/sample_diffusion.py -r models/ldm/<model_spec>/model.ckpt -l <logdir> -n <\#samples> --batch_size <batch_size> -c <\#ddim steps> -e <\#eta> 
-```
-
-# Inpainting
-![inpainting](assets/inpainting.png)
-
-Download the pre-trained weights
-```
-wget -O models/ldm/inpainting_big/last.ckpt https://heibox.uni-heidelberg.de/f/4d9ac7ea40c64582b7c9/?dl=1
-```
-
-and sample with
-```
-python scripts/inpaint.py --indir data/inpainting_examples/ --outdir outputs/inpainting_results
-```
-`indir` should contain images `*.png` and masks `<image_fname>_mask.png` like
-the examples provided in `data/inpainting_examples`.
-
-
-# Train your own LDMs
-
-## Data preparation
-
-### Faces 
-For downloading the CelebA-HQ and FFHQ datasets, proceed as described in the [taming-transformers](https://github.com/CompVis/taming-transformers#celeba-hq) 
-repository.
-
-### LSUN 
-
-The LSUN datasets can be conveniently downloaded via the script available [here](https://github.com/fyu/lsun).
-We performed a custom split into training and validation images, and provide the corresponding filenames
-at [https://ommer-lab.com/files/lsun.zip](https://ommer-lab.com/files/lsun.zip). 
-After downloading, extract them to `./data/lsun`. The beds/cats/churches subsets should
-also be placed/symlinked at `./data/lsun/bedrooms`/`./data/lsun/cats`/`./data/lsun/churches`, respectively.
-
-### ImageNet
-The code will try to download (through [Academic
-Torrents](http://academictorrents.com/)) and prepare ImageNet the first time it
-is used. However, since ImageNet is quite large, this requires a lot of disk
-space and time. If you already have ImageNet on your disk, you can speed things
-up by putting the data into
-`${XDG_CACHE}/autoencoders/data/ILSVRC2012_{split}/data/` (which defaults to
-`~/.cache/autoencoders/data/ILSVRC2012_{split}/data/`), where `{split}` is one
-of `train`/`validation`. It should have the following structure:
+You can also update an existing [latent diffusion](https://github.com/CompVis/latent-diffusion) environment by running
 
 ```
-${XDG_CACHE}/autoencoders/data/ILSVRC2012_{split}/data/
-├── n01440764
-│   ├── n01440764_10026.JPEG
-│   ├── n01440764_10027.JPEG
-│   ├── ...
-├── n01443537
-│   ├── n01443537_10007.JPEG
-│   ├── n01443537_10014.JPEG
-│   ├── ...
-├── ...
-```
-
-If you haven't extracted the data, you can also place
-`ILSVRC2012_img_train.tar`/`ILSVRC2012_img_val.tar` (or symlinks to them) into
-`${XDG_CACHE}/autoencoders/data/ILSVRC2012_train/` /
-`${XDG_CACHE}/autoencoders/data/ILSVRC2012_validation/`, which will then be
-extracted into above structure without downloading it again.  Note that this
-will only happen if neither a folder
-`${XDG_CACHE}/autoencoders/data/ILSVRC2012_{split}/data/` nor a file
-`${XDG_CACHE}/autoencoders/data/ILSVRC2012_{split}/.ready` exist. Remove them
-if you want to force running the dataset preparation again.
-
-
-## Model Training
-
-Logs and checkpoints for trained models are saved to `logs/<START_DATE_AND_TIME>_<config_spec>`.
-
-### Training autoencoder models
-
-Configs for training a KL-regularized autoencoder on ImageNet are provided at `configs/autoencoder`.
-Training can be started by running
-```
-CUDA_VISIBLE_DEVICES=<GPU_ID> python main.py --base configs/autoencoder/<config_spec>.yaml -t --gpus 0,    
-```
-where `config_spec` is one of {`autoencoder_kl_8x8x64`(f=32, d=64), `autoencoder_kl_16x16x16`(f=16, d=16), 
-`autoencoder_kl_32x32x4`(f=8, d=4), `autoencoder_kl_64x64x3`(f=4, d=3)}.
-
-For training VQ-regularized models, see the [taming-transformers](https://github.com/CompVis/taming-transformers) 
-repository.
-
-### Training LDMs 
-
-In ``configs/latent-diffusion/`` we provide configs for training LDMs on the LSUN-, CelebA-HQ, FFHQ and ImageNet datasets. 
-Training can be started by running
-
-```shell script
-CUDA_VISIBLE_DEVICES=<GPU_ID> python main.py --base configs/latent-diffusion/<config_spec>.yaml -t --gpus 0,
+conda install pytorch torchvision -c pytorch
+pip install transformers==4.19.2
+pip install -e .
 ``` 
 
-where ``<config_spec>`` is one of {`celebahq-ldm-vq-4`(f=4, VQ-reg. autoencoder, spatial size 64x64x3),`ffhq-ldm-vq-4`(f=4, VQ-reg. autoencoder, spatial size 64x64x3),
-`lsun_bedrooms-ldm-vq-4`(f=4, VQ-reg. autoencoder, spatial size 64x64x3),
-`lsun_churches-ldm-vq-4`(f=8, KL-reg. autoencoder, spatial size 32x32x4),`cin-ldm-vq-8`(f=8, VQ-reg. autoencoder, spatial size 32x32x4)}.
 
-## Coming Soon...
+## Stable Diffusion v1
 
-* More inference scripts for conditional LDMs.
-* In the meantime, you can play with our colab notebook https://colab.research.google.com/drive/1xqzUi2iXQXDqXBHQGP9Mqt2YrYW6cx-J?usp=sharing
-* We will also release some further pretrained models.
+Stable Diffusion v1 refers to a specific configuration of the model
+architecture that uses a downsampling-factor 8 autoencoder with an 860M UNet
+and CLIP ViT-L/14 text encoder for the diffusion model. The model was pretrained on 256x256 images and 
+then finetuned on 512x512 images.
+
+*Note: Stable Diffusion v1 is a general text-to-image diffusion model and therefore mirrors biases and (mis-)conceptions that are present
+in its training data. 
+Details on the training procedure and data, as well as the intended use of the model can be found in the corresponding [model card](https://huggingface.co/CompVis/stable-diffusion).
+Research into the safe deployment of general text-to-image models is an ongoing effort. To prevent misuse and harm, we currently provide access to the checkpoints only for [academic research purposes upon request](TODO).
+**This is an experiment in safe and community-driven publication of a capable and general text-to-image model. We are working on a public release with a more permissive license that also incorporates ethical considerations.***
+
+[Request access to Stable Diffusion v1 checkpoints for academic research](TODO) 
+
+### Weights
+
+We currently provide three checkpoints, `sd-v1-1.ckpt`, `sd-v1-2.ckpt` and `sd-v1-3.ckpt`,
+which were trained as follows,
+
+- `sd-v1-1.ckpt`: 237k steps at resolution `256x256` on [laion2B-en](https://huggingface.co/datasets/laion/laion2B-en).
+  194k steps at resolution `512x512` on [laion-high-resolution](https://huggingface.co/datasets/laion/laion-high-resolution) (170M examples from LAION-5B with resolution `>= 1024x1024`).
+- `sd-v1-2.ckpt`: Resumed from `sd-v1-1.ckpt`.
+  515k steps at resolution `512x512` on "laion-improved-aesthetics" (a subset of laion2B-en,
+filtered to images with an original size `>= 512x512`, estimated aesthetics score `> 5.0`, and an estimated watermark probability `< 0.5`. The watermark estimate is from the LAION-5B metadata, the aesthetics score is estimated using an [improved aesthetics estimator](https://github.com/christophschuhmann/improved-aesthetic-predictor)).
+- `sd-v1-3.ckpt`: Resumed from `sd-v1-2.ckpt`. 195k steps at resolution `512x512` on "laion-improved-aesthetics" and 10\% dropping of the text-conditioning to improve [classifier-free guidance sampling](https://arxiv.org/abs/2207.12598).
+
+Evaluations with different classifier-free guidance scales (1.5, 2.0, 3.0, 4.0,
+5.0, 6.0, 7.0, 8.0) and 50 PLMS sampling
+steps show the relative improvements of the checkpoints:
+![sd evaluation results](assets/v1-variants-scores.jpg)
+
+
+
+### Text-to-Image with Stable Diffusion
+![txt2img-stable2](assets/stable-samples/txt2img/merged-0005.png)
+![txt2img-stable2](assets/stable-samples/txt2img/merged-0007.png)
+
+Stable Diffusion is a latent diffusion model conditioned on the (non-pooled) text embeddings of a CLIP ViT-L/14 text encoder.
+
+After [obtaining the weights](#weights), link them
+```
+mkdir -p models/ldm/stable-diffusion-v1/
+ln -s <path/to/model.ckpt> models/ldm/stable-diffusion-v1/model.ckpt 
+```
+and sample with
+```
+python scripts/txt2img.py --prompt "a photograph of an astronaut riding a horse" --plms 
+```
+By default, this uses a guidance scale of `--scale 7.5`, [Katherine Crowson's implementation](https://github.com/CompVis/latent-diffusion/pull/51) of the [PLMS](https://arxiv.org/abs/2202.09778) sampler, 
+and renders images of size 512x512 (which it was trained on) in 50 steps. All supported arguments are listed below (type `python scripts/txt2img.py --help`).
+
+```commandline
+usage: txt2img.py [-h] [--prompt [PROMPT]] [--outdir [OUTDIR]] [--skip_grid] [--skip_save] [--ddim_steps DDIM_STEPS] [--plms] [--laion400m] [--fixed_code] [--ddim_eta DDIM_ETA] [--n_iter N_ITER] [--H H] [--W W] [--C C] [--f F] [--n_samples N_SAMPLES] [--n_rows N_ROWS]
+                  [--scale SCALE] [--from-file FROM_FILE] [--config CONFIG] [--ckpt CKPT] [--seed SEED] [--precision {full,autocast}]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --prompt [PROMPT]     the prompt to render
+  --outdir [OUTDIR]     dir to write results to
+  --skip_grid           do not save a grid, only individual samples. Helpful when evaluating lots of samples
+  --skip_save           do not save individual samples. For speed measurements.
+  --ddim_steps DDIM_STEPS
+                        number of ddim sampling steps
+  --plms                use plms sampling
+  --laion400m           uses the LAION400M model
+  --fixed_code          if enabled, uses the same starting code across samples
+  --ddim_eta DDIM_ETA   ddim eta (eta=0.0 corresponds to deterministic sampling
+  --n_iter N_ITER       sample this often
+  --H H                 image height, in pixel space
+  --W W                 image width, in pixel space
+  --C C                 latent channels
+  --f F                 downsampling factor
+  --n_samples N_SAMPLES
+                        how many samples to produce for each given prompt. A.k.a. batch size
+  --n_rows N_ROWS       rows in the grid (default: n_samples)
+  --scale SCALE         unconditional guidance scale: eps = eps(x, empty) + scale * (eps(x, cond) - eps(x, empty))
+  --from-file FROM_FILE
+                        if specified, load prompts from this file
+  --config CONFIG       path to config which constructs model
+  --ckpt CKPT           path to checkpoint of model
+  --seed SEED           the seed (for reproducible sampling)
+  --precision {full,autocast}
+                        evaluate at this precision
+
+```
+Note: The inference config for all v1 versions is designed to be used with EMA-only checkpoints. 
+For this reason `use_ema=False` is set in the configuration, otherwise the code will try to switch from
+non-EMA to EMA weights. If you want to examine the effect of EMA vs no EMA, we provide "full" checkpoints
+which contain both types of weights. For these, `use_ema=False` will load and use the non-EMA weights.
+
+
+### Image Modification with Stable Diffusion
+
+By using a diffusion-denoising mechanism as first proposed by [SDEdit](https://arxiv.org/abs/2108.01073), the model can be used for different 
+tasks such as text-guided image-to-image translation and upscaling. Similar to the txt2img sampling script, 
+we provide a script to perform image modification with Stable Diffusion.  
+
+The following describes an example where a rough sketch made in [Pinta](https://www.pinta-project.com/) is converted into a detailed artwork.
+```
+python scripts/img2img.py --prompt "A fantasy landscape, trending on artstation" --init-img <path-to-img.jpg> --strength 0.8
+```
+Here, strength is a value between 0.0 and 1.0, that controls the amount of noise that is added to the input image. 
+Values that approach 1.0 allow for lots of variations but will also produce images that are not semantically consistent with the input. See the following example.
+
+**Input**
+
+![sketch-in](assets/stable-samples/img2img/sketch-mountains-input.jpg)
+
+**Outputs**
+
+![out3](assets/stable-samples/img2img/mountains-3.png)
+![out2](assets/stable-samples/img2img/mountains-2.png)
+
+This procedure can, for example, also be used to upscale samples from the base model.
 
 
 ## Comments 
 
-- Our codebase for the diffusion models builds heavily on [OpenAI's codebase](https://github.com/openai/guided-diffusion)
+- Our codebase for the diffusion models builds heavily on [OpenAI's ADM codebase](https://github.com/openai/guided-diffusion)
 and [https://github.com/lucidrains/denoising-diffusion-pytorch](https://github.com/lucidrains/denoising-diffusion-pytorch). 
 Thanks for open-sourcing!
 
@@ -215,6 +175,7 @@ Thanks for open-sourcing!
       archivePrefix={arXiv},
       primaryClass={cs.CV}
 }
+
 ```
 
 

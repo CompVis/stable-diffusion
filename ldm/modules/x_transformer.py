@@ -407,7 +407,7 @@ class AttentionLayers(nn.Module):
         self.rotary_pos_emb = always(None)
 
         assert rel_pos_num_buckets <= rel_pos_max_distance, 'number of relative position buckets must be less than the relative position max distance'
-        self.rel_pos = always(None)
+        self.rel_pos = None
 
         self.pre_norm = pre_norm
 
