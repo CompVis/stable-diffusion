@@ -210,8 +210,9 @@ def main():
         with open(opt.from_file, "r") as f:
             data = f.read().splitlines()
             remainder = len(data) % batch_size
-            if remainder > 0:
-                data = data + [data[-1] * remainder]
+            if (remainder > 0) and (batch_size > remainder):
+                pad_length = (batch_size - remainder)
+                data = data + pad_length * [data[-1]]
             data = list(chunk(data, batch_size))
 
     sample_path = os.path.join(outpath, "samples")
