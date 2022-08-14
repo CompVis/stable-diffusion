@@ -209,6 +209,9 @@ def main():
         print(f"reading prompts from {opt.from_file}")
         with open(opt.from_file, "r") as f:
             data = f.read().splitlines()
+            remainder = len(data) % batch_size
+            if remainder > 0:
+                data = data + [data[-1] * remainder]
             data = list(chunk(data, batch_size))
 
     sample_path = os.path.join(outpath, "samples")
