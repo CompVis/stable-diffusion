@@ -1,7 +1,7 @@
-
 import argparse, os, sys, glob, random
 import torch
 import numpy as np
+import copy
 from omegaconf import OmegaConf
 from PIL import Image
 from tqdm import tqdm, trange
@@ -31,8 +31,6 @@ def load_model_from_config(ckpt, verbose=False):
 
 
 config = "optimizedSD/v1-inference.yaml"
-configFS = "optimizedSD/firstStage.yml"
-configCS = "optimizedSD/condStage.yml"
 ckpt = "models/ldm/stable-diffusion-v1/model.ckpt"
 device = "cuda"
 
@@ -141,6 +139,7 @@ parser.add_argument(
 )
 opt = parser.parse_args()
 
+tic = time.time()
 os.makedirs(opt.outdir, exist_ok=True)
 outpath = opt.outdir
 
@@ -149,29 +148,32 @@ os.makedirs(sample_path, exist_ok=True)
 base_count = len(os.listdir(sample_path))
 grid_count = len(os.listdir(outpath)) - 1
 seed_everything(opt.seed)
-config = OmegaConf.load(f"{config}")
+
 sd = load_model_from_config(f"{ckpt}")
-
-model = instantiate_from_config(config.model)
-m, u = model.load_state_dict(sd, strict=False)
-model.eval()
-model = model.to(device)
-sampler = PLMSSampler(model)
-
 li = []
 for key, value in sd.items():
     if(key.split('.')[0]) == 'model':
         li.append(key)
 for key in li:
     sd[key[6:]] = sd.pop(key)
-model.sd = sd
 
 
-configCS = OmegaConf.load(f"{configCS}")
-modelCS = instantiate_from_config(configCS.model)
-_, _ = modelCS.load_state_dict(sd, strict=False)
-modelCS.eval()
-modelCS = modelCS.to(device)
+config = OmegaConf.load(f"{config}")
+
+
+proxy_model = instantiate_from_config(config.modelUNet)
+_, _ = proxy_model.load_state_dict(sd, strict=False)
+proxy_model.eval()
+proxy_model.sd = sd
+
+proxy_modelCS = instantiate_from_config(config.modelCondStage)
+_, _ = proxy_modelCS.load_state_dict(sd, strict=False)
+proxy_modelCS.eval()
+
+proxy_modelFS = instantiate_from_config(config.modelFirstStage)
+_, _ = proxy_modelFS.load_state_dict(sd, strict=False)
+proxy_modelFS.eval()
+
 
 precision = "full"
 
@@ -197,17 +199,26 @@ else:
 precision_scope = autocast if (device == "cuda" and precision=="autocast") else nullcontext
 with torch.no_grad():
     with precision_scope("cuda"):
-        tic = time.time()
         all_samples = list()
         for n in trange(opt.n_iter, desc="Sampling"):
+
+            model = copy.deepcopy(proxy_model)
+            model.eval()
+
+            modelCS = copy.deepcopy(proxy_modelCS)
+            modelCS.eval()
+            modelCS = modelCS.to(device)
+
+            modelFS = copy.deepcopy(proxy_modelFS)
+            modelFS.eval()
+            
             for prompts in tqdm(data, desc="data"):
                 uc = None
                 if opt.scale != 1.0:
                     uc = modelCS.get_learned_conditioning(batch_size * [""])
                 if isinstance(prompts, tuple):
                     prompts = list(prompts)
-
-
+                
                 c = modelCS.get_learned_conditioning(prompts)
                 print(c.shape)
                 shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
@@ -217,7 +228,8 @@ with torch.no_grad():
                     time.sleep(1)
                 # print(torch.cuda.memory_allocated()/1e6)
 
-
+                model = model.to(device)
+                sampler = PLMSSampler(model)
                 samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
                                 conditioning=c,
                                 batch_size=opt.n_samples,
@@ -235,11 +247,6 @@ with torch.no_grad():
                     time.sleep(1)
                 # print(torch.cuda.memory_allocated()/1e6)
 
-                
-                configFS = OmegaConf.load(f"{configFS}")
-                modelFS = instantiate_from_config(configFS.model)
-                _, _ = modelFS.load_state_dict(sd, strict=False)
-                modelFS.eval()
                 modelFS = modelFS.to(device)
 
                 x_samples_ddim = modelFS.decode_first_stage(samples_ddim)
@@ -275,8 +282,8 @@ with torch.no_grad():
         #     Image.fromarray(grid.astype(np.uint8)).save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
         #     grid_count += 1
 
-        toc = time.time()
+toc = time.time()
 
+time_taken = (toc-tic)/60.0
 
-print(f"Your samples are ready and waiting for you here: \n{outpath} \n"
-        f" \nEnjoy.")
+print(("Your samples are ready in {0:.2f} minutes and waiting for you here \n" + outpath).format(time_taken))
