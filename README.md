@@ -78,6 +78,9 @@ steps show the relative improvements of the checkpoints:
 
 Stable Diffusion is a latent diffusion model conditioned on the (non-pooled) text embeddings of a CLIP ViT-L/14 text encoder.
 
+
+#### Sampling Script
+
 After [obtaining the weights](#weights), link them
 ```
 mkdir -p models/ldm/stable-diffusion-v1/
@@ -86,24 +89,6 @@ ln -s <path/to/model.ckpt> models/ldm/stable-diffusion-v1/model.ckpt
 and sample with
 ```
 python scripts/txt2img.py --prompt "a photograph of an astronaut riding a horse" --plms 
-```
-
-Another way to download and sample Stable Diffusion is by using the [diffusers library](https://github.com/huggingface/diffusers/tree/main#new--stable-diffusion-is-now-fully-compatible-with-diffusers)
-```py
-# make sure you're logged in with `huggingface-cli login`
-from torch import autocast
-from diffusers import StableDiffusionPipeline, LMSDiscreteScheduler
-
-pipe = StableDiffusionPipeline.from_pretrained(
-	"CompVis/stable-diffusion-v1-3-diffusers", 
-	use_auth_token=True
-)
-
-prompt = "a photo of an astronaut riding a horse on mars"
-with autocast("cuda"):
-    image = pipe(prompt)["sample"][0]  
-    
-image.save("astronaut_rides_horse.png")
 ```
 
 By default, this uses a guidance scale of `--scale 7.5`, [Katherine Crowson's implementation](https://github.com/CompVis/latent-diffusion/pull/51) of the [PLMS](https://arxiv.org/abs/2202.09778) sampler, 
@@ -147,6 +132,28 @@ Note: The inference config for all v1 versions is designed to be used with EMA-o
 For this reason `use_ema=False` is set in the configuration, otherwise the code will try to switch from
 non-EMA to EMA weights. If you want to examine the effect of EMA vs no EMA, we provide "full" checkpoints
 which contain both types of weights. For these, `use_ema=False` will load and use the non-EMA weights.
+
+
+#### Diffusers Integration
+
+Another way to download and sample Stable Diffusion is by using the [diffusers library](https://github.com/huggingface/diffusers/tree/main#new--stable-diffusion-is-now-fully-compatible-with-diffusers)
+```py
+# make sure you're logged in with `huggingface-cli login`
+from torch import autocast
+from diffusers import StableDiffusionPipeline, LMSDiscreteScheduler
+
+pipe = StableDiffusionPipeline.from_pretrained(
+	"CompVis/stable-diffusion-v1-3-diffusers", 
+	use_auth_token=True
+)
+
+prompt = "a photo of an astronaut riding a horse on mars"
+with autocast("cuda"):
+    image = pipe(prompt)["sample"][0]  
+    
+image.save("astronaut_rides_horse.png")
+```
+
 
 
 ### Image Modification with Stable Diffusion
