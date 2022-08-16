@@ -87,6 +87,25 @@ and sample with
 ```
 python scripts/txt2img.py --prompt "a photograph of an astronaut riding a horse" --plms 
 ```
+
+Another way to download and sample Stable Diffusion is by using the [diffusers library](https://github.com/huggingface/diffusers/tree/main#new--stable-diffusion-is-now-fully-compatible-with-diffusers)
+```py
+# make sure you're logged in with `huggingface-cli login`
+from torch import autocast
+from diffusers import StableDiffusionPipeline, LMSDiscreteScheduler
+
+pipe = StableDiffusionPipeline.from_pretrained(
+	"CompVis/stable-diffusion-v1-3-diffusers", 
+	use_auth_token=True
+)
+
+prompt = "a photo of an astronaut riding a horse on mars"
+with autocast("cuda"):
+    image = pipe(prompt)["sample"][0]  
+    
+image.save("astronaut_rides_horse.png")
+```
+
 By default, this uses a guidance scale of `--scale 7.5`, [Katherine Crowson's implementation](https://github.com/CompVis/latent-diffusion/pull/51) of the [PLMS](https://arxiv.org/abs/2202.09778) sampler, 
 and renders images of size 512x512 (which it was trained on) in 50 steps. All supported arguments are listed below (type `python scripts/txt2img.py --help`).
 
