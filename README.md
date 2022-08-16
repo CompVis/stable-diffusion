@@ -2,7 +2,7 @@
 
 - This repo is a modified version of the Stable Diffusion repo, modifed to use lesser VRAM than the original by sacrificing on inference speed. It can generate 512x512 images from a prompt on a 6Gb VRAM GPU in 90 seconds per image (RTX 2060 in my case). This is not possible with the original repo on a 6Gb GPU.
 
-- All the modified files are in the [optimizedSD](optimizedSD) folder, so if you have already installed the original repo, you can just copy this folder into the orignal repo.
+- All the modified files are in the [optimizedSD](optimizedSD) folder, so if you have already installed the original repo, you can just download and copy this folder into the orignal repo instead of cloning the entire repo.
 
 - You can also clone this repo and follow the same installation steps as the original written below (mainly creating the conda env and placing the weights at the specified location).
 
