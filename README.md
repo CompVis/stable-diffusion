@@ -2,16 +2,18 @@
 
 - This repo is a modified version of the Stable Diffusion repo. It is modifed to use lesser VRAM than the original one by sacrificing on speed. It can generate 512x512 images from a prompt on a 6Gb VRAM GPU in 90 seconds per image (RTX 2060 in my case). This is not possible with the original repo on a 6Gb GPU.
 
-- To use this repo follow the same installation steps as the original (mainly creating the conda env and placing the weights at the specified location), only difference being, clone this repo instead of the original one.
+- If you have already cloned the original Stable Diffusion Repo, you can just copy the [optimizedSD](optimizedSD) folder into the orignal repo to get the optimized files.
+
+- You can also clone this repo and follow the same installation steps as the original written below (mainly creating the conda env and placing the weights at the specified location).
 
 - For example, the following command will generate two 512x512 images:
 
-`python optimized_txt2img.py --prompt "A realistic photo of man eating chocolate in Outer Space" --H 512 --W 512 --seed 27 --n_iter 2`
+`python optimizedSD/optimized_txt2img.py --prompt "A realistic photo of man eating chocolate in Outer Space" --H 512 --W 512 --seed 27 --n_iter 2 --ddim_steps 50`
 
 - We won't be able to generate multiple 512x512 images at once as it will require a VRAM greater than 6Gb, therefore to generate multiple images, we will have have to use the 'n_iter' option.
 
 ```commandline
-usage: optimized_txt2img.py [-h] [--prompt [PROMPT]] [--outdir [OUTDIR]] [--skip_grid] [--skip_save] [--ddim_steps DDIM_STEPS] [--fixed_code] [--ddim_eta DDIM_ETA] [--n_iter N_ITER] [--H H] [--W W] [--C C] [--f F] [--n_samples N_SAMPLES] [--n_rows N_ROWS]
+usage: optimizedSD/optimized_txt2img.py [-h] [--prompt [PROMPT]] [--outdir [OUTDIR]] [--skip_grid] [--skip_save] [--ddim_steps DDIM_STEPS] [--fixed_code] [--ddim_eta DDIM_ETA] [--n_iter N_ITER] [--H H] [--W W] [--C C] [--f F] [--n_samples N_SAMPLES] [--n_rows N_ROWS]
                   [--scale SCALE] [--from-file FROM_FILE] [--seed SEED]
 
 optional arguments:
