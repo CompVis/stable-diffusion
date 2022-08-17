@@ -1,6 +1,6 @@
 # Optimized Stable Diffusion (Sort of)
 
-- This repo is a modified version of the Stable Diffusion repo, modifed to use lesser VRAM than the original by sacrificing on inference speed. It can generate 512x512 images from a prompt on a 6Gb VRAM GPU in 90 seconds per image (RTX 2060 in my case). This is not possible with the original repo on a 6Gb GPU.
+- This repo is a modified version of the Stable Diffusion repo, modifed to use lesser VRAM than the original by sacrificing on inference speed. It can generate 512x512 images from a prompt on a 6Gb VRAM GPU in 70 seconds per image (RTX 2060 in my case). This is not possible with the original repo on a 6Gb GPU.
 
 - All the modified files are in the [optimizedSD](optimizedSD) folder, so if you have already installed the original repo, you can just download and copy this folder into the orignal repo instead of cloning the entire repo.
 
@@ -42,7 +42,7 @@ optional arguments:
 
 - To achieve this, the stable diffusion model is fragmented into four parts which are sent to the GPU one at a time, only when needed. After the calculation is done, they are deleted from the GPU memory. This allows us to run a bigger model on a lower VRAM.
 
-- The only drawback is higher inference time (90 seconds per image for 50 ddim_steps on a 6Gb RTX 2060) which is still an order of magnitude faster than inference on CPU.
+- The only drawback is higher inference time (70 seconds per image for 50 ddim_steps on a 6Gb RTX 2060) which is still an order of magnitude faster than inference on CPU.
 
 # Stable Diffusion
 

@@ -13,7 +13,6 @@ from pytorch_lightning import seed_everything
 from torch import autocast
 from contextlib import contextmanager, nullcontext
 from ldm.util import instantiate_from_config
-from ldm.models.diffusion.plms import PLMSSampler
 
 
 def chunk(it, size):
@@ -151,31 +150,42 @@ seed_everything(opt.seed)
 
 sd = load_model_from_config(f"{ckpt}")
 li = []
+lo = []
 for key, value in sd.items():
-    if(key.split('.')[0]) == 'model':
-        li.append(key)
+    sp = key.split('.')
+    if(sp[0]) == 'model':
+        if('input_blocks' in sp):
+            li.append(key)
+        elif('middle_block' in sp):
+            li.append(key)
+        elif('time_embed' in sp):
+            li.append(key)
+        else:
+            lo.append(key)
 for key in li:
-    sd[key[6:]] = sd.pop(key)
-
+    sd['model1.' + key[6:]] = sd.pop(key)
+for key in lo:
+    sd['model2.' + key[6:]] = sd.pop(key)
 
 config = OmegaConf.load(f"{config}")
+config.modelUNet.params.ddim_steps = opt.ddim_steps
 
 
-proxy_model = instantiate_from_config(config.modelUNet)
-_, _ = proxy_model.load_state_dict(sd, strict=False)
-proxy_model.eval()
-proxy_model.sd = sd
+model = instantiate_from_config(config.modelUNet)
+_, _ = model.load_state_dict(sd, strict=False)
+model.eval()
+model.sd = sd
 
-proxy_modelCS = instantiate_from_config(config.modelCondStage)
-_, _ = proxy_modelCS.load_state_dict(sd, strict=False)
-proxy_modelCS.eval()
+modelCS = instantiate_from_config(config.modelCondStage)
+_, _ = modelCS.load_state_dict(sd, strict=False)
+modelCS.eval()
 
-proxy_modelFS = instantiate_from_config(config.modelFirstStage)
-_, _ = proxy_modelFS.load_state_dict(sd, strict=False)
-proxy_modelFS.eval()
-
+modelFS = instantiate_from_config(config.modelFirstStage)
+_, _ = modelFS.load_state_dict(sd, strict=False)
+modelFS.eval()
 
 precision = "full"
+
 
 start_code = None
 if opt.fixed_code:
@@ -202,16 +212,7 @@ with torch.no_grad():
         all_samples = list()
         for n in trange(opt.n_iter, desc="Sampling"):
 
-            model = copy.deepcopy(proxy_model)
-            model.eval()
-
-            modelCS = copy.deepcopy(proxy_modelCS)
-            modelCS.eval()
-            modelCS = modelCS.to(device)
-
-            modelFS = copy.deepcopy(proxy_modelFS)
-            modelFS.eval()
-            
+            modelCS.to(device)            
             for prompts in tqdm(data, desc="data"):
                 uc = None
                 if opt.scale != 1.0:
@@ -220,17 +221,15 @@ with torch.no_grad():
                     prompts = list(prompts)
                 
                 c = modelCS.get_learned_conditioning(prompts)
-                print(c.shape)
                 shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
                 mem = torch.cuda.memory_allocated()/1e6
-                del modelCS
+                modelCS.to("cpu")
                 while(torch.cuda.memory_allocated()/1e6 >= mem):
                     time.sleep(1)
-                # print(torch.cuda.memory_allocated()/1e6)
+                print("memory1 = ",torch.cuda.memory_allocated()/1e6)
 
-                model = model.to(device)
-                sampler = PLMSSampler(model)
-                samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
+
+                samples_ddim, _ = model.sample(S=opt.ddim_steps,
                                 conditioning=c,
                                 batch_size=opt.n_samples,
                                 shape=shape,
@@ -240,20 +239,12 @@ with torch.no_grad():
                                 eta=opt.ddim_eta,
                                 x_T=start_code)
 
-                mem = torch.cuda.memory_allocated()/1e6
-                del model
-                del sampler
-                while(torch.cuda.memory_allocated()/1e6 >= mem):
-                    time.sleep(1)
-                # print(torch.cuda.memory_allocated()/1e6)
-
-                modelFS = modelFS.to(device)
-
+                modelFS.to(device)
                 x_samples_ddim = modelFS.decode_first_stage(samples_ddim)
                 x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
                 
                 mem = torch.cuda.memory_allocated()/1e6
-                del modelFS
+                modelFS.to("cpu")
                 while(torch.cuda.memory_allocated()/1e6 >= mem):
                     time.sleep(1)
 
@@ -269,7 +260,7 @@ with torch.no_grad():
                     all_samples.append(x_samples_ddim)
                 
                 del x_samples_ddim
-                print(torch.cuda.memory_allocated()/1e6)
+                print("memory_final = ", torch.cuda.memory_allocated()/1e6)
 
         # if not skip_grid:
         #     # additionally, save as grid

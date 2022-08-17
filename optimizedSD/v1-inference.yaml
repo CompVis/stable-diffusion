@@ -17,15 +17,6 @@ modelUNet:
     scale_factor: 0.18215
     use_ema: False
 
-    scheduler_config: # 10000 warmup steps
-      target: ldm.lr_scheduler.LambdaLinearScheduler
-      params:
-        warm_up_steps: [10000]
-        cycle_lengths: [10000000000000] # incredibly large number to prevent corner cases
-        f_start: [1.e-6]
-        f_max: [1.]
-        f_min: [1.]
-
     unetConfigEncode:
       target: optimizedSD.openaimodelSplit.UNetModelEncode
       params:
