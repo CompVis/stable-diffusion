@@ -66,8 +66,9 @@ model from huggingface.co. This obviously didn't work for me.
 
 Rather than set up a hugging face local hub, I found the most
 expedient thing to do was to download the Bert tokenizer in advance,
-and patch stable-diffusion to read it from the local disk. The steps
-to do this are:
+and patch stable-diffusion to read it from the local disk. After you
+have completed the conda environment creation and activation steps,the
+steps to preload the Bert model are:
 
 ~~~~
 (ldm) ~/stable-diffusion$ mkdir ./models/bert
