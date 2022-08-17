@@ -110,7 +110,7 @@ parser.add_argument(
 parser.add_argument(
     "--n_samples",
     type=int,
-    default=1,
+    default=5,
     help="how many samples to produce for each given prompt. A.k.a. batch size",
 )
 parser.add_argument(
@@ -142,7 +142,7 @@ tic = time.time()
 os.makedirs(opt.outdir, exist_ok=True)
 outpath = opt.outdir
 
-sample_path = os.path.join(outpath, "samples")
+sample_path = os.path.join(outpath, "samples", "_".join(opt.prompt.split()) )
 os.makedirs(sample_path, exist_ok=True)
 base_count = len(os.listdir(sample_path))
 grid_count = len(os.listdir(outpath)) - 1
@@ -174,7 +174,6 @@ config.modelUNet.params.ddim_steps = opt.ddim_steps
 model = instantiate_from_config(config.modelUNet)
 _, _ = model.load_state_dict(sd, strict=False)
 model.eval()
-model.sd = sd
 
 modelCS = instantiate_from_config(config.modelCondStage)
 _, _ = modelCS.load_state_dict(sd, strict=False)
@@ -226,10 +225,9 @@ with torch.no_grad():
                 modelCS.to("cpu")
                 while(torch.cuda.memory_allocated()/1e6 >= mem):
                     time.sleep(1)
-                print("memory1 = ",torch.cuda.memory_allocated()/1e6)
 
 
-                samples_ddim, _ = model.sample(S=opt.ddim_steps,
+                samples_ddim = model.sample(S=opt.ddim_steps,
                                 conditioning=c,
                                 batch_size=opt.n_samples,
                                 shape=shape,
@@ -240,26 +238,26 @@ with torch.no_grad():
                                 x_T=start_code)
 
                 modelFS.to(device)
-                x_samples_ddim = modelFS.decode_first_stage(samples_ddim)
-                x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
-                
+                print("saving images")
+                for i in range(batch_size):
+                    
+                    x_samples_ddim = modelFS.decode_first_stage(samples_ddim[i].unsqueeze(0))
+                    x_sample = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
+                # for x_sample in x_samples_ddim:
+                    x_sample = 255. * rearrange(x_sample[0].cpu().numpy(), 'c h w -> h w c')
+                    Image.fromarray(x_sample.astype(np.uint8)).save(
+                        os.path.join(sample_path, f"{base_count:05}.png"))
+                    base_count += 1
+
+
                 mem = torch.cuda.memory_allocated()/1e6
                 modelFS.to("cpu")
                 while(torch.cuda.memory_allocated()/1e6 >= mem):
                     time.sleep(1)
 
-                # if not skip_save:
-                print("saving image")
-                for x_sample in x_samples_ddim:
-                    x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                    Image.fromarray(x_sample.astype(np.uint8)).save(
-                        os.path.join(sample_path, "_".join(opt.prompt.split()) + "_" + f"{base_count:05}.png"))
-                    base_count += 1
-
-                if not opt.skip_grid:
-                    all_samples.append(x_samples_ddim)
-                
-                del x_samples_ddim
+                # if not opt.skip_grid:
+                #     all_samples.append(x_samples_ddim)
+                del samples_ddim
                 print("memory_final = ", torch.cuda.memory_allocated()/1e6)
 
         # if not skip_grid:
@@ -277,4 +275,4 @@ toc = time.time()
 
 time_taken = (toc-tic)/60.0
 
-print(("Your samples are ready in {0:.2f} minutes and waiting for you here \n" + outpath).format(time_taken))
+print(("Your samples are ready in {0:.2f} minutes and waiting for you here \n" + sample_path).format(time_taken))

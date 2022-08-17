@@ -6,12 +6,12 @@ https://github.com/CompVis/taming-transformers
 -- merci
 """
 
+import time
 import torch
 from einops import rearrange
 from tqdm import tqdm
 from ldm.modules.distributions.distributions import DiagonalGaussianDistribution
 from ldm.models.autoencoder import VQModelInterface
-import copy
 import torch.nn as nn
 import numpy as np
 import pytorch_lightning as pl
@@ -388,11 +388,8 @@ class DiffusionWrapper(pl.LightningModule):
     def __init__(self, diff_model_config):
         super().__init__()
         self.diffusion_model = instantiate_from_config(diff_model_config)
-        self.conditioning_key = "crossattn"
-        assert self.conditioning_key in [None, 'concat', 'crossattn', 'hybrid', 'adm']
 
-    def forward(self, x, t, c_concat: list = None, c_crossattn: list = None):
-        cc = torch.cat(c_crossattn, 1)
+    def forward(self, x, t, cc):
         out = self.diffusion_model(x, t, context=cc)
         return out
 
@@ -400,10 +397,8 @@ class DiffusionWrapperOut(pl.LightningModule):
     def __init__(self, diff_model_config):
         super().__init__()
         self.diffusion_model = instantiate_from_config(diff_model_config)
-        self.conditioning_key = "crossattn"
 
-    def forward(self, h,emb,tp,hs, c_concat: list = None, c_crossattn: list = None):
-        cc = torch.cat(c_crossattn, 1)
+    def forward(self, h,emb,tp,hs, cc):
         return self.diffusion_model(h,emb,tp,hs, context=cc)
 
 
@@ -432,7 +427,6 @@ class UNet(DDPM):
         ignore_keys = kwargs.pop("ignore_keys", [])
         super().__init__(conditioning_key=conditioning_key, *args, **kwargs)
         self.concat_mode = concat_mode
-        self.sd = None
         self.cond_stage_trainable = cond_stage_trainable
         self.cond_stage_key = cond_stage_key
         self.num_downs = 0
@@ -487,21 +481,33 @@ class UNet(DDPM):
             self.make_cond_schedule()
     
     def apply_model(self, x_noisy, t, cond, return_ids=False):
-
-        if isinstance(cond, dict):
-            pass
-        else:
-            if not isinstance(cond, list):
-                cond = [cond]
-            key = 'c_crossattn'
-            cond = {key: cond}
           
         self.model1.to("cuda")
-        aa,bb,ccc = self.model1(x_noisy, t, **cond)
-        self.model1.to("cpu")
 
+        h,emb,hs = self.model1(x_noisy[0:2], t[:2], cond[:2])
+        bs = cond.shape[0]
+        assert bs%2 == 0
+        lenhs = len(hs)
+
+        for i in range(2,bs,2):
+            h_temp,emb_temp,hs_temp = self.model1(x_noisy[i:i+2], t[i:i+2], cond[i:i+2])
+            h = torch.cat((h,h_temp))
+            emb = torch.cat((emb,emb_temp))
+            for j in range(lenhs):
+                hs[j] = torch.cat((hs[j], hs_temp[j]))
+
+        self.model1.to("cpu")
         self.model2.to("cuda")
-        x_recon = self.model2(aa,bb,x_noisy.dtype, ccc,**cond)
+        
+        hs_temp = [hs[j][:2] for j in range(lenhs)]
+        x_recon = self.model2(h[:2],emb[:2],x_noisy.dtype,hs_temp,cond[:2])
+
+        for i in range(2,bs,2):
+
+            hs_temp = [hs[j][i:i+2] for j in range(lenhs)]
+            x_recon1 = self.model2(h[i:i+2],emb[i:i+2],x_noisy.dtype,hs_temp,cond[i:i+2])
+            x_recon = torch.cat((x_recon, x_recon1))
+
         self.model2.to("cpu")
 
         if isinstance(x_recon, tuple) and not return_ids:
@@ -588,7 +594,7 @@ class UNet(DDPM):
         C, H, W = shape
         size = (batch_size, C, H, W)
         print(f'Data shape for PLMS sampling is {size}')
-        samples, intermediates = self.plms_sampling(conditioning, size,
+        samples = self.plms_sampling(conditioning, size,
                                                     callback=callback,
                                                     img_callback=img_callback,
                                                     quantize_denoised=quantize_x0,
@@ -604,7 +610,7 @@ class UNet(DDPM):
                                                     unconditional_conditioning=unconditional_conditioning,
                                                     )
 
-        return samples, intermediates
+        return samples
 
     @torch.no_grad()
     def plms_sampling(self, cond, shape,
@@ -626,7 +632,6 @@ class UNet(DDPM):
             subset_end = int(min(timesteps / self.ddim_timesteps.shape[0], 1) * self.ddim_timesteps.shape[0]) - 1
             timesteps = self.ddim_timesteps[:subset_end]
 
-        intermediates = {'x_inter': [img], 'pred_x0': [img]}
         time_range = list(reversed(range(0,timesteps))) if ddim_use_original_steps else np.flip(timesteps)
         total_steps = timesteps if ddim_use_original_steps else timesteps.shape[0]
         print(f"Running PLMS Sampling with {total_steps} timesteps")
@@ -658,11 +663,7 @@ class UNet(DDPM):
             if callback: callback(i)
             if img_callback: img_callback(pred_x0, i)
 
-            if index % log_every_t == 0 or index == total_steps - 1:
-                intermediates['x_inter'].append(img)
-                intermediates['pred_x0'].append(pred_x0)
-
-        return img, intermediates
+        return img
 
     @torch.no_grad()
     def p_sample_plms(self, x, c, t, index, repeat_noise=False, use_original_steps=False, quantize_denoised=False,

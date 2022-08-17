@@ -608,7 +608,7 @@ class UNetModelEncode(nn.Module):
             h = module(h, emb, context)
             hs.append(h)
         h = self.middle_block(h, emb, context)
-
+        
         return h, emb, hs
 
 
