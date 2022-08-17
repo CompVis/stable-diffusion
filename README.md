@@ -12,10 +12,11 @@ lets you create images from a prompt in just three lines of code:
 
 ~~~~
 from ldm.simplet2i import T2I
-model = T2I()
-model.text2image("a unicorn in manhattan")
+model   = T2I()
+outputs = model.text2image("a unicorn in manhattan")
 ~~~~
 
+Outputs is a list of lists in the format [[filename1,seed1],[filename2,seed2]...]
 Please see ldm/simplet2i.py for more information.
 
 ## Interactive command-line interface similar to the Discord bot
@@ -26,6 +27,9 @@ the "dream mothership" bot that Stable AI provided on its Discord
 server.  The advantage of this is that the lengthy model
 initialization only happens once. After that image generation is
 fast.
+
+The script uses the readline library to allow for in-line editing,
+command history (up and down arrows) and more.
 
 Note that this has only been tested in the Linux environment!
 
@@ -48,14 +52,18 @@ Outputs:
    outputs/txt2img-samples/00010.png: "ashley judd riding a camel" -n2 -S 1362479620
 
 dream> "your prompt here" -n6 -g
-...
+    outputs/txt2img-samples/00041.png: "your prompt here" -n6 -g -S 2685670268
+    seeds for individual rows: [2685670268, 1216708065, 2335773498, 822223658, 714542046, 3395302430]
 ~~~~
 
-Command-line arguments (`./scripts/dream.py -h`) allow you to change
+Command-line arguments passed to the script allow you to change
 various defaults, and select between the mature stable-diffusion
 weights (512x512) and the older (256x256) latent diffusion weights
-(laion400m). Within the script, the switches are (mostly) identical to
-those used in the Discord bot, except you don't need to type "!dream".
+(laion400m). From the dream> prompt, the arguments are (mostly)
+identical to those used in the Discord bot, except you don't need to
+type "!dream". Pass "-h" (or "--help") to list the arguments.
+
+For command-line help, type -h (or --help) at the dream> prompt.
 
 ## Workaround for machines with limited internet connectivity
 

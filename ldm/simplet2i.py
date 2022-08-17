@@ -7,7 +7,8 @@ from ldm.simplet2i import T2I
 t2i = T2I(outdir      = <path>        // outputs/txt2img-samples
           model       = <path>        // models/ldm/stable-diffusion-v1/model.ckpt
           config      = <path>        // default="configs/stable-diffusion/v1-inference.yaml
-          batch       = <integer>     // 1
+          iterations  = <integer>     // how many times to run the sampling (1)
+          batch       = <integer>     // how many images to generate per sampling (1)
           steps       = <integer>     // 50
           seed        = <integer>     // current system time
           sampler     = ['ddim','plms']  // ddim
@@ -17,27 +18,33 @@ t2i = T2I(outdir      = <path>        // outputs/txt2img-samples
           cfg_scale   = <float>       // unconditional guidance scale (7.5)
           fixed_code  = <boolean>     // False
           )
+
 # do the slow model initialization
 t2i.load_model()
 
 # Do the fast inference & image generation. Any options passed here 
 # override the default values assigned during class initialization
 # Will call load_model() if the model was not previously loaded.
-t2i.txt2img(prompt = <string>           // required
-            // the remaining option arguments override constructur value when present
-            outdir = <path>             
-            iterations  = <integer>
-            batch       = <integer>
-            steps       = <integer>
-            seed        = <integer>     
-            sampler     = ['ddim','plms']
-            grid        = <boolean>
-            width       = <integer> 
-            height      = <integer>
-            cfg_scale   = <float>
+# The method returns a list of images. Each row of the list is a sub-list of [filename,seed]
+results = t2i.txt2img(prompt = <string>           // required
+                      outdir = <path>             // the remaining option arguments override constructur value when present
+                      iterations  = <integer>
+                      batch       = <integer>
+                      steps       = <integer>
+                      seed        = <integer>     
+                      sampler     = ['ddim','plms']
+                      grid        = <boolean>
+                      width       = <integer> 
+                      height      = <integer>
+                      cfg_scale   = <float>
             ) -> boolean
+
+for row in results:
+    print(f'filename={row[0]}')
+    print(f'seed    ={row[1]}')
                  
 """
+
 import torch
 import numpy as np
 import random
@@ -126,7 +133,10 @@ class T2I:
     def txt2img(self,prompt,outdir=None,batch=None,iterations=None,
                 steps=None,seed=None,grid=None,individual=None,width=None,height=None,
                 cfg_scale=None,ddim_eta=None):
-        """ generate an image from the prompt, writing iteration images into the outdir """
+        """
+        Generate an image from the prompt, writing iteration images into the outdir
+        The output is a list of lists in the format: [[filename1,seed1], [filename2,seed2],...]
+        """
         outdir     = outdir     or self.outdir
         steps      = steps      or self.steps
         seed       = seed       or self.seed

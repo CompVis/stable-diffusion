@@ -51,7 +51,7 @@ def main():
 
     # preload the model
     t2i.load_model()
-    print("\n* Initialization done! Awaiting your command...")
+    print("\n* Initialization done! Awaiting your command (-h for help)...")
 
     log_path   = os.path.join(opt.outdir,"dream_log.txt")
     with open(log_path,'a') as log:
@@ -68,6 +68,7 @@ def main_loop(t2i,parser,log):
             print("goodbye!")
             break
 
+        # rearrange the arguments to mimic how it works in the Dream bot.
         elements = shlex.split(command)
         switches = ['']
         switches_started = False
@@ -81,11 +82,16 @@ def main_loop(t2i,parser,log):
                 switches[0] += el
                 switches[0] += ' '
         switches[0] = switches[0][:len(switches[0])-1]
+
         try:
             opt      = parser.parse_args(switches)
         except SystemExit:
             parser.print_help()
-            pass
+            continue
+        if len(opt.prompt)==0:
+            print("Try again with a prompt!")
+            continue
+
         results = t2i.txt2img(**vars(opt))
         print("Outputs:")
         write_log_message(opt,switches,results,log)
@@ -147,7 +153,7 @@ def create_argv_parser():
                         
     
 def create_cmd_parser():
-    parser = argparse.ArgumentParser(description="Parse terminal input in a discord 'dreambot' fashion")
+    parser = argparse.ArgumentParser(description='Example: dream> a fantastic alien landscape -W1024 -H960 -s100 -n12')
     parser.add_argument('prompt')
     parser.add_argument('-s','--steps',type=int,help="number of steps")
     parser.add_argument('-S','--seed',type=int,help="image seed")
