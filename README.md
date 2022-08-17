@@ -73,7 +73,7 @@ activation steps,the steps to preload the Bert model are:
 
 ~~~~
 (ldm) ~/stable-diffusion$ mkdir ./models/bert
-> python3
+(ldm) ~/stable-diffusion$ python3
 >>> from transformers import BertTokenizerFast
 >>> model = BertTokenizerFast.from_pretrained("bert-base-uncased")
 >>> model.save_pretrained("./models/bert")
