@@ -105,7 +105,7 @@ def create_argv_parser():
     parser.add_argument('-b','--batch',
                         type=int,
                         default=1,
-                        help="number of images to produce iteration (currently not working properly - producing too many images)")
+                        help="number of images to produce per iteration (currently not working properly - producing too many images)")
     parser.add_argument('--sampler',
                         choices=['plms','ddim'],
                         default='plms',
