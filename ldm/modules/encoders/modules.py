@@ -60,7 +60,10 @@ class BERTTokenizer(AbstractEncoder):
         # by running:
         #   from transformers import BertTokenizerFast
         #   BertTokenizerFast.from_pretrained("bert-base-uncased")
-        self.tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased",local_files_only=True)
+        try:
+            self.tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased",local_files_only=True)
+        except OSError:
+            raise SystemExit("* Couldn't load Bert tokenizer files. Try running scripts/preload_models.py from an internet-conected machine.")
         self.device = device
         self.vq_interface = vq_interface
         self.max_length = max_length
