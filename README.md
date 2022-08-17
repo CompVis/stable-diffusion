@@ -29,28 +29,33 @@ fast.
 
 Note that this has only been tested in the Linux environment!
 
-   (ldm) ~/stable-diffusion$ ./scripts/dream.py
-   * Initializing, be patient...
+~~~~
+(ldm) ~/stable-diffusion$ ./scripts/dream.py
+* Initializing, be patient...
+Loading model from models/ldm/text2img-large/model.ckpt
+LatentDiffusion: Running in eps-prediction mode
+DiffusionWrapper has 872.30 M params.
+making attention of type 'vanilla' with 512 in_channels
+Working with z of shape (1, 4, 32, 32) = 4096 dimensions.
+making attention of type 'vanilla' with 512 in_channels
+Loading Bert tokenizer from "models/bert"
+setting sampler to plms
 
-    Loading model from models/ldm/text2img-large/model.ckpt
-    LatentDiffusion: Running in eps-prediction mode
-    DiffusionWrapper has 872.30 M params.
-    making attention of type 'vanilla' with 512 in_channels
-    Working with z of shape (1, 4, 32, 32) = 4096 dimensions.
-    making attention of type 'vanilla' with 512 in_channels
-    Loading Bert tokenizer from "models/bert"
-    setting sampler to plms
+* Initialization done! Awaiting your command...
+dream> ashley judd riding a camel -n2
+Outputs:
+   outputs/txt2img-samples/00009.png: "ashley judd riding a camel" -n2 -S 416354203
+   outputs/txt2img-samples/00010.png: "ashley judd riding a camel" -n2 -S 1362479620
 
-    * Initialization done! Awaiting your command...
-    dream> ashley judd riding a camel -n2
-    Outputs:
-       outputs/txt2img-samples/00009.png: "ashley judd riding a camel" -n2 -S 416354203
-       outputs/txt2img-samples/00010.png: "ashley judd riding a camel" -n2 -S 1362479620
+dream> "your prompt here" -n6 -g
+...
+~~~~
 
-Command-line arguments ("./scripts/dream.py -h") allow you to change
+Command-line arguments (`./scripts/dream.py -h`) allow you to change
 various defaults, and select between the mature stable-diffusion
 weights (512x512) and the older (256x256) latent diffusion weights
-(laion400m).
+(laion400m). Within the script, the switches are (mostly) identical to
+those used in the Discord bot, except you don't need to type "!dream".
 
 ## No need for internet connectivity when loading the model
 
@@ -64,11 +69,13 @@ expedient thing to do was to download the Bert tokenizer in advance,
 and patch stable-diffusion to read it from the local disk. The steps
 to do this are:
 
-  (ldm) ~/stable-diffusion$ mkdir ./models/bert
-  > python3
-  >>> from transformers import BertTokenizerFast
-  >>> model = BertTokenizerFast.from_pretrained("bert-base-uncased")
-  >>> model.save_pretrained("./models/bert")
+~~~~
+(ldm) ~/stable-diffusion$ mkdir ./models/bert
+> python3
+>>> from transformers import BertTokenizerFast
+>>> model = BertTokenizerFast.from_pretrained("bert-base-uncased")
+>>> model.save_pretrained("./models/bert")
+~~~~
 
 (Make sure you are in the stable-diffusion directory when you do
 this!)
@@ -85,9 +92,10 @@ I added the requirement for torchmetrics to environment.yaml.
 
 Follow the directions from the original README, which starts below, to
 configure the environment and install requirements. For support,
-please use this repository's GitHub Issues tracking service.
+please use this repository's GitHub Issues tracking service. Feel free
+to send me an email if you use and like the script.
 
-Author: Lincoln D. Stein <lincoln.stein@gmail.com>
+*Author:* Lincoln D. Stein <lincoln.stein@gmail.com>
 
 # Original README from CompViz/stable-diffusion
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
