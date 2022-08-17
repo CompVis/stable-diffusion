@@ -4,7 +4,7 @@ import readline
 import argparse
 import shlex
 import atexit
-from os import path
+import os
 
 def main():
     arg_parser = create_argv_parser()
@@ -41,6 +41,10 @@ def main():
               weights=weights,
               config=config)
 
+    # make sure the output directory exists
+    if not os.path.exists(opt.outdir):
+        os.makedirs(opt.outdir)
+        
     # gets rid of annoying messages about random seed
     logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
 
@@ -48,7 +52,7 @@ def main():
     t2i.load_model()
     print("\n* Initialization done! Awaiting your command...")
 
-    log_path   = path.join(opt.outdir,"dream_log.txt")
+    log_path   = os.path.join(opt.outdir,"dream_log.txt")
     with open(log_path,'a') as log:
         cmd_parser = create_cmd_parser()
         main_loop(t2i,cmd_parser,log)
@@ -132,7 +136,7 @@ def create_cmd_parser():
     return parser
 
 def load_history():
-    histfile = path.join(path.expanduser('~'),".dream_history")
+    histfile = os.path.join(os.path.expanduser('~'),".dream_history")
     try:
         readline.read_history_file(histfile)
         readline.set_history_length(1000)

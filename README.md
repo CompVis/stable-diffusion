@@ -86,6 +86,29 @@ If you don't like this change, just copy over the file
 ldm/modules/encoders/modules.py from the CompVis/stable-diffusion
 repository.
 
+In addition, I have found that the Kornia library needs to do a
+one-time download of its own. On a non-internet connected system, you
+may see an error message like this one when running dream.py for the
+first time
+
+~~~~
+Downloading: "https://github.com/DagnyT/hardnet/raw/master/pretrained/train_liberty_with_aug/checkpoint_liberty_with_aug.pth" to /u/lstein/.cache/torch/hub/checkpoints/checkpoint_liberty_with_aug.pth
+Traceback (most recent call last):
+  File "/u/lstein/.conda/envs/ldm/lib/python3.8/urllib/request.py", line 1350, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "/u/lstein/.conda/envs/ldm/lib/python3.8/http/client.py", line 1255, in request
+...
+~~~~
+
+The fix is to log into an internet-connected machine and manually
+download the file into the required location. On my system, the incantation was:
+
+~~~~
+(ldm) ~/stable-diffusion$ mkdir -p /u/lstein/.cache/torch/hub/checkpoints/
+(ldm) ~/stable-diffusion$ wget https://github.com/DagnyT/hardnet/raw/master/pretrained/train_liberty_with_aug/checkpoint_liberty_with_aug.pth \
+                            -O /u/lstein/.cache/torch/hub/checkpoints/checkpoint_liberty_with_aug.pth
+~~~~
+
 ## Minor fixes
 
 I added the requirement for torchmetrics to environment.yaml.
