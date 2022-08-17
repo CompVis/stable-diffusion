@@ -7,6 +7,7 @@ import atexit
 import os
 
 def main():
+    ''' Initialize command-line parsers and the diffusion model '''
     arg_parser = create_argv_parser()
     opt        = arg_parser.parse_args()
     if opt.laion400m:
@@ -59,6 +60,7 @@ def main():
         log.close()
 
 def main_loop(t2i,parser,log):
+    ''' prompt/read/execute loop '''
     while True:
         try:
             command = input("dream> ")
@@ -86,13 +88,35 @@ def main_loop(t2i,parser,log):
             pass
         results = t2i.txt2img(**vars(opt))
         print("Outputs:")
-        for r in results:
-            log_message = " ".join(['   ',str(r[0])+':',
-                                    f'"{switches[0]}"',
-                                    *switches[1:],f'-S {r[1]}'])
-            print(log_message)
-            log.write(log_message+"\n")
-            log.flush()
+        write_log_message(opt,switches,results,log)
+
+def write_log_message(opt,switches,results,logfile):
+    ''' logs the name of the output image, its prompt and seed to both the terminal and the log file '''
+    if opt.grid:
+        _output_for_grid(switches,results,logfile)
+    else:
+        _output_for_individual(switches,results,logfile)
+
+def _output_for_individual(switches,results,logfile):
+    for r in results:
+        log_message = " ".join(['   ',str(r[0])+':',
+                                f'"{switches[0]}"',
+                                *switches[1:],f'-S {r[1]}'])
+        print(log_message)
+        logfile.write(log_message+"\n")
+        logfile.flush()
+
+def _output_for_grid(switches,results,logfile):
+    first_seed = results[0][1]
+    log_message = " ".join(['   ',str(results[0][0])+':',
+                            f'"{switches[0]}"',
+                            *switches[1:],f'-S {results[0][1]}'])
+    print(log_message)
+    logfile.write(log_message+"\n")
+    all_seeds   = [row[1] for row in results]
+    log_message = f'    seeds for individual rows: {all_seeds}'
+    print(log_message)
+    logfile.write(log_message+"\n")
 
 def create_argv_parser():
     parser = argparse.ArgumentParser(description="Parse script's command line args")
@@ -133,6 +157,7 @@ def create_cmd_parser():
     parser.add_argument('-H','--height',type=int,help="image height, multiple of 64")
     parser.add_argument('-C','--cfg_scale',type=float,help="prompt configuration scale (7.5)")
     parser.add_argument('-g','--grid',action='store_true',help="generate a grid")
+    parser.add_argument('-i','--individual',action='store_true',help="generate individual files (default)")
     return parser
 
 def load_history():

@@ -57,57 +57,40 @@ weights (512x512) and the older (256x256) latent diffusion weights
 (laion400m). Within the script, the switches are (mostly) identical to
 those used in the Discord bot, except you don't need to type "!dream".
 
-## No need for internet connectivity when loading the model
+## Workaround for machines with limited internet connectivity
 
 My development machine is a GPU node in a high-performance compute
 cluster which has no connection to the internet. During model
 initialization, stable-diffusion tries to download the Bert tokenizer
-model from huggingface.co. This obviously didn't work for me.
+and a file needed by the kornia library.  This obviously didn't work
+for me.
 
-Rather than set up a hugging face local hub, I found the most
-expedient thing to do was to download the Bert tokenizer in advance
-from a machine that had internet access (in this case, the head node
-of the cluster), and patch stable-diffusion to read it from the local
-disk. After you have completed the conda environment creation and
-activation steps,the steps to preload the Bert model are:
-
-~~~~
-(ldm) ~/stable-diffusion$ mkdir ./models/bert
-(ldm) ~/stable-diffusion$ python3
->>> from transformers import BertTokenizerFast
->>> model = BertTokenizerFast.from_pretrained("bert-base-uncased")
->>> model.save_pretrained("./models/bert")
-~~~~
-
-(Make sure you are in the stable-diffusion directory when you do
-this!)
-
-If you don't like this change, just copy over the file
-ldm/modules/encoders/modules.py from the CompVis/stable-diffusion
-repository.
-
-In addition, I have found that the Kornia library needs to do a
-one-time download of its own. On a non-internet connected system, you
-may see an error message like this one when running dream.py for the
-first time
+To work around this, I have modified ldm/modules/encoders/modules.py
+to look for locally cached Bert files rather than attempting to
+download them. For this to work, you must run
+"scripts/preload_models.py" once from an internet-connected machine
+prior to running the code on an isolated one. This assumes that both
+machines share a common network-mounted filesystem with a common
+.cache directory.
 
 ~~~~
+(ldm) ~/stable-diffusion$ python3 ./scripts/preload_models.py
+preloading bert tokenizer...
+Downloading: 100%|██████████████████████████████████| 28.0/28.0 [00:00<00:00, 49.3kB/s]
+Downloading: 100%|██████████████████████████████████| 226k/226k [00:00<00:00, 2.79MB/s]
+Downloading: 100%|██████████████████████████████████| 455k/455k [00:00<00:00, 4.36MB/s]
+Downloading: 100%|██████████████████████████████████| 570/570 [00:00<00:00, 477kB/s]
+...success
+preloading kornia requirements...
 Downloading: "https://github.com/DagnyT/hardnet/raw/master/pretrained/train_liberty_with_aug/checkpoint_liberty_with_aug.pth" to /u/lstein/.cache/torch/hub/checkpoints/checkpoint_liberty_with_aug.pth
-Traceback (most recent call last):
-  File "/u/lstein/.conda/envs/ldm/lib/python3.8/urllib/request.py", line 1350, in do_open
-    h.request(req.get_method(), req.selector, req.data, headers,
-  File "/u/lstein/.conda/envs/ldm/lib/python3.8/http/client.py", line 1255, in request
-...
+100%|███████████████████████████████████████████████| 5.10M/5.10M [00:00<00:00, 101MB/s]
+...success
 ~~~~
 
-The fix is to log into an internet-connected machine and manually
-download the file into the required location. On my system, the incantation was:
-
-~~~~
-(ldm) ~/stable-diffusion$ mkdir -p /u/lstein/.cache/torch/hub/checkpoints/
-(ldm) ~/stable-diffusion$ wget https://github.com/DagnyT/hardnet/raw/master/pretrained/train_liberty_with_aug/checkpoint_liberty_with_aug.pth \
-                            -O /u/lstein/.cache/torch/hub/checkpoints/checkpoint_liberty_with_aug.pth
-~~~~
+If you don't need this change and want to download the files just in
+time, copy over the file ldm/modules/encoders/modules.py from the
+CompVis/stable-diffusion repository. Or you can run preload_models.py
+on the target machine.
 
 ## Minor fixes
 

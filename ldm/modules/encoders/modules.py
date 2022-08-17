@@ -55,10 +55,12 @@ class BERTTokenizer(AbstractEncoder):
     def __init__(self, device="cuda", vq_interface=True, max_length=77):
         super().__init__()
         from transformers import BertTokenizerFast  # TODO: add to reuquirements
-        fn       = 'models/bert'
-        print(f'Loading Bert tokenizer from "{fn}"')
-#        self.tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
-        self.tokenizer = BertTokenizerFast.from_pretrained(fn,local_files_only=True)
+        # Modified to allow to run on non-internet connected compute nodes.
+        # Model needs to be loaded into cache from an internet-connected machine
+        # by running:
+        #   from transformers import BertTokenizerFast
+        #   BertTokenizerFast.from_pretrained("bert-base-uncased")
+        self.tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased",local_files_only=True)
         self.device = device
         self.vq_interface = vq_interface
         self.max_length = max_length
@@ -235,4 +237,3 @@ if __name__ == "__main__":
     from ldm.util import count_params
     model = FrozenCLIPEmbedder()
     count_params(model, verbose=True)
-

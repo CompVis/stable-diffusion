@@ -52,8 +52,8 @@ from torchvision.utils import make_grid
 from pytorch_lightning import seed_everything
 from torch import autocast
 from contextlib import contextmanager, nullcontext
-from time import time
-from math import sqrt
+import time
+import math
 
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
@@ -72,6 +72,7 @@ class T2I:
     seed
     sampler
     grid
+    individual
     width
     height
     cfg_scale
@@ -84,9 +85,10 @@ class T2I:
                  outdir="outputs/txt2img-samples",
                  batch=1,
                  iterations = 1,
-                 width=256,   # change to 512 for stable diffusion
-                 height=256,  # change to 512 for stable diffusion
+                 width=512,
+                 height=512,
                  grid=False,
+                 individual=None, # redundant
                  steps=50,
                  seed=None,
                  cfg_scale=7.5,
@@ -122,7 +124,7 @@ class T2I:
         else:
             self.seed = seed
     def txt2img(self,prompt,outdir=None,batch=None,iterations=None,
-                steps=None,seed=None,grid=None,width=None,height=None,
+                steps=None,seed=None,grid=None,individual=None,width=None,height=None,
                 cfg_scale=None,ddim_eta=None):
         """ generate an image from the prompt, writing iteration images into the outdir """
         outdir     = outdir     or self.outdir
@@ -134,13 +136,16 @@ class T2I:
         ddim_eta   = ddim_eta   or self.ddim_eta
         batch      = batch or self.batch
         iterations = iterations or self.iterations
-        if batch > 1:
-            iterations = 1
 
         model = self.load_model()  # will instantiate the model or return it from cache
 
+        # grid and individual are mutually exclusive, with individual taking priority.
+        # not necessary, but needed for compatability with dream bot
         if (grid is None):
             grid = self.grid
+        if individual:
+            grid = False
+        
         data = [batch * [prompt]]
 
         # make directories and establish names for the output files
@@ -159,6 +164,8 @@ class T2I:
         sampler         = self.sampler
         images = list()
         seeds  = list()
+
+        tic    = time.time()
         
         with torch.no_grad():
             with precision_scope("cuda"):
@@ -171,7 +178,7 @@ class T2I:
                             if cfg_scale != 1.0:
                                 uc = model.get_learned_conditioning(batch * [""])
                             if isinstance(prompts, tuple):
-                                    prompts = list(prompts)
+                                prompts = list(prompts)
                             c = model.get_learned_conditioning(prompts)
                             shape = [self.latent_channels, height // self.downsampling_factor, width // self.downsampling_factor]
                             samples_ddim, _ = sampler.sample(S=steps,
@@ -187,20 +194,21 @@ class T2I:
                             x_samples_ddim = model.decode_first_stage(samples_ddim)
                             x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
 
-                            for x_sample in x_samples_ddim:
-                                if grid:
-                                    all_samples.append(x_samples_ddim)
-                                    seeds.append(seed)
-                                else:
+                            if not grid:
+                                for x_sample in x_samples_ddim:
                                     x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                                     filename = os.path.join(outdir, f"{base_count:05}.png")
                                     Image.fromarray(x_sample.astype(np.uint8)).save(filename)
                                     images.append([filename,seed])
                                     base_count += 1
-                        seed = self._new_seed()
+                            else:
+                                all_samples.append(x_samples_ddim)
+                                seeds.append(seed)
 
+                        seed = self._new_seed()
+ 
                     if grid:
-                        n_rows = int(sqrt(batch * iterations))
+                        n_rows = batch if batch>1 else int(math.sqrt(batch * iterations))
                         # save as grid
                         grid = torch.stack(all_samples, 0)
                         grid = rearrange(grid, 'n b c h w -> (n b) c h w')
@@ -212,6 +220,9 @@ class T2I:
                         Image.fromarray(grid.astype(np.uint8)).save(filename)
                         for s in seeds:
                             images.append([filename,s])
+
+        toc = time.time()
+        print(f'{batch * iterations} images generated in',"%4.2fs"% (toc-tic))
 
         return images
         
