@@ -55,7 +55,10 @@ class BERTTokenizer(AbstractEncoder):
     def __init__(self, device="cuda", vq_interface=True, max_length=77):
         super().__init__()
         from transformers import BertTokenizerFast  # TODO: add to reuquirements
-        self.tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
+        fn       = 'models/bert'
+        print(f'Loading Bert tokenizer from "{fn}"')
+#        self.tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
+        self.tokenizer = BertTokenizerFast.from_pretrained(fn,local_files_only=True)
         self.device = device
         self.vq_interface = vq_interface
         self.max_length = max_length
@@ -232,3 +235,4 @@ if __name__ == "__main__":
     from ldm.util import count_params
     model = FrozenCLIPEmbedder()
     count_params(model, verbose=True)
+

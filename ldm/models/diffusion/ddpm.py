@@ -255,7 +255,7 @@ class DDPM(pl.LightningModule):
         b = shape[0]
         img = torch.randn(shape, device=device)
         intermediates = [img]
-        for i in tqdm(reversed(range(0, self.num_timesteps)), desc='Sampling t', total=self.num_timesteps):
+        for i in tqdm(reversed(range(0, self.num_timesteps)), desc='Sampling t', total=self.num_timesteps, dynamic_ncols=True):
             img = self.p_sample(img, torch.full((b,), i, device=device, dtype=torch.long),
                                 clip_denoised=self.clip_denoised)
             if i % self.log_every_t == 0 or i == self.num_timesteps - 1:

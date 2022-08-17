@@ -1,4 +1,95 @@
 # Stable Diffusion
+
+This is a fork of CompVis/stable-diffusion, the wonderful open source
+text-to-image generator.
+
+The original has been modified in several minor ways:
+
+## Simplified API for text to image generation
+
+There is now a simplified API for text to image generation, which
+lets you create images from a prompt in just three lines of code:
+
+~~~~
+from ldm.simplet2i import T2I
+model = T2I()
+model.text2image("a unicorn in manhattan")
+~~~~
+
+Please see ldm/simplet2i.py for more information.
+
+## Interactive command-line interface similar to the Discord bot
+
+There is now a command-line script, located in scripts/dream.py, which
+provides an interactive interface to image generation similar to
+the "dream mothership" bot that Stable AI provided on its Discord
+server.  The advantage of this is that the lengthy model
+initialization only happens once. After that image generation is
+fast.
+
+Note that this has only been tested in the Linux environment!
+
+   (ldm) ~/stable-diffusion$ ./scripts/dream.py
+   * Initializing, be patient...
+
+    Loading model from models/ldm/text2img-large/model.ckpt
+    LatentDiffusion: Running in eps-prediction mode
+    DiffusionWrapper has 872.30 M params.
+    making attention of type 'vanilla' with 512 in_channels
+    Working with z of shape (1, 4, 32, 32) = 4096 dimensions.
+    making attention of type 'vanilla' with 512 in_channels
+    Loading Bert tokenizer from "models/bert"
+    setting sampler to plms
+
+    * Initialization done! Awaiting your command...
+    dream> ashley judd riding a camel -n2
+    Outputs:
+       outputs/txt2img-samples/00009.png: "ashley judd riding a camel" -n2 -S 416354203
+       outputs/txt2img-samples/00010.png: "ashley judd riding a camel" -n2 -S 1362479620
+
+Command-line arguments ("./scripts/dream.py -h") allow you to change
+various defaults, and select between the mature stable-diffusion
+weights (512x512) and the older (256x256) latent diffusion weights
+(laion400m).
+
+## No need for internet connectivity when loading the model
+
+My development machine is a GPU node in a high-performance compute
+cluster which has no connection to the internet. During model
+initialization, stable-diffusion tries to download the Bert tokenizer
+model from huggingface.co. This obviously didn't work for me.
+
+Rather than set up a hugging face local hub, I found the most
+expedient thing to do was to download the Bert tokenizer in advance,
+and patch stable-diffusion to read it from the local disk. The steps
+to do this are:
+
+  (ldm) ~/stable-diffusion$ mkdir ./models/bert
+  > python3
+  >>> from transformers import BertTokenizerFast
+  >>> model = BertTokenizerFast.from_pretrained("bert-base-uncased")
+  >>> model.save_pretrained("./models/bert")
+
+(Make sure you are in the stable-diffusion directory when you do
+this!)
+
+If you don't like this change, just copy over the file
+ldm/modules/encoders/modules.py from the CompVis/stable-diffusion
+repository.
+
+## Minor fixes
+
+I added the requirement for torchmetrics to environment.yaml.
+
+## Installation and support
+
+Follow the directions from the original README, which starts below, to
+configure the environment and install requirements. For support,
+please use this repository's GitHub Issues tracking service.
+
+Author: Lincoln D. Stein <lincoln.stein@gmail.com>
+
+# Original README from CompViz/stable-diffusion
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
 
 [**High-Resolution Image Synthesis with Latent Diffusion Models**](https://arxiv.org/abs/2112.10752)<br/>

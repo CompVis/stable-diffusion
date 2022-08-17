@@ -135,7 +135,7 @@ class DDIMSampler(object):
         total_steps = timesteps if ddim_use_original_steps else timesteps.shape[0]
         print(f"Running DDIM Sampling with {total_steps} timesteps")
 
-        iterator = tqdm(time_range, desc='DDIM Sampler', total=total_steps)
+        iterator = tqdm(time_range, desc='DDIM Sampler', total=total_steps, dynamic_ncols=True)
 
         for i, step in enumerate(iterator):
             index = total_steps - i - 1
