@@ -136,6 +136,18 @@ parser.add_argument(
     default=42,
     help="the seed (for reproducible sampling)",
 )
+parser.add_argument(
+    "--small_batch",
+    action='store_true',
+    help="Reduce inference time when generate a smaller batch of images",
+)
+parser.add_argument(
+    "--precision",
+    type=str,
+    help="evaluate at this precision",
+    choices=["full", "autocast"],
+    default="full"
+)
 opt = parser.parse_args()
 
 tic = time.time()
@@ -170,6 +182,12 @@ for key in lo:
 config = OmegaConf.load(f"{config}")
 config.modelUNet.params.ddim_steps = opt.ddim_steps
 
+if opt.small_batch:
+    config.modelUNet.params.small_batch = True
+else:
+    config.modelUNet.params.small_batch = False
+
+
 
 model = instantiate_from_config(config.modelUNet)
 _, _ = model.load_state_dict(sd, strict=False)
@@ -182,9 +200,6 @@ modelCS.eval()
 modelFS = instantiate_from_config(config.modelFirstStage)
 _, _ = modelFS.load_state_dict(sd, strict=False)
 modelFS.eval()
-
-precision = "full"
-
 
 start_code = None
 if opt.fixed_code:
@@ -205,14 +220,15 @@ else:
         data = list(chunk(data, batch_size))
 
 
-precision_scope = autocast if (device == "cuda" and precision=="autocast") else nullcontext
+precision_scope = autocast if opt.precision=="autocast" else nullcontext
 with torch.no_grad():
-    with precision_scope("cuda"):
-        all_samples = list()
-        for n in trange(opt.n_iter, desc="Sampling"):
 
-            modelCS.to(device)            
-            for prompts in tqdm(data, desc="data"):
+    all_samples = list()
+    for n in trange(opt.n_iter, desc="Sampling"):
+        for prompts in tqdm(data, desc="data"):
+             with precision_scope("cuda"):
+
+                modelCS.to(device)
                 uc = None
                 if opt.scale != 1.0:
                     uc = modelCS.get_learned_conditioning(batch_size * [""])

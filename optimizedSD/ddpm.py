@@ -34,7 +34,6 @@ class DDPM(pl.LightningModule):
     def __init__(self,
                  timesteps=1000,
                  beta_schedule="linear",
-                 loss_type="l2",
                  ckpt_path=None,
                  ignore_keys=[],
                  load_only_unet=False,
@@ -56,8 +55,6 @@ class DDPM(pl.LightningModule):
                  parameterization="eps",  # all assuming fixed variance schedules
                  scheduler_config=None,
                  use_positional_encodings=False,
-                 learn_logvar=False,
-                 logvar_init=0.,
                  ):
         super().__init__()
         assert parameterization in ["eps", "x0"], 'currently only supporting "eps" and "x0"'
@@ -84,13 +81,6 @@ class DDPM(pl.LightningModule):
             self.init_from_ckpt(ckpt_path, ignore_keys=ignore_keys, only_model=load_only_unet)
         self.register_schedule(given_betas=given_betas, beta_schedule=beta_schedule, timesteps=timesteps,
                                linear_start=linear_start, linear_end=linear_end, cosine_s=cosine_s)
-
-        self.loss_type = loss_type
-
-        self.learn_logvar = learn_logvar
-        self.logvar = torch.full(fill_value=logvar_init, size=(self.num_timesteps,))
-        if self.learn_logvar:
-            self.logvar = nn.Parameter(self.logvar, requires_grad=True)
 
 
     def register_schedule(self, given_betas=None, beta_schedule="linear", timesteps=1000,
@@ -166,88 +156,6 @@ class FirstStage(DDPM):
         for param in self.first_stage_model.parameters():
             param.requires_grad = False
 
-    def delta_border(self, h, w):
-        """
-        :param h: height
-        :param w: width
-        :return: normalized distance to image border,
-         wtith min distance = 0 at border and max dist = 0.5 at image center
-        """
-        lower_right_corner = torch.tensor([h - 1, w - 1]).view(1, 1, 2)
-        arr = self.meshgrid(h, w) / lower_right_corner
-        dist_left_up = torch.min(arr, dim=-1, keepdims=True)[0]
-        dist_right_down = torch.min(1 - arr, dim=-1, keepdims=True)[0]
-        edge_dist = torch.min(torch.cat([dist_left_up, dist_right_down], dim=-1), dim=-1)[0]
-        return edge_dist
-
-    def get_weighting(self, h, w, Ly, Lx, device):
-        weighting = self.delta_border(h, w)
-        weighting = torch.clip(weighting, self.split_input_params["clip_min_weight"],
-                               self.split_input_params["clip_max_weight"], )
-        weighting = weighting.view(1, h * w, 1).repeat(1, 1, Ly * Lx).to(device)
-
-        if self.split_input_params["tie_braker"]:
-            L_weighting = self.delta_border(Ly, Lx)
-            L_weighting = torch.clip(L_weighting,
-                                     self.split_input_params["clip_min_tie_weight"],
-                                     self.split_input_params["clip_max_tie_weight"])
-
-            L_weighting = L_weighting.view(1, 1, Ly * Lx).to(device)
-            weighting = weighting * L_weighting
-        return weighting
-
-    def get_fold_unfold(self, x, kernel_size, stride, uf=1, df=1):  # todo load once not every time, shorten code
-        """
-        :param x: img of size (bs, c, h, w)
-        :return: n img crops of size (n, bs, c, kernel_size[0], kernel_size[1])
-        """
-        bs, nc, h, w = x.shape
-
-        # number of crops in image
-        Ly = (h - kernel_size[0]) // stride[0] + 1
-        Lx = (w - kernel_size[1]) // stride[1] + 1
-
-        if uf == 1 and df == 1:
-            fold_params = dict(kernel_size=kernel_size, dilation=1, padding=0, stride=stride)
-            unfold = torch.nn.Unfold(**fold_params)
-
-            fold = torch.nn.Fold(output_size=x.shape[2:], **fold_params)
-
-            weighting = self.get_weighting(kernel_size[0], kernel_size[1], Ly, Lx, x.device).to(x.dtype)
-            normalization = fold(weighting).view(1, 1, h, w)  # normalizes the overlap
-            weighting = weighting.view((1, 1, kernel_size[0], kernel_size[1], Ly * Lx))
-
-        elif uf > 1 and df == 1:
-            fold_params = dict(kernel_size=kernel_size, dilation=1, padding=0, stride=stride)
-            unfold = torch.nn.Unfold(**fold_params)
-
-            fold_params2 = dict(kernel_size=(kernel_size[0] * uf, kernel_size[0] * uf),
-                                dilation=1, padding=0,
-                                stride=(stride[0] * uf, stride[1] * uf))
-            fold = torch.nn.Fold(output_size=(x.shape[2] * uf, x.shape[3] * uf), **fold_params2)
-
-            weighting = self.get_weighting(kernel_size[0] * uf, kernel_size[1] * uf, Ly, Lx, x.device).to(x.dtype)
-            normalization = fold(weighting).view(1, 1, h * uf, w * uf)  # normalizes the overlap
-            weighting = weighting.view((1, 1, kernel_size[0] * uf, kernel_size[1] * uf, Ly * Lx))
-
-        elif df > 1 and uf == 1:
-            fold_params = dict(kernel_size=kernel_size, dilation=1, padding=0, stride=stride)
-            unfold = torch.nn.Unfold(**fold_params)
-
-            fold_params2 = dict(kernel_size=(kernel_size[0] // df, kernel_size[0] // df),
-                                dilation=1, padding=0,
-                                stride=(stride[0] // df, stride[1] // df))
-            fold = torch.nn.Fold(output_size=(x.shape[2] // df, x.shape[3] // df), **fold_params2)
-
-            weighting = self.get_weighting(kernel_size[0] // df, kernel_size[1] // df, Ly, Lx, x.device).to(x.dtype)
-            normalization = fold(weighting).view(1, 1, h // df, w // df)  # normalizes the overlap
-            weighting = weighting.view((1, 1, kernel_size[0] // df, kernel_size[1] // df, Ly * Lx))
-
-        else:
-            raise NotImplementedError
-
-        return fold, unfold, normalization, weighting
-
 
     @torch.no_grad()
     def decode_first_stage(self, z, predict_cids=False, force_not_quantize=False):
@@ -260,48 +168,10 @@ class FirstStage(DDPM):
         z = 1. / self.scale_factor * z
 
         if hasattr(self, "split_input_params"):
-            if self.split_input_params["patch_distributed_vq"]:
-                ks = self.split_input_params["ks"]  # eg. (128, 128)
-                stride = self.split_input_params["stride"]  # eg. (64, 64)
-                uf = self.split_input_params["vqf"]
-                bs, nc, h, w = z.shape
-                if ks[0] > h or ks[1] > w:
-                    ks = (min(ks[0], h), min(ks[1], w))
-                    print("reducing Kernel")
-
-                if stride[0] > h or stride[1] > w:
-                    stride = (min(stride[0], h), min(stride[1], w))
-                    print("reducing stride")
-
-                fold, unfold, normalization, weighting = self.get_fold_unfold(z, ks, stride, uf=uf)
-
-                z = unfold(z)  # (bn, nc * prod(**ks), L)
-                # 1. Reshape to img shape
-                z = z.view((z.shape[0], -1, ks[0], ks[1], z.shape[-1]))  # (bn, nc, ks[0], ks[1], L )
-
-                # 2. apply model loop over last dim
-                if isinstance(self.first_stage_model, VQModelInterface):
-                    output_list = [self.first_stage_model.decode(z[:, :, :, :, i],
-                                                                 force_not_quantize=predict_cids or force_not_quantize)
-                                   for i in range(z.shape[-1])]
-                else:
-
-                    output_list = [self.first_stage_model.decode(z[:, :, :, :, i])
-                                   for i in range(z.shape[-1])]
-
-                o = torch.stack(output_list, axis=-1)  # # (bn, nc, ks[0], ks[1], L)
-                o = o * weighting
-                # Reverse 1. reshape to img shape
-                o = o.view((o.shape[0], -1, o.shape[-1]))  # (bn, nc * ks[0] * ks[1], L)
-                # stitch crops together
-                decoded = fold(o)
-                decoded = decoded / normalization  # norm is shape (1, 1, h, w)
-                return decoded
+            if isinstance(self.first_stage_model, VQModelInterface):
+                return self.first_stage_model.decode(z, force_not_quantize=predict_cids or force_not_quantize)
             else:
-                if isinstance(self.first_stage_model, VQModelInterface):
-                    return self.first_stage_model.decode(z, force_not_quantize=predict_cids or force_not_quantize)
-                else:
-                    return self.first_stage_model.decode(z)
+                return self.first_stage_model.decode(z)
 
         else:
             if isinstance(self.first_stage_model, VQModelInterface):
@@ -415,6 +285,7 @@ class UNet(DDPM):
                  conditioning_key=None,
                  scale_factor=1.0,
                  ddim_steps = 50,
+                 small_batch = False,
                  scale_by_std=False,
                  *args, **kwargs):
         self.num_timesteps_cond = default(num_timesteps_cond, 1)
@@ -444,6 +315,7 @@ class UNet(DDPM):
         self.model2 = DiffusionWrapperOut(self.unetConfigDecode)
         self.model1.eval()
         self.model2.eval()
+        self.small_batch = small_batch
         self.restarted_from_ckpt = False
         if ckpt_path is not None:
             self.init_from_ckpt(ckpt_path, ignore_keys)
@@ -471,26 +343,21 @@ class UNet(DDPM):
             print(f"setting self.scale_factor to {self.scale_factor}")
             print("### USING STD-RESCALING ###")
 
-    def register_schedule(self,
-                          given_betas=None, beta_schedule="linear", timesteps=1000,
-                          linear_start=1e-4, linear_end=2e-2, cosine_s=8e-3):
-        super().register_schedule(given_betas, beta_schedule, timesteps, linear_start, linear_end, cosine_s)
 
-        self.shorten_cond_schedule = self.num_timesteps_cond > 1
-        if self.shorten_cond_schedule:
-            self.make_cond_schedule()
-    
     def apply_model(self, x_noisy, t, cond, return_ids=False):
           
         self.model1.to("cuda")
-
-        h,emb,hs = self.model1(x_noisy[0:2], t[:2], cond[:2])
+        step = 1
+        if self.small_batch:
+            step = 2
+        h,emb,hs = self.model1(x_noisy[0:step], t[:step], cond[:step])
         bs = cond.shape[0]
+        
         assert bs%2 == 0
         lenhs = len(hs)
 
-        for i in range(2,bs,2):
-            h_temp,emb_temp,hs_temp = self.model1(x_noisy[i:i+2], t[i:i+2], cond[i:i+2])
+        for i in range(step,bs,step):
+            h_temp,emb_temp,hs_temp = self.model1(x_noisy[i:i+step], t[i:i+step], cond[i:i+step])
             h = torch.cat((h,h_temp))
             emb = torch.cat((emb,emb_temp))
             for j in range(lenhs):
@@ -499,13 +366,13 @@ class UNet(DDPM):
         self.model1.to("cpu")
         self.model2.to("cuda")
         
-        hs_temp = [hs[j][:2] for j in range(lenhs)]
-        x_recon = self.model2(h[:2],emb[:2],x_noisy.dtype,hs_temp,cond[:2])
+        hs_temp = [hs[j][:step] for j in range(lenhs)]
+        x_recon = self.model2(h[:step],emb[:step],x_noisy.dtype,hs_temp,cond[:step])
 
-        for i in range(2,bs,2):
+        for i in range(step,bs,step):
 
-            hs_temp = [hs[j][i:i+2] for j in range(lenhs)]
-            x_recon1 = self.model2(h[i:i+2],emb[i:i+2],x_noisy.dtype,hs_temp,cond[i:i+2])
+            hs_temp = [hs[j][i:i+step] for j in range(lenhs)]
+            x_recon1 = self.model2(h[i:i+step],emb[i:i+step],x_noisy.dtype,hs_temp,cond[i:i+step])
             x_recon = torch.cat((x_recon, x_recon1))
 
         self.model2.to("cpu")
@@ -528,18 +395,12 @@ class UNet(DDPM):
                                                   num_ddpm_timesteps=self.num_timesteps,verbose=verbose)
         alphas_cumprod = self.alphas_cumprod
         assert alphas_cumprod.shape[0] == self.num_timesteps, 'alphas have to be defined for each timestep'
-        to_torch = lambda x: x.clone().detach().to(torch.float32).to(self.device)
+        to_torch = lambda x: x.to(self.device)
 
         self.register_buffer1('betas', to_torch(self.betas))
         self.register_buffer1('alphas_cumprod', to_torch(alphas_cumprod))
         self.register_buffer1('alphas_cumprod_prev', to_torch(self.alphas_cumprod_prev))
-
-        # calculations for diffusion q(x_t | x_{t-1}) and others
-        self.register_buffer1('sqrt_alphas_cumprod', to_torch(np.sqrt(alphas_cumprod.cpu())))
         self.register_buffer1('sqrt_one_minus_alphas_cumprod', to_torch(np.sqrt(1. - alphas_cumprod.cpu())))
-        self.register_buffer1('log_one_minus_alphas_cumprod', to_torch(np.log(1. - alphas_cumprod.cpu())))
-        self.register_buffer1('sqrt_recip_alphas_cumprod', to_torch(np.sqrt(1. / alphas_cumprod.cpu())))
-        self.register_buffer1('sqrt_recipm1_alphas_cumprod', to_torch(np.sqrt(1. / alphas_cumprod.cpu() - 1)))
 
         # ddim sampling parameters
         ddim_sigmas, ddim_alphas, ddim_alphas_prev = make_ddim_sampling_parameters(alphacums=self.alphas_cumprod.cpu(),

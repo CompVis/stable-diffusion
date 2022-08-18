@@ -1,20 +1,30 @@
-# UPDATE
+# NEW UPDATE
 
-The code can now generate images in batches which reduce the inference time for a single 512x512 image on a RTX 2060 from 75 to 40 seconds!
+The code can now generate _512x512 images in 40 second per image while using less than 5Gb VRAM. And with the entire 6Gb VRAM, it can generate upto 708x512 images._
+
+# OLD UPDATE
+
+The code can now generate images in batches which reduces the inference time for a single 512x512 image on a RTX 2060 from 75 to 40 seconds!
 
 # Optimized Stable Diffusion (Sort of)
 
 - This repo is a modified version of the Stable Diffusion repo, modifed to use lesser VRAM than the original by sacrificing on inference speed. It can generate _512x512 images from a prompt on a 6Gb VRAM GPU in 40 seconds per image_ (RTX 2060 in my case). This is not possible with the original repo on a 6Gb GPU.
 
-- To achieve least inference time per image, use the maximum batch size (--n_samples) possible that can fit in the GPU (I can get a maximum batch size of 6 in the case of RTX 2060)
+- To achieve the inference time of 40 seconds per image, use the maximum batch size `--n_samples` that can fit on the GPU (I can get a maximum batch size of 20 in the case of RTX 2060).
+
+- The maximum image size possible on RTX 2060 6Gb is 704x512 with the max batch size of 4.
+
+- If you get a CUDA out of memory error, try reducing the batch size `--n_samples`. If it doesn't work, the other option is to reduce the image width `--W` or height `--H` or both.
+
+- If you want to generate a small batch of images (less than 6 on RTX 2060) use the `--small_batch` flag. Generating a small batch without this flag will increase the inference time to 60 seconds per image. Using this flag will limit the max image size to 512x512 in 6Gb VRAM
 
 - All the modified files are in the [optimizedSD](optimizedSD) folder, so if you have already installed the original repo, you can just download and copy this folder into the orignal repo instead of cloning the entire repo.
 
 - You can also clone this repo and follow the same installation steps as the original written below (mainly creating the conda env and placing the weights at the specified location).
 
-- For example, the following command will generate 12 512x512 images:
+- For example, the following command will generate 20 512x512 images:
 
-`python optimizedSD/optimized_txt2img.py --prompt "Cyberpunk style image of a Telsa car reflection in rain" --H 512 --W 512 --seed 27 --n_iter 2 --n_samples 6 --ddim_steps 50`
+`python optimizedSD/optimized_txt2img.py --prompt "Cyberpunk style image of a Telsa car reflection in rain" --H 512 --W 512 --seed 27 --n_iter 2 --n_samples 10 --ddim_steps 50`
 
 ```commandline
 usage: optimizedSD/optimized_txt2img.py [-h] [--prompt [PROMPT]] [--outdir [OUTDIR]] [--skip_grid] [--skip_save] [--ddim_steps DDIM_STEPS] [--fixed_code] [--ddim_eta DDIM_ETA] [--n_iter N_ITER] [--H H] [--W W] [--C C] [--f F] [--n_samples N_SAMPLES] [--n_rows N_ROWS]
@@ -29,6 +39,7 @@ optional arguments:
   --fixed_code          if enabled, uses the same starting code across samples
   --ddim_eta DDIM_ETA   ddim eta (eta=0.0 corresponds to deterministic sampling
   --n_iter N_ITER       sample this often
+  --small_batch         use to reduce inference time for a small batch from 60 to 40 seconds
   --H H                 image height, in pixel space
   --W W                 image width, in pixel space
   --C C                 latent channels
