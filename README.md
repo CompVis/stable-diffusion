@@ -10,7 +10,7 @@
 
 **CVPR '22 Oral**
 
-which is available on [GitHub](https://github.com/CompVis/latent-diffusion). [arXiv](https://arxiv.org/abs/2112.10752). [Project page](https://ommer-lab.com/research/latent-diffusion-models/)
+which is available on [GitHub](https://github.com/CompVis/latent-diffusion). PDF at [arXiv](https://arxiv.org/abs/2112.10752). Please also visit our [Project page](https://ommer-lab.com/research/latent-diffusion-models/).
 
 ![txt2img-stable2](assets/stable-samples/txt2img/merged-0006.png)
 [Stable Diffusion](#stable-diffusion-v1) is a latent text-to-image diffusion
