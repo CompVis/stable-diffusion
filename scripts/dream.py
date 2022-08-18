@@ -1,10 +1,15 @@
 #!/usr/bin/env python
-
-import readline
 import argparse
 import shlex
 import atexit
 import os
+
+# readline will be disabled on windows systems
+try:
+    import readline
+    readline_available = True
+except:
+    readline_available = False
 
 debugging = False
 
@@ -26,7 +31,8 @@ def main():
         weights = "models/ldm/stable-diffusion-v1/model.ckpt"
 
     # command line history will be stored in a file called "~/.dream_history"
-    setup_readline()
+    if readline_available:
+        setup_readline()
 
     print("* Initializing, be patient...\n")
     from pytorch_lightning import logging
@@ -174,80 +180,81 @@ def create_cmd_parser():
     parser.add_argument('-f','--strength',default=0.75,type=float,help="strength for noising/unnoising. 0.0 preserves image exactly, 1.0 replaces it completely")
     return parser
 
-def setup_readline():
-    readline.set_completer(Completer(['--steps','-s','--seed','-S','--iterations','-n','--batch_size','-b',
-                                      '--width','-W','--height','-H','--cfg_scale','-C','--grid','-g',
-                                      '--individual','-i','--init_img','-I','--strength','-f']).complete)
-    readline.set_completer_delims(" ")
-    readline.parse_and_bind('tab: complete')
-    load_history()
+if readline_available:
+    def setup_readline():
+        readline.set_completer(Completer(['--steps','-s','--seed','-S','--iterations','-n','--batch_size','-b',
+                                          '--width','-W','--height','-H','--cfg_scale','-C','--grid','-g',
+                                          '--individual','-i','--init_img','-I','--strength','-f']).complete)
+        readline.set_completer_delims(" ")
+        readline.parse_and_bind('tab: complete')
+        load_history()
 
-def load_history():
-    histfile = os.path.join(os.path.expanduser('~'),".dream_history")
-    try:
-        readline.read_history_file(histfile)
-        readline.set_history_length(1000)
-    except FileNotFoundError:
-        pass
-    atexit.register(readline.write_history_file,histfile)
+    def load_history():
+        histfile = os.path.join(os.path.expanduser('~'),".dream_history")
+        try:
+            readline.read_history_file(histfile)
+            readline.set_history_length(1000)
+        except FileNotFoundError:
+            pass
+        atexit.register(readline.write_history_file,histfile)
 
-class Completer():
-    def __init__(self,options):
-        self.options = sorted(options)
-        return
+    class Completer():
+        def __init__(self,options):
+            self.options = sorted(options)
+            return
 
-    def complete(self,text,state):
-        if text.startswith('-I') or text.startswith('--init_img'):
-            return self._image_completions(text,state)
-        
-        response = None
-        if state == 0:
-            # This is the first time for this text, so build a match list.
-            if text:
-                self.matches = [s 
-                                for s in self.options
-                                if s and s.startswith(text)]
+        def complete(self,text,state):
+            if text.startswith('-I') or text.startswith('--init_img'):
+                return self._image_completions(text,state)
+
+            response = None
+            if state == 0:
+                # This is the first time for this text, so build a match list.
+                if text:
+                    self.matches = [s 
+                                    for s in self.options
+                                    if s and s.startswith(text)]
+                else:
+                    self.matches = self.options[:]
+
+            # Return the state'th item from the match list,
+            # if we have that many.
+            try:
+                response = self.matches[state]
+            except IndexError:
+                response = None
+            return response
+
+        def _image_completions(self,text,state):
+            # get the path so far
+            if text.startswith('-I'):
+                path = text.replace('-I','',1).lstrip()
+            elif text.startswith('--init_img='):
+                path = text.replace('--init_img=','',1).lstrip()
+
+            matches  = list()
+
+            path = os.path.expanduser(path)
+            if len(path)==0:
+                matches.append(text+'./')
             else:
-                self.matches = self.options[:]
-        
-        # Return the state'th item from the match list,
-        # if we have that many.
-        try:
-            response = self.matches[state]
-        except IndexError:
-            response = None
-        return response
+                dir  = os.path.dirname(path)
+                dir_list = os.listdir(dir)
+                for n in dir_list:
+                    if n.startswith('.') and len(n)>1:
+                        continue
+                    full_path = os.path.join(dir,n)
+                    if full_path.startswith(path):
+                        if os.path.isdir(full_path):
+                            matches.append(os.path.join(os.path.dirname(text),n)+'/')
+                        elif n.endswith('.png'):
+                            matches.append(os.path.join(os.path.dirname(text),n))
 
-    def _image_completions(self,text,state):
-        # get the path so far
-        if text.startswith('-I'):
-            path = text.replace('-I','',1).lstrip()
-        elif text.startswith('--init_img='):
-            path = text.replace('--init_img=','',1).lstrip()
-
-        matches  = list()
-
-        path = os.path.expanduser(path)
-        if len(path)==0:
-            matches.append(text+'./')
-        else:
-            dir  = os.path.dirname(path)
-            dir_list = os.listdir(dir)
-            for n in dir_list:
-                if n.startswith('.') and len(n)>1:
-                    continue
-                full_path = os.path.join(dir,n)
-                if full_path.startswith(path):
-                    if os.path.isdir(full_path):
-                        matches.append(os.path.join(os.path.dirname(text),n)+'/')
-                    elif n.endswith('.png'):
-                        matches.append(os.path.join(os.path.dirname(text),n))
-                
-        try:
-            response = matches[state]
-        except IndexError:
-            response = None
-        return response
+            try:
+                response = matches[state]
+            except IndexError:
+                response = None
+            return response
         
 
 if __name__ == "__main__":
