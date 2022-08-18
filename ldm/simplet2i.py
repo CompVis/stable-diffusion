@@ -8,7 +8,7 @@ t2i = T2I(outdir      = <path>        // outputs/txt2img-samples
           model       = <path>        // models/ldm/stable-diffusion-v1/model.ckpt
           config      = <path>        // default="configs/stable-diffusion/v1-inference.yaml
           iterations  = <integer>     // how many times to run the sampling (1)
-          batch       = <integer>     // how many images to generate per sampling (1)
+          batch_size       = <integer>     // how many images to generate per sampling (1)
           steps       = <integer>     // 50
           seed        = <integer>     // current system time
           sampler     = ['ddim','plms']  // ddim
@@ -73,7 +73,7 @@ class T2I:
     model
     config
     iterations
-    batch
+    batch_size
     steps
     seed
     sampler
@@ -90,7 +90,7 @@ class T2I:
 """
     def __init__(self,
                  outdir="outputs/txt2img-samples",
-                 batch=1,
+                 batch_size=1,
                  iterations = 1,
                  width=512,
                  height=512,
@@ -110,7 +110,7 @@ class T2I:
                  strength=0.75 # default in scripts/img2img.py
     ):
         self.outdir     = outdir
-        self.batch      = batch
+        self.batch_size      = batch_size
         self.iterations = iterations
         self.width      = width
         self.height     = height
@@ -133,7 +133,7 @@ class T2I:
         else:
             self.seed = seed
 
-    def txt2img(self,prompt,outdir=None,batch=None,iterations=None,
+    def txt2img(self,prompt,outdir=None,batch_size=None,iterations=None,
                 steps=None,seed=None,grid=None,individual=None,width=None,height=None,
                 cfg_scale=None,ddim_eta=None,strength=None,init_img=None):
         """
@@ -147,7 +147,7 @@ class T2I:
         height     = height     or self.height
         cfg_scale  = cfg_scale  or self.cfg_scale
         ddim_eta   = ddim_eta   or self.ddim_eta
-        batch      = batch or self.batch
+        batch_size = batch_size or self.batch_size
         iterations = iterations or self.iterations
         strength   = strength   or self.strength     # not actually used here, but preserved for code refactoring
 
@@ -160,7 +160,7 @@ class T2I:
         if individual:
             grid = False
         
-        data = [batch * [prompt]]
+        data = [batch_size * [prompt]]
 
         # make directories and establish names for the output files
         os.makedirs(outdir, exist_ok=True)
@@ -168,7 +168,7 @@ class T2I:
 
         start_code = None
         if self.fixed_code:
-            start_code = torch.randn([batch,
+            start_code = torch.randn([batch_size,
                                       self.latent_channels,
                                       height // self.downsampling_factor,
                                       width  // self.downsampling_factor],
@@ -190,14 +190,14 @@ class T2I:
                         for prompts in tqdm(data, desc="data", dynamic_ncols=True):
                             uc = None
                             if cfg_scale != 1.0:
-                                uc = model.get_learned_conditioning(batch * [""])
+                                uc = model.get_learned_conditioning(batch_size * [""])
                             if isinstance(prompts, tuple):
                                 prompts = list(prompts)
                             c = model.get_learned_conditioning(prompts)
                             shape = [self.latent_channels, height // self.downsampling_factor, width // self.downsampling_factor]
                             samples_ddim, _ = sampler.sample(S=steps,
                                                              conditioning=c,
-                                                             batch_size=batch,
+                                                             batch_size_size=batch_size,
                                                              shape=shape,
                                                              verbose=False,
                                                              unconditional_guidance_scale=cfg_scale,
@@ -224,17 +224,17 @@ class T2I:
                     if grid:
                         images = self._make_grid(samples=all_samples,
                                                  seeds=seeds,
-                                                 batch_size=batch,
+                                                 batch_size=batch_size,
                                                  iterations=iterations,
                                                  outdir=outdir)
 
         toc = time.time()
-        print(f'{batch * iterations} images generated in',"%4.2fs"% (toc-tic))
+        print(f'{batch_size * iterations} images generated in',"%4.2fs"% (toc-tic))
 
         return images
         
     # There is lots of shared code between this and txt2img and should be refactored.
-    def img2img(self,prompt,outdir=None,init_img=None,batch=None,iterations=None,
+    def img2img(self,prompt,outdir=None,init_img=None,batch_size=None,iterations=None,
                 steps=None,seed=None,grid=None,individual=None,width=None,height=None,
                 cfg_scale=None,ddim_eta=None,strength=None):
         """
@@ -246,7 +246,7 @@ class T2I:
         seed       = seed       or self.seed
         cfg_scale  = cfg_scale  or self.cfg_scale
         ddim_eta   = ddim_eta   or self.ddim_eta
-        batch      = batch      or self.batch
+        batch_size = batch_size or self.batch_size
         iterations = iterations or self.iterations
         strength   = strength   or self.strength
 
@@ -263,7 +263,7 @@ class T2I:
         if individual:
             grid = False
         
-        data = [batch * [prompt]]
+        data = [batch_size * [prompt]]
 
         # PLMS sampler not supported yet, so ignore previous sampler
         if self.sampler_name!='ddim':
@@ -278,7 +278,7 @@ class T2I:
 
         assert os.path.isfile(init_img)
         init_image = self._load_img(init_img).to(self.device)
-        init_image = repeat(init_image, '1 ... -> b ...', b=batch)
+        init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
 
         sampler.make_schedule(ddim_num_steps=steps, ddim_eta=ddim_eta, verbose=False)
@@ -307,13 +307,13 @@ class T2I:
                         for prompts in tqdm(data, desc="data", dynamic_ncols=True):
                             uc = None
                             if cfg_scale != 1.0:
-                                uc = model.get_learned_conditioning(batch * [""])
+                                uc = model.get_learned_conditioning(batch_size * [""])
                             if isinstance(prompts, tuple):
                                 prompts = list(prompts)
                             c = model.get_learned_conditioning(prompts)
 
                             # encode (scaled latent)
-                            z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch).to(self.device))
+                            z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(self.device))
                             # decode it
                             samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=cfg_scale,
                                                      unconditional_conditioning=uc,)
@@ -337,12 +337,12 @@ class T2I:
                     if grid:
                         images = self._make_grid(samples=all_samples,
                                                  seeds=seeds,
-                                                 batch_size=batch,
+                                                 batch_size=batch_size,
                                                  iterations=iterations,
                                                  outdir=outdir)
 
         toc = time.time()
-        print(f'{batch * iterations} images generated in',"%4.2fs"% (toc-tic))
+        print(f'{batch_size * iterations} images generated in',"%4.2fs"% (toc-tic))
 
         return images
 

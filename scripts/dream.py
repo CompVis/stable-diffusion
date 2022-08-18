@@ -6,6 +6,8 @@ import shlex
 import atexit
 import os
 
+debugging = False
+
 def main():
     ''' Initialize command-line parsers and the diffusion model '''
     arg_parser = create_argv_parser()
@@ -24,7 +26,7 @@ def main():
         weights = "models/ldm/stable-diffusion-v1/model.ckpt"
 
     # command line history will be stored in a file called "~/.dream_history"
-    load_history()
+    setup_readline()
 
     print("* Initializing, be patient...\n")
     from pytorch_lightning import logging
@@ -36,7 +38,7 @@ def main():
     # the user input loop
     t2i = T2I(width=width,
               height=height,
-              batch=opt.batch,
+              batch_size=opt.batch_size,
               outdir=opt.outdir,
               sampler=opt.sampler,
               weights=weights,
@@ -50,7 +52,8 @@ def main():
     logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
 
     # preload the model
-    t2i.load_model()
+    if not debugging:
+        t2i.load_model()
     print("\n* Initialization done! Awaiting your command (-h for help)...")
 
     log_path   = os.path.join(opt.outdir,"dream_log.txt")
@@ -139,7 +142,7 @@ def create_argv_parser():
                         type=int,
                         default=1,
                         help="number of images to generate")
-    parser.add_argument('-b','--batch',
+    parser.add_argument('-b','--batch_size',
                         type=int,
                         default=1,
                         help="number of images to produce per iteration (currently not working properly - producing too many images)")
@@ -161,7 +164,7 @@ def create_cmd_parser():
     parser.add_argument('-s','--steps',type=int,help="number of steps")
     parser.add_argument('-S','--seed',type=int,help="image seed")
     parser.add_argument('-n','--iterations',type=int,default=1,help="number of samplings to perform")
-    parser.add_argument('-b','--batch',type=int,default=1,help="number of images to produce per sampling (currently broken)")
+    parser.add_argument('-b','--batch_size',type=int,default=1,help="number of images to produce per sampling (currently broken)")
     parser.add_argument('-W','--width',type=int,help="image width, multiple of 64")
     parser.add_argument('-H','--height',type=int,help="image height, multiple of 64")
     parser.add_argument('-C','--cfg_scale',default=7.5,type=float,help="prompt configuration scale")
@@ -171,6 +174,14 @@ def create_cmd_parser():
     parser.add_argument('-f','--strength',default=0.75,type=float,help="strength for noising/unnoising. 0.0 preserves image exactly, 1.0 replaces it completely")
     return parser
 
+def setup_readline():
+    readline.set_completer(Completer(['--steps','-s','--seed','-S','--iterations','-n','--batch_size','-b',
+                                      '--width','-W','--height','-H','--cfg_scale','-C','--grid','-g',
+                                      '--individual','-i','--init_img','-I','--strength','-f']).complete)
+    readline.set_completer_delims(" ")
+    readline.parse_and_bind('tab: complete')
+    load_history()
+
 def load_history():
     histfile = os.path.join(os.path.expanduser('~'),".dream_history")
     try:
@@ -179,6 +190,65 @@ def load_history():
     except FileNotFoundError:
         pass
     atexit.register(readline.write_history_file,histfile)
+
+class Completer():
+    def __init__(self,options):
+        self.options = sorted(options)
+        return
+
+    def complete(self,text,state):
+        if text.startswith('-I') or text.startswith('--init_img'):
+            return self._image_completions(text,state)
+        
+        response = None
+        if state == 0:
+            # This is the first time for this text, so build a match list.
+            if text:
+                self.matches = [s 
+                                for s in self.options
+                                if s and s.startswith(text)]
+            else:
+                self.matches = self.options[:]
+        
+        # Return the state'th item from the match list,
+        # if we have that many.
+        try:
+            response = self.matches[state]
+        except IndexError:
+            response = None
+        return response
+
+    def _image_completions(self,text,state):
+        # get the path so far
+        if text.startswith('-I'):
+            path = text.replace('-I','',1).lstrip()
+        elif text.startswith('--init_img='):
+            path = text.replace('--init_img=','',1).lstrip()
+
+        matches  = list()
+
+        path = os.path.expanduser(path)
+        if len(path)==0:
+            matches.append(text+'./')
+        else:
+            dir  = os.path.dirname(path)
+            dir_list = os.listdir(dir)
+            for n in dir_list:
+                if n.startswith('.') and len(n)>1:
+                    continue
+                full_path = os.path.join(dir,n)
+                if full_path.startswith(path):
+                    if os.path.isdir(full_path):
+                        matches.append(os.path.join(os.path.dirname(text),n)+'/')
+                    elif n.endswith('.png'):
+                        matches.append(os.path.join(os.path.dirname(text),n))
+                
+        try:
+            response = matches[state]
+        except IndexError:
+            response = None
+        return response
+        
 
 if __name__ == "__main__":
     main()
