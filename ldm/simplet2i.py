@@ -197,7 +197,7 @@ class T2I:
                             shape = [self.latent_channels, height // self.downsampling_factor, width // self.downsampling_factor]
                             samples_ddim, _ = sampler.sample(S=steps,
                                                              conditioning=c,
-                                                             batch_size_size=batch_size,
+                                                             batch_size=batch_size,
                                                              shape=shape,
                                                              verbose=False,
                                                              unconditional_guidance_scale=cfg_scale,
