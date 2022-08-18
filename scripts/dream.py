@@ -92,7 +92,10 @@ def main_loop(t2i,parser,log):
             print("Try again with a prompt!")
             continue
 
-        results = t2i.txt2img(**vars(opt))
+        if opt.init_img is None:
+            results = t2i.txt2img(**vars(opt))
+        else:
+            results = t2i.img2img(**vars(opt))
         print("Outputs:")
         write_log_message(opt,switches,results,log)
 
@@ -161,9 +164,11 @@ def create_cmd_parser():
     parser.add_argument('-b','--batch',type=int,default=1,help="number of images to produce per sampling (currently broken)")
     parser.add_argument('-W','--width',type=int,help="image width, multiple of 64")
     parser.add_argument('-H','--height',type=int,help="image height, multiple of 64")
-    parser.add_argument('-C','--cfg_scale',type=float,help="prompt configuration scale (7.5)")
+    parser.add_argument('-C','--cfg_scale',default=7.5,type=float,help="prompt configuration scale")
     parser.add_argument('-g','--grid',action='store_true',help="generate a grid")
     parser.add_argument('-i','--individual',action='store_true',help="generate individual files (default)")
+    parser.add_argument('-I','--init_img',type=str,help="path to input image (supersedes width and height)")
+    parser.add_argument('-f','--strength',default=0.75,type=float,help="strength for noising/unnoising. 0.0 preserves image exactly, 1.0 replaces it completely")
     return parser
 
 def load_history():
