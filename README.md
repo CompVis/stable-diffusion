@@ -3,21 +3,7 @@
 This is a fork of CompVis/stable-diffusion, the wonderful open source
 text-to-image generator.
 
-The original has been modified in several minor ways:
-
-## Simplified API for text to image generation
-
-There is now a simplified API for text to image generation, which
-lets you create images from a prompt in just three lines of code:
-
-~~~~
-from ldm.simplet2i import T2I
-model   = T2I()
-outputs = model.text2image("a unicorn in manhattan")
-~~~~
-
-Outputs is a list of lists in the format [[filename1,seed1],[filename2,seed2]...]
-Please see ldm/simplet2i.py for more information.
+The original has been modified in several ways:
 
 ## Interactive command-line interface similar to the Discord bot
 
@@ -63,7 +49,24 @@ weights (512x512) and the older (256x256) latent diffusion weights
 identical to those used in the Discord bot, except you don't need to
 type "!dream". Pass "-h" (or "--help") to list the arguments.
 
+This script also provides an img2img feature that lets you seed your
+creations with a drawing or photo.
+
 For command-line help, type -h (or --help) at the dream> prompt.
+
+## Simplified API for text to image generation
+
+There is now a simplified API for text to image generation, which
+lets you create images from a prompt in just three lines of code:
+
+~~~~
+from ldm.simplet2i import T2I
+model   = T2I()
+outputs = model.text2image("a unicorn in manhattan")
+~~~~
+
+Outputs is a list of lists in the format [[filename1,seed1],[filename2,seed2]...]
+Please see ldm/simplet2i.py for more information.
 
 ## Workaround for machines with limited internet connectivity
 
