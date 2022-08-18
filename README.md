@@ -1,4 +1,4 @@
-# Stable Diffusion
+# Stable Diffusion Dream Script
 
 This is a fork of CompVis/stable-diffusion, the wonderful open source
 text-to-image generator.
@@ -7,20 +7,23 @@ The original has been modified in several ways:
 
 ## Interactive command-line interface similar to the Discord bot
 
-There is now a command-line script, located in scripts/dream.py, which
+The *dream.py* script, located in scripts/dream.py, 
 provides an interactive interface to image generation similar to
 the "dream mothership" bot that Stable AI provided on its Discord
-server.  The advantage of this is that the lengthy model
-initialization only happens once. After that image generation is
-fast.
+server. Unlike the txt2img.py and img2img.py scripts provided in the
+original CompViz/stable-diffusion source code repository, the
+time-consuming initialization of the AI model
+initialization only happens once. After that image generation 
+from the command-line interface is very fast.
 
 The script uses the readline library to allow for in-line editing,
-command history (up and down arrows) and more.
+command history (up and down arrows), autocompletion, and more.
 
-Note that this has only been tested in the Linux environment!
+Note that this has only been tested in the Linux environment. Testing
+and tweaking for Windows is in progress.
 
 ~~~~
-(ldm) ~/stable-diffusion$ ./scripts/dream.py
+(ldm) ~/stable-diffusion$ python3 ./scripts/dream.py
 * Initializing, be patient...
 Loading model from models/ldm/text2img-large/model.ckpt
 LatentDiffusion: Running in eps-prediction mode
@@ -32,31 +35,72 @@ Loading Bert tokenizer from "models/bert"
 setting sampler to plms
 
 * Initialization done! Awaiting your command...
-dream> ashley judd riding a camel -n2
+dream> ashley judd riding a camel -n2 -s150
 Outputs:
-   outputs/txt2img-samples/00009.png: "ashley judd riding a camel" -n2 -S 416354203
-   outputs/txt2img-samples/00010.png: "ashley judd riding a camel" -n2 -S 1362479620
+   outputs/txt2img-samples/00009.png: "ashley judd riding a camel" -n2 -s150 -S 416354203
+   outputs/txt2img-samples/00010.png: "ashley judd riding a camel" -n2 -s150-S 1362479620
 
-dream> "your prompt here" -n6 -g
-    outputs/txt2img-samples/00041.png: "your prompt here" -n6 -g -S 2685670268
+dream> "there's a fly in my soup" -n6 -g
+    outputs/txt2img-samples/00041.png: "there's a fly in my soup" -n6 -g -S 2685670268
     seeds for individual rows: [2685670268, 1216708065, 2335773498, 822223658, 714542046, 3395302430]
 ~~~~
 
-Command-line arguments passed to the script allow you to change
-various defaults, and select between the mature stable-diffusion
-weights (512x512) and the older (256x256) latent diffusion weights
-(laion400m). From the dream> prompt, the arguments are (mostly)
+The dream> prompt's  arguments are pretty-much
 identical to those used in the Discord bot, except you don't need to
-type "!dream". Pass "-h" (or "--help") to list the arguments.
+type "!dream". A significant change is that creation of individual images is the default
+unless --grid (-g) is given. For backward compatibility, the -i switch is recognized.
+For command-line help type -h (or --help) at the dream> prompt.
+
+The script itself also recognizes a series of command-line switches that will change
+important global defaults, such as the directory for image outputs and the location
+of the model weight files.
+
+## Image-to-Image
 
 This script also provides an img2img feature that lets you seed your
-creations with a drawing or photo.
+creations with a drawing or photo. This is a really cool feature that tells
+stable diffusion to build the prompt on top of the image you provide, preserving
+the original's basic shape and layout. To use it, provide the --init_img 
+option as shown here:
 
-For command-line help, type -h (or --help) at the dream> prompt.
+~~~~
+dream> "waterfall and rainbow" --init_img=./init-images/crude_drawing.png --strength=0.5 -s100 -n4
+~~~~
+
+The --init_img (-I) option gives the path to the seed picture. --strength (-f) controls how much
+the original will be modified, ranging from 0.0 (keep the original intact), to 1.0 (ignore the original
+completely). The default is 0.75, and ranges from 0.25-0.75 give interesting results.
+
+## Installation
+
+For installation, follow the instructions from the original CompViz/stable-diffusion
+README which is appended to this README for your convenience. A few things to be aware of:
+
+1. You will need the stable-diffusion model weights, which have to be downloaded separately as described
+in the CompViz instructions. They are expected to be released in the latter half of August.
+
+2. If you do not have the weights and want to play with low-quality image generation, then you can use
+the public LAION400m weights, which can be installed like this:
+
+~~~~
+mkdir -p models/ldm/text2img-large/
+wget -O models/ldm/text2img-large/model.ckpt https://ommer-lab.com/files/latent-diffusion/nitro/txt2img-f8-large/model.ckpt
+~~~~
+
+You will then have to invoke dream.py with the --laion400m (or -l for short) flag:
+~~~~
+(ldm) ~/stable-diffusion$ python3 ./scripts/dream.py -l
+~~~~
+
+3. To get around issues that arise when running the stable diffusion model on a machine without internet
+connectivity, I wrote a script that pre-downloads internet dependencies. Whether or not your GPU machine 
+has connectivity, you will need to run this preloading script before the first run of dream.py. See
+"Workaround for machines with limited internet connectivity" below for the walkthrough.
 
 ## Simplified API for text to image generation
 
-There is now a simplified API for text to image generation, which
+For programmers who wish to incorporate stable-diffusion into other
+products, this repository includes a simplified API for text to image generation, which
 lets you create images from a prompt in just three lines of code:
 
 ~~~~
@@ -67,6 +111,7 @@ outputs = model.text2image("a unicorn in manhattan")
 
 Outputs is a list of lists in the format [[filename1,seed1],[filename2,seed2]...]
 Please see ldm/simplet2i.py for more information.
+
 
 ## Workaround for machines with limited internet connectivity
 
@@ -103,14 +148,9 @@ time, copy over the file ldm/modules/encoders/modules.py from the
 CompVis/stable-diffusion repository. Or you can run preload_models.py
 on the target machine.
 
-## Minor fixes
+## Support
 
-I added the requirement for torchmetrics to environment.yaml.
-
-## Installation and support
-
-Follow the directions from the original README, which starts below, to
-configure the environment and install requirements. For support,
+For support,
 please use this repository's GitHub Issues tracking service. Feel free
 to send me an email if you use and like the script.
 
