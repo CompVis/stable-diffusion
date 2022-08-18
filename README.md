@@ -2,7 +2,7 @@
 
 [![Discord Server](https://discordapp.com/api/guilds/930499730843250783/widget.png?style=banner2)](https://discord.gg/Sx6Spmsgx7)
 
-All thanks goes to CompVis and Stability AI for releasing this codebase!
+All thanks goes to CompVis and Stability AI for releasing this codebase! Pretrained models coming soon...
 
 # Stable Diffusion
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
