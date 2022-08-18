@@ -104,7 +104,7 @@ def select_cond_path(mode):
     return selected_path
 
 
-def get_cond(mode, selected_path):
+def get_cond(mode, selected_path, device="cuda"):
     example = dict()
     if mode == "superresolution":
         up_f = 4
@@ -117,7 +117,7 @@ def get_cond(mode, selected_path):
         c = rearrange(c, '1 c h w -> 1 h w c')
         c = 2. * c - 1.
 
-        c = c.to(torch.device("cuda"))
+        c = c.to(torch.device(device)
         example["LR_image"] = c
         example["image"] = c_up
 
@@ -128,9 +128,9 @@ def visualize_cond_img(path):
     display(ipyimg(filename=path))
 
 
-def run(model, selected_path, task, custom_steps, resize_enabled=False, classifier_ckpt=None, global_step=None):
+def run(model, selected_path, task, custom_steps, resize_enabled=False, classifier_ckpt=None, global_step=None, device="cuda"):
 
-    example = get_cond(task, selected_path)
+    example = get_cond(task, selected_path, device)
 
     save_intermediate_vid = False
     n_runs = 1
