@@ -47,7 +47,7 @@ def load_img_pil(img_pil):
     image = img_pil.convert("RGB")
     w, h = image.size
     print(f"loaded input image of size ({w}, {h})")
-    w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
+    w, h = map(lambda x: x - x % 64, (w, h))  # resize to integer multiple of 64
     image = image.resize((w, h), resample=PIL.Image.LANCZOS)
     print(f"cropped image to size ({w}, {h})")
     image = np.array(image).astype(np.float32) / 255.0
@@ -436,8 +436,8 @@ img2img_interface = gr.Interface(
         gr.Slider(minimum=1.0, maximum=15.0, step=0.5, label='Classifier Free Guidance Scale', value=7.0),
         gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising Strength', value=0.75),
         gr.Number(label='Seed', value=-1),
-        gr.Slider(minimum=32, maximum=2048, step=32, label="Resize Height", value=512),
-        gr.Slider(minimum=32, maximum=2048, step=32, label="Resize Width", value=512),
+        gr.Slider(minimum=64, maximum=2048, step=64, label="Resize Height", value=512),
+        gr.Slider(minimum=64, maximum=2048, step=64, label="Resize Width", value=512),
     ],
     outputs=[
         gr.Gallery(),
