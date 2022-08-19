@@ -45,7 +45,7 @@ dream> "there's a fly in my soup" -n6 -g
     seeds for individual rows: [2685670268, 1216708065, 2335773498, 822223658, 714542046, 3395302430]
 ~~~~
 
-The dream> prompt's  arguments are pretty-much
+The dream> prompt's  arguments are pretty much
 identical to those used in the Discord bot, except you don't need to
 type "!dream" (it doesn't hurt if you do). A significant change is that creation of individual images 
 is now the default
