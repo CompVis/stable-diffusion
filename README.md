@@ -95,12 +95,12 @@ worked, your command prompt will be prefixed by the name of the current anaconda
 ```
 This will create stable-diffusion folder where you will follow the rest of the steps.
 
-6. Enter the newly-created stable-diffusion folder. From this step forward make sure that you are working in the stable-diffusion directory!
+4. Enter the newly-created stable-diffusion folder. From this step forward make sure that you are working in the stable-diffusion directory!
 ```
 (base) ~$ cd stable-diffusion
 (base) ~/stable-diffusion$
 ```
-7. Use anaconda to copy necessary python packages, create a new python environment named "ldm",
+5. Use anaconda to copy necessary python packages, create a new python environment named "ldm",
 and activate the environment. 
 ```
 (base) ~/stable-diffusion$ conda env create -f environment.yaml
@@ -109,12 +109,12 @@ and activate the environment.
 ```
 After these steps, your command prompt will be prefixed by "(ldm)" as shown above.
 
-8. Load a couple of small machine-learning models required by stable diffusion:
+6. Load a couple of small machine-learning models required by stable diffusion:
 ```
 (ldm) ~/stable-diffusion$ python3 scripts/preload_models.py
 ```
 
-9. Now you need to install the weights for the released stable diffusion model.
+7. Now you need to install the weights for the stable diffusion model.
 
 For testing prior to the release of the real weights, you can use an older weight file that produces low-quality images. Create a directory within stable-diffusion named "models/ldm/text2img.large", and use the wget URL downloader tool to copy the weight file into it:
 ```
@@ -128,7 +128,7 @@ For testing with the released weighs, you will do something similar, but with a 
 ```
 These weight files are ~5 GB in size, so downloading may take a while.
 
-10. Start generating images!
+8. Start generating images!
 ```
 # for the pre-release weights use the -l or --liaon400m switch
 (ldm) ~/stable-diffusion$ python3 scripts/dream.py -l
@@ -139,7 +139,7 @@ These weight files are ~5 GB in size, so downloading may take a while.
 # for additional configuration switches and arguments, use -h or --help
 (ldm) ~/stable-diffusion$ python3 scripts/dream.py -h
 ```
-11. Subsequently, to relaunch the script, be sure to run "conda activate ldm" (step 7, second command), enter the "stable-diffusion" 
+9. Subsequently, to relaunch the script, be sure to run "conda activate ldm" (step 7, second command), enter the "stable-diffusion" 
 directory, and then launch the dream script (step 10).
 
 ### Updating to newer versions of the script
