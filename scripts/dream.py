@@ -114,9 +114,10 @@ def main_loop(t2i,parser,log):
                 results = t2i.txt2img(**vars(opt))
             else:
                 results = t2i.img2img(**vars(opt))
-                print("Outputs:")
-                write_log_message(opt,switches,results,log)
+            print("Outputs:")
+            write_log_message(opt,switches,results,log)
         except KeyboardInterrupt:
+            print('*interrupted*')
             continue
     print("goodbye!")
 
