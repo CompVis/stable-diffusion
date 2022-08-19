@@ -146,7 +146,7 @@ parser.add_argument(
     type=str,
     help="evaluate at this precision",
     choices=["full", "autocast"],
-    default="full"
+    default="autocast"
 )
 opt = parser.parse_args()
 
@@ -154,7 +154,7 @@ tic = time.time()
 os.makedirs(opt.outdir, exist_ok=True)
 outpath = opt.outdir
 
-sample_path = os.path.join(outpath, "samples", "_".join(opt.prompt.split()) )
+sample_path = os.path.join(outpath, "samples", "_".join(opt.prompt.split())[:255])
 os.makedirs(sample_path, exist_ok=True)
 base_count = len(os.listdir(sample_path))
 grid_count = len(os.listdir(outpath)) - 1
@@ -192,14 +192,18 @@ else:
 model = instantiate_from_config(config.modelUNet)
 _, _ = model.load_state_dict(sd, strict=False)
 model.eval()
-
+    
 modelCS = instantiate_from_config(config.modelCondStage)
 _, _ = modelCS.load_state_dict(sd, strict=False)
 modelCS.eval()
-
+    
 modelFS = instantiate_from_config(config.modelFirstStage)
 _, _ = modelFS.load_state_dict(sd, strict=False)
 modelFS.eval()
+
+if opt.precision == "autocast":
+    model.half()
+    modelCS.half()
 
 start_code = None
 if opt.fixed_code:
@@ -227,7 +231,6 @@ with torch.no_grad():
     for n in trange(opt.n_iter, desc="Sampling"):
         for prompts in tqdm(data, desc="data"):
              with precision_scope("cuda"):
-
                 modelCS.to(device)
                 uc = None
                 if opt.scale != 1.0:

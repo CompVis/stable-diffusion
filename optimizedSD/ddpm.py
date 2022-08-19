@@ -346,6 +346,7 @@ class UNet(DDPM):
 
     def apply_model(self, x_noisy, t, cond, return_ids=False):
           
+
         self.model1.to("cuda")
         step = 1
         if self.small_batch:

@@ -1,24 +1,18 @@
-# NEW UPDATE
+# UPDATE
 
-The code can now generate _512x512 images in 40 second per image while using less than 5Gb VRAM. And with the entire 6Gb VRAM, it can generate upto 708x512 images._
-
-# OLD UPDATE
-
-The code can now generate images in batches which reduces the inference time for a single 512x512 image on a RTX 2060 from 75 to 40 seconds!
+The code can now use mixed precision to generate _512x512 images under 25 seconds per image while using less than 4Gb VRAM (Tested on RTX 2060 which has tensor cores). And with 6Gb VRAM, it can generate upto 640x704 images._ Thanks to @xraxra for the suggestion
 
 # Optimized Stable Diffusion (Sort of)
 
-- This repo is a modified version of the Stable Diffusion repo, modifed to use lesser VRAM than the original by sacrificing on inference speed. It can generate _512x512 images from a prompt on a 6Gb VRAM GPU in 40 seconds per image_ (RTX 2060 in my case). This is not possible with the original repo on a 6Gb GPU.
+- This repo is a modified version of the Stable Diffusion repo, optimized to use lesser VRAM than the original by sacrificing on inference speed. It can generate _512x512 images from a prompt on a 4Gb VRAM GPU in under 25 seconds per image_ (RTX 2060 in my case). This is not possible with the original repo on a 6Gb GPU.
 
-- To achieve the inference time of 40 seconds per image, use the maximum batch size `--n_samples` that can fit on the GPU (I can get a maximum batch size of 20 in the case of RTX 2060).
-
-- The maximum image size possible on RTX 2060 6Gb is 704x512 with the max batch size of 4.
+- To achieve the inference time of less than 25 seconds per image, use the maximum batch size `--n_samples` that can fit on the GPU. Inference time per image will reduce on increasing the batch size, but the required VRAM will also increase.
 
 - If you get a CUDA out of memory error, try reducing the batch size `--n_samples`. If it doesn't work, the other option is to reduce the image width `--W` or height `--H` or both.
 
-- If you want to generate a small batch of images (less than 6 on RTX 2060) use the `--small_batch` flag. Generating a small batch without this flag will increase the inference time to 60 seconds per image. Using this flag will limit the max image size to 512x512 in 6Gb VRAM
+- Mixed Precision is enabled by default. If you don't have a GPU with tensor cores, you can still use mixed precision to run the code using lesser VRAM but the inference time may be larger. And if you feel that the inference is slower, try using the `--precision full` argument to disable it. On RTX 2060, using full precision can generate 512x512 images in 40 second per image while using less than 5Gb VRAM. And with 6Gb VRAM, it can generate upto 708x512 images.
 
-- All the modified files are in the [optimizedSD](optimizedSD) folder, so if you have already installed the original repo, you can just download and copy this folder into the orignal repo instead of cloning the entire repo.
+- All the modified files are in the [optimizedSD](optimizedSD) folder, so if you have already cloned the original repo, you can just download and copy this folder into the orignal repo instead of cloning the entire repo.
 
 - You can also clone this repo and follow the same installation steps as the original written below (mainly creating the conda env and placing the weights at the specified location).
 
