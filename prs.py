@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from omegaconf import OmegaConf
 import PIL
-from PIL import Image
+from PIL import Image, ImageOps, ImageStat, ImageEnhance, ImageDraw
 from PIL.PngImagePlugin import PngInfo
 from einops import rearrange, repeat
 from tqdm import tqdm, trange
@@ -20,6 +20,7 @@ from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 
+from types import SimpleNamespace
 import json5 as json
 
 def chunk(it, size):
@@ -70,8 +71,6 @@ def load_img(path):
 
 def do_run(device, model, opt):
     print('Starting render!')
-    from types import SimpleNamespace
-    opt = SimpleNamespace(**opt)
     seed_everything(opt.seed)
 
     if opt.plms:
@@ -182,17 +181,123 @@ def do_run(device, model, opt):
 
                     # to image
                     grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-                    Image.fromarray(grid.astype(np.uint8)).save(os.path.join(outpath, f'{opt.batch_name}-{grid_count:04}.png'), pnginfo=metadata)
+                    output_filename = os.path.join(outpath, f'{opt.batch_name}-{grid_count:04}.png')
+                    Image.fromarray(grid.astype(np.uint8)).save(output_filename, pnginfo=metadata)
                     grid_count += 1
 
                 toc = time.time()
+    return output_filename
+
+#functions for GO BIG
+def addalpha(im, mask):
+    imr, img, imb, ima = im.split()
+    mmr, mmg, mmb, mma = mask.split()
+    im = Image.merge('RGBA', [imr, img, imb, mma])  # we want the RGB from the original, but the transparency from the mask
+    return(im)
+
+# Alternative method composites a grid of images at the positions provided
+def grid_merge(source, slices):
+    source.convert("RGBA")
+    for slice, posx, posy in slices: # go in reverse to get proper stacking
+        source.alpha_composite(slice, (posx, posy))
+    return source
+
+def grid_coords(target, original, overlap):
+    #generate a list of coordinate tuples for our sections, in order of how they'll be rendered
+    #target should be the size for the gobig result, original is the size of each chunk being rendered
+    center = []
+    target_x, target_y = target
+    center_x = int(target_x / 2)
+    center_y = int(target_y / 2)
+    original_x, original_y = original
+    x = center_x - int(original_x / 2)
+    y = center_y - int(original_y / 2)
+    center.append((x,y)) #center chunk
+    uy = y #up
+    uy_list = []
+    dy = y #down
+    dy_list = []
+    lx = x #left
+    lx_list = []
+    rx = x #right
+    rx_list = []
+    while uy > 0: #center row vertical up
+        uy = uy - original_y + overlap
+        uy_list.append((lx, uy))
+    while (dy + original_y) <= target_y: #center row vertical down
+        dy = dy + original_y - overlap
+        dy_list.append((rx, dy))
+    while lx > 0:
+        lx = lx - original_x + overlap
+        lx_list.append((lx, y))
+        uy = y
+        while uy > 0:
+            uy = uy - original_y + overlap
+            uy_list.append((lx, uy))
+        dy = y
+        while (dy + original_y) <= target_y:
+            dy = dy + original_y - overlap
+            dy_list.append((lx, dy))
+    while (rx + original_x) <= target_x:
+        rx = rx + original_x - overlap
+        rx_list.append((rx, y))
+        uy = y
+        while uy > 0:
+            uy = uy - original_y + overlap
+            uy_list.append((rx, uy))
+        dy = y
+        while (dy + original_y) <= target_y:
+            dy = dy + original_y - overlap
+            dy_list.append((rx, dy))
+    # calculate a new size that will fill the canvas, which will be optionally used in grid_slice and go_big
+    last_coordx, last_coordy = dy_list[-1:][0]
+    render_edgey = last_coordy + original_y # outer bottom edge of the render canvas
+    render_edgex = last_coordx + original_x # outer side edge of the render canvas
+    scalarx = render_edgex / target_x
+    scalary = render_edgey / target_y
+    if scalarx <= scalary:
+        new_edgex = int(target_x * scalarx)
+        new_edgey = int(target_y * scalarx)
+    else:
+        new_edgex = int(target_x * scalary)
+        new_edgey = int(target_y * scalary)
+    # now put all the chunks into one master list of coordinates (essentially reverse of how we calculated them so that the central slices will be on top)
+    result = []
+    for coords in dy_list[::-1]:
+        result.append(coords)
+    for coords in uy_list[::-1]:
+        result.append(coords)
+    for coords in rx_list[::-1]:
+        result.append(coords)
+    for coords in lx_list[::-1]:
+        result.append(coords)
+    result.append(center[0])
+    return result, (new_edgex, new_edgey)
+
+# Chop our source into a grid of images that each equal the size of the original render
+def grid_slice(source, overlap, og_size, maximize=False): 
+    width, height = og_size # size of the slices to be rendered
+    maximize = True # remove this once it's working
+    coordinates, new_size = grid_coords(source.size, og_size, overlap)
+    if maximize == True:
+        source = source.resize(new_size, get_resampling_mode()) # minor concern that we're resizing twice
+        coordinates, new_size = grid_coords(source.size, og_size, overlap) # re-do the coordinates with the new canvas size
+    # loc_width and loc_height are the center point of the goal size, and we'll start there and work our way out
+    slices = []
+    for coordinate in coordinates:
+        x, y = coordinate
+        slices.append(((source.crop((x, y, x+width, y+height))), x, y))
+    global slices_todo
+    slices_todo = len(slices) - 1
+    return slices, new_size
+
+
 
 def parse_args():
     my_parser = argparse.ArgumentParser(
-        prog='MathRockDiffusion',
-        description='Generate images from text prompts.',
+        prog='ProgRock-Stable',
+        description='Generate images from text prompts, based on Stable Diffusion.',
     )
-
     my_parser.add_argument(
         '-s',
         '--settings',
@@ -201,7 +306,6 @@ def parse_args():
         default=['settings.json'],
         help='A settings JSON file to use, best to put in quotes. Multiples are allowed and layered in order.'
     )
-
     my_parser.add_argument(
         '-o',
         '--output',
@@ -209,7 +313,6 @@ def parse_args():
         required=False,
         help='What output directory to use within images_out'
     )
-
     my_parser.add_argument(
         '-p',
         '--prompt',
@@ -218,7 +321,6 @@ def parse_args():
         required=False,
         help='Override the prompt'
     )
-
     my_parser.add_argument(
         '-c',
         '--cpu',
@@ -230,7 +332,6 @@ def parse_args():
         const=0,
         help='Force use of CPU instead of GPU, and how many threads to run'
     )
-
     my_parser.add_argument(
         '-n',
         '--n_batches',
@@ -238,6 +339,26 @@ def parse_args():
         action='store',
         required=False,
         help='How many images to generate'
+    )
+    my_parser.add_argument(
+        '--gobig',
+        action='store_true',
+        required=False,
+        help='After generation, the image is split into sections and re-rendered, to double the size.'
+    )
+    my_parser.add_argument(
+        '--gobig_init',
+        action='store',
+        required=False,
+        help='An image to use to kick off GO BIG mode, skipping the initial render.'
+    )
+    my_parser.add_argument(
+        '--gobig_scale',
+        action='store',
+        type=int,
+        default = 2,
+        required=False,
+        help='An image to use to kick off GO BIG mode, skipping the initial render.'
     )
 
     return my_parser.parse_args()
@@ -374,6 +495,55 @@ class Settings:
         if is_json_key_present(settings_file, 'init_image'):
             self.init_image = (settings_file["init_image"])
 
+def do_gobig(gobig_init, gobig_scale, device, model, opt):
+    gobig_maximize = True
+    overlap = 64
+    outpath = opt.outdir
+    # get our render size for each slice, and our target size
+    input_image = Image.open(gobig_init).convert('RGBA')
+    opt.W, opt.H = input_image.size
+    target_W = opt.W * gobig_scale
+    target_H = opt.H * gobig_scale
+    target_image = input_image.resize((target_W, target_H), get_resampling_mode())
+    slices, new_canvas_size = grid_slice(target_image, overlap, (opt.W, opt.H))
+    if gobig_maximize == True:
+        # increase our final image size to use up blank space
+        target_image = input_image.resize(new_canvas_size, get_resampling_mode())
+        slices, new_canvas_size = grid_slice(target_image, overlap, (opt.W, opt.H))
+    input_image.close()
+    # now we trigger a do_run for each slice
+    betterslices = []
+    slice_image = 'slice.png'
+    for count, chunk_w_coords in enumerate(slices):
+        chunk, coord_x, coord_y = chunk_w_coords
+        opt.seed = opt.seed + 1
+        chunk.save(slice_image)
+        opt.init_image = slice_image
+        result = do_run(device, model, opt)
+        resultslice = Image.open(result).convert('RGBA')
+        betterslices.append((resultslice.copy(), coord_x, coord_y))
+        resultslice.close()
+    # create an alpha channel for compositing the slices
+    alpha = Image.new('L', (opt.W, opt.H), color=0xFF)
+    alpha_gradient = ImageDraw.Draw(alpha)
+    a = 0
+    i = 0
+    shape = ((opt.W, opt.H), (0,0))
+    while i < overlap:
+        alpha_gradient.rectangle(shape, fill = a)
+        a += 4
+        i += 1
+        shape = ((opt.W - i, opt.H - i), (i,i))
+    mask = Image.new('RGBA', (opt.W, opt.H), color=0)
+    mask.putalpha(alpha)
+    # now composite the slices together
+    finished_slices = []
+    for betterslice, x, y in betterslices:
+        finished_slice = addalpha(betterslice, mask)
+        finished_slices.append((finished_slice, x, y))
+    final_output = grid_merge(target_image, finished_slices)
+    final_output.save(f'{result}-gobig.png')
+
 def main():
     cl_args = parse_args()
 
@@ -407,7 +577,7 @@ def main():
     settings.prompt = dynamic_value(settings.prompt)
     print(f'Setting prompt to: \n"{settings.prompt}"\n')
 
-    #accelerator = accelerate.Accelerator()
+    # setup the model
     ckpt = "./models/sd-v1-3-full-ema.ckpt"
     inf_config = "./configs/stable-diffusion/v1-inference.yaml"
     config = OmegaConf.load(f"{inf_config}")
@@ -443,8 +613,14 @@ def main():
             "strength": 1.0 - settings.init_strength,
             "config": config
         }
+        opt = SimpleNamespace(**opt)
         # render the image(s)!
-        do_run(device, model, opt)
+        if cl_args.gobig_init == None:
+            gobig_init = do_run(device, model, opt)
+        else:
+            gobig_init = cl_args.gobig_init
+        if cl_args.gobig:
+            do_gobig(gobig_init, cl_args.gobig_scale, device, model, opt)
 
 if __name__ == "__main__":
     main()
