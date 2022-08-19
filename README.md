@@ -130,13 +130,13 @@ These weight files are ~5 GB in size, so downloading may take a while.
 
 10. Start generating images!
 ```
-# for the pre-release weights use the **-l** switch
+# for the pre-release weights use the -l or --liaon400m switch
 (ldm) ~/stable-diffusion$ python3 scripts/dream.py -l
 
 # for the post-release weights do not use the switch
 (ldm) ~/stable-diffusion$ python3 scripts/dream.py
 
-# for additional configuration switches and arguments, use **-h**
+# for additional configuration switches and arguments, use -h or --help
 (ldm) ~/stable-diffusion$ python3 scripts/dream.py -h
 ```
 11. Subsequently, to relaunch the script, be sure to run "conda activate ldm" (step 7, second command), enter the "stable-diffusion" 
@@ -210,18 +210,13 @@ This installs two machine learning models that stable diffusion requires.
 
 9. Now you need to install the weights for the big stable diffusion model.
 
-For testing prior to the release of the real weights, create a directory within stable-diffusion named "models\ldm\text2img.large"
-```
-mkdir models\ldm\text2img.large
-```
-For testing with the released weighs, create a directory named within stable-diffusion named "models\ldm\stable-diffusion-v1"
-copy "model.ckpt" into "stable-diffusion\models\ldm\text2img.large\"
-```
-mkdir models\ldm\stable-diffusion-v1
-```
-Then use a web browser to copy model.ckpt into the appropriate directory. For the text2img.large (pre-release) model, the weights are at https://ommer-lab.com/files/latent-diffusion/nitro/txt2img-f8-large/model.ckpt
+For testing prior to the release of the real weights, create a directory within stable-diffusion named "models\ldm\text2img.large".
 
-10. Generate your first image:
+For testing with the released weights, create a directory named within stable-diffusion named "models\ldm\stable-diffusion-v1".
+
+Then use a web browser to copy model.ckpt into the appropriate directory. For the text2img.large (pre-release) model, the weights are at https://ommer-lab.com/files/latent-diffusion/nitro/txt2img-f8-large/model.ckpt. Check back here later for the release URL.
+
+10. Start generating images!
 ```
 # for the pre-release weights
 python scripts\dream.py -l
