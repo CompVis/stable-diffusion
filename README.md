@@ -74,6 +74,8 @@ completely). The default is 0.75, and ranges from 0.25-0.75 give interesting res
 
 ## Installation
 
+### Linux/Mac
+
 For installation, follow the instructions from the original CompViz/stable-diffusion
 README which is appended to this README for your convenience. A few things to be aware of:
 
@@ -97,6 +99,58 @@ You will then have to invoke dream.py with the --laion400m (or -l for short) fla
 connectivity, I wrote a script that pre-downloads internet dependencies. Whether or not your GPU machine 
 has connectivity, you will need to run this preloading script before the first run of dream.py. See
 "Workaround for machines with limited internet connectivity" below for the walkthrough.
+
+### Windows
+
+1. Install the most recent Python from here: https://www.python.org/downloads/windows/
+
+2. Install Anaconda3 (miniconda3 version) from here: https://docs.anaconda.com/anaconda/install/windows/
+
+3. Install Git from here: https://git-scm.com/download/win
+
+4. Launch Anaconda from the Windows Start menu. This will bring up a command window. Type all the remaining commands in this window.
+
+5. Run the command:
+```
+git clone https://github.com/lstein/stable-diffusion.git" 
+```
+This will create stable-diffusion folder where you will follow the rest of the steps.
+
+6. Run the following two commands:
+```
+conda env create -f environment.yaml
+conda activate ldm
+```
+This will install all python requirements (step 6a) and activate the "ldm" environment which sets PATH and other environment variables properly (6b).
+
+7. Run the command:
+```
+python scripts/preload_models.py
+```
+This installs two machine learning models that stable diffusion requires.
+
+8. Now you need to install the weights for the big stable diffusion model.
+
+For testing prior to the release of the real weights, create a directory within stable-diffusion named "models\ldm\text2img.large"
+```
+mkdir models\ldm\text2img.large
+```
+For testing with the released weighs, create a directory named within stable-diffusion named "models\ldm\stable-diffusion-v1"
+copy "model.ckpt" into "stable-diffusion\models\ldm\text2img.large\"
+```
+mkdir models\ldm\stable-diffusion-v1
+```
+Then use a web browser to copy model.ckpt into the appropriate directory. For the text2img.large (pre-release) model, the weights are at https://ommer-lab.com/files/latent-diffusion/nitro/txt2img-f8-large/model.ckpt
+
+9. Generate your first image:
+```
+# for the pre-release weights
+python scripts\dream.py -l
+
+# for the post-release weights
+python scripts\dream.py
+```
+10. Subsequently, to relaunch the script, first activate the Anaconda command window (step 4), run "conda activate ldm" (step 6b), and then launch the dream script (step 9).
 
 ## Simplified API for text to image generation
 
@@ -182,6 +236,7 @@ See [this section](#stable-diffusion-v1) below and the [model card](https://hugg
 
   
 ## Requirements
+
 A suitable [conda](https://conda.io/) environment named `ldm` can be created
 and activated with:
 
@@ -196,8 +251,7 @@ You can also update an existing [latent diffusion](https://github.com/CompVis/la
 conda install pytorch torchvision -c pytorch
 pip install transformers==4.19.2
 pip install -e .
-``` 
-
+```
 
 ## Stable Diffusion v1
 
