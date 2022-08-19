@@ -45,7 +45,7 @@ def load_model_from_config(config, ckpt, verbose=False):
     model.eval()
     return model
 
-def do_run(device, model, config, opt):
+def do_run(device, model, opt):
     print('Starting render!')
     from types import SimpleNamespace
     opt = SimpleNamespace(**opt)
@@ -361,7 +361,7 @@ def main():
     inf_config = "./configs/stable-diffusion/v1-inference.yaml"
     config = OmegaConf.load(f"{inf_config}")
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    model = load_model_from_config(config, f"{ckpt}")
+    model = load_model_from_config(config, f"{ckpt}", verbose=False)
     model = model.to(device)
 
     for i in range(settings.n_batches):
@@ -387,11 +387,11 @@ def main():
             "from_file": settings.from_file,
             "seed" : settings.seed,
             "fixed_code": False,
-            "precision": "full",
+            "precision": "autocast",
             "config": config
         }
         # render the image(s)!
-        do_run(device, model, config, opt)
+        do_run(device, model, opt)
 
 if __name__ == "__main__":
     main()
