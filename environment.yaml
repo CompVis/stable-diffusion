@@ -1,4 +1,4 @@
-name: ldm
+name: prs
 channels:
   - pytorch
   - defaults

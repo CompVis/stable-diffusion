@@ -13,7 +13,7 @@ from torchvision.utils import make_grid
 import time
 from pytorch_lightning import seed_everything
 from torch import autocast
-import accelerate
+#import accelerate
 from contextlib import contextmanager, nullcontext
 
 from ldm.util import instantiate_from_config
@@ -358,7 +358,7 @@ def main():
 
     #accelerator = accelerate.Accelerator()
     ckpt = "./models/sd-v1-3-full-ema.ckpt"
-    inf_config = "./configs/v1-inference.yaml"
+    inf_config = "./configs/stable-diffusion/v1-inference.yaml"
     config = OmegaConf.load(f"{inf_config}")
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = load_model_from_config(config, f"{ckpt}")
@@ -386,6 +386,8 @@ def main():
             "dyn" : settings.dyn,
             "from_file": settings.from_file,
             "seed" : settings.seed,
+            "fixed_code": False,
+            "precision": "full",
             "config": config
         }
         # render the image(s)!

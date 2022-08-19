@@ -1,3 +1,26 @@
+# Prog Rock Stable
+An enhanced (hopefully!) version of Stable Diffusion
+
+# Installation instructions
+Download this repository either by zip file or via git:
+```
+git clone  --no-checkout https://github.com/lowfuel/progrock-stable
+cd progrock-stable
+```
+
+Create a [conda](https://conda.io/) environment named `prs`:
+```
+conda env create -f environment.yaml
+conda activate prs
+```
+
+Download the model required for Stable Diffusion, and copy it into the `models` directory
+
+Run prs to make sure everything worked!
+```
+python prs.py
+```
+
 # Stable Diffusion
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
 
