@@ -45,6 +45,29 @@ def load_model_from_config(config, ckpt, verbose=False):
     model.eval()
     return model
 
+def get_resampling_mode():
+    try:
+        from PIL import __version__, Image
+        major_ver = int(__version__.split('.')[0])
+        if major_ver >= 9:
+            return Image.Resampling.LANCZOS
+        else:
+            return Image.LANCZOS
+    except Exception as ex:
+        return 1  # 'Lanczos' irrespective of version.
+
+def load_img(path):
+    image = Image.open(path).convert("RGB")
+    w, h = image.size
+    print(f"loaded input image of size ({w}, {h}) from {path}")
+    w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
+    image = image.resize((w, h), get_resampling_mode())
+    image = np.array(image).astype(np.float32) / 255.0
+    image = image[None].transpose(0, 3, 1, 2)
+    image = torch.from_numpy(image)
+    return 2.*image - 1.
+
+
 def do_run(device, model, opt):
     print('Starting render!')
     from types import SimpleNamespace
@@ -78,6 +101,20 @@ def do_run(device, model, opt):
     base_count = len(os.listdir(sample_path))
     grid_count = len(os.listdir(outpath)) - 1
 
+    if opt.init_image is not None:
+        assert os.path.isfile(opt.init_image)
+        init_image = load_img(opt.init_image).to(device)
+        init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
+        init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
+        sampler.make_schedule(ddim_num_steps=opt.ddim_steps, ddim_eta=opt.ddim_eta, verbose=False)
+
+        # strength is like skip_steps I think
+        assert 0. <= opt.strength <= 1., 'can only work with strength in [0.0, 1.0]'
+        t_enc = int(opt.strength * opt.ddim_steps)
+        print(f"target t_enc is {t_enc} steps")
+    else:
+        init_image = None
+
     start_code = None
     if opt.fixed_code:
         start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
@@ -96,16 +133,26 @@ def do_run(device, model, opt):
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
                         c = model.get_learned_conditioning(prompts)
-                        shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
-                        samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
-                                                         conditioning=c,
-                                                         batch_size=opt.n_samples,
-                                                         shape=shape,
-                                                         verbose=False,
-                                                         unconditional_guidance_scale=opt.scale,
-                                                         unconditional_conditioning=uc,
-                                                         eta=opt.ddim_eta,
-                                                         x_T=start_code)
+
+                        if init_image is None:
+                            shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
+                            samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
+                                                            conditioning=c,
+                                                            batch_size=opt.n_samples,
+                                                            shape=shape,
+                                                            verbose=False,
+                                                            unconditional_guidance_scale=opt.scale,
+                                                            unconditional_conditioning=uc,
+                                                            eta=opt.ddim_eta,
+                                                            x_T=start_code)
+
+                        else:
+                            # encode (scaled latent)
+                            z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
+                            # decode it
+                            samples_ddim = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
+                                                    unconditional_conditioning=uc,)
+
 
                         x_samples_ddim = model.decode_first_stage(samples_ddim)
                         x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
@@ -281,6 +328,8 @@ class Settings:
     dyn = None
     from_file = None
     seed = "random"
+    init_image = None
+    init_strength = 0.5
     
     def apply_settings_file(self, filename, settings_file):
         print(f'Applying settings file: {filename}')
@@ -316,12 +365,14 @@ class Settings:
             self.dyn = (settings_file["dyn"])
         if is_json_key_present(settings_file, 'from_file'):
             self.from_file = (settings_file["from_file"])
-        if is_json_key_present(settings_file, 'dyn'):
-            self.dyn = (settings_file["dyn"])
         if is_json_key_present(settings_file, 'seed'):
             self.seed = (settings_file["seed"])
             if self.seed == "random":
                 self.seed = random.randint(1, 10000000)
+        if is_json_key_present(settings_file, 'init_strength'):
+            self.init_strength = (settings_file["init_strength"])
+        if is_json_key_present(settings_file, 'init_image'):
+            self.init_image = (settings_file["init_image"])
 
 def main():
     cl_args = parse_args()
@@ -388,6 +439,8 @@ def main():
             "seed" : settings.seed,
             "fixed_code": False,
             "precision": "autocast",
+            "init_image": settings.init_image,
+            "strength": settings.init_strength,
             "config": config
         }
         # render the image(s)!
