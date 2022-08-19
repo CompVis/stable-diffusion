@@ -152,6 +152,14 @@ python scripts\dream.py
 ```
 10. Subsequently, to relaunch the script, first activate the Anaconda command window (step 4), run "conda activate ldm" (step 6b), and then launch the dream script (step 9).
 
+### Updating to newer versions of the script
+
+This distribution is changing rapidly. If you used the "git clone" method (step 5) to download the stable-diffusion directory, then to update to the latest and greatest version, launch the Anaconda window, enter "stable-diffusion", and type:
+```
+git pull
+```
+This will bring your local copy into sync with the remote one.
+
 ## Simplified API for text to image generation
 
 For programmers who wish to incorporate stable-diffusion into other
