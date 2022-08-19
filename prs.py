@@ -580,6 +580,7 @@ def main():
     # setup the model
     ckpt = "./models/sd-v1-3-full-ema.ckpt"
     inf_config = "./configs/stable-diffusion/v1-inference.yaml"
+    print('Loading the model and checkpoint...')
     config = OmegaConf.load(f"{inf_config}")
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = load_model_from_config(config, f"{ckpt}", verbose=False)
