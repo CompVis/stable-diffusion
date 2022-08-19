@@ -19,8 +19,9 @@ from the command-line interface is very fast.
 The script uses the readline library to allow for in-line editing,
 command history (up and down arrows), autocompletion, and more.
 
-Note that this has only been tested in the Linux environment. Testing
-and tweaking for Windows is in progress.
+The script is confirmed to work on Linux and Windows systems. It should
+work on MacOSX as well, but this is not confirmed. Note that this script
+runs from the command-line (CMD or Terminal window), and does not have a GUI.
 
 ~~~~
 (ldm) ~/stable-diffusion$ python3 ./scripts/dream.py
@@ -45,7 +46,7 @@ dream> "there's a fly in my soup" -n6 -g
     seeds for individual rows: [2685670268, 1216708065, 2335773498, 822223658, 714542046, 3395302430]
 ~~~~
 
-The dream> prompt's  arguments are pretty much
+The dream> prompt's arguments are pretty much
 identical to those used in the Discord bot, except you don't need to
 type "!dream" (it doesn't hurt if you do). A significant change is that creation of individual images 
 is now the default
@@ -75,6 +76,79 @@ completely). The default is 0.75, and ranges from 0.25-0.75 give interesting res
 ## Installation
 
 ### Linux/Mac
+
+1. You will need to install the following prerequisites if they are not already available. Use your
+operating system's preferred installer
+* Python (version 3.8 or higher)
+* git
+
+2. Install the Python Anaconda environment manager using pip3.
+```
+~$ pip3 install anaconda
+```
+After installing anaconda, you should log out of your system and log back in. If the installation
+worked, your command prompt will be prefixed by the name of the current anaconda environment, "(base)".
+
+3. Copy the stable-diffusion source code from GitHub:
+```
+(base) ~$ git clone https://github.com/lstein/stable-diffusion.git
+```
+This will create stable-diffusion folder where you will follow the rest of the steps.
+
+6. Enter the newly-created stable-diffusion folder. From this step forward make sure that you are working in the stable-diffusion directory!
+```
+(base) ~$ cd stable-diffusion
+(base) ~/stable-diffusion$
+```
+7. Use anaconda to copy necessary python packages, create a new python environment named "ldm",
+and activate the environment. 
+```
+(base) ~/stable-diffusion$ conda env create -f environment.yaml
+(base) ~/stable-diffusion$ conda activate ldm
+(ldm) ~/stable-diffusion$
+```
+After these steps, your command prompt will be prefixed by "(ldm)" as shown above.
+
+8. Load a couple of small machine-learning models required by stable diffusion:
+```
+(ldm) ~/stable-diffusion$ python3 scripts/preload_models.py
+```
+
+9. Now you need to install the weights for the released stable diffusion model.
+
+For testing prior to the release of the real weights, you can use an older weight file that produces low-quality images. Create a directory within stable-diffusion named "models/ldm/text2img.large", and use the wget URL downloader tool to copy the weight file into it:
+```
+(ldm) ~/stable-diffusion$ mkdir -p models/ldm/text2img-large
+(ldm) ~/stable-diffusion$ wget -O models/ldm/text2img-large/model.ckpt https://ommer-lab.com/files/latent-diffusion/nitro/txt2img-f8-large/model.ckpt
+```
+For testing with the released weighs, you will do something similar, but with a directory named "models/ldm/stable-diffusion-v1"
+```
+(ldm) ~/stable-diffusion$ mkdir -p models/ldm/stable-diffusion-v1
+(ldm) ~/stable-diffusion$ wget -O models/ldm/stable-diffusion-v1/model.ckpt <ENTER URL HERE>
+```
+These weight files are ~5 GB in size, so downloading may take a while.
+
+10. Start generating images!
+```
+# for the pre-release weights use the **-l** switch
+(ldm) ~/stable-diffusion$ python3 scripts/dream.py -l
+
+# for the post-release weights do not use the switch
+(ldm) ~/stable-diffusion$ python3 scripts/dream.py
+
+# for additional configuration switches and arguments, use **-h**
+(ldm) ~/stable-diffusion$ python3 scripts/dream.py -h
+```
+11. Subsequently, to relaunch the script, be sure to run "conda activate ldm" (step 7, second command), enter the "stable-diffusion" 
+directory, and then launch the dream script (step 10).
+
+### Updating to newer versions of the script
+
+This distribution is changing rapidly. If you used the "git clone" method (step 5) to download the stable-diffusion directory, then to update to the latest and greatest version, launch the Anaconda window, enter "stable-diffusion", and type:
+```
+(ldm) ~/stable-diffusion$ git pull
+```
+This will bring your local copy into sync with the remote one.
 
 For installation, follow the instructions from the original CompViz/stable-diffusion
 README which is appended to this README for your convenience. A few things to be aware of:
