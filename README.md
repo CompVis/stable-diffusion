@@ -116,20 +116,25 @@ git clone https://github.com/lstein/stable-diffusion.git
 ```
 This will create stable-diffusion folder where you will follow the rest of the steps.
 
-6. Run the following two commands:
+6. Enter the newly-created stable-diffusion folder. From this step forward make sure that you are working in the stable-diffusion directory!
 ```
-conda env create -f environment.yaml
-conda activate ldm
+cd stable-diffusion
 ```
-This will install all python requirements (step 6a) and activate the "ldm" environment which sets PATH and other environment variables properly (6b).
 
-7. Run the command:
+7. Run the following two commands:
+```
+conda env create -f environment.yaml    (step 7a)
+conda activate ldm                      (step 7b)
+```
+This will install all python requirements and activate the "ldm" environment which sets PATH and other environment variables properly.
+
+8. Run the command:
 ```
 python scripts/preload_models.py
 ```
 This installs two machine learning models that stable diffusion requires.
 
-8. Now you need to install the weights for the big stable diffusion model.
+9. Now you need to install the weights for the big stable diffusion model.
 
 For testing prior to the release of the real weights, create a directory within stable-diffusion named "models\ldm\text2img.large"
 ```
@@ -142,7 +147,7 @@ mkdir models\ldm\stable-diffusion-v1
 ```
 Then use a web browser to copy model.ckpt into the appropriate directory. For the text2img.large (pre-release) model, the weights are at https://ommer-lab.com/files/latent-diffusion/nitro/txt2img-f8-large/model.ckpt
 
-9. Generate your first image:
+10. Generate your first image:
 ```
 # for the pre-release weights
 python scripts\dream.py -l
@@ -150,7 +155,7 @@ python scripts\dream.py -l
 # for the post-release weights
 python scripts\dream.py
 ```
-10. Subsequently, to relaunch the script, first activate the Anaconda command window (step 4), run "conda activate ldm" (step 6b), and then launch the dream script (step 9).
+11. Subsequently, to relaunch the script, first activate the Anaconda command window (step 4), run "conda activate ldm" (step 7b), and then launch the dream script (step 10).
 
 ### Updating to newer versions of the script
 
