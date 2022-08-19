@@ -237,9 +237,7 @@ def main():
     if opt.fixed_code:
         start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
 
-    print("start code", start_code.abs().sum())
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
-    precision_scope = nullcontext
     with torch.no_grad():
         with precision_scope("cuda"):
             with model.ema_scope():
@@ -288,6 +286,7 @@ def main():
                     Image.fromarray(grid.astype(np.uint8)).save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
                     grid_count += 1
 
+                toc = time.time()
                 image = x_samples_ddim.cpu().permute(0, 2, 3, 1).numpy()
 
                 # run safety checker
