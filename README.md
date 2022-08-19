@@ -150,30 +150,6 @@ This distribution is changing rapidly. If you used the "git clone" method (step 
 ```
 This will bring your local copy into sync with the remote one.
 
-For installation, follow the instructions from the original CompViz/stable-diffusion
-README which is appended to this README for your convenience. A few things to be aware of:
-
-1. You will need the stable-diffusion model weights, which have to be downloaded separately as described
-in the CompViz instructions. They are expected to be released in the latter half of August.
-
-2. If you do not have the weights and want to play with low-quality image generation, then you can use
-the public LAION400m weights, which can be installed like this:
-
-~~~~
-mkdir -p models/ldm/text2img-large/
-wget -O models/ldm/text2img-large/model.ckpt https://ommer-lab.com/files/latent-diffusion/nitro/txt2img-f8-large/model.ckpt
-~~~~
-
-You will then have to invoke dream.py with the --laion400m (or -l for short) flag:
-~~~~
-(ldm) ~/stable-diffusion$ python3 ./scripts/dream.py -l
-~~~~
-
-3. To get around issues that arise when running the stable diffusion model on a machine without internet
-connectivity, I wrote a script that pre-downloads internet dependencies. Whether or not your GPU machine 
-has connectivity, you will need to run this preloading script before the first run of dream.py. See
-"Workaround for machines with limited internet connectivity" below for the walkthrough.
-
 ### Windows
 
 1. Install the most recent Python from here: https://www.python.org/downloads/windows/
@@ -204,7 +180,7 @@ This will install all python requirements and activate the "ldm" environment whi
 
 8. Run the command:
 ```
-python scripts/preload_models.py
+python scripts\preload_models.py
 ```
 This installs two machine learning models that stable diffusion requires.
 
