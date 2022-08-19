@@ -47,7 +47,8 @@ dream> "there's a fly in my soup" -n6 -g
 
 The dream> prompt's  arguments are pretty-much
 identical to those used in the Discord bot, except you don't need to
-type "!dream". A significant change is that creation of individual images is the default
+type "!dream" (it doesn't hurt if you do). A significant change is that creation of individual images 
+is now the default
 unless --grid (-g) is given. For backward compatibility, the -i switch is recognized.
 For command-line help type -h (or --help) at the dream> prompt.
 
