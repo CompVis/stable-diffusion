@@ -68,6 +68,7 @@ def main():
         main_loop(t2i,cmd_parser,log)
         log.close()
 
+
 def main_loop(t2i,parser,log):
     ''' prompt/read/execute loop '''
     done = False
@@ -119,6 +120,7 @@ def main_loop(t2i,parser,log):
         except KeyboardInterrupt:
             print('*interrupted*')
             continue
+
     print("goodbye!")
 
 
@@ -173,7 +175,7 @@ def create_argv_parser():
     parser.add_argument('-o',
                         '--outdir',
                         type=str,
-                        default="outputs/txt2img-samples",
+                        default="outputs/img-samples",
                         help="directory in which to place generated images and a log of prompts and seeds")
     return parser
                         
