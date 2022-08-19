@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Before running stable-diffusion on an internet-isolated machine,
 # run this script from one with internet connectivity. The
 # two machines must share a common .cache directory.
