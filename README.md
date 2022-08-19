@@ -112,7 +112,7 @@ has connectivity, you will need to run this preloading script before the first r
 
 5. Run the command:
 ```
-git clone https://github.com/lstein/stable-diffusion.git" 
+git clone https://github.com/lstein/stable-diffusion.git
 ```
 This will create stable-diffusion folder where you will follow the rest of the steps.
 
