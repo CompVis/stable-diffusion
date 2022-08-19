@@ -212,7 +212,7 @@ This installs two machine learning models that stable diffusion requires.
 
 For testing prior to the release of the real weights, create a directory within stable-diffusion named "models\ldm\text2img.large".
 
-For testing with the released weights, create a directory named within stable-diffusion named "models\ldm\stable-diffusion-v1".
+For testing with the released weights, create a directory within stable-diffusion named "models\ldm\stable-diffusion-v1".
 
 Then use a web browser to copy model.ckpt into the appropriate directory. For the text2img.large (pre-release) model, the weights are at https://ommer-lab.com/files/latent-diffusion/nitro/txt2img-f8-large/model.ckpt. Check back here later for the release URL.
 
