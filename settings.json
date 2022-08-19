@@ -4,8 +4,8 @@
 {
     "prompt" : "A druid in his shop, selling potions and trinkets, fantasy painting by raphael lacoste and craig mullins",
     "batch_name" : "Default", // Directory to save to inside "out"
-    "width" : 512, // resolution
-    "height" : 512, // resolution
+    "width" : 512, // resolution (not used when doing init_image)
+    "height" : 512, // resolution (not used when doing init_image)
     "steps" : 50, // Number of steps to do
     "seed" : "random", // Can be set to a specific number (no quotes)
     // Init image stuff

@@ -440,7 +440,7 @@ def main():
             "fixed_code": False,
             "precision": "autocast",
             "init_image": settings.init_image,
-            "strength": settings.init_strength,
+            "strength": 1.0 - settings.init_strength,
             "config": config
         }
         # render the image(s)!
