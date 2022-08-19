@@ -139,8 +139,8 @@ These weight files are ~5 GB in size, so downloading may take a while.
 # for additional configuration switches and arguments, use -h or --help
 (ldm) ~/stable-diffusion$ python3 scripts/dream.py -h
 ```
-9. Subsequently, to relaunch the script, be sure to run "conda activate ldm" (step 7, second command), enter the "stable-diffusion" 
-directory, and then launch the dream script (step 10).
+9. Subsequently, to relaunch the script, be sure to run "conda activate ldm" (step 5, second command), enter the "stable-diffusion" 
+directory, and then launch the dream script (step 8). If you forget to activate the ldm environment, the script will fail with multiple ModuleNotFound errors.
 
 ### Updating to newer versions of the script
 
