@@ -239,9 +239,7 @@ def main():
     if opt.fixed_code:
         start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
 
-    print("start code", start_code.abs().sum())
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
-    precision_scope = nullcontext
     with torch.no_grad():
         with precision_scope("cuda"):
             with model.ema_scope():
@@ -296,6 +294,13 @@ def main():
                     grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
                     Image.fromarray(grid.astype(np.uint8)).save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
                     grid_count += 1
+
+                image = x_samples_ddim.cpu().permute(0, 2, 3, 1).numpy()
+
+                # run safety checker
+                safety_checker_input = pipe.feature_extractor(numpy_to_pil(image), return_tensors="pt")
+                image, has_nsfw_concept = pipe.safety_checker(images=image, clip_input=safety_checker_input.pixel_values)
+                toc = time.time()
 
     print(f"Your samples are ready and waiting for you here: \n{outpath} \n"
           f" \nEnjoy.")
