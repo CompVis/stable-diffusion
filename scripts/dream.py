@@ -4,14 +4,14 @@ import shlex
 import atexit
 import os
 
-# readline will be disabled on windows systems
+# readline unavailable on windows systems
 try:
     import readline
     readline_available = True
 except:
     readline_available = False
 
-debugging = False
+debugging = True
 
 def main():
     ''' Initialize command-line parsers and the diffusion model '''
@@ -60,7 +60,7 @@ def main():
     # preload the model
     if not debugging:
         t2i.load_model()
-    print("\n* Initialization done! Awaiting your command (-h for help)...")
+    print("\n* Initialization done! Awaiting your command (-h for help, q to quit)...")
 
     log_path   = os.path.join(opt.outdir,"dream_log.txt")
     with open(log_path,'a') as log:
@@ -70,15 +70,23 @@ def main():
 
 def main_loop(t2i,parser,log):
     ''' prompt/read/execute loop '''
-    while True:
+    done = False
+    
+    while not done:
         try:
             command = input("dream> ")
         except EOFError:
-            print("goodbye!")
+            done = True
             break
 
-        # rearrange the arguments to mimic how it works in the Dream bot.
         elements = shlex.split(command)
+        if elements[0]=='q':  # 
+            done = True
+            break
+        if elements[0].startswith('!dream'): # in case a stored prompt still contains the !dream command
+            elements.pop(0)
+            
+        # rearrange the arguments to mimic how it works in the Dream bot.
         switches = ['']
         switches_started = False
 
@@ -101,12 +109,17 @@ def main_loop(t2i,parser,log):
             print("Try again with a prompt!")
             continue
 
-        if opt.init_img is None:
-            results = t2i.txt2img(**vars(opt))
-        else:
-            results = t2i.img2img(**vars(opt))
-        print("Outputs:")
-        write_log_message(opt,switches,results,log)
+        try:
+            if opt.init_img is None:
+                results = t2i.txt2img(**vars(opt))
+            else:
+                results = t2i.img2img(**vars(opt))
+                print("Outputs:")
+                write_log_message(opt,switches,results,log)
+        except KeyboardInterrupt:
+            continue
+    print("goodbye!")
+
 
 def write_log_message(opt,switches,results,logfile):
     ''' logs the name of the output image, its prompt and seed to both the terminal and the log file '''
