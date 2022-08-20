@@ -132,6 +132,9 @@ model = model.half().to(device)
 def dream(prompt: str, ddim_steps: int, plms: bool, fixed_code: bool, ddim_eta: float, n_iter: int, n_samples: int, cfg_scale: float, seed: int, height: int, width: int):
     torch.cuda.empty_cache()
 
+    opt.H = height
+    opt.W = width
+
     rng_seed = seed_everything(seed)
 
     if plms:
