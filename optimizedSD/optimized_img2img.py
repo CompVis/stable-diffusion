@@ -12,6 +12,7 @@ import time
 from pytorch_lightning import seed_everything
 from torch import autocast
 from contextlib import contextmanager, nullcontext
+from einops import rearrange, repeat
 from ldm.util import instantiate_from_config
 
 
@@ -28,6 +29,23 @@ def load_model_from_config(ckpt, verbose=False):
     sd = pl_sd["state_dict"]
     return sd
 
+def load_img(path, h0, w0):
+   
+    image = Image.open(path).convert("RGB")
+    w, h = image.size
+
+    print(f"loaded input image of size ({w}, {h}) from {path}")   
+    if(h0 is not None and w0 is not None):
+        h, w = h0, w0
+    
+    w, h = map(lambda x: x - x % 32, (w0, h0))  # resize to integer multiple of 32
+
+    print(f"New image size ({w}, {h})")
+    image = image.resize((w, h), resample = Image.LANCZOS)
+    image = np.array(image).astype(np.float32) / 255.0
+    image = image[None].transpose(0, 3, 1, 2)
+    image = torch.from_numpy(image)
+    return 2.*image - 1.
 
 config = "optimizedSD/v1-inference.yaml"
 ckpt = "models/ldm/stable-diffusion-v1/model.ckpt"
@@ -47,8 +65,16 @@ parser.add_argument(
     type=str,
     nargs="?",
     help="dir to write results to",
-    default="outputs/txt2img-samples"
+    default="outputs/img2img-samples"
 )
+
+parser.add_argument(
+    "--init-img",
+    type=str,
+    nargs="?",
+    help="path to the input image"
+)
+
 parser.add_argument(
     "--skip_grid",
     action='store_true',
@@ -67,11 +93,6 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--fixed_code",
-    action='store_true',
-    help="if enabled, uses the same starting code across samples ",
-)
-parser.add_argument(
     "--ddim_eta",
     type=float,
     default=0.0,
@@ -86,14 +107,20 @@ parser.add_argument(
 parser.add_argument(
     "--H",
     type=int,
-    default=512,
+    default=None,
     help="image height, in pixel space",
 )
 parser.add_argument(
     "--W",
     type=int,
-    default=512,
+    default=None,
     help="image width, in pixel space",
+)
+parser.add_argument(
+    "--strength",
+    type=float,
+    default=0.75,
+    help="strength for noising/unnoising. 1.0 corresponds to full destruction of information in init image",
 )
 parser.add_argument(
     "--C",
@@ -160,6 +187,7 @@ base_count = len(os.listdir(sample_path))
 grid_count = len(os.listdir(outpath)) - 1
 seed_everything(opt.seed)
 
+
 sd = load_model_from_config(f"{ckpt}")
 li = []
 lo = []
@@ -188,6 +216,7 @@ else:
     config.modelUNet.params.small_batch = False
 
 
+init_image = load_img(opt.init_img, opt.H, opt.W).to(device)
 
 model = instantiate_from_config(config.modelUNet)
 _, _ = model.load_state_dict(sd, strict=False)
@@ -204,10 +233,9 @@ modelFS.eval()
 if opt.precision == "autocast":
     model.half()
     modelCS.half()
-
-start_code = None
-if opt.fixed_code:
-    start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
+    modelFS.half()
+    init_image = init_image.half()
+    
 
 
 batch_size = opt.n_samples
@@ -222,6 +250,23 @@ else:
     with open(opt.from_file, "r") as f:
         data = f.read().splitlines()
         data = list(chunk(data, batch_size))
+
+modelFS.to(device)
+
+assert os.path.isfile(opt.init_img)
+# init_image = load_img(opt.init_img, opt.H, opt.W).to(device)
+init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
+init_latent = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image))  # move to latent space
+
+mem = torch.cuda.memory_allocated()/1e6
+modelFS.to("cpu")
+while(torch.cuda.memory_allocated()/1e6 >= mem):
+    time.sleep(1)
+
+
+assert 0. <= opt.strength <= 1., 'can only work with strength in [0.0, 1.0]'
+t_enc = int(opt.strength * opt.ddim_steps)
+print(f"target t_enc is {t_enc} steps")
 
 
 precision_scope = autocast if opt.precision=="autocast" else nullcontext
@@ -239,22 +284,17 @@ with torch.no_grad():
                     prompts = list(prompts)
                 
                 c = modelCS.get_learned_conditioning(prompts)
-                shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
                 mem = torch.cuda.memory_allocated()/1e6
                 modelCS.to("cpu")
                 while(torch.cuda.memory_allocated()/1e6 >= mem):
                     time.sleep(1)
 
+                # encode (scaled latent)
+                z_enc = model.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
+                # decode it
+                samples_ddim = model.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
+                                            unconditional_conditioning=uc,)
 
-                samples_ddim = model.sample(S=opt.ddim_steps,
-                                conditioning=c,
-                                batch_size=opt.n_samples,
-                                shape=shape,
-                                verbose=False,
-                                unconditional_guidance_scale=opt.scale,
-                                unconditional_conditioning=uc,
-                                eta=opt.ddim_eta,
-                                x_T=start_code)
 
                 modelFS.to(device)
                 print("saving images")

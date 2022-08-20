@@ -1,55 +1,50 @@
-# UPDATE
+# Update: Added optimized_img2img.py
 
-The code can now use mixed precision to generate _512x512 images under 25 seconds per image while using less than 4Gb VRAM (Tested on RTX 2060 which has tensor cores). And with 6Gb VRAM, it can generate upto 640x704 images._ Thanks to @xraxra for the suggestion
+This code can now generate a 512x512 image from prior images using less than 4Gb of RAM (in less than 20 seconds on RTX 2060)
 
 # Optimized Stable Diffusion (Sort of)
 
-- This repo is a modified version of the Stable Diffusion repo, optimized to use lesser VRAM than the original by sacrificing on inference speed. It can generate _512x512 images from a prompt on a 4Gb VRAM GPU in under 25 seconds per image_ (RTX 2060 in my case). This is not possible with the original repo on a 6Gb GPU.
+- This repo is a modified version of the Stable Diffusion repo, optimized to use lesser VRAM than the original by sacrificing on inference speed.
 
-- To achieve the inference time of less than 25 seconds per image, use the maximum batch size `--n_samples` that can fit on the GPU. Inference time per image will reduce on increasing the batch size, but the required VRAM will also increase.
+- It has two python files. 1) `optimized_img2img.py` to generate new image based on a given image and prompt. 2) `optimized_txt2img.py` to generate an image based only on a prompt.
 
-- If you get a CUDA out of memory error, try reducing the batch size `--n_samples`. If it doesn't work, the other option is to reduce the image width `--W` or height `--H` or both.
+## img2img
 
-- Mixed Precision is enabled by default. If you don't have a GPU with tensor cores, you can still use mixed precision to run the code using lesser VRAM but the inference time may be larger. And if you feel that the inference is slower, try using the `--precision full` argument to disable it. On RTX 2060, using full precision can generate 512x512 images in 40 second per image while using less than 5Gb VRAM. And with 6Gb VRAM, it can generate upto 708x512 images.
+- It can generate _512x512 images from a prior image and prompt on a 4Gb VRAM GPU in under 20 seconds per image_ (RTX 2060 in my case).
 
-- All the modified files are in the [optimizedSD](optimizedSD) folder, so if you have already cloned the original repo, you can just download and copy this folder into the orignal repo instead of cloning the entire repo.
+- You can use the `--H` & `--W` arguments to set the size of the generated image.The maximum size that can fit on 6Gb GPU (RTX 2060) is around 576x768.
 
-- You can also clone this repo and follow the same installation steps as the original written below (mainly creating the conda env and placing the weights at the specified location).
+- For example, the following command will generate 20 512x512 images:
+
+`python optimizedSD/optimized_img2img.py --prompt "Austrian alps" --init-img ~/sketch-mountains-input.jpg --strength 0.8 --n_iter 2 --n_samples 5 --H 576 --W 768`
+
+## txt2img
+
+- It can generate _512x512 images from a prompt on a 4Gb VRAM GPU in under 25 seconds per image_ (RTX 2060 in my case).
+
+- You can use the `--H` & `--W` arguments to set the size of the generated image.
 
 - For example, the following command will generate 20 512x512 images:
 
 `python optimizedSD/optimized_txt2img.py --prompt "Cyberpunk style image of a Telsa car reflection in rain" --H 512 --W 512 --seed 27 --n_iter 2 --n_samples 10 --ddim_steps 50`
 
-```commandline
-usage: optimizedSD/optimized_txt2img.py [-h] [--prompt [PROMPT]] [--outdir [OUTDIR]] [--skip_grid] [--skip_save] [--ddim_steps DDIM_STEPS] [--fixed_code] [--ddim_eta DDIM_ETA] [--n_iter N_ITER] [--H H] [--W W] [--C C] [--f F] [--n_samples N_SAMPLES] [--n_rows N_ROWS]
-                  [--scale SCALE] [--from-file FROM_FILE] [--seed SEED]
+---
 
-optional arguments:
-  -h, --help            show this help message and exit
-  --prompt [PROMPT]     the prompt to render
-  --outdir [OUTDIR]     dir to write results to
-  --ddim_steps DDIM_STEPS
-                        number of ddim sampling steps
-  --fixed_code          if enabled, uses the same starting code across samples
-  --ddim_eta DDIM_ETA   ddim eta (eta=0.0 corresponds to deterministic sampling
-  --n_iter N_ITER       sample this often
-  --small_batch         use to reduce inference time for a small batch from 60 to 40 seconds
-  --H H                 image height, in pixel space
-  --W W                 image width, in pixel space
-  --C C                 latent channels
-  --f F                 downsampling factor
-  --n_samples N_SAMPLES
-                        how many samples to produce for each given prompt. A.k.a. batch size
-  --n_rows N_ROWS       rows in the grid (default: n_samples)
-  --scale SCALE         unconditional guidance scale: eps = eps(x, empty) + scale * (eps(x, cond) - eps(x, empty))
-  --from-file FROM_FILE
-                        if specified, load prompts from this file
-  --seed SEED           the seed (for reproducible sampling)
-```
+- To get the lowest inference time per image, use the maximum batch size `--n_samples` that can fit on the GPU. Inference time per image will reduce on increasing the batch size, but the required VRAM will also increase.
+
+- If you get a CUDA out of memory error, try reducing the batch size `--n_samples`. If it doesn't work, the other option is to reduce the image width `--W` or height `--H` or both.
+
+- Mixed Precision is enabled by default. If you don't have a GPU with tensor cores, you can still use mixed precision to run the code using lesser VRAM but the inference time may be larger. And if you feel that the inference is slower, try using the `--precision full` argument to disable it.
+
+- All the modified files are in the [optimizedSD](optimizedSD) folder, so if you have already cloned the original repo, you can just download and copy this folder into the orignal repo instead of cloning the entire repo.
+
+- You can also clone this repo and follow the same installation steps as the original written below (mainly creating the conda env and placing the weights at the specified location).
+
+---
 
 - To achieve this, the stable diffusion model is fragmented into four parts which are sent to the GPU only when needed. After the calculation is done, they are moved back to the CPU. This allows us to run a bigger model on a lower VRAM.
 
-- The only drawback is higher inference time (40 seconds per image for 50 ddim_steps on a 6Gb RTX 2060) which is still an order of magnitude faster than inference on CPU.
+- The only drawback is higher inference time which is still an order of magnitude faster than inference on CPU.
 
 # Stable Diffusion
 
