@@ -7,7 +7,6 @@
     "width" : 512, // resolution (not used when doing init_image)
     "height" : 512, // resolution (not used when doing init_image)
     "steps" : 50, // Number of steps to do
-    "scale" : 7.0, // has impact on image quality. Between 6.0 and 9.0 is sensible.
     "seed" : "random", // Can be set to a specific number (no quotes)
     "n_batches" : 1, // Number of overall batches of images to make in this render
     "n_samples" : 1, // how many images to create in a given n_batch
@@ -21,6 +20,7 @@
     "gobig_overlap": 64, // number of pixels to blend against other areas in go_big
     // Generally, you can ignore most of the rest of this
     "plms" : false, // whether or not do use plms diffusion instead of ddim
-    "eta" : 0.0, // does not seem to currently do anything
+    "eta" : 0.0, // "corresponds to deterministic sampling"
+    "scale" : 5.0, // clip guidance scale factor?
     "from_file": null // load prompts from a file instead of using prompt
 }
