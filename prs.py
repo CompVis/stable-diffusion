@@ -131,6 +131,13 @@ def do_run(device, model, opt):
                             uc = model.get_learned_conditioning(batch_size * [""])
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
+
+                        # process the prompt for randomizers and dynamic values
+                        for prompt in prompts:
+                            prompt = randomize_prompt(prompt)
+                            prompt = dynamic_value(prompt)
+                            print(f'\nPrompt for this image: \n"{prompt}"\n')
+
                         c = model.get_learned_conditioning(prompts)
 
                         if init_image is None:
@@ -431,8 +438,6 @@ class Settings:
     prompt = "A druid in his shop, selling potions and trinkets, fantasy painting by raphael lacoste and craig mullins"
     batch_name = "default"
     n_batches = 1
-    skip_grid = False
-    skip_save = False
     steps = 50
     plms = False
     eta = 0.0
@@ -458,10 +463,6 @@ class Settings:
             self.batch_name = (settings_file["batch_name"])
         if is_json_key_present(settings_file, 'n_batches'):
             self.n_batches = (settings_file["n_batches"])
-        if is_json_key_present(settings_file, 'skip_grid'):
-            self.skip_grid = (settings_file["skip_grid"])
-        if is_json_key_present(settings_file, 'skip_save'):
-            self.skip_save = (settings_file["skip_save"])
         if is_json_key_present(settings_file, 'steps'):
             self.steps = (settings_file["steps"])
         if is_json_key_present(settings_file, 'plms'):
@@ -573,11 +574,6 @@ def main():
 
     outdir = (f'./out/{settings.batch_name}')
 
-    # process the prompt for randomizers and dynamic values
-    settings.prompt = randomize_prompt(settings.prompt)
-    settings.prompt = dynamic_value(settings.prompt)
-    print(f'Setting prompt to: \n"{settings.prompt}"\n')
-
     # setup the model
     ckpt = "./models/sd-v1-3-full-ema.ckpt"
     inf_config = "./configs/stable-diffusion/v1-inference.yaml"
@@ -593,8 +589,8 @@ def main():
             "prompt" : settings.prompt,
             "batch_name" : settings.batch_name,
             "outdir" : outdir,
-            "skip_grid" : settings.skip_grid,
-            "skip_save" : settings.skip_save,
+            "skip_grid" : False,
+            "skip_save" : False,
             "ddim_steps" : settings.steps,
             "plms" : settings.plms,
             "ddim_eta" : settings.eta,

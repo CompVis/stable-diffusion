@@ -10,19 +10,17 @@
     "seed" : "random", // Can be set to a specific number (no quotes)
     // Init image stuff
     "init_image": null, // the file to use for a starting point (leave as null for no init)
-    "init_strength": 0.5, // how strongly the init should be applied.
+    "init_strength": 0.62, // how strongly the init should be applied (essentially skip_steps)
     // go_big stuff
     "gobig_maximize": false, // auto-extend go_big into otherwise wasted space
     "gobig_overlap": 64, // number of pixels to blend against other areas in go_big
     // Generally, you can ignore most of the rest of this
     "n_batches" : 1, // Number of images to make in this render
-    "skip_grid" : false, // Don't use the tile method when rendering multiple samples
-    "skip_save" : false, // If for some weird reason you don't want to save your output
     "plms" : false, // whether or not do use plms diffusion instead of ddim
     "eta" : 0.0, // "corresponds to deterministic sampling"
-    "n_iter" : 1, // number of samples per step?
+    "n_iter" : 1, // number of images to put in the grid collage
     "n_samples" : 1, // how many samples to create in a given n_batch
     "n_rows" : 2, // width of the grid collage
     "scale" : 5.0, // clip guidance scale factor?
-    "from_file": null // load prompts from a file (not supported yet)
+    "from_file": null // load prompts from a file instead of using prompt
 }
