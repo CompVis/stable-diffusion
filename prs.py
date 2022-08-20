@@ -275,13 +275,9 @@ def grid_coords(target, original, overlap):
     return result, (new_edgex, new_edgey)
 
 # Chop our source into a grid of images that each equal the size of the original render
-def grid_slice(source, overlap, og_size, maximize=False): 
+def grid_slice(source, overlap, og_size): 
     width, height = og_size # size of the slices to be rendered
-    maximize = True # remove this once it's working
     coordinates, new_size = grid_coords(source.size, og_size, overlap)
-    if maximize == True:
-        source = source.resize(new_size, get_resampling_mode()) # minor concern that we're resizing twice
-        coordinates, new_size = grid_coords(source.size, og_size, overlap) # re-do the coordinates with the new canvas size
     # loc_width and loc_height are the center point of the goal size, and we'll start there and work our way out
     slices = []
     for coordinate in coordinates:
@@ -358,7 +354,7 @@ def parse_args():
         type=int,
         default = 2,
         required=False,
-        help='An image to use to kick off GO BIG mode, skipping the initial render.'
+        help='What scale to multiply your original image by. 2 is a good value. 3 is insane. Anything more and I wish you luck.'
     )
 
     return my_parser.parse_args()
@@ -451,6 +447,8 @@ class Settings:
     seed = "random"
     init_image = None
     init_strength = 0.5
+    gobig_maximize = True
+    gobig_overlap = 64
     
     def apply_settings_file(self, filename, settings_file):
         print(f'Applying settings file: {filename}')
@@ -494,10 +492,13 @@ class Settings:
             self.init_strength = (settings_file["init_strength"])
         if is_json_key_present(settings_file, 'init_image'):
             self.init_image = (settings_file["init_image"])
+        if is_json_key_present(settings_file, 'gobig_maximize'):
+            self.gobig_maximize = (settings_file["gobig_maximize"])
+        if is_json_key_present(settings_file, 'gobig_overlap'):
+            self.gobig_overlap = (settings_file["gobig_overlap"])
 
 def do_gobig(gobig_init, gobig_scale, device, model, opt):
-    gobig_maximize = True
-    overlap = 64
+    overlap = opt.gobig_overlap
     outpath = opt.outdir
     # get our render size for each slice, and our target size
     input_image = Image.open(gobig_init).convert('RGBA')
@@ -506,7 +507,7 @@ def do_gobig(gobig_init, gobig_scale, device, model, opt):
     target_H = opt.H * gobig_scale
     target_image = input_image.resize((target_W, target_H), get_resampling_mode())
     slices, new_canvas_size = grid_slice(target_image, overlap, (opt.W, opt.H))
-    if gobig_maximize == True:
+    if opt.gobig_maximize == True:
         # increase our final image size to use up blank space
         target_image = input_image.resize(new_canvas_size, get_resampling_mode())
         slices, new_canvas_size = grid_slice(target_image, overlap, (opt.W, opt.H))
@@ -612,6 +613,8 @@ def main():
             "precision": "autocast",
             "init_image": settings.init_image,
             "strength": 1.0 - settings.init_strength,
+            "gobig_maximize": settings.gobig_maximize,
+            "gobig_overlap": settings.gobig_overlap,
             "config": config
         }
         opt = SimpleNamespace(**opt)

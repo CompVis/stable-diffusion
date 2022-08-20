@@ -11,6 +11,9 @@
     // Init image stuff
     "init_image": null, // the file to use for a starting point (leave as null for no init)
     "init_strength": 0.5, // how strongly the init should be applied.
+    // go_big stuff
+    "gobig_maximize": false, // auto-extend go_big into otherwise wasted space
+    "gobig_overlap": 64, // number of pixels to blend against other areas in go_big
     // Generally, you can ignore most of the rest of this
     "n_batches" : 1, // Number of images to make in this render
     "skip_grid" : false, // Don't use the tile method when rendering multiple samples
