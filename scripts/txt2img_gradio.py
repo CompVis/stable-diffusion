@@ -142,6 +142,8 @@ def dream(prompt: str, ddim_steps: int, plms: bool, fixed_code: bool, ddim_eta: 
     else:
         sampler = DDIMSampler(model)
 
+    opt.outdir = "outputs/txt2img-samples"
+
     os.makedirs(opt.outdir, exist_ok=True)
     outpath = opt.outdir
 
@@ -226,6 +228,8 @@ def translation(prompt: str, init_img, ddim_steps: int, ddim_eta: float, n_iter:
     rng_seed = seed_everything(seed)
 
     sampler = DDIMSampler(model)
+
+    opt.outdir = "outputs/img2img-samples"
 
     os.makedirs(opt.outdir, exist_ok=True)
     outpath = opt.outdir
@@ -329,8 +333,8 @@ dream_interface = gr.Interface(
         gr.Slider(minimum=1, maximum=8, step=1, label='Samples per iteration', value=2),
         gr.Slider(minimum=1.0, maximum=20.0, step=0.5, label='Classifier Free Guidance Scale', value=7.0),
         gr.Number(label='Seed', value=-1),
-        gr.Slider(minimum=32, maximum=2048, step=64, label="Height", value=512),
-        gr.Slider(minimum=32, maximum=2048, step=64, label="Width", value=512),
+        gr.Slider(minimum=64, maximum=2048, step=64, label="Height", value=512),
+        gr.Slider(minimum=64, maximum=2048, step=64, label="Width", value=512),
     ],
     outputs=[
         gr.Gallery(),
