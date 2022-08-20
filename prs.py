@@ -116,6 +116,7 @@ def do_run(device, model, opt):
 
     start_code = None
     if opt.fixed_code:
+        print('Doing fixed code for some reason')
         start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
 
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
@@ -604,7 +605,7 @@ def main():
             "scale" : settings.scale,
             "dyn" : settings.dyn,
             "from_file": settings.from_file,
-            "seed" : settings.seed,
+            "seed" : settings.seed + i,
             "fixed_code": False,
             "precision": "autocast",
             "init_image": settings.init_image,
