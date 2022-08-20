@@ -1,6 +1,7 @@
 import argparse, os, sys, glob
 import random
 import torch
+from torch import nn
 import numpy as np
 from omegaconf import OmegaConf
 import PIL
@@ -16,6 +17,7 @@ from torch import autocast
 #import accelerate
 from contextlib import contextmanager, nullcontext
 
+import k_diffusion as K
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
@@ -68,6 +70,17 @@ def load_img(path):
     image = torch.from_numpy(image)
     return 2.*image - 1.
 
+class CFGDenoiser(nn.Module):
+    def __init__(self, model):
+        super().__init__()
+        self.inner_model = model
+
+    def forward(self, x, sigma, uncond, cond, cond_scale):
+        x_in = torch.cat([x] * 2)
+        sigma_in = torch.cat([sigma] * 2)
+        cond_in = torch.cat([uncond, cond])
+        uncond, cond = self.inner_model(x_in, sigma_in, cond=cond_in).chunk(2)
+        return uncond + (cond - uncond) * cond_scale
 
 def do_run(device, model, opt):
     print('Starting render!')
@@ -77,6 +90,9 @@ def do_run(device, model, opt):
         sampler = PLMSSampler(model)
     else:
         sampler = DDIMSampler(model)
+
+    model_wrap = K.external.CompVisDenoiser(model)
+    sigma_min, sigma_max = model_wrap.sigmas[0].item(), model_wrap.sigmas[-1].item()
 
     os.makedirs(opt.outdir, exist_ok=True)
     outpath = opt.outdir
@@ -116,7 +132,6 @@ def do_run(device, model, opt):
 
     start_code = None
     if opt.fixed_code:
-        print('Doing fixed code for some reason')
         start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
 
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
@@ -143,15 +158,20 @@ def do_run(device, model, opt):
 
                         if init_image is None:
                             shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
-                            samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
-                                                            conditioning=c,
-                                                            batch_size=opt.n_samples,
-                                                            shape=shape,
-                                                            verbose=False,
-                                                            unconditional_guidance_scale=opt.scale,
-                                                            unconditional_conditioning=uc,
-                                                            eta=opt.ddim_eta,
-                                                            x_T=start_code)
+                            sigmas = model_wrap.get_sigmas(opt.ddim_steps)
+                            x = torch.randn([opt.n_samples, *shape], device=device) * sigmas[0]
+                            model_wrap_cfg = CFGDenoiser(model_wrap)
+                            extra_args = {'cond': c, 'uncond': uc, 'cond_scale': opt.scale}
+                            samples_ddim = K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args)
+                            # samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
+                            #                                 conditioning=c,
+                            #                                 batch_size=opt.n_samples,
+                            #                                 shape=shape,
+                            #                                 verbose=False,
+                            #                                 unconditional_guidance_scale=opt.scale,
+                            #                                 unconditional_conditioning=uc,
+                            #                                 eta=opt.ddim_eta,
+                            #                                 x_T=start_code)
 
                         else:
                             # encode (scaled latent)
