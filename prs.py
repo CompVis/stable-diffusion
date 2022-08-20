@@ -163,15 +163,6 @@ def do_run(device, model, opt):
                             model_wrap_cfg = CFGDenoiser(model_wrap)
                             extra_args = {'cond': c, 'uncond': uc, 'cond_scale': opt.scale}
                             samples_ddim = K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args)
-                            # samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
-                            #                                 conditioning=c,
-                            #                                 batch_size=opt.n_samples,
-                            #                                 shape=shape,
-                            #                                 verbose=False,
-                            #                                 unconditional_guidance_scale=opt.scale,
-                            #                                 unconditional_conditioning=uc,
-                            #                                 eta=opt.ddim_eta,
-                            #                                 x_T=start_code)
 
                         else:
                             # encode (scaled latent)

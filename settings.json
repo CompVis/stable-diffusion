@@ -7,7 +7,7 @@
     "width" : 512, // resolution (not used when doing init_image)
     "height" : 512, // resolution (not used when doing init_image)
     "steps" : 50, // Number of steps to do
-    "scale" : 7.0, // has impact on image quality. A value from 2.0 to 25.0 is worth trying
+    "scale" : 7.0, // has impact on image quality. Between 6.0 and 9.0 is sensible.
     "seed" : "random", // Can be set to a specific number (no quotes)
     "n_batches" : 1, // Number of overall batches of images to make in this render
     "n_samples" : 1, // how many images to create in a given n_batch
