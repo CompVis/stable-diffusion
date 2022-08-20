@@ -11,6 +11,7 @@ import time
 from pytorch_lightning import seed_everything
 from torch import autocast
 from contextlib import contextmanager, nullcontext
+from random import randint
 
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
@@ -164,8 +165,7 @@ def main():
     parser.add_argument(
         "--seed",
         type=int,
-        default=42,
-        help="the seed (for reproducible sampling)",
+        help="the seed (for reproducible sampling) if seed argument is omitted, use a random seed",
     )
     parser.add_argument(
         "--precision",
@@ -182,7 +182,10 @@ def main():
         opt.ckpt = "models/ldm/text2img-large/model.ckpt"
         opt.outdir = "outputs/txt2img-samples-laion400m"
 
-    seed_everything(opt.seed)
+    if opt.seed is not None:
+        seed_everything(opt.seed)
+    else:
+        seed_everything(randint(0, 2**32 - 1))  # NumPy requires the seed be convertible to an unsigned 32-bit int
 
     config = OmegaConf.load(f"{opt.config}")
     model = load_model_from_config(config, f"{opt.ckpt}")
