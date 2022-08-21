@@ -134,10 +134,12 @@ def do_run(device, model, opt):
                             prompts = list(prompts)
 
                         # process the prompt for randomizers and dynamic values
+                        newprompts = []
                         for prompt in prompts:
                             prompt = randomize_prompt(prompt)
                             prompt = dynamic_value(prompt)
-                            print(f'\nPrompt for this image: \n"{prompt}"\n')
+                            newprompts.append(prompt)
+                        prompts = newprompts
 
                         c = model.get_learned_conditioning(prompts)
 
