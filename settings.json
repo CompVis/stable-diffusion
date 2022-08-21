@@ -22,5 +22,6 @@
     // Generally, you can ignore most of the rest of this
     "plms" : false, // whether or not do use plms diffusion instead of ddim
     "eta" : 0.0, // currently does not seem to do anything
-    "from_file": null // load prompts from a file instead of using prompt
+    "from_file": null, // load prompts from a file instead of using prompt
+    "cool_down": 0.0 // number of seconds to pause between images, to keep GPU cool
 }

@@ -83,17 +83,10 @@ def do_run(device, model, opt):
 
     batch_size = opt.n_samples
     n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
-    if not opt.from_file:
-        prompt = opt.prompt
-        assert prompt is not None
-        data = [batch_size * [prompt]]
 
-    else:
-        #TODO: process a prompt file ahead of time for randomizers
-        print(f"reading prompts from {opt.from_file}")
-        with open(opt.from_file, "r") as f:
-            data = f.read().splitlines()
-            data = list(chunk(data, batch_size))
+    # prompt = opt.prompt
+    data = [batch_size * [opt.prompt]]
+    # data = opt.prompt
 
     sample_path = os.path.join(outpath, "samples")
     os.makedirs(sample_path, exist_ok=True)
@@ -116,7 +109,6 @@ def do_run(device, model, opt):
 
     start_code = None
     if opt.fixed_code:
-        print('Doing fixed code for some reason')
         start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
 
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
@@ -130,8 +122,6 @@ def do_run(device, model, opt):
                         uc = None
                         if opt.scale != 1.0:
                             uc = model.get_learned_conditioning(batch_size * [""])
-                        if isinstance(prompts, tuple):
-                            prompts = list(prompts)
 
                         # process the prompt for randomizers and dynamic values
                         newprompts = []
@@ -140,6 +130,8 @@ def do_run(device, model, opt):
                             prompt = dynamic_value(prompt)
                             newprompts.append(prompt)
                         prompts = newprompts
+
+                        print(f'\nPrompt for this image:\n   {prompts}\n')
 
                         c = model.get_learned_conditioning(prompts)
 
@@ -185,7 +177,7 @@ def do_run(device, model, opt):
                     add_metadata = True
                     metadata = PngInfo()
                     if add_metadata == True:
-                        metadata.add_text("prompt", opt.prompt)
+                        metadata.add_text("prompt", str(prompts))
                         metadata.add_text("seed", str(opt.seed))
                         metadata.add_text("steps", str(opt.ddim_steps))
 
@@ -347,6 +339,13 @@ def parse_args():
         help='How many images to generate'
     )
     my_parser.add_argument(
+        '-f',
+        '--from_file',
+        action='store',
+        required=False,
+        help='A text file with prompts (one per line)'
+    )
+    my_parser.add_argument(
         '--gobig',
         action='store_true',
         required=False,
@@ -457,6 +456,7 @@ class Settings:
     init_strength = 0.5
     gobig_maximize = True
     gobig_overlap = 64
+    cool_down = 0.0
     
     def apply_settings_file(self, filename, settings_file):
         print(f'Applying settings file: {filename}')
@@ -500,6 +500,8 @@ class Settings:
             self.gobig_maximize = (settings_file["gobig_maximize"])
         if is_json_key_present(settings_file, 'gobig_overlap'):
             self.gobig_overlap = (settings_file["gobig_overlap"])
+        if is_json_key_present(settings_file, 'cool_down'):
+            self.cool_down = (settings_file["cool_down"])
 
 def do_gobig(gobig_init, gobig_scale, device, model, opt):
     overlap = opt.gobig_overlap
@@ -575,6 +577,9 @@ def main():
     if cl_args.n_batches:
         settings.n_batches = cl_args.n_batches
 
+    if cl_args.from_file:
+        settings.from_file = cl_args.from_file
+
     outdir = (f'./out/{settings.batch_name}')
 
     # setup the model
@@ -586,44 +591,56 @@ def main():
     model = load_model_from_config(config, f"{ckpt}", verbose=False)
     model = model.to(device)
 
-    for i in range(settings.n_batches):
-        # pack up our settings into a simple namespace for the renderer
-        opt = {
-            "prompt" : settings.prompt,
-            "batch_name" : settings.batch_name,
-            "outdir" : outdir,
-            "skip_grid" : False,
-            "skip_save" : False,
-            "ddim_steps" : settings.steps,
-            "plms" : settings.plms,
-            "ddim_eta" : settings.eta,
-            "n_iter" : settings.n_iter,
-            "W" : settings.width,
-            "H" : settings.height,
-            "C" : 4,
-            "f" : 8,
-            "n_samples" : settings.n_samples,
-            "n_rows" : settings.n_rows,
-            "scale" : settings.scale,
-            "dyn" : settings.dyn,
-            "from_file": settings.from_file,
-            "seed" : settings.seed + i,
-            "fixed_code": False,
-            "precision": "autocast",
-            "init_image": settings.init_image,
-            "strength": 1.0 - settings.init_strength,
-            "gobig_maximize": settings.gobig_maximize,
-            "gobig_overlap": settings.gobig_overlap,
-            "config": config
-        }
-        opt = SimpleNamespace(**opt)
-        # render the image(s)!
-        if cl_args.gobig_init == None:
-            gobig_init = do_run(device, model, opt)
-        else:
-            gobig_init = cl_args.gobig_init
-        if cl_args.gobig:
-            do_gobig(gobig_init, cl_args.gobig_scale, device, model, opt)
+    prompts = []
+    if settings.from_file is not None:
+        with open(settings.from_file, "r") as f:
+            prompts = f.read().splitlines()
+    else:
+        prompts.append(settings.prompt)
+
+    for prompt in prompts:
+        for i in range(settings.n_batches):
+            # pack up our settings into a simple namespace for the renderer
+            opt = {
+                "prompt" : prompt,
+                "batch_name" : settings.batch_name,
+                "outdir" : outdir,
+                "skip_grid" : False,
+                "skip_save" : False,
+                "ddim_steps" : settings.steps,
+                "plms" : settings.plms,
+                "ddim_eta" : settings.eta,
+                "n_iter" : settings.n_iter,
+                "W" : settings.width,
+                "H" : settings.height,
+                "C" : 4,
+                "f" : 8,
+                "n_samples" : settings.n_samples,
+                "n_rows" : settings.n_rows,
+                "scale" : settings.scale,
+                "dyn" : settings.dyn,
+                "from_file": settings.from_file,
+                "seed" : settings.seed + i,
+                "fixed_code": False,
+                "precision": "autocast",
+                "init_image": settings.init_image,
+                "strength": 1.0 - settings.init_strength,
+                "gobig_maximize": settings.gobig_maximize,
+                "gobig_overlap": settings.gobig_overlap,
+                "config": config
+            }
+            opt = SimpleNamespace(**opt)
+            # render the image(s)!
+            if cl_args.gobig_init == None:
+                # either just a regular render, or a regular render that will next go_big
+                gobig_init = do_run(device, model, opt)
+            else:
+                gobig_init = cl_args.gobig_init
+            if cl_args.gobig:
+                do_gobig(gobig_init, cl_args.gobig_scale, device, model, opt)
+            if settings.cool_down > 0 and i < (settings.n_batches - 1):
+                print(f'Pausing {settings.cool_down} seconds to give your poor GPU a rest...')
+                time.sleep(settings.cool_down)
 
 if __name__ == "__main__":
     main()
