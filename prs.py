@@ -632,12 +632,13 @@ def main():
             opt = SimpleNamespace(**opt)
             # render the image(s)!
             if cl_args.gobig_init == None:
+                # either just a regular render, or a regular render that will next go_big
                 gobig_init = do_run(device, model, opt)
             else:
                 gobig_init = cl_args.gobig_init
             if cl_args.gobig:
                 do_gobig(gobig_init, cl_args.gobig_scale, device, model, opt)
-            if settings.cool_down > 0:
+            if settings.cool_down > 0 and i < (settings.n_batches - 1):
                 print(f'Pausing {settings.cool_down} seconds to give your poor GPU a rest...')
                 time.sleep(settings.cool_down)
 
