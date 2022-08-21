@@ -11,7 +11,7 @@ try:
 except:
     readline_available = False
 
-debugging = True
+debugging = False
 
 def main():
     ''' Initialize command-line parsers and the diffusion model '''
