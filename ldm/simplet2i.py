@@ -108,6 +108,7 @@ class T2I:
                  ddim_eta=0.0,  # deterministic
                  fixed_code=False,
                  precision='autocast',
+                 full_precision=False,
                  strength=0.75 # default in scripts/img2img.py
     ):
         self.outdir     = outdir
@@ -126,6 +127,7 @@ class T2I:
         self.downsampling_factor = downsampling_factor
         self.ddim_eta            = ddim_eta
         self.precision           = precision
+        self.full_precision      = full_precision
         self.strength            = strength
         self.model      = None     # empty for now
         self.sampler    = None
@@ -407,7 +409,12 @@ class T2I:
         m, u = model.load_state_dict(sd, strict=False)
         model.cuda()
         model.eval()
-        model.half()
+        if self.full_precision:
+            print('Using slower but more accurate full precision math')
+            model.full()
+        else:
+            print('Using half precision math. Call with --full_precision to use full precision')
+            model.half()
         return model
 
     def _load_img(self,path):

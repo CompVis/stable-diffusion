@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 import shlex
 import atexit
@@ -11,7 +12,7 @@ try:
 except:
     readline_available = False
 
-debugging = True
+debugging = False
 
 def main():
     ''' Initialize command-line parsers and the diffusion model '''
@@ -49,6 +50,7 @@ def main():
               outdir=opt.outdir,
               sampler=opt.sampler,
               weights=weights,
+              full_precision=opt.full_precision,
               config=config)
 
     # make sure the output directory exists
@@ -165,14 +167,18 @@ def create_argv_parser():
                         type=int,
                         default=1,
                         help="number of images to generate")
+    parser.add_argument('-F','--full_precision',
+                        dest='full_precision',
+                        action='store_true',
+                        help="use slower full precision math for calculations")
     parser.add_argument('-b','--batch_size',
                         type=int,
                         default=1,
                         help="number of images to produce per iteration (currently not working properly - producing too many images)")
     parser.add_argument('--sampler',
                         choices=['plms','ddim', 'klms'],
-                        default='plms',
-                        help="which sampler to use")
+                        default='klms',
+                        help="which sampler to use (klms)")
     parser.add_argument('-o',
                         '--outdir',
                         type=str,

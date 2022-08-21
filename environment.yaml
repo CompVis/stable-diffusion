@@ -25,7 +25,7 @@ dependencies:
     - torchmetrics==0.6.0
     - kornia==0.6
     - accelerate==0.12.0
-    - git+https://github.com/crowsonkb/k-diffusion.git@master
-    - -e git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
     - -e git+https://github.com/openai/CLIP.git@main#egg=clip
+    - -e git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
+    - -e git+https://github.com/lstein/k-diffusion.git@master#egg=k-diffusion
     - -e .
