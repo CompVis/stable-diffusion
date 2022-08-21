@@ -2,6 +2,7 @@ import argparse
 import shlex
 import atexit
 import os
+import sys
 
 # readline unavailable on windows systems
 try:
@@ -34,7 +35,7 @@ def main():
         setup_readline()
 
     print("* Initializing, be patient...\n")
-    os.path.append('.')
+    sys.path.append('.')
     from pytorch_lightning import logging
     from ldm.simplet2i import T2I
 
