@@ -170,7 +170,7 @@ def create_argv_parser():
                         default=1,
                         help="number of images to produce per iteration (currently not working properly - producing too many images)")
     parser.add_argument('--sampler',
-                        choices=['plms','ddim'],
+                        choices=['plms','ddim', 'klms'],
                         default='plms',
                         help="which sampler to use")
     parser.add_argument('-o',
