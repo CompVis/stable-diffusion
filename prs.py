@@ -454,6 +454,7 @@ class Settings:
     init_strength = 0.5
     gobig_maximize = True
     gobig_overlap = 64
+    cool_down = 0.0
     
     def apply_settings_file(self, filename, settings_file):
         print(f'Applying settings file: {filename}')
@@ -497,6 +498,8 @@ class Settings:
             self.gobig_maximize = (settings_file["gobig_maximize"])
         if is_json_key_present(settings_file, 'gobig_overlap'):
             self.gobig_overlap = (settings_file["gobig_overlap"])
+        if is_json_key_present(settings_file, 'cool_down'):
+            self.cool_down = (settings_file["cool_down"])
 
 def do_gobig(gobig_init, gobig_scale, device, model, opt):
     overlap = opt.gobig_overlap
@@ -634,6 +637,9 @@ def main():
                 gobig_init = cl_args.gobig_init
             if cl_args.gobig:
                 do_gobig(gobig_init, cl_args.gobig_scale, device, model, opt)
+            if settings.cool_down > 0:
+                print(f'Pausing {settings.cool_down} seconds to give your poor GPU a rest...')
+                time.sleep(settings.cool_down)
 
 if __name__ == "__main__":
     main()
