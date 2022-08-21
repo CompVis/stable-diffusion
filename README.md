@@ -21,15 +21,30 @@ Run prs to make sure everything worked!
 python prs.py
 ```
 
-# Use
+# Basic Use
+
+To use the default settings, but with your own text prompt:
+```
+python prs.py -p "A painting of a troll under a bridge, by Hubert Robert"
+```
+
+# Intermediate Use
+
 It is recommended that you create your own settings file(s) inside the settings folder, and leave the orignial settings.json file as is.
 
 To specify your own settings file, simply do:
 ```
 python prs.py -s settings\my_file.json
 ```
-Note: You can supply multiple settings partial settings files, they will be layered on top of the previous ones in order, ALWAYS starting with the default settings.json
+Note: You can supply multiple settings partial settings files, they will be layered on top of the previous ones in order, ALWAYS starting with the default settings.json. 
 
+# Advanced Use
+## Run a series of prompts
+Create a text file (let's call it myprompts.txt), then edit your settings file and set:
+```
+    "from_file": "myprompts.txt",
+```
+Each prompt will be run, in order, n_batches of times. So if n_batches = 5 you'll get 5 images for the first prompt, then five for the second, and so on.
 
 # About Stable Diffusion
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*

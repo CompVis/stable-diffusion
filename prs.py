@@ -83,17 +83,10 @@ def do_run(device, model, opt):
 
     batch_size = opt.n_samples
     n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
-    if not opt.from_file:
-        prompt = opt.prompt
-        assert prompt is not None
-        data = [batch_size * [prompt]]
 
-    else:
-        #TODO: process a prompt file ahead of time for randomizers
-        print(f"reading prompts from {opt.from_file}")
-        with open(opt.from_file, "r") as f:
-            data = f.read().splitlines()
-            data = list(chunk(data, batch_size))
+    # prompt = opt.prompt
+    data = [batch_size * [opt.prompt]]
+    # data = opt.prompt
 
     sample_path = os.path.join(outpath, "samples")
     os.makedirs(sample_path, exist_ok=True)
@@ -116,7 +109,6 @@ def do_run(device, model, opt):
 
     start_code = None
     if opt.fixed_code:
-        print('Doing fixed code for some reason')
         start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
 
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
@@ -130,8 +122,6 @@ def do_run(device, model, opt):
                         uc = None
                         if opt.scale != 1.0:
                             uc = model.get_learned_conditioning(batch_size * [""])
-                        if isinstance(prompts, tuple):
-                            prompts = list(prompts)
 
                         # process the prompt for randomizers and dynamic values
                         newprompts = []
@@ -586,44 +576,54 @@ def main():
     model = load_model_from_config(config, f"{ckpt}", verbose=False)
     model = model.to(device)
 
-    for i in range(settings.n_batches):
-        # pack up our settings into a simple namespace for the renderer
-        opt = {
-            "prompt" : settings.prompt,
-            "batch_name" : settings.batch_name,
-            "outdir" : outdir,
-            "skip_grid" : False,
-            "skip_save" : False,
-            "ddim_steps" : settings.steps,
-            "plms" : settings.plms,
-            "ddim_eta" : settings.eta,
-            "n_iter" : settings.n_iter,
-            "W" : settings.width,
-            "H" : settings.height,
-            "C" : 4,
-            "f" : 8,
-            "n_samples" : settings.n_samples,
-            "n_rows" : settings.n_rows,
-            "scale" : settings.scale,
-            "dyn" : settings.dyn,
-            "from_file": settings.from_file,
-            "seed" : settings.seed + i,
-            "fixed_code": False,
-            "precision": "autocast",
-            "init_image": settings.init_image,
-            "strength": 1.0 - settings.init_strength,
-            "gobig_maximize": settings.gobig_maximize,
-            "gobig_overlap": settings.gobig_overlap,
-            "config": config
-        }
-        opt = SimpleNamespace(**opt)
-        # render the image(s)!
-        if cl_args.gobig_init == None:
-            gobig_init = do_run(device, model, opt)
-        else:
-            gobig_init = cl_args.gobig_init
-        if cl_args.gobig:
-            do_gobig(gobig_init, cl_args.gobig_scale, device, model, opt)
+    prompts = []
+    if settings.from_file is not None:
+        with open(settings.from_file, "r") as f:
+            prompts = f.read().splitlines()
+    else:
+        prompts.append(settings.prompt)
+
+    print(prompts)
+
+    for prompt in prompts:
+        for i in range(settings.n_batches):
+            # pack up our settings into a simple namespace for the renderer
+            opt = {
+                "prompt" : prompt,
+                "batch_name" : settings.batch_name,
+                "outdir" : outdir,
+                "skip_grid" : False,
+                "skip_save" : False,
+                "ddim_steps" : settings.steps,
+                "plms" : settings.plms,
+                "ddim_eta" : settings.eta,
+                "n_iter" : settings.n_iter,
+                "W" : settings.width,
+                "H" : settings.height,
+                "C" : 4,
+                "f" : 8,
+                "n_samples" : settings.n_samples,
+                "n_rows" : settings.n_rows,
+                "scale" : settings.scale,
+                "dyn" : settings.dyn,
+                "from_file": settings.from_file,
+                "seed" : settings.seed + i,
+                "fixed_code": False,
+                "precision": "autocast",
+                "init_image": settings.init_image,
+                "strength": 1.0 - settings.init_strength,
+                "gobig_maximize": settings.gobig_maximize,
+                "gobig_overlap": settings.gobig_overlap,
+                "config": config
+            }
+            opt = SimpleNamespace(**opt)
+            # render the image(s)!
+            if cl_args.gobig_init == None:
+                gobig_init = do_run(device, model, opt)
+            else:
+                gobig_init = cl_args.gobig_init
+            if cl_args.gobig:
+                do_gobig(gobig_init, cl_args.gobig_scale, device, model, opt)
 
 if __name__ == "__main__":
     main()
