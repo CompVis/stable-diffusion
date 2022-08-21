@@ -1,6 +1,12 @@
 # Prog Rock Stable
 An enhanced (hopefully!) version of Stable Diffusion
 
+Please consider supporting my time and effort in maintaining and improving this program on my [Patreon](https://www.patreon.com/jasonmhough?fan_landing=true). Thanks!
+
+Also available:
+- [Prog Rock Diffusion](https://github.com/lowfuel/progrockdiffusion) (command line Disco Diffusion, with Go_Big and other enhancements)
+- [Disco Diffusion notebook](https://github.com/lowfuel/DiscoDiffusion-Warp-gobig) with Go_Big
+
 # Installation instructions
 Download this repository either by zip file or via git:
 ```
