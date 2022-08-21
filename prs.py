@@ -131,6 +131,8 @@ def do_run(device, model, opt):
                             newprompts.append(prompt)
                         prompts = newprompts
 
+                        print(f'\nPrompt for this image:\n   {prompts}\n')
+
                         c = model.get_learned_conditioning(prompts)
 
                         if init_image is None:
@@ -175,7 +177,7 @@ def do_run(device, model, opt):
                     add_metadata = True
                     metadata = PngInfo()
                     if add_metadata == True:
-                        metadata.add_text("prompt", opt.prompt)
+                        metadata.add_text("prompt", str(prompts))
                         metadata.add_text("seed", str(opt.seed))
                         metadata.add_text("steps", str(opt.ddim_steps))
 
@@ -595,8 +597,6 @@ def main():
             prompts = f.read().splitlines()
     else:
         prompts.append(settings.prompt)
-
-    print(prompts)
 
     for prompt in prompts:
         for i in range(settings.n_batches):
