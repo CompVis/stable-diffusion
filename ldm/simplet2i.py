@@ -11,7 +11,7 @@ t2i = T2I(outdir      = <path>        // outputs/txt2img-samples
           batch_size       = <integer>     // how many images to generate per sampling (1)
           steps       = <integer>     // 50
           seed        = <integer>     // current system time
-          sampler     = ['ddim','plms']  // ddim
+          sampler     = ['ddim','plms','klms']  // klms
           grid        = <boolean>     // false
           width       = <integer>     // image width, multiple of 64 (512)
           height      = <integer>     // image height, multiple of 64 (512)
@@ -62,8 +62,9 @@ import time
 import math
 
 from ldm.util import instantiate_from_config
-from ldm.models.diffusion.ddim import DDIMSampler
-from ldm.models.diffusion.plms import PLMSSampler
+from ldm.models.diffusion.ddim     import DDIMSampler
+from ldm.models.diffusion.plms     import PLMSSampler
+from ldm.models.diffusion.ksampler import KSampler
 
 class T2I:
     """T2I class
@@ -101,7 +102,7 @@ class T2I:
                  cfg_scale=7.5,
                  weights="models/ldm/stable-diffusion-v1/model.ckpt",
                  config = "configs/latent-diffusion/txt2img-1p4B-eval.yaml",
-                 sampler="plms",
+                 sampler="klms",
                  latent_channels=4,
                  downsampling_factor=8,
                  ddim_eta=0.0,  # deterministic
@@ -387,6 +388,9 @@ class T2I:
             elif self.sampler_name == 'ddim':
                 print("setting sampler to ddim")
                 self.sampler = DDIMSampler(self.model)
+            elif self.sampler_name == 'klms':
+                print("setting sampler to klms")
+                self.sampler = KSampler(self.model,'lms')
             else:
                 print(f"unsupported sampler {self.sampler_name}, defaulting to plms")
                 self.sampler = PLMSSampler(self.model)
