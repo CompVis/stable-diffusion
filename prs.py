@@ -337,6 +337,13 @@ def parse_args():
         help='How many images to generate'
     )
     my_parser.add_argument(
+        '-f',
+        '--from_file',
+        action='store',
+        required=False,
+        help='A text file with prompts (one per line)'
+    )
+    my_parser.add_argument(
         '--gobig',
         action='store_true',
         required=False,
@@ -564,6 +571,9 @@ def main():
 
     if cl_args.n_batches:
         settings.n_batches = cl_args.n_batches
+
+    if cl_args.from_file:
+        settings.from_file = cl_args.from_file
 
     outdir = (f'./out/{settings.batch_name}')
 
