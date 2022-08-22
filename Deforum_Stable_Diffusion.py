@@ -1,14 +1,5 @@
 # %%
 # !! {"metadata":{
-# !!   "id":"cc-imports"
-# !! }}
-
-#<cc-imports>
-
-import subprocess
-
-# %%
-# !! {"metadata":{
 # !!   "id": "c442uQJ_gUgy"
 # !! }}
 """
@@ -24,8 +15,9 @@ Notebook by [deforum](https://twitter.com/deforum_art)
 # !!   "cellView": "form"
 # !! }}
 #@markdown **NVIDIA GPU**
-sub_p_res = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,memory.free', '--format=csv,noheade'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-print(sub_p_res) #<cc-cm>
+import subprocess
+sub_p_res = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,memory.free', '--format=csv,noheader'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+print(sub_p_res)
 
 
 # %%
@@ -38,18 +30,18 @@ print(sub_p_res) #<cc-cm>
 setup_environment = False #@param {type:"boolean"}
 
 if setup_environment:
-  pip_sub_p_res = subprocess.run(['pip', 'install', 'torch==1.11.0+cu113', 'torchvision==0.12.0+cu113', 'torchaudio==0.11.0', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-  print(pip_sub_p_res) #<cc-cm>
-  pip_sub_p_res = subprocess.run(['pip', 'install', 'omegaconf==2.1.1', 'einops==0.3.0', 'pytorch-lightning==1.4.2', 'torchmetrics==0.6.0', 'torchtext==0.2.3', 'transformers==4.19.2', 'kornia==0.6'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-  print(pip_sub_p_res) #<cc-cm>
-  sub_p_res = subprocess.run(['git', 'clone', 'https://github.com/deforum/stable-diffusion'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-  print(sub_p_res) #<cc-cm>
-  pip_sub_p_res = subprocess.run(['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-  print(pip_sub_p_res) #<cc-cm>
-  pip_sub_p_res = subprocess.run(['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-  print(pip_sub_p_res) #<cc-cm>
-  pip_sub_p_res = subprocess.run(['pip', 'install', 'git+https://github.com/deforum/k-diffusion/'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-  print(pip_sub_p_res) #<cc-cm>
+  pip_sub_p_res = subprocess.run(['pip', 'install', 'torch==1.11.0+cu113', 'torchvision==0.12.0+cu113', 'torchaudio==0.11.0', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+  print(pip_sub_p_res)
+  pip_sub_p_res = subprocess.run(['pip', 'install', 'omegaconf==2.1.1', 'einops==0.3.0', 'pytorch-lightning==1.4.2', 'torchmetrics==0.6.0', 'torchtext==0.2.3', 'transformers==4.19.2', 'kornia==0.6'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+  print(pip_sub_p_res)
+  sub_p_res = subprocess.run(['git', 'clone', 'https://github.com/deforum/stable-diffusion'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+  print(sub_p_res)
+  pip_sub_p_res = subprocess.run(['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+  print(pip_sub_p_res)
+  pip_sub_p_res = subprocess.run(['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+  print(pip_sub_p_res)
+  pip_sub_p_res = subprocess.run(['pip', 'install', 'git+https://github.com/deforum/k-diffusion/'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+  print(pip_sub_p_res)
   print("Runtime > Restart Runtime")
 
 # %%
@@ -66,6 +58,7 @@ import argparse, glob
 import torch
 import torch.nn as nn
 import numpy as np
+import shutil
 from omegaconf import OmegaConf
 from PIL import Image
 from tqdm import tqdm, trange
@@ -121,6 +114,41 @@ class CFGDenoiser(nn.Module):
         cond_in = torch.cat([uncond, cond])
         uncond, cond = self.inner_model(x_in, sigma_in, cond=cond_in).chunk(2)
         return uncond + (cond - uncond) * cond_scale
+
+def make_callback(sampler, dynamic_threshold=None, static_threshold=None):  
+    # Creates the callback function to be passed into the samplers
+    # The callback function is applied to the image after each step
+    def dynamic_thresholding_(img, threshold):
+        # Dynamic thresholding from Imagen paper (May 2022)
+        s = np.percentile(np.abs(img.cpu()), threshold, axis=tuple(range(1,img.ndim)))
+        s = np.max(np.append(s,1.0))
+        torch.clamp_(img, -1*s, s)
+        torch.FloatTensor.div_(img, s)
+
+    # Callback for samplers in the k-diffusion repo, called thus:
+    #   callback({'x': x, 'i': i, 'sigma': sigmas[i], 'sigma_hat': sigmas[i], 'denoised': denoised})
+    def k_callback(args_dict):
+        if static_threshold is not None:
+            torch.clamp_(args_dict['x'], -1*static_threshold, static_threshold)
+        if dynamic_threshold is not None:
+            dynamic_thresholding_(args_dict['x'], dynamic_threshold)
+
+    # Function that is called on the image (img) and step (i) at each step
+    def img_callback(img, i):
+        # Thresholding functions
+        if dynamic_threshold is not None:
+            dynamic_thresholding_(img, dynamic_threshold)
+        if static_threshold is not None:
+            torch.clamp_(img, -1*static_threshold, static_threshold)
+
+    if sampler in ["plms","ddim"]: 
+        # Callback function formated for compvis latent diffusion samplers
+        callback = img_callback
+    else: 
+        # Default callback function uses k-diffusion sampler variables
+        callback = k_callback
+
+    return callback
 
 def run(params):
 
@@ -203,6 +231,10 @@ def run(params):
                     # seed
                     seed_everything(local_seed)
 
+                    callback = make_callback(sampler=params["sampler"],
+                                             dynamic_threshold=params["dynamic_threshold"], 
+                                             static_threshold=params["static_threshold"])                    
+
                     # k samplers
                     if params["sampler"] in ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral"]:
 
@@ -216,17 +248,17 @@ def run(params):
                         extra_args = {'cond': c, 'uncond': uc, 'cond_scale': params["scale"]}
 
                         if params["sampler"]=="klms":
-                            samples = K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process)
+                            samples = K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
                         elif params["sampler"]=="dpm2":
-                            samples = K.sampling.sample_dpm_2(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process)
+                            samples = K.sampling.sample_dpm_2(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
                         elif params["sampler"]=="dpm2_ancestral":
-                            samples = K.sampling.sample_dpm_2_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process)
+                            samples = K.sampling.sample_dpm_2_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
                         elif params["sampler"]=="heun":
-                            samples = K.sampling.sample_heun(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process)
+                            samples = K.sampling.sample_heun(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
                         elif params["sampler"]=="euler":
-                            samples = K.sampling.sample_euler(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process)
+                            samples = K.sampling.sample_euler(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
                         elif params["sampler"]=="euler_ancestral":
-                            samples = K.sampling.sample_euler_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process)
+                            samples = K.sampling.sample_euler_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
                         
                         x_samples = model.decode_first_stage(samples)
                         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
@@ -276,7 +308,8 @@ def run(params):
                                                              unconditional_guidance_scale=params["scale"],
                                                              unconditional_conditioning=uc,
                                                              eta=params["eta"],
-                                                             x_T=start_code)
+                                                             x_T=start_code,
+                                                             img_callback=callback)
 
                             x_samples = model.decode_first_stage(samples)
                             x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
@@ -320,7 +353,7 @@ models_path = "/content/models" #@param {type:"string"}
 output_path = "/content/output" #@param {type:"string"}
 
 #@markdown **Google Drive Path Variables (Optional)**
-mount_google_drive = True #@param {type:"boolean"}
+mount_google_drive = False #@param {type:"boolean"}
 force_remount = False
 
 if mount_google_drive:
@@ -336,10 +369,8 @@ if mount_google_drive:
     print("...error mounting drive or with drive path variables")
     print("...reverting to default path variables")
 
-sub_p_res = subprocess.run(['mkdir', '-p', '$models_path'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-print(sub_p_res) #<cc-cm>
-sub_p_res = subprocess.run(['mkdir', '-p', '$output_path'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-print(sub_p_res) #<cc-cm>
+os.makedirs(models_path, exist_ok=True)
+os.makedirs(output_path, exist_ok=True)
 
 print(f"models_path: {models_path}")
 print(f"output_path: {output_path}")
@@ -356,11 +387,14 @@ model_map = {
     'sd-v1-3-full-ema.ckpt': {'downloaded': False, 'sha256': '54632c6e8a36eecae65e36cb0595fab314e1a1545a65209f24fde221a8d4b2ca', 'link': ['https://drinkordiecdn.lol/sd-v1-3-full-ema.ckpt'] },
   }
 
+def wget(url, outputdir):
+    res = subprocess.run(['wget', url, '-P', f'{outputdir}'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+    print(res)
+
 def download_model(model_checkpoint):
   download_link = model_map[model_checkpoint]["link"][0]
   print(f"!wget -O {models_path}/{model_checkpoint} {download_link}")
-  sub_p_res = subprocess.run(['wget', '-O', '$models_path/$model_checkpoint', '$download_link'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-  print(sub_p_res) #<cc-cm>
+  wget(download_link, models_path)
   return
 
 # config path
@@ -368,8 +402,7 @@ if os.path.exists(models_path+'/'+model_config):
   print(f"{models_path+'/'+model_config} exists")
 else:
   print("cp ./stable-diffusion/configs/stable-diffusion/v1-inference.yaml $models_path/.")
-  sub_p_res = subprocess.run(['cp', './stable-diffusion/configs/stable-diffusion/v1-inference.yaml', '$models_path/.'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-  print(sub_p_res) #<cc-cm>
+  shutil.copy('./stable-diffusion/configs/stable-diffusion/v1-inference.yaml', models_path)
 
 # checkpoint path or download
 if os.path.exists(models_path+'/'+model_checkpoint):
@@ -468,6 +501,8 @@ def opt_params():
     steps = 10 #@param
     scale = 7 #@param
     eta = 0.0 #@param
+    dynamic_threshold = None #@param
+    static_threshold = None #@param    
     
     #@markdown **Batch Settings**
     n_batch = 1 #@param
