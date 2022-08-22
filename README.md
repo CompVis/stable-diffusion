@@ -86,7 +86,7 @@ completely). The default is 0.75, and ranges from 0.25-0.75 give interesting res
 
 ## Changes
 
-* v1.01 (21 August 2022)
+* v1.02 (21 August 2022)
     * A copy of the prompt and all of its switches and options is now stored in the corresponding
     image in a tEXt metadata field named "Dream". You can read the prompt using scripts/images2prompt.py,
     or an image editor that allows you to explore the full metadata.
