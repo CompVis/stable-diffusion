@@ -76,7 +76,8 @@ completely). The default is 0.75, and ranges from 0.25-0.75 give interesting res
 ## Changes
 
 * v1.01 (21 August 2022)
-    * added k_lms sampling **Please run "conda env update -f environment.yaml" to load the k_lms dependencies**
+    * added k_lms sampling. 
+      **Please run "conda env update -f environment.yaml" to load the k_lms dependencies!!**
     * use half precision arithmetic by default, resulting in faster execution and lower memory requirements
     Pass argument --full_precision to dream.py to get slower but more accurate image generation
 
