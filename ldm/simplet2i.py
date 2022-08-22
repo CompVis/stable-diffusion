@@ -11,7 +11,7 @@ t2i = T2I(outdir      = <path>        // outputs/txt2img-samples
           batch_size       = <integer>     // how many images to generate per sampling (1)
           steps       = <integer>     // 50
           seed        = <integer>     // current system time
-          sampler     = ['ddim','plms','klms']  // klms
+          sampler_name= ['ddim','plms','klms']  // klms
           grid        = <boolean>     // false
           width       = <integer>     // image width, multiple of 64 (512)
           height      = <integer>     // image height, multiple of 64 (512)
@@ -77,7 +77,7 @@ class T2I:
     batch_size
     steps
     seed
-    sampler
+    sampler_name
     grid
     individual
     width
@@ -104,15 +104,15 @@ The vast majority of these arguments default to reasonable values.
                  cfg_scale=7.5,
                  weights="models/ldm/stable-diffusion-v1/model.ckpt",
                  config = "configs/latent-diffusion/txt2img-1p4B-eval.yaml",
-                 sampler="klms",
+                 sampler_name="klms",
                  latent_channels=4,
                  downsampling_factor=8,
                  ddim_eta=0.0,  # deterministic
                  fixed_code=False,
                  precision='autocast',
                  full_precision=False,
-                 strength=0.75 # default in scripts/img2img.py,
-                 latent_diffusion_weights=False
+                 strength=0.75, # default in scripts/img2img.py
+                 latent_diffusion_weights=False  # just to keep track of this parameter when regenerating prompt
     ):
         self.outdir     = outdir
         self.batch_size      = batch_size
@@ -124,7 +124,7 @@ The vast majority of these arguments default to reasonable values.
         self.cfg_scale  = cfg_scale
         self.weights    = weights
         self.config     = config
-        self.sampler_name  = sampler
+        self.sampler_name  = sampler_name
         self.fixed_code    = fixed_code
         self.latent_channels     = latent_channels
         self.downsampling_factor = downsampling_factor
@@ -416,7 +416,7 @@ The vast majority of these arguments default to reasonable values.
         if self.full_precision:
             print('Using slower but more accurate full-precision math (--full_precision)')
         else:
-            print('Using half precision math. Call with --full_precision to use full precision')
+            print('Using half precision math. Call with --full_precision to use slower but more accurate full precision.')
             model.half()
         return model
 
