@@ -151,7 +151,39 @@ def make_callback(sampler, dynamic_threshold=None, static_threshold=None):
 
     return callback
 
-def run(args, local_seed):
+def run(params):
+
+    # timestring
+    timestring = time.strftime('%Y%m%d%H%M%S')
+
+    # outpath
+    os.makedirs(params["outdir"], exist_ok=True)
+    outpath = params["outdir"]
+
+    # timestring
+    timestring = time.strftime('%Y%m%d%H%M%S')
+
+    # random seed
+    if params["seed"] == -1:
+        local_seed = np.random.randint(0,4294967295)
+    else:
+        local_seed = params["seed"]
+
+    # save/append settings
+    if params["save_settings"] and params["filename"] is None:
+        filename = f"{timestring}_settings.txt"
+        assert not os.path.isfile(f"{outpath}{filename}")
+        params["filename"] = f"{timestring}_settings.txt"
+        params["batch_seeds"] = [local_seed]
+        with open(f"{outpath}{filename}", "w+") as f:
+            json.dump(params, f, ensure_ascii=False, indent=4)
+    elif params["save_settings"] and params["filename"] is not None:
+        filename = params["filename"]
+        with open(f"{outpath}{filename}") as f:
+            params = json.load(f)
+        params["batch_seeds"] += [local_seed]
+        with open(f"{outpath}{filename}", "w+") as f:
+            json.dump(params, f, ensure_ascii=False, indent=4)
 
     # load settings
     accelerator = accelerate.Accelerator()
@@ -163,8 +195,8 @@ def run(args, local_seed):
     seed_everything(local_seed)
 
     # plms
-    if args.sampler=="plms":
-        args.eta = 0
+    if params["sampler"]=="plms":
+        params["eta"] = 0
         sampler = PLMSSampler(model)
     else:
         sampler = DDIMSampler(model)
@@ -172,35 +204,35 @@ def run(args, local_seed):
     model_wrap = K.external.CompVisDenoiser(model)
     sigma_min, sigma_max = model_wrap.sigmas[0].item(), model_wrap.sigmas[-1].item()
 
-    batch_size = args.n_samples
-    n_rows = args.n_rows if args.n_rows > 0 else batch_size
+    batch_size = params["n_samples"]
+    n_rows = params["n_rows"] if params["n_rows"] > 0 else batch_size
 
-    print(args.prompts)
+    print(params["prompts"])
 
-    data = list(chunk(args.prompts, batch_size))
+    data = list(chunk(params["prompts"], batch_size))
     sample_index = 0
 
     start_code = None
     
     # init image
-    if args.use_init:
-        assert os.path.isfile(args.init_image)
-        init_image = load_img(args.init_image).to(device)
+    if params["use_init"]:
+        assert os.path.isfile(params["init_image"])
+        init_image = load_img(params["init_image"]).to(device)
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
 
-        sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.eta, verbose=False)
+        sampler.make_schedule(ddim_num_steps=params['steps'], ddim_eta=params['eta'], verbose=False)
 
-        assert 0. <= args.strength <= 1., 'can only work with strength in [0.0, 1.0]'
-        t_enc = int(args.strength * args.steps)
+        assert 0. <= params['strength'] <= 1., 'can only work with strength in [0.0, 1.0]'
+        t_enc = int(params['strength'] * params['steps'])
         print(f"target t_enc is {t_enc} steps")
 
     # no init image
     else:
-        if args.fixed_code:
-            start_code = torch.randn([args.n_samples, args.C, args.H // args.f, args.W // args.f], device=device)
+        if params["fixed_code"]:
+            start_code = torch.randn([params["n_samples"], params["C"], params["H"] // params["f"], params["W"] // params["f"]], device=device)
 
-    precision_scope = autocast if args.precision=="autocast" else nullcontext
+    precision_scope = autocast if params["precision"]=="autocast" else nullcontext
     with torch.no_grad():
         with precision_scope("cuda"):
             with model.ema_scope():
@@ -209,37 +241,37 @@ def run(args, local_seed):
                     prompt_seed = local_seed + prompt_index
                     seed_everything(prompt_seed)
 
-                    callback = make_callback(sampler=args.sampler,
-                                            dynamic_threshold=args.dynamic_threshold, 
-                                            static_threshold=args.static_threshold)                            
+                    callback = make_callback(sampler=params["sampler"],
+                                            dynamic_threshold=params["dynamic_threshold"], 
+                                            static_threshold=params["static_threshold"])                            
 
                     uc = None
-                    if args.scale != 1.0:
+                    if params["scale"] != 1.0:
                         uc = model.get_learned_conditioning(batch_size * [""])
                     if isinstance(prompts, tuple):
                         prompts = list(prompts)
                     c = model.get_learned_conditioning(prompts)
 
-                    if args.sampler in ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral"]:
-                        shape = [args.C, args.H // args.f, args.W // args.f]
-                        sigmas = model_wrap.get_sigmas(args.steps)
+                    if params["sampler"] in ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral"]:
+                        shape = [params["C"], params["H"] // params["f"], params["W"] // params["f"]]
+                        sigmas = model_wrap.get_sigmas(params["steps"])
                         torch.manual_seed(local_seed)
-                        x = torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
+                        x = torch.randn([params["n_samples"], *shape], device=device) * sigmas[0]
                         model_wrap_cfg = CFGDenoiser(model_wrap)
-                        extra_args = {'cond': c, 'uncond': uc, 'cond_scale': args.scale}
-                        if args.sampler=="klms":
+                        extra_args = {'cond': c, 'uncond': uc, 'cond_scale': params["scale"]}
+                        if params["sampler"]=="klms":
                             samples = K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
-                        elif args.sampler=="dpm2":
+                        elif params["sampler"]=="dpm2":
                             samples = K.sampling.sample_dpm_2(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
-                        elif args.sampler=="dpm2_ancestral":
+                        elif params["sampler"]=="dpm2_ancestral":
                             samples = K.sampling.sample_dpm_2_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
-                        elif args.sampler=="heun":
+                        elif params["sampler"]=="heun":
                             samples = K.sampling.sample_heun(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
-                        elif args.sampler=="euler":
+                        elif params["sampler"]=="euler":
                             samples = K.sampling.sample_euler(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
-                        elif args.sampler=="euler_ancestral":
+                        elif params["sampler"]=="euler_ancestral":
                             samples = K.sampling.sample_euler_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
-
+                        
                         x_samples = model.decode_first_stage(samples)
                         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
                         x_samples = accelerator.gather(x_samples)
@@ -247,17 +279,17 @@ def run(args, local_seed):
                     else:
 
                         # no init image
-                        if not args.use_init:
-                            shape = [args.C, args.H // args.f, args.W // args.f]
+                        if not params['use_init']:
+                            shape = [params["C"], params["H"] // params["f"], params["W"] // params["f"]]
 
-                            samples, _ = sampler.sample(S=args.steps,
+                            samples, _ = sampler.sample(S=params["steps"],
                                                             conditioning=c,
-                                                            batch_size=args.n_samples,
+                                                            batch_size=params["n_samples"],
                                                             shape=shape,
                                                             verbose=False,
-                                                            unconditional_guidance_scale=args.scale,
+                                                            unconditional_guidance_scale=params["scale"],
                                                             unconditional_conditioning=uc,
-                                                            eta=args.eta,
+                                                            eta=params["eta"],
                                                             x_T=start_code,
                                                             img_callback=callback)
 
@@ -269,34 +301,34 @@ def run(args, local_seed):
                             # encode (scaled latent)
                             z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
                             # decode it
-                            samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=args.scale,
+                            samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=params['scale'],
                                                     unconditional_conditioning=uc,)
 
                         x_samples = model.decode_first_stage(samples)
                         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
                     
                     # save samples
-                    if args.display_samples or args.save_samples:
+                    if params["display_samples"] or params["save_samples"]:
                         for index, x_sample in enumerate(x_samples):
                             x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                            if args.display_samples:
+                            if params["display_samples"]:
                                 display.display(Image.fromarray(x_sample.astype(np.uint8)))
-                            if args.save_samples:
+                            if params["save_samples"]:
                                 Image.fromarray(x_sample.astype(np.uint8)).save(
-                                    os.path.join(args.outdir, f"{args.timestring}_{index:02}_{prompt_seed}.png"))                                    
+                                    os.path.join(outpath, f"{timestring}_{index:02}_{prompt_seed}.png"))                                    
 
                     # save grid
-                    if args.display_grid or args.save_grid:
+                    if params["display_grid"] or params["save_grid"]:
                         grid = torch.stack([x_samples], 0)
                         grid = rearrange(grid, 'n b c h w -> (n b) c h w')
                         grid = make_grid(grid, nrow=n_rows, padding=0)
 
                         # to image
                         grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-                        if args.display_grid:
+                        if params["display_grid"]:
                             display.display(Image.fromarray(grid.astype(np.uint8)))
-                        if args.save_grid:
-                            Image.fromarray(grid.astype(np.uint8)).save(os.path.join(args.outdir, f'{args.timestring}_{prompt_seed}_grid.png'))
+                        if params["save_grid"]:
+                            Image.fromarray(grid.astype(np.uint8)).save(os.path.join(outpath, f'{timestring}_{prompt_seed}_grid.png'))
 
                 # stop timer
                 toc = time.time()
@@ -343,7 +375,7 @@ print(f"output_path: {output_path}")
 print("\nSelect Model:\n")
 
 model_config = "v1-inference.yaml" #@param ["v1-inference.yaml","custom"]
-model_checkpoint =  "sd-v1-3-full-ema.ckpt" #@param ["sd-v1-3-full-ema.ckpt","sd-v1-4.ckpt"]
+model_checkpoint =  "sd-v1-3-full-ema.ckpt" #@param ["sd-v1-3-full-ema.ckpt","custom"]
 check_sha256 = True #@param {type:"boolean"}
 
 model_map = {
@@ -355,10 +387,10 @@ def wget(url, outputdir):
     print(res)
 
 def download_model(model_checkpoint):
-    download_link = model_map[model_checkpoint]["link"][0]
-    print(f"!wget -O {models_path}/{model_checkpoint} {download_link}")
-    wget(download_link, models_path)
-    return
+  download_link = model_map[model_checkpoint]["link"][0]
+  print(f"!wget -O {models_path}/{model_checkpoint} {download_link}")
+  wget(download_link, models_path)
+  return
 
 # config path
 if os.path.exists(models_path+'/'+model_config):
@@ -436,49 +468,48 @@ model = model.to(device)
 # !!   "cellView": "form",
 # !!   "id": "qH74gBWDd2oq"
 # !! }}
-class DeforumArgs():
-    def __init__(self):
+def opt_params():
 
-        #@markdown **Save & Display Settings**
-        self.batchdir = "test" #@param {type:"string"}
-        self.outdir = get_output_folder(output_path, self.batchdir)
-        self.save_settings = False #@param {type:"boolean"}
-        self.save_grid = True #@param {type:"boolean"}
-        self.display_grid = True #@param {type:"boolean"}
-        self.save_samples = True #@param {type:"boolean"}
-        self.display_samples = False #@param {type:"boolean"}
+    #@markdown **Save & Display Settings**
+    batchdir = "test" #@param {type:"string"}
+    outdir = get_output_folder(output_path,batchdir)
+    save_settings = False #@param {type:"boolean"}
+    save_grid = True #@param {type:"boolean"}
+    display_grid = True #@param {type:"boolean"}
+    save_samples = True #@param {type:"boolean"}
+    display_samples = False #@param {type:"boolean"}
 
-        #@markdown **Prompt Settings**
-        self.seed = 1574552011 #@param
+    #@markdown **Prompt Settings**
+    seed = 1574552011 #@param
 
-        #@markdown **Image Settings**
-        self.n_samples = 1 #@param
-        self.n_rows = 1 #@param
-        self.W = 512 #@param
-        self.H = 768 #@param
+    #@markdown **Image Settings**
+    n_samples = 1 #@param
+    n_rows = 1 #@param
+    W = 512 #@param
+    H = 768 #@param
 
-        #@markdown **Init Settings**
-        self.use_init = False #@param {type:"boolean"}
-        self.init_image = "/content/drive/MyDrive/AI/StableDiffusion/20220815180851_0.png" #@param {type:"string"}
-        self.strength = 0.1 #@param {type:"number"}
+    #@markdown **Init Settings**
+    use_init = False #@param {type:"boolean"}
+    init_image = "/content/drive/MyDrive/AI/StableDiffusion/20220815180851_0.png" #@param {type:"string"}
+    strength = 0.1 #@param {type:"number"}
 
-        #@markdown **Sampling Settings**
-        self.sampler = 'dpm2' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
-        self.steps = 10 #@param
-        self.scale = 7 #@param
-        self.eta = 0.0 #@param
-        self.dynamic_threshold = None #@param
-        self.static_threshold = None #@param    
+    #@markdown **Sampling Settings**
+    sampler = 'dpm2' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
+    steps = 10 #@param
+    scale = 7 #@param
+    eta = 0.0 #@param
+    dynamic_threshold = None #@param
+    static_threshold = None #@param    
 
-        #@markdown **Batch Settings**
-        self.n_batch = 1 #@param
+    #@markdown **Batch Settings**
+    n_batch = 1 #@param
 
-        self.precision = 'autocast' 
-        self.fixed_code = True
-        self.C = 4
-        self.f = 8
-        self.prompts = prompts
-        self.timestring = ""
+    precision = 'autocast' 
+    fixed_code = True
+    C = 4
+    f = 8
+
+    return locals()
 
 # %%
 # !! {"metadata":{
@@ -496,35 +527,13 @@ prompts = [
 # !!   "id": "cxx8BzxjiaXg"
 # !! }}
 #@markdown **Run**
-args = DeforumArgs()
-args.filename = None
-args.prompts = prompts
-
-def do_batch_run():
-    # create output folder
-    os.makedirs(args.outdir, exist_ok=True)
-
-    # current timestring for filenames
-    args.timestring = time.strftime('%Y%m%d%H%M%S')
-
-    # random seed
-    if args.seed == -1:
-        local_seed = np.random.randint(0,4294967295)
-    else:
-        local_seed = args.seed
-
-    # save settings for the batch
-    if args.save_settings:
-        filename = os.path.join(args.outdir, f"{args.timestring}_settings.txt")
-        with open(filename, "w+", encoding="utf-8") as f:
-            json.dump(dict(args.__dict__), f, ensure_ascii=False, indent=4)
-
-    for batch_index in range(args.n_batch):
-        print(f"run {batch_index+1} of {args.n_batch}")
-        run(args, local_seed)
-        local_seed += 1
-
-do_batch_run()
+params = opt_params()
+params["filename"] = None
+params["prompts"] = prompts
+for ii in range(params["n_batch"]):
+    num = params["n_batch"]
+    print(f"run {ii+1} of {num}")
+    run(params)
 
 # %%
 # !! {"main_metadata":{
