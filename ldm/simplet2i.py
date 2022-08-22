@@ -457,52 +457,47 @@ The vast majority of these arguments default to reasonable values.
         image = image[None].transpose(0, 3, 1, 2)
         image = torch.from_numpy(image)
         return 2.*image - 1.
-    """
-    example: "an apple: a banana:0 a watermelon:0.5"
-        grabs all text up to the first occurance of ':' 
-        then removes the text, repeating until no characters left.
-        if ':' has no weight defined, defaults to 1.0
         
-        the above example turns into 3 sub-prompts:
-        "an apple" 1.0
-        "a banana" 0.0
-        "a watermelon" 0.5
-        The weights are added and normalized
-        The resulting image will be: apple 66% (1.0 / 1.5), banana 0%, watermelon 33% (0.5 / 1.5)
+    """
+    grabs all text up to the first occurrence of ':' 
+    uses the grabbed text as a sub-prompt, and takes the value following ':' as weight
+    if ':' has no value defined, defaults to 1.0
+    repeats until no text remaining
     """
     def split_weighted_subprompts(text):
-        # very simple, uses : to separate sub-prompts 
-        # assumes number following : and space after number
-        # if no number found, defaults to 1.0
         remaining = len(text)
         prompts = []
         weights = []
         while remaining > 0:
-            # find : 
             if ":" in text:
-                idx = text.index(":") # first occurrance from start
-                # snip sub prompt
+                idx = text.index(":") # first occurrence from start
+                # grab up to index as sub-prompt
                 prompt = text[:idx]
                 remaining -= idx
                 # remove from main text
                 text = text[idx+1:]
-                # get number
+                # find value for weight 
                 if " " in text:
-                    idx = text.index(" ") # first occurance
+                    idx = text.index(" ") # first occurence
                 else: # no space, read to end
                     idx = len(text)
                 if idx != 0:
-                    weight = float(text[:idx])
-                else: # no number to grab
+                    try:
+                        weight = float(text[:idx])
+                    except: # couldn't treat as float
+                        print(f"Warning: '{text[:idx]}' is not a value, are you missing a space?")
+                        weight = 1.0
+                else: # no value found
                     weight = 1.0
-                # remove
+                # remove from main text
                 remaining -= idx
                 text = text[idx+1:]
+                # append the sub-prompt and its weight
                 prompts.append(prompt)
                 weights.append(weight)
-            else:
-                if len(text) > 0:
-                    # take what remains as weight 1
+            else: # no : found
+                if len(text) > 0: # there is still text though
+                    # take remainder as weight 1
                     prompts.append(text)
                     weights.append(1.0)
                 remaining = 0
