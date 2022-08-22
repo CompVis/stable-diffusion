@@ -410,8 +410,7 @@ class T2I:
         model.cuda()
         model.eval()
         if self.full_precision:
-            print('Using slower but more accurate full precision math')
-            model.full()
+            print('Using slower but more accurate full-precision math (--full_precision)')
         else:
             print('Using half precision math. Call with --full_precision to use full precision')
             model.half()
