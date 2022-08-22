@@ -88,6 +88,8 @@ class T2I:
     downsampling_factor
     precision
     strength
+
+The vast majority of these arguments default to reasonable values.
 """
     def __init__(self,
                  outdir="outputs/txt2img-samples",
@@ -109,7 +111,8 @@ class T2I:
                  fixed_code=False,
                  precision='autocast',
                  full_precision=False,
-                 strength=0.75 # default in scripts/img2img.py
+                 strength=0.75 # default in scripts/img2img.py,
+                 latent_diffusion_weights=False
     ):
         self.outdir     = outdir
         self.batch_size      = batch_size
@@ -119,7 +122,7 @@ class T2I:
         self.grid       = grid
         self.steps      = steps
         self.cfg_scale  = cfg_scale
-        self.weights   = weights
+        self.weights    = weights
         self.config     = config
         self.sampler_name  = sampler
         self.fixed_code    = fixed_code
@@ -131,6 +134,7 @@ class T2I:
         self.strength            = strength
         self.model      = None     # empty for now
         self.sampler    = None
+        self.latent_diffusion_weights=latent_diffusion_weights
         if seed is None:
             self.seed = self._new_seed()
         else:
