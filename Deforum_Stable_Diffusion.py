@@ -15,7 +15,7 @@ Notebook by [deforum](https://twitter.com/deforum_art)
 # !!   "cellView": "form"
 # !! }}
 #@markdown **NVIDIA GPU**
-!nvidia-smi --query-gpu=name,memory.total,memory.free --format=csv,noheader
+#!nvidia-smi --query-gpu=name,memory.total,memory.free --format=csv,noheader
 
 # %%
 # !! {"metadata":{
@@ -23,7 +23,7 @@ Notebook by [deforum](https://twitter.com/deforum_art)
 # !!   "cellView": "form"
 # !! }}
 #@markdown **Setup Environment**
-
+"""
 setup_environment = False #@param {type:"boolean"}
 
 if setup_environment:
@@ -34,7 +34,7 @@ if setup_environment:
   %pip install -e git+https://github.com/openai/CLIP.git@main#egg=clip
   %pip install git+https://github.com/deforum/k-diffusion/
   print("Runtime > Restart Runtime")
-
+"""
 # %%
 # !! {"metadata":{
 # !!   "cellView": "form",
@@ -299,11 +299,11 @@ def run(params):
 #@markdown **Local Path Variables**
 print("Local Path Variables:\n")
 
-models_path = "/content/models" #@param {type:"string"}
-output_path = "/content/output" #@param {type:"string"}
+models_path = "./models" #@param {type:"string"}
+output_path = "./output" #@param {type:"string"}
 
 #@markdown **Google Drive Path Variables (Optional)**
-mount_google_drive = True #@param {type:"boolean"}
+mount_google_drive = False #@param {type:"boolean"}
 force_remount = False
 
 if mount_google_drive:
@@ -319,8 +319,8 @@ if mount_google_drive:
     models_path = "/content/models"
     output_path = "/content/output"
 
-!mkdir -p $models_path
-!mkdir -p $output_path
+os.makedirs(models_path,exist_ok=True)
+os.makedirs(models_path,exist_ok=True)
 
 print(f"models_path: {models_path}")
 print(f"output_path: {output_path}")
@@ -340,7 +340,7 @@ model_map = {
 def download_model(model_checkpoint):
   download_link = model_map[model_checkpoint]["link"][0]
   print(f"!wget -O {models_path}/{model_checkpoint} {download_link}")
-  !wget -O $models_path/$model_checkpoint $download_link
+  #!wget -O $models_path/$model_checkpoint $download_link
   return
 
 # config path
@@ -348,7 +348,7 @@ if os.path.exists(models_path+'/'+model_config):
   print(f"{models_path+'/'+model_config} exists")
 else:
   print("cp ./stable-diffusion/configs/stable-diffusion/v1-inference.yaml $models_path/.")
-  !cp ./stable-diffusion/configs/stable-diffusion/v1-inference.yaml $models_path/.
+  #!cp ./stable-diffusion/configs/stable-diffusion/v1-inference.yaml $models_path/.
 
 # checkpoint path or download
 if os.path.exists(models_path+'/'+model_checkpoint):
