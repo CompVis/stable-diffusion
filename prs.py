@@ -609,6 +609,7 @@ def main():
     config = OmegaConf.load(f"{inf_config}")
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = load_model_from_config(config, f"{ckpt}", verbose=False)
+    model = model.half() # proably needs to be optional if we want cpu/mps/etc.
     model = model.to(device)
 
     prompts = []
