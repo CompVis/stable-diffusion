@@ -20,6 +20,7 @@ from ldm.models.diffusion.plms import PLMSSampler
 
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
+import uuid
 
 
 # load safety model
@@ -236,6 +237,35 @@ def main():
 
     seed_everything(opt.seed)
 
+    os.makedirs(opt.outdir, exist_ok=True)
+    outpath = opt.outdir
+
+    prompts_file = os.path.join(outpath, "prompts.txt")
+    outfolder = ''
+    args = ' '.join(sys.argv)
+    if os.path.exists(prompts_file):
+        with open(prompts_file, "r") as f:
+            prompts = f.readlines()
+        for line in prompts:
+            if opt.prompt in line:
+                outfolder = line[0:36]
+    if len(outfolder) == 0:
+        outfolder = str(uuid.uuid4())
+    promt_text = f"{outfolder} {args}"
+    with open(prompts_file, "a") as f:
+        f.write(promt_text)
+        f.write("\n")
+
+    sample_path = os.path.join(outpath, outfolder)
+    os.makedirs(sample_path, exist_ok=True)
+    prompts_file = os.path.join(sample_path, "prompts.txt")
+    with open(prompts_file, "a") as f:
+        f.write(promt_text)
+        f.write("\n")
+    print(f"saving to folder {sample_path}")
+    #input("Press Enter to continue...")
+    outpath = sample_path
+
     config = OmegaConf.load(f"{opt.config}")
     model = load_model_from_config(config, f"{opt.ckpt}")
 
@@ -247,8 +277,8 @@ def main():
     else:
         sampler = DDIMSampler(model)
 
-    os.makedirs(opt.outdir, exist_ok=True)
-    outpath = opt.outdir
+    # os.makedirs(opt.outdir, exist_ok=True)
+    # outpath = opt.outdir
 
     print("Creating invisible watermark encoder (see https://github.com/ShieldMnt/invisible-watermark)...")
     wm = "StableDiffusionV1"
@@ -268,8 +298,9 @@ def main():
             data = f.read().splitlines()
             data = list(chunk(data, batch_size))
 
-    sample_path = os.path.join(outpath, "samples")
-    os.makedirs(sample_path, exist_ok=True)
+    #sample_path = os.path.join(outpath, "samples")
+    #os.makedirs(sample_path, exist_ok=True)
+
     base_count = len(os.listdir(sample_path))
     grid_count = len(os.listdir(outpath)) - 1
 
@@ -318,23 +349,23 @@ def main():
                                 img.save(os.path.join(sample_path, f"{base_count:05}.png"))
                                 base_count += 1
 
-                        if not opt.skip_grid:
-                            all_samples.append(x_checked_image_torch)
+                #         if not opt.skip_grid:
+                #             all_samples.append(x_checked_image_torch)
 
-                if not opt.skip_grid:
-                    # additionally, save as grid
-                    grid = torch.stack(all_samples, 0)
-                    grid = rearrange(grid, 'n b c h w -> (n b) c h w')
-                    grid = make_grid(grid, nrow=n_rows)
+                # if not opt.skip_grid:
+                #     # additionally, save as grid
+                #     grid = torch.stack(all_samples, 0)
+                #     grid = rearrange(grid, 'n b c h w -> (n b) c h w')
+                #     grid = make_grid(grid, nrow=n_rows)
 
-                    # to image
-                    grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-                    img = Image.fromarray(grid.astype(np.uint8))
-                    img = put_watermark(img, wm_encoder)
-                    img.save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
-                    grid_count += 1
+                #     # to image
+                #     grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
+                #     img = Image.fromarray(grid.astype(np.uint8))
+                #     img = put_watermark(img, wm_encoder)
+                #     img.save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
+                #     grid_count += 1
 
-                toc = time.time()
+                # toc = time.time()
 
     print(f"Your samples are ready and waiting for you here: \n{outpath} \n"
           f" \nEnjoy.")
