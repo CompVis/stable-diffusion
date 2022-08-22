@@ -456,7 +456,7 @@ class Settings:
     gobig_overlap = 64
     gobig_realesrgan = False
     cool_down = 0.0
-    checkpoint = "./models/sd-v1-3-full-ema.ckpt"
+    checkpoint = "./models/sd-v1-4.ckpt"
     
     def apply_settings_file(self, filename, settings_file):
         print(f'Applying settings file: {filename}')
