@@ -17,7 +17,11 @@ initialization only happens once. After that image generation
 from the command-line interface is very fast.
 
 The script uses the readline library to allow for in-line editing,
-command history (up and down arrows), autocompletion, and more.
+command history (up and down arrows), autocompletion, and more. To help
+keep track of which prompts generated which images, the script writes a
+log file of image names and prompts to the selected output directory.
+In addition, as of version 1.02, it also writes the prompt into the PNG
+file's metadata where it can be retrieved using scripts/images2prompt.py
 
 The script is confirmed to work on Linux and Windows systems. It should
 work on MacOSX as well, but this is not confirmed. Note that this script
@@ -38,12 +42,19 @@ setting sampler to plms
 * Initialization done! Awaiting your command...
 dream> ashley judd riding a camel -n2 -s150
 Outputs:
-   outputs/txt2img-samples/00009.png: "ashley judd riding a camel" -n2 -s150 -S 416354203
-   outputs/txt2img-samples/00010.png: "ashley judd riding a camel" -n2 -s150-S 1362479620
+   outputs/img-samples/00009.png: "ashley judd riding a camel" -n2 -s150 -S 416354203
+   outputs/img-samples/00010.png: "ashley judd riding a camel" -n2 -s150 -S 1362479620
 
 dream> "there's a fly in my soup" -n6 -g
-    outputs/txt2img-samples/00041.png: "there's a fly in my soup" -n6 -g -S 2685670268
+    outputs/img-samples/00011.png: "there's a fly in my soup" -n6 -g -S 2685670268
     seeds for individual rows: [2685670268, 1216708065, 2335773498, 822223658, 714542046, 3395302430]
+dream> q
+
+# this shows how to retrieve the prompt stored in the saved image's metadata
+(ldm) ~/stable-diffusion$ python3 ./scripts/images2prompt.py outputs/img_samples/*.png
+00009.png: "ashley judd riding a camel" -s150 -S 416354203
+00010.png: "ashley judd riding a camel" -s150 -S 1362479620
+00011.png: "there's a fly in my soup" -n6 -g -S 2685670268
 ~~~~
 
 The dream> prompt's arguments are pretty much
@@ -74,6 +85,12 @@ the original will be modified, ranging from 0.0 (keep the original intact), to 1
 completely). The default is 0.75, and ranges from 0.25-0.75 give interesting results.
 
 ## Changes
+
+* v1.01 (21 August 2022)
+    * A copy of the prompt and all of its switches and options is now stored in the corresponding
+    image in a tEXt metadata field named "Dream". You can read the prompt using scripts/images2prompt.py,
+    or an image editor that allows you to explore the full metadata.
+        **Please run "conda env update -f environment.yaml" to load the k_lms dependencies!!**
 
 * v1.01 (21 August 2022)
     * added k_lms sampling. 
