@@ -87,6 +87,9 @@ def main_loop(t2i,parser,log):
             break
 
         elements = shlex.split(command)
+        if len(elements)==0:
+            continue
+        
         if elements[0]=='q':  # 
             done = True
             break
