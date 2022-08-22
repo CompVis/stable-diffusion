@@ -6,6 +6,7 @@ from PIL import Image,PngImagePlugin
 
 if len(sys.argv) < 2:
     print("Usage: file2prompt.py <file1.png> <file2.png> <file3.png>...")
+    print("This script opens up the indicated dream.py-generated PNG file(s) and prints out the prompt used to generate them.")
     exit(-1)
 
 filenames = sys.argv[1:]

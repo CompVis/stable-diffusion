@@ -86,6 +86,10 @@ completely). The default is 0.75, and ranges from 0.25-0.75 give interesting res
 
 ## Changes
 
+* v1.03 (22 August 2022)
+   * The original txt2img and img2img scripts from the CompViz repository have been moved into
+     a subfolder named "orig_scripts", to reduce confusion.
+   
 * v1.02 (21 August 2022)
     * A copy of the prompt and all of its switches and options is now stored in the corresponding
     image in a tEXt metadata field named "Dream". You can read the prompt using scripts/images2prompt.py,
