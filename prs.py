@@ -456,6 +456,7 @@ class Settings:
     gobig_overlap = 64
     gobig_realesrgan = False
     cool_down = 0.0
+    checkpoint = "./models/sd-v1-3-full-ema.ckpt"
     
     def apply_settings_file(self, filename, settings_file):
         print(f'Applying settings file: {filename}')
@@ -503,6 +504,8 @@ class Settings:
             self.gobig_realesrgan = (settings_file["gobig_realesrgan"])
         if is_json_key_present(settings_file, 'cool_down'):
             self.cool_down = (settings_file["cool_down"])
+        if is_json_key_present(settings_file, 'checkpoint'):
+            self.checkpoint = (settings_file["checkpoint"])
 
 def esrgan_resize(input):
     input.save('_esrgan_orig.png')
@@ -555,7 +558,7 @@ def do_gobig(gobig_init, gobig_scale, device, model, opt):
     shape = ((opt.W, opt.H), (0,0))
     while i < overlap:
         alpha_gradient.rectangle(shape, fill = a)
-        a += 4
+        a += int(255 / overlap)
         i += 1
         shape = ((opt.W - i, opt.H - i), (i,i))
     mask = Image.new('RGBA', (opt.W, opt.H), color=0)
@@ -600,7 +603,7 @@ def main():
     outdir = (f'./out/{settings.batch_name}')
 
     # setup the model
-    ckpt = "./models/sd-v1-3-full-ema.ckpt"
+    ckpt = settings.checkpoint # "./models/sd-v1-3-full-ema.ckpt"
     inf_config = "./configs/stable-diffusion/v1-inference.yaml"
     print('Loading the model and checkpoint...')
     config = OmegaConf.load(f"{inf_config}")
@@ -648,6 +651,7 @@ def main():
                 "config": config
             }
             opt = SimpleNamespace(**opt)
+            print(f'Opt steps is {opt.ddim_steps}')
             # render the image(s)!
             if cl_args.gobig_init == None:
                 # either just a regular render, or a regular render that will next go_big

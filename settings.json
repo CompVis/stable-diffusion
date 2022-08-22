@@ -24,5 +24,6 @@
     "plms" : false, // whether or not do use plms diffusion instead of ddim
     "eta" : 0.0, // currently does not seem to do anything
     "from_file": null, // load prompts from this file instead of using a single prompt. Each prompt is rendered n_batches times
-    "cool_down": 0.0 // number of seconds to pause between images, to keep GPU cool
+    "cool_down": 0.0, // number of seconds to pause between images, to keep GPU cool
+    "checkpoint": "./models/sd-v1-4.ckpt"
 }
