@@ -15,6 +15,7 @@ from pytorch_lightning import seed_everything
 from torch import autocast
 #import accelerate
 from contextlib import contextmanager, nullcontext
+import subprocess
 
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
@@ -280,7 +281,6 @@ def grid_coords(target, original, overlap):
 def grid_slice(source, overlap, og_size): 
     width, height = og_size # size of the slices to be rendered
     coordinates, new_size = grid_coords(source.size, og_size, overlap)
-    # loc_width and loc_height are the center point of the goal size, and we'll start there and work our way out
     slices = []
     for coordinate in coordinates:
         x, y = coordinate
@@ -288,8 +288,6 @@ def grid_slice(source, overlap, og_size):
     global slices_todo
     slices_todo = len(slices) - 1
     return slices, new_size
-
-
 
 def parse_args():
     my_parser = argparse.ArgumentParser(
@@ -456,6 +454,7 @@ class Settings:
     init_strength = 0.5
     gobig_maximize = True
     gobig_overlap = 64
+    gobig_realesrgan = False
     cool_down = 0.0
     
     def apply_settings_file(self, filename, settings_file):
@@ -500,8 +499,24 @@ class Settings:
             self.gobig_maximize = (settings_file["gobig_maximize"])
         if is_json_key_present(settings_file, 'gobig_overlap'):
             self.gobig_overlap = (settings_file["gobig_overlap"])
+        if is_json_key_present(settings_file, 'gobig_realesrgan'):
+            self.gobig_realesrgan = (settings_file["gobig_realesrgan"])
         if is_json_key_present(settings_file, 'cool_down'):
             self.cool_down = (settings_file["cool_down"])
+
+def esrgan_resize(input):
+    input.save('_esrgan_orig.png')
+    try:
+        subprocess.run(
+            ['realesrgan-ncnn-vulkan', '-i', '_esrgan_orig.png', '-o', '_esrgan_.png'],
+            stdout=subprocess.PIPE
+        ).stdout.decode('utf-8')
+        output = Image.open('_esrgan_.png').convert('RGBA')
+        return output
+    except Exception as e:
+        print('ESRGAN resize failed. Make sure realesrgan-ncnn-vulkan is in your path (or in this directory)')
+        print(e)
+        quit()
 
 def do_gobig(gobig_init, gobig_scale, device, model, opt):
     overlap = opt.gobig_overlap
@@ -511,6 +526,8 @@ def do_gobig(gobig_init, gobig_scale, device, model, opt):
     opt.W, opt.H = input_image.size
     target_W = opt.W * gobig_scale
     target_H = opt.H * gobig_scale
+    if opt.gobig_realesrgan:
+        input_image = esrgan_resize(input_image)
     target_image = input_image.resize((target_W, target_H), get_resampling_mode())
     slices, new_canvas_size = grid_slice(target_image, overlap, (opt.W, opt.H))
     if opt.gobig_maximize == True:
@@ -521,9 +538,9 @@ def do_gobig(gobig_init, gobig_scale, device, model, opt):
     # now we trigger a do_run for each slice
     betterslices = []
     slice_image = 'slice.png'
+    opt.seed = opt.seed + 1
     for count, chunk_w_coords in enumerate(slices):
         chunk, coord_x, coord_y = chunk_w_coords
-        opt.seed = opt.seed + 1
         chunk.save(slice_image)
         opt.init_image = slice_image
         result = do_run(device, model, opt)
@@ -627,6 +644,7 @@ def main():
                 "strength": 1.0 - settings.init_strength,
                 "gobig_maximize": settings.gobig_maximize,
                 "gobig_overlap": settings.gobig_overlap,
+                "gobig_realesrgan": settings.gobig_realesrgan,
                 "config": config
             }
             opt = SimpleNamespace(**opt)
