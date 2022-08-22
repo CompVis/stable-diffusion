@@ -146,17 +146,21 @@ After these steps, your command prompt will be prefixed by "(ldm)" as shown abov
 
 7. Now you need to install the weights for the stable diffusion model.
 
-For testing prior to the release of the real weights, you can use an older weight file that produces low-quality images. Create a directory within stable-diffusion named "models/ldm/text2img-large", and use the wget URL downloader tool to copy the weight file into it:
-```
-(ldm) ~/stable-diffusion$ mkdir -p models/ldm/text2img-large
-(ldm) ~/stable-diffusion$ wget -O models/ldm/text2img-large/model.ckpt https://ommer-lab.com/files/latent-diffusion/nitro/txt2img-f8-large/model.ckpt
-```
-For testing with the released weighs, you will do something similar, but with a directory named "models/ldm/stable-diffusion-v1"
+For running with the released weights, you will first need to set up an acount with Hugging Face (https://huggingface.co).
+Use your credentials to log in, and then point browser at https://huggingface.co/CompVis/stable-diffusion-v-1-4-original.
+You may be asked to sign a license agreement at this point.
+
+Click on "Files and versions" near the top of the page, and then click on the file named "sd-v1-4.ckpt". You'll be taken
+to a page that prompts you to click the "download" link. Now save the file somewhere safe on your local machine.
+
+Now run the following commands from within the stable-diffusion directory to point it to the weights file.
+   
 ```
 (ldm) ~/stable-diffusion$ mkdir -p models/ldm/stable-diffusion-v1
-(ldm) ~/stable-diffusion$ wget -O models/ldm/stable-diffusion-v1/model.ckpt <ENTER URL HERE>
+(ldm) ~/stable-diffusion$ ln -sf /path/to/sd-v1-4.ckpt models/ldm/stable-diffusion-v1/model.ckpt
 ```
-These weight files are ~5 GB in size, so downloading may take a while.
+
+The weight file is >4 GB in size, so downloading may take a while.
 
 8. Start generating images!
 ```
@@ -213,15 +217,36 @@ This will install all python requirements and activate the "ldm" environment whi
 ```
 python scripts\preload_models.py
 ```
-This installs two machine learning models that stable diffusion requires.
+
+This installs several machine learning models that stable diffusion
+requires. (Note that this step is required. I created it because some people
+are using GPU systems that are behind a firewall and the models can't be
+downloaded just-in-time)
 
 9. Now you need to install the weights for the big stable diffusion model.
 
-For testing prior to the release of the real weights, create a directory within stable-diffusion named "models\ldm\text2img-large".
+For running with the released weights, you will first need to set up
+an acount with Hugging Face (https://huggingface.co).  Use your
+credentials to log in, and then point browser at
+https://huggingface.co/CompVis/stable-diffusion-v-1-4-original.  You
+may be asked to sign a license agreement at this point.
 
-For testing with the released weights, create a directory within stable-diffusion named "models\ldm\stable-diffusion-v1".
+Click on "Files and versions" near the top of the page, and then click
+on the file named "sd-v1-4.ckpt". You'll be taken to a page that
+prompts you to click the "download" link. Now save the file somewhere
+safe on your local machine.  The weight file is >4 GB in size, so
+downloading may take a while.
 
-Then use a web browser to copy model.ckpt into the appropriate directory. For the text2img-large (pre-release) model, the weights are at https://ommer-lab.com/files/latent-diffusion/nitro/txt2img-f8-large/model.ckpt. Check back here later for the release URL.
+Now run the following commands from **within the stable-diffusion
+directory** to point it to the weights file:
+   
+```
+mkdir -p models/ldm/stable-diffusion-v1
+copy C:\path\to\sd-v1-4.ckpt models\ldm\stable-diffusion-v1\model.ckpt
+```
+
+Instead of copying the file, you may instead create a shortcut within the
+models\ldm\stable-diffusion-v1\ directory that points to it.
 
 10. Start generating images!
 ```

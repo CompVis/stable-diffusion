@@ -40,7 +40,11 @@ def main():
     sys.path.append('.')
     from pytorch_lightning import logging
     from ldm.simplet2i import T2I
-
+    # these two lines prevent a horrible warning message from appearing
+    # when the frozen CLIP tokenizer is imported
+    import transformers
+    transformers.logging.set_verbosity_error()
+    
     # creating a simple text2image object with a handful of
     # defaults passed on the command line.
     # additional parameters will be added (or overriden) during
