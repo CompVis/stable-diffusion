@@ -124,7 +124,7 @@ After these steps, your command prompt will be prefixed by "(ldm)" as shown abov
 
 7. Now you need to install the weights for the stable diffusion model.
 
-For testing prior to the release of the real weights, you can use an older weight file that produces low-quality images. Create a directory within stable-diffusion named "models/ldm/text2img.large", and use the wget URL downloader tool to copy the weight file into it:
+For testing prior to the release of the real weights, you can use an older weight file that produces low-quality images. Create a directory within stable-diffusion named "models/ldm/text2img-large", and use the wget URL downloader tool to copy the weight file into it:
 ```
 (ldm) ~/stable-diffusion$ mkdir -p models/ldm/text2img-large
 (ldm) ~/stable-diffusion$ wget -O models/ldm/text2img-large/model.ckpt https://ommer-lab.com/files/latent-diffusion/nitro/txt2img-f8-large/model.ckpt
@@ -195,11 +195,11 @@ This installs two machine learning models that stable diffusion requires.
 
 9. Now you need to install the weights for the big stable diffusion model.
 
-For testing prior to the release of the real weights, create a directory within stable-diffusion named "models\ldm\text2img.large".
+For testing prior to the release of the real weights, create a directory within stable-diffusion named "models\ldm\text2img-large".
 
 For testing with the released weights, create a directory within stable-diffusion named "models\ldm\stable-diffusion-v1".
 
-Then use a web browser to copy model.ckpt into the appropriate directory. For the text2img.large (pre-release) model, the weights are at https://ommer-lab.com/files/latent-diffusion/nitro/txt2img-f8-large/model.ckpt. Check back here later for the release URL.
+Then use a web browser to copy model.ckpt into the appropriate directory. For the text2img-large (pre-release) model, the weights are at https://ommer-lab.com/files/latent-diffusion/nitro/txt2img-f8-large/model.ckpt. Check back here later for the release URL.
 
 10. Start generating images!
 ```
