@@ -86,6 +86,11 @@ completely). The default is 0.75, and ranges from 0.25-0.75 give interesting res
 
 ## Changes
 
+* v1.04 (22 August 2022 - after the drop)
+   * Updated README to reflect installation of the released weights.
+   * Suppressed very noisy and inconsequential warning when loading the frozen CLIP
+   tokenizer.
+
 * v1.03 (22 August 2022)
    * The original txt2img and img2img scripts from the CompViz repository have been moved into
      a subfolder named "orig_scripts", to reduce confusion.
