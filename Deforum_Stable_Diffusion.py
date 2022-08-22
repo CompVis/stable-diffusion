@@ -1,5 +1,14 @@
 # %%
 # !! {"metadata":{
+# !!   "id":"cc-imports"
+# !! }}
+
+#<cc-imports>
+
+import subprocess
+
+# %%
+# !! {"metadata":{
 # !!   "id": "c442uQJ_gUgy"
 # !! }}
 """
@@ -15,7 +24,9 @@ Notebook by [deforum](https://twitter.com/deforum_art)
 # !!   "cellView": "form"
 # !! }}
 #@markdown **NVIDIA GPU**
-#!nvidia-smi --query-gpu=name,memory.total,memory.free --format=csv,noheader
+sub_p_res = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,memory.free', '--format=csv,noheade'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
+print(sub_p_res) #<cc-cm>
+
 
 # %%
 # !! {"metadata":{
@@ -23,18 +34,24 @@ Notebook by [deforum](https://twitter.com/deforum_art)
 # !!   "cellView": "form"
 # !! }}
 #@markdown **Setup Environment**
-"""
+
 setup_environment = False #@param {type:"boolean"}
 
 if setup_environment:
-  %pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --extra-index-url https://download.pytorch.org/whl/cu113
-  %pip install omegaconf==2.1.1 einops==0.3.0 pytorch-lightning==1.4.2 torchmetrics==0.6.0 torchtext==0.2.3 transformers==4.19.2 kornia==0.6
-  !git clone https://github.com/deforum/stable-diffusion
-  %pip install -e git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
-  %pip install -e git+https://github.com/openai/CLIP.git@main#egg=clip
-  %pip install git+https://github.com/deforum/k-diffusion/
+  pip_sub_p_res = subprocess.run(['pip', 'install', 'torch==1.11.0+cu113', 'torchvision==0.12.0+cu113', 'torchaudio==0.11.0', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
+  print(pip_sub_p_res) #<cc-cm>
+  pip_sub_p_res = subprocess.run(['pip', 'install', 'omegaconf==2.1.1', 'einops==0.3.0', 'pytorch-lightning==1.4.2', 'torchmetrics==0.6.0', 'torchtext==0.2.3', 'transformers==4.19.2', 'kornia==0.6'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
+  print(pip_sub_p_res) #<cc-cm>
+  sub_p_res = subprocess.run(['git', 'clone', 'https://github.com/deforum/stable-diffusion'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
+  print(sub_p_res) #<cc-cm>
+  pip_sub_p_res = subprocess.run(['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
+  print(pip_sub_p_res) #<cc-cm>
+  pip_sub_p_res = subprocess.run(['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
+  print(pip_sub_p_res) #<cc-cm>
+  pip_sub_p_res = subprocess.run(['pip', 'install', 'git+https://github.com/deforum/k-diffusion/'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
+  print(pip_sub_p_res) #<cc-cm>
   print("Runtime > Restart Runtime")
-"""
+
 # %%
 # !! {"metadata":{
 # !!   "cellView": "form",
@@ -299,11 +316,11 @@ def run(params):
 #@markdown **Local Path Variables**
 print("Local Path Variables:\n")
 
-models_path = "./models" #@param {type:"string"}
-output_path = "./output" #@param {type:"string"}
+models_path = "/content/models" #@param {type:"string"}
+output_path = "/content/output" #@param {type:"string"}
 
 #@markdown **Google Drive Path Variables (Optional)**
-mount_google_drive = False #@param {type:"boolean"}
+mount_google_drive = True #@param {type:"boolean"}
 force_remount = False
 
 if mount_google_drive:
@@ -311,16 +328,18 @@ if mount_google_drive:
   try:
     drive_path = "/content/drive"
     drive.mount(drive_path,force_remount=force_remount)
-    models_path = "/content/drive/MyDrive/AI/models" #@param {type:"string"}
-    output_path = "/content/drive/MyDrive/AI/StableDiffusion" #@param {type:"string"}
+    models_path_gdrive = "/content/drive/MyDrive/AI/models" #@param {type:"string"}
+    output_path_gdrive = "/content/drive/MyDrive/AI/StableDiffusion" #@param {type:"string"}
+    models_path = models_path_gdrive
+    output_path = output_path_gdrive
   except:
     print("...error mounting drive or with drive path variables")
     print("...reverting to default path variables")
-    models_path = "/content/models"
-    output_path = "/content/output"
 
-os.makedirs(models_path,exist_ok=True)
-os.makedirs(models_path,exist_ok=True)
+sub_p_res = subprocess.run(['mkdir', '-p', '$models_path'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
+print(sub_p_res) #<cc-cm>
+sub_p_res = subprocess.run(['mkdir', '-p', '$output_path'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
+print(sub_p_res) #<cc-cm>
 
 print(f"models_path: {models_path}")
 print(f"output_path: {output_path}")
@@ -340,7 +359,8 @@ model_map = {
 def download_model(model_checkpoint):
   download_link = model_map[model_checkpoint]["link"][0]
   print(f"!wget -O {models_path}/{model_checkpoint} {download_link}")
-  #!wget -O $models_path/$model_checkpoint $download_link
+  sub_p_res = subprocess.run(['wget', '-O', '$models_path/$model_checkpoint', '$download_link'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
+  print(sub_p_res) #<cc-cm>
   return
 
 # config path
@@ -348,7 +368,8 @@ if os.path.exists(models_path+'/'+model_config):
   print(f"{models_path+'/'+model_config} exists")
 else:
   print("cp ./stable-diffusion/configs/stable-diffusion/v1-inference.yaml $models_path/.")
-  #!cp ./stable-diffusion/configs/stable-diffusion/v1-inference.yaml $models_path/.
+  sub_p_res = subprocess.run(['cp', './stable-diffusion/configs/stable-diffusion/v1-inference.yaml', '$models_path/.'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
+  print(sub_p_res) #<cc-cm>
 
 # checkpoint path or download
 if os.path.exists(models_path+'/'+model_checkpoint):
@@ -477,7 +498,7 @@ for ii in range(params["n_batch"]):
 # !!   "accelerator": "GPU",
 # !!   "colab": {
 # !!     "collapsed_sections": [],
-# !!     "name": "Deforum Stable Diffusion",
+# !!     "name": "Deforum_Stable_Diffusion.ipynb",
 # !!     "provenance": [],
 # !!     "private_outputs": true
 # !!   },
