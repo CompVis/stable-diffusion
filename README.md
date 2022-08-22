@@ -73,6 +73,14 @@ The --init_img (-I) option gives the path to the seed picture. --strength (-f) c
 the original will be modified, ranging from 0.0 (keep the original intact), to 1.0 (ignore the original
 completely). The default is 0.75, and ranges from 0.25-0.75 give interesting results.
 
+## Changes
+
+- v1.01 (21 August 2022)
+* added k_lms sampling **Please run "conda update -f environment.yaml" to load the k_lms dependencies**
+* use half precision arithmetic by default, resulting in faster execution and lower memory requirements
+Pass argument --full_precision to dream.py to get slower but more accurate image generation
+
+
 ## Installation
 
 ### Linux/Mac
