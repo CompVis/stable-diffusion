@@ -1,6 +1,6 @@
 # Update: Added optimized_img2img.py
 
-This code can now generate a 512x512 image from prior images using less than 4Gb of RAM (in less than 20 seconds on RTX 2060)
+This code can now generate a 512x512 image from prior images using less than 4GB of RAM (in less than 20 seconds on RTX 2060)
 
 # Optimized Stable Diffusion (Sort of)
 
@@ -10,9 +10,9 @@ This code can now generate a 512x512 image from prior images using less than 4Gb
 
 ## img2img
 
-- It can generate _512x512 images from a prior image and prompt on a 4Gb VRAM GPU in under 20 seconds per image_ (RTX 2060 in my case).
+- It can generate _512x512 images from a prior image and prompt on a 4GB VRAM GPU in under 20 seconds per image_ (RTX 2060 in my case).
 
-- You can use the `--H` & `--W` arguments to set the size of the generated image.The maximum size that can fit on 6Gb GPU (RTX 2060) is around 576x768.
+- You can use the `--H` & `--W` arguments to set the size of the generated image.The maximum size that can fit on 6GB GPU (RTX 2060) is around 576x768.
 
 - For example, the following command will generate 20 512x512 images:
 
@@ -20,7 +20,7 @@ This code can now generate a 512x512 image from prior images using less than 4Gb
 
 ## txt2img
 
-- It can generate _512x512 images from a prompt on a 4Gb VRAM GPU in under 25 seconds per image_ (RTX 2060 in my case).
+- It can generate _512x512 images from a prompt on a 4GB VRAM GPU in under 25 seconds per image_ (RTX 2060 in my case).
 
 - You can use the `--H` & `--W` arguments to set the size of the generated image.
 
