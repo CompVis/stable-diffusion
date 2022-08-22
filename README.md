@@ -110,6 +110,8 @@ completely). The default is 0.75, and ranges from 0.25-0.75 give interesting res
 
 ## Installation
 
+There are separate installation walkthroughs for [Linux/Mac](#linuxmac) and [Windows](#windows).
+
 ### Linux/Mac
 
 1. You will need to install the following prerequisites if they are not already available. Use your
@@ -149,6 +151,10 @@ After these steps, your command prompt will be prefixed by "(ldm)" as shown abov
 (ldm) ~/stable-diffusion$ python3 scripts/preload_models.py
 ```
 
+Note that this step is necessary because I modified the original
+just-in-time model loading scheme to allow the script to work on GPU
+machines that are not internet connected. See [Workaround for machines with limited internet connectivity](#workaround-for-machines-with-limited-internet-connectivity)
+
 7. Now you need to install the weights for the stable diffusion model.
 
 For running with the released weights, you will first need to set up an acount with Hugging Face (https://huggingface.co).
@@ -181,7 +187,7 @@ The weight file is >4 GB in size, so downloading may take a while.
 9. Subsequently, to relaunch the script, be sure to run "conda activate ldm" (step 5, second command), enter the "stable-diffusion" 
 directory, and then launch the dream script (step 8). If you forget to activate the ldm environment, the script will fail with multiple ModuleNotFound errors.
 
-### Updating to newer versions of the script
+#### Updating to newer versions of the script
 
 This distribution is changing rapidly. If you used the "git clone" method (step 5) to download the stable-diffusion directory, then to update to the latest and greatest version, launch the Anaconda window, enter "stable-diffusion", and type:
 ```
@@ -263,7 +269,7 @@ python scripts\dream.py
 ```
 11. Subsequently, to relaunch the script, first activate the Anaconda command window (step 4), enter the stable-diffusion directory (step 6, "cd \path\to\stable-diffusion"), run "conda activate ldm" (step 7b), and then launch the dream script (step 10).
 
-### Updating to newer versions of the script
+#### Updating to newer versions of the script
 
 This distribution is changing rapidly. If you used the "git clone" method (step 5) to download the stable-diffusion directory, then to update to the latest and greatest version, launch the Anaconda window, enter "stable-diffusion", and type:
 ```
