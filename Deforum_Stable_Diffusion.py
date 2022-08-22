@@ -1,14 +1,5 @@
 # %%
 # !! {"metadata":{
-# !!   "id":"cc-imports"
-# !! }}
-
-#<cc-imports>
-
-import subprocess
-
-# %%
-# !! {"metadata":{
 # !!   "id": "c442uQJ_gUgy"
 # !! }}
 """
@@ -24,8 +15,9 @@ Notebook by [deforum](https://twitter.com/deforum_art)
 # !!   "cellView": "form"
 # !! }}
 #@markdown **NVIDIA GPU**
-sub_p_res = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,memory.free', '--format=csv,noheade'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-print(sub_p_res) #<cc-cm>
+import subprocess
+sub_p_res = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,memory.free', '--format=csv,noheader'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+print(sub_p_res)
 
 
 # %%
@@ -38,18 +30,18 @@ print(sub_p_res) #<cc-cm>
 setup_environment = False #@param {type:"boolean"}
 
 if setup_environment:
-  pip_sub_p_res = subprocess.run(['pip', 'install', 'torch==1.11.0+cu113', 'torchvision==0.12.0+cu113', 'torchaudio==0.11.0', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-  print(pip_sub_p_res) #<cc-cm>
-  pip_sub_p_res = subprocess.run(['pip', 'install', 'omegaconf==2.1.1', 'einops==0.3.0', 'pytorch-lightning==1.4.2', 'torchmetrics==0.6.0', 'torchtext==0.2.3', 'transformers==4.19.2', 'kornia==0.6'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-  print(pip_sub_p_res) #<cc-cm>
-  sub_p_res = subprocess.run(['git', 'clone', 'https://github.com/deforum/stable-diffusion'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-  print(sub_p_res) #<cc-cm>
-  pip_sub_p_res = subprocess.run(['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-  print(pip_sub_p_res) #<cc-cm>
-  pip_sub_p_res = subprocess.run(['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-  print(pip_sub_p_res) #<cc-cm>
-  pip_sub_p_res = subprocess.run(['pip', 'install', 'git+https://github.com/deforum/k-diffusion/'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-  print(pip_sub_p_res) #<cc-cm>
+  pip_sub_p_res = subprocess.run(['pip', 'install', 'torch==1.11.0+cu113', 'torchvision==0.12.0+cu113', 'torchaudio==0.11.0', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+  print(pip_sub_p_res)
+  pip_sub_p_res = subprocess.run(['pip', 'install', 'omegaconf==2.1.1', 'einops==0.3.0', 'pytorch-lightning==1.4.2', 'torchmetrics==0.6.0', 'torchtext==0.2.3', 'transformers==4.19.2', 'kornia==0.6'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+  print(pip_sub_p_res)
+  sub_p_res = subprocess.run(['git', 'clone', 'https://github.com/deforum/stable-diffusion'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+  print(sub_p_res)
+  pip_sub_p_res = subprocess.run(['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+  print(pip_sub_p_res)
+  pip_sub_p_res = subprocess.run(['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+  print(pip_sub_p_res)
+  pip_sub_p_res = subprocess.run(['pip', 'install', 'git+https://github.com/deforum/k-diffusion/'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+  print(pip_sub_p_res)
   print("Runtime > Restart Runtime")
 
 # %%
@@ -66,6 +58,7 @@ import argparse, glob
 import torch
 import torch.nn as nn
 import numpy as np
+import shutil
 from omegaconf import OmegaConf
 from PIL import Image
 from tqdm import tqdm, trange
@@ -320,7 +313,7 @@ models_path = "/content/models" #@param {type:"string"}
 output_path = "/content/output" #@param {type:"string"}
 
 #@markdown **Google Drive Path Variables (Optional)**
-mount_google_drive = True #@param {type:"boolean"}
+mount_google_drive = False #@param {type:"boolean"}
 force_remount = False
 
 if mount_google_drive:
@@ -336,10 +329,8 @@ if mount_google_drive:
     print("...error mounting drive or with drive path variables")
     print("...reverting to default path variables")
 
-sub_p_res = subprocess.run(['mkdir', '-p', '$models_path'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-print(sub_p_res) #<cc-cm>
-sub_p_res = subprocess.run(['mkdir', '-p', '$output_path'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-print(sub_p_res) #<cc-cm>
+os.makedirs(models_path, exist_ok=True)
+os.makedirs(output_path, exist_ok=True)
 
 print(f"models_path: {models_path}")
 print(f"output_path: {output_path}")
@@ -356,11 +347,14 @@ model_map = {
     'sd-v1-3-full-ema.ckpt': {'downloaded': False, 'sha256': '54632c6e8a36eecae65e36cb0595fab314e1a1545a65209f24fde221a8d4b2ca', 'link': ['https://drinkordiecdn.lol/sd-v1-3-full-ema.ckpt'] },
   }
 
+def wget(url, outputdir):
+    res = subprocess.run(['wget', url, '-P', f'{outputdir}'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+    print(res)
+
 def download_model(model_checkpoint):
   download_link = model_map[model_checkpoint]["link"][0]
   print(f"!wget -O {models_path}/{model_checkpoint} {download_link}")
-  sub_p_res = subprocess.run(['wget', '-O', '$models_path/$model_checkpoint', '$download_link'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-  print(sub_p_res) #<cc-cm>
+  wget(download_link, models_path)
   return
 
 # config path
@@ -368,8 +362,7 @@ if os.path.exists(models_path+'/'+model_config):
   print(f"{models_path+'/'+model_config} exists")
 else:
   print("cp ./stable-diffusion/configs/stable-diffusion/v1-inference.yaml $models_path/.")
-  sub_p_res = subprocess.run(['cp', './stable-diffusion/configs/stable-diffusion/v1-inference.yaml', '$models_path/.'], stdout=subprocess.PIPE).stdout.decode('utf-8') #<cc-cm>
-  print(sub_p_res) #<cc-cm>
+  shutil.copy('./stable-diffusion/configs/stable-diffusion/v1-inference.yaml', models_path)
 
 # checkpoint path or download
 if os.path.exists(models_path+'/'+model_checkpoint):
