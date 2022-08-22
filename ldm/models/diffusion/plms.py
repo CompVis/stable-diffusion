@@ -2,6 +2,7 @@
 
 import torch
 import numpy as np
+#from tqdm.notebook import tqdm
 from tqdm import tqdm
 from functools import partial
 
