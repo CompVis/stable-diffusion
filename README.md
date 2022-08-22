@@ -227,7 +227,7 @@ python scripts\dream.py -l
 # for the post-release weights
 python scripts\dream.py
 ```
-11. Subsequently, to relaunch the script, first activate the Anaconda command window (step 4), run "conda activate ldm" (step 7b), and then launch the dream script (step 10).
+11. Subsequently, to relaunch the script, first activate the Anaconda command window (step 4), enter the stable-diffusion directory (step 6, "cd \path\to\stable-diffusion"), run "conda activate ldm" (step 7b), and then launch the dream script (step 10).
 
 ### Updating to newer versions of the script
 
