@@ -105,6 +105,42 @@ class CFGDenoiser(nn.Module):
         uncond, cond = self.inner_model(x_in, sigma_in, cond=cond_in).chunk(2)
         return uncond + (cond - uncond) * cond_scale
 
+
+def make_callback(sampler, dynamic_threshold=None, static_threshold=None):  
+    # Creates the callback function to be passed into the samplers
+    # The callback function is applied to the image after each step
+    def dynamic_thresholding_(img, threshold):
+        # Dynamic thresholding from Imagen paper (May 2022)
+        s = np.percentile(np.abs(img.cpu()), threshold, axis=tuple(range(1,img.ndim)))
+        s = np.max(np.append(s,1.0))
+        torch.clamp_(img, -1*s, s)
+        torch.FloatTensor.div_(img, s)
+  
+    # Callback for samplers in the k-diffusion repo, called thus:
+    #   callback({'x': x, 'i': i, 'sigma': sigmas[i], 'sigma_hat': sigmas[i], 'denoised': denoised})
+    def k_callback(args_dict):
+        if static_threshold is not None:
+            torch.clamp_(args_dict['x'], -1*static_threshold, static_threshold)
+        if dynamic_threshold is not None:
+            dynamic_thresholding_(args_dict['x'], dynamic_threshold)
+    
+    # Function that is called on the image (img) and step (i) at each step
+    def img_callback(img, i):
+        # Thresholding functions
+        if dynamic_threshold is not None:
+            dynamic_thresholding_(img, dynamic_threshold)
+        if static_threshold is not None:
+            torch.clamp_(img, -1*static_threshold, static_threshold)
+
+    if sampler in ["plms","ddim"]: 
+        # Callback function formated for compvis latent diffusion samplers
+        callback = img_callback
+    else: 
+        # Default callback function uses k-diffusion sampler variables
+        callback = k_callback
+
+    return callback
+
 def run(params):
 
     # timestring
@@ -186,6 +222,10 @@ def run(params):
                     # seed
                     seed_everything(local_seed)
 
+                    callback = make_callback(sampler=params["sampler"],
+                                             dynamic_threshold=params["dynamic_threshold"], 
+                                             static_threshold=params["static_threshold"])
+
                     # k samplers
                     if params["sampler"] in ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral"]:
 
@@ -199,17 +239,17 @@ def run(params):
                         extra_args = {'cond': c, 'uncond': uc, 'cond_scale': params["scale"]}
 
                         if params["sampler"]=="klms":
-                            samples = K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process)
+                            samples = K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
                         elif params["sampler"]=="dpm2":
-                            samples = K.sampling.sample_dpm_2(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process)
+                            samples = K.sampling.sample_dpm_2(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
                         elif params["sampler"]=="dpm2_ancestral":
-                            samples = K.sampling.sample_dpm_2_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process)
+                            samples = K.sampling.sample_dpm_2_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
                         elif params["sampler"]=="heun":
-                            samples = K.sampling.sample_heun(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process)
+                            samples = K.sampling.sample_heun(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
                         elif params["sampler"]=="euler":
-                            samples = K.sampling.sample_euler(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process)
+                            samples = K.sampling.sample_euler(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
                         elif params["sampler"]=="euler_ancestral":
-                            samples = K.sampling.sample_euler_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process)
+                            samples = K.sampling.sample_euler_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
                         
                         x_samples = model.decode_first_stage(samples)
                         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
@@ -259,7 +299,8 @@ def run(params):
                                                              unconditional_guidance_scale=params["scale"],
                                                              unconditional_conditioning=uc,
                                                              eta=params["eta"],
-                                                             x_T=start_code)
+                                                             x_T=start_code,
+                                                             img_callback=callback)
 
                             x_samples = model.decode_first_stage(samples)
                             x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
@@ -447,6 +488,8 @@ def opt_params():
     steps = 10 #@param
     scale = 7 #@param
     eta = 0.0 #@param
+    dynamic_threshold = None #@param
+    static_threshold = None #@param
     
     #@markdown **Batch Settings**
     n_batch = 1 #@param
