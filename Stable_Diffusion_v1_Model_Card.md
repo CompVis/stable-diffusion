@@ -36,10 +36,11 @@ Excluded uses are described below.
  ### Misuse, Malicious Use, and Out-of-Scope Use
 _Note: This section is taken from the [DALLE-MINI model card](https://huggingface.co/dalle-mini/dalle-mini), but applies in the same way to Stable Diffusion v1_.
 
-
 The model should not be used to intentionally create or disseminate images that create hostile or alienating environments for people. This includes generating images that people would foreseeably find disturbing, distressing, or offensive; or content that propagates historical or current stereotypes.
+
 #### Out-of-Scope Use
 The model was not trained to be factual or true representations of people or events, and therefore using the model to generate such content is out-of-scope for the abilities of this model.
+
 #### Misuse and Malicious Use
 Using the model to generate content that is cruel to individuals is a misuse of this model. This includes, but is not limited to:
 
@@ -66,14 +67,17 @@ Using the model to generate content that is cruel to individuals is a misuse of 
   [LAION-5B](https://laion.ai/blog/laion-5b/) which contains adult material
   and is not fit for product use without additional safety mechanisms and
   considerations.
+- No additional measures were used to deduplicate the dataset. As a result, we observe some degree of memorization for images that are duplicated in the training data.
+  The training data can be searched at [https://rom1504.github.io/clip-retrieval/](https://rom1504.github.io/clip-retrieval/) to possibly assist in the detection of memorized images.
 
 ### Bias
 While the capabilities of image generation models are impressive, they can also reinforce or exacerbate social biases. 
-Stable Diffusion v1 was trained on subsets of [LAION-2B(en)](https://laion.ai/blog/laion-5b/), 
-which consists of images that are primarily limited to English descriptions. 
+Stable Diffusion v1 was primarily trained on subsets of [LAION-2B(en)](https://laion.ai/blog/laion-5b/), 
+which consists of images that are limited to English descriptions. 
 Texts and images from communities and cultures that use other languages are likely to be insufficiently accounted for. 
 This affects the overall output of the model, as white and western cultures are often set as the default. Further, the 
 ability of the model to generate content with non-English prompts is significantly worse than with English-language prompts.
+Stable Diffusion v1 mirrors and exacerbates biases to such a degree that viewer discretion must be advised irrespective of the input or its intent.
 
 
 ## Training
@@ -81,7 +85,7 @@ ability of the model to generate content with non-English prompts is significant
 **Training Data**
 The model developers used the following dataset for training the model:
 
-- LAION-2B (en) and subsets thereof (see next section)
+- LAION-5B and subsets thereof (see next section)
 
 **Training Procedure**
 Stable Diffusion v1 is a latent diffusion model which combines an autoencoder with a diffusion model that is trained in the latent space of the autoencoder. During training, 
@@ -91,16 +95,15 @@ Stable Diffusion v1 is a latent diffusion model which combines an autoencoder wi
 - The non-pooled output of the text encoder is fed into the UNet backbone of the latent diffusion model via cross-attention.
 - The loss is a reconstruction objective between the noise that was added to the latent and the prediction made by the UNet.
 
-We currently provide three checkpoints, `sd-v1-1.ckpt`, `sd-v1-2.ckpt` and `sd-v1-3.ckpt`,
-which were trained as follows,
+We currently provide the following checkpoints:
 
 - `sd-v1-1.ckpt`: 237k steps at resolution `256x256` on [laion2B-en](https://huggingface.co/datasets/laion/laion2B-en).
   194k steps at resolution `512x512` on [laion-high-resolution](https://huggingface.co/datasets/laion/laion-high-resolution) (170M examples from LAION-5B with resolution `>= 1024x1024`).
 - `sd-v1-2.ckpt`: Resumed from `sd-v1-1.ckpt`.
-  515k steps at resolution `512x512` on "laion-improved-aesthetics" (a subset of laion2B-en,
-filtered to images with an original size `>= 512x512`, estimated aesthetics score `> 5.0`, and an estimated watermark probability `< 0.5`. The watermark estimate is from the LAION-5B metadata, the aesthetics score is estimated using an [improved aesthetics estimator](https://github.com/christophschuhmann/improved-aesthetic-predictor)).
-- `sd-v1-3.ckpt`: Resumed from `sd-v1-2.ckpt`. 195k steps at resolution `512x512` on "laion-improved-aesthetics" and 10\% dropping of the text-conditioning to improve [classifier-free guidance sampling](https://arxiv.org/abs/2207.12598).
-
+  515k steps at resolution `512x512` on [laion-aesthetics v2 5+](https://laion.ai/blog/laion-aesthetics/) (a subset of laion2B-en with estimated aesthetics score `> 5.0`, and additionally
+filtered to images with an original size `>= 512x512`, and an estimated watermark probability `< 0.5`. The watermark estimate is from the [LAION-5B](https://laion.ai/blog/laion-5b/) metadata, the aesthetics score is estimated using the [LAION-Aesthetics Predictor V2](https://github.com/christophschuhmann/improved-aesthetic-predictor)).
+- `sd-v1-3.ckpt`: Resumed from `sd-v1-2.ckpt`. 195k steps at resolution `512x512` on "laion-aesthetics v2 5+" and 10\% dropping of the text-conditioning to improve [classifier-free guidance sampling](https://arxiv.org/abs/2207.12598).
+- `sd-v1-4.ckpt`: Resumed from `sd-v1-2.ckpt`. 225k steps at resolution `512x512` on "laion-aesthetics v2 5+" and 10\% dropping of the text-conditioning to improve [classifier-free guidance sampling](https://arxiv.org/abs/2207.12598).
 
 - **Hardware:** 32 x 8 x A100 GPUs
 - **Optimizer:** AdamW
@@ -116,6 +119,7 @@ steps show the relative improvements of the checkpoints:
 ![pareto](assets/v1-variants-scores.jpg) 
 
 Evaluated using 50 PLMS steps and 10000 random prompts from the COCO2017 validation set, evaluated at 512x512 resolution.  Not optimized for FID scores.
+
 ## Environmental Impact
 
 **Stable Diffusion v1** **Estimated Emissions**
@@ -126,6 +130,7 @@ Based on that information, we estimate the following CO2 emissions using the [Ma
 - **Cloud Provider:** AWS
 - **Compute Region:** US-east
 - **Carbon Emitted (Power consumption x Time x Carbon produced based on location of power grid):** 11250 kg CO2 eq.
+
 ## Citation
     @InProceedings{Rombach_2022_CVPR,
         author    = {Rombach, Robin and Blattmann, Andreas and Lorenz, Dominik and Esser, Patrick and Ommer, Bj\"orn},
@@ -137,4 +142,3 @@ Based on that information, we estimate the following CO2 emissions using the [Ma
     }
 
 *This model card was written by: Robin Rombach and Patrick Esser and is based on the [DALL-E Mini model card](https://huggingface.co/dalle-mini/dalle-mini).*
-
