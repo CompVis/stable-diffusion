@@ -87,7 +87,7 @@ completely). The default is 0.75, and ranges from 0.25-0.75 give interesting res
 
 1. You will need to install the following prerequisites if they are not already available. Use your
 operating system's preferred installer
-* Python (version 3.8 or higher)
+* Python (version 3.8.5 recommended; higher may work)
 * git
 
 2. Install the Python Anaconda environment manager using pip3.
@@ -160,7 +160,8 @@ This will bring your local copy into sync with the remote one.
 
 ### Windows
 
-1. Install the most recent Python from here: https://www.python.org/downloads/windows/
+1. Install Python version 3.8.5 from here: https://www.python.org/downloads/windows/
+   (note that several users have reported that later versions do not work properly)
 
 2. Install Anaconda3 (miniconda3 version) from here: https://docs.anaconda.com/anaconda/install/windows/
 
