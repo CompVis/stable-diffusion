@@ -90,7 +90,12 @@ def main_loop(t2i,parser,log):
             done = True
             break
 
-        elements = shlex.split(command)
+        try:
+            elements = shlex.split(command)
+        except ValueError as e:
+            print(str(e))
+            continue
+        
         if len(elements)==0:
             continue
         
@@ -133,6 +138,10 @@ def main_loop(t2i,parser,log):
         except KeyboardInterrupt:
             print('*interrupted*')
             continue
+        except RuntimeError as e:
+            print(str(e))
+            continue
+            
 
     print("goodbye!")
 
