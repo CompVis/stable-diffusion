@@ -276,7 +276,9 @@ For support,
 please use this repository's GitHub Issues tracking service. Feel free
 to send me an email if you use and like the script.
 
-*Author:* Lincoln D. Stein <lincoln.stein@gmail.com>
+*Original Author:* Lincoln D. Stein <lincoln.stein@gmail.com>
+
+*Contributions by:* [Peter Kowalczyk](https://github.com/slix), [Henry Harrison](https://github.com/hwharrison), [xraxra](https://github.com/xraxra), and [bmaltais](https://github.com/bmaltais)
 
 # Original README from CompViz/stable-diffusion
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
