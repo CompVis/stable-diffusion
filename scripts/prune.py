@@ -2,7 +2,7 @@ import os
 import torch
 
 
-def prune_it(p, keep_only_ema=True):
+def prune_it(p, keep_only_ema=False):
     print(f"prunin' in path: {p}")
     size_initial = os.path.getsize(p)
     nsd = dict()
@@ -18,7 +18,7 @@ def prune_it(p, keep_only_ema=True):
     if keep_only_ema:
         sd = nsd["state_dict"].copy()
         # infer ema keys
-        ema_keys = {k: "model_ema." + k[6:].replace(".", "") for k in sd.keys() if k.startswith("model.")}
+        ema_keys = {k: "model_ema." + k[6:].replace(".", ".") for k in sd.keys() if k.startswith("model.")}
         new_sd = dict()
 
         for k in sd:
@@ -29,6 +29,12 @@ def prune_it(p, keep_only_ema=True):
 
         assert len(new_sd) == len(sd) - len(ema_keys)
         nsd["state_dict"] = new_sd
+    else:
+        sd = nsd['state_dict'].copy()
+        new_sd = dict()
+        for k in sd:
+            new_sd[k] = sd[k].half()
+        nsd['state_dict'] = new_sd
 
     fn = f"{os.path.splitext(p)[0]}-pruned.ckpt" if not keep_only_ema else f"{os.path.splitext(p)[0]}-ema-pruned.ckpt"
     print(f"saving pruned checkpoint at: {fn}")
