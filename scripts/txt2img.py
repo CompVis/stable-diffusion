@@ -263,7 +263,6 @@ def main():
         f.write(promt_text)
         f.write("\n")
     print(f"saving to folder {sample_path}")
-    #input("Press Enter to continue...")
     outpath = sample_path
 
     config = OmegaConf.load(f"{opt.config}")
@@ -276,9 +275,6 @@ def main():
         sampler = PLMSSampler(model)
     else:
         sampler = DDIMSampler(model)
-
-    # os.makedirs(opt.outdir, exist_ok=True)
-    # outpath = opt.outdir
 
     print("Creating invisible watermark encoder (see https://github.com/ShieldMnt/invisible-watermark)...")
     wm = "StableDiffusionV1"
@@ -297,9 +293,6 @@ def main():
         with open(opt.from_file, "r") as f:
             data = f.read().splitlines()
             data = list(chunk(data, batch_size))
-
-    #sample_path = os.path.join(outpath, "samples")
-    #os.makedirs(sample_path, exist_ok=True)
 
     base_count = len(os.listdir(sample_path))
     grid_count = len(os.listdir(outpath)) - 1
@@ -349,23 +342,23 @@ def main():
                                 img.save(os.path.join(sample_path, f"{base_count:05}.png"))
                                 base_count += 1
 
-                #         if not opt.skip_grid:
-                #             all_samples.append(x_checked_image_torch)
+                        if not opt.skip_grid:
+                            all_samples.append(x_checked_image_torch)
 
-                # if not opt.skip_grid:
-                #     # additionally, save as grid
-                #     grid = torch.stack(all_samples, 0)
-                #     grid = rearrange(grid, 'n b c h w -> (n b) c h w')
-                #     grid = make_grid(grid, nrow=n_rows)
+                if not opt.skip_grid:
+                    # additionally, save as grid
+                    grid = torch.stack(all_samples, 0)
+                    grid = rearrange(grid, 'n b c h w -> (n b) c h w')
+                    grid = make_grid(grid, nrow=n_rows)
 
-                #     # to image
-                #     grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-                #     img = Image.fromarray(grid.astype(np.uint8))
-                #     img = put_watermark(img, wm_encoder)
-                #     img.save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
-                #     grid_count += 1
+                    # to image
+                    grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
+                    img = Image.fromarray(grid.astype(np.uint8))
+                    img = put_watermark(img, wm_encoder)
+                    img.save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
+                    grid_count += 1
 
-                # toc = time.time()
+                toc = time.time()
 
     print(f"Your samples are ready and waiting for you here: \n{outpath} \n"
           f" \nEnjoy.")
