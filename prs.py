@@ -605,7 +605,7 @@ def main():
     # setup the model
     ckpt = settings.checkpoint # "./models/sd-v1-3-full-ema.ckpt"
     inf_config = "./configs/stable-diffusion/v1-inference.yaml"
-    print('Loading the model and checkpoint...')
+    print(f'Loading the model and checkpoint ({ckpt})...')
     config = OmegaConf.load(f"{inf_config}")
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = load_model_from_config(config, f"{ckpt}", verbose=False)
@@ -651,7 +651,6 @@ def main():
                 "config": config
             }
             opt = SimpleNamespace(**opt)
-            print(f'Opt steps is {opt.ddim_steps}')
             # render the image(s)!
             if cl_args.gobig_init == None:
                 # either just a regular render, or a regular render that will next go_big
