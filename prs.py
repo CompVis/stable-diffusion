@@ -555,7 +555,7 @@ def do_gobig(gobig_init, gobig_scale, device, model, opt):
     shape = ((opt.W, opt.H), (0,0))
     while i < overlap:
         alpha_gradient.rectangle(shape, fill = a)
-        a += 4
+        a += int(255 / overlap)
         i += 1
         shape = ((opt.W - i, opt.H - i), (i,i))
     mask = Image.new('RGBA', (opt.W, opt.H), color=0)
