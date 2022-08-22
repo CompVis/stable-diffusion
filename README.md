@@ -20,7 +20,7 @@ conda env create -f environment.yaml
 conda activate prs
 ```
 
-Download the [Stable Diffusion weights](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original), and place it in the `models` directory
+Download the [Stable Diffusion weights](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original) "sd-v1-4.ckpt", and place it in the `models` directory
 
 Run prs to make sure everything worked!
 ```

@@ -69,6 +69,21 @@ def load_img(path):
     image = torch.from_numpy(image)
     return 2.*image - 1.
 
+def thats_numberwang(dir, wildcard):
+    files = os.listdir(dir)
+    filenums = []
+    for file in files:
+        if wildcard in file:
+            start = file.index('-')
+            end = file.index('.', start+1)
+            filenum = int(file[(start + 1):end])
+            filenums.append(filenum)
+    if not filenums:
+        numberwang = 0
+    else:
+        numberwang = max(filenums) + 1
+    return numberwang
+
 
 def do_run(device, model, opt):
     print('Starting render!')
@@ -91,8 +106,8 @@ def do_run(device, model, opt):
 
     sample_path = os.path.join(outpath, "samples")
     os.makedirs(sample_path, exist_ok=True)
-    base_count = len(os.listdir(sample_path))
-    grid_count = len(os.listdir(outpath)) - 1
+    base_count = thats_numberwang(sample_path, opt.batch_name)
+    grid_count = thats_numberwang(outpath, opt.batch_name)
 
     if opt.init_image is not None:
         assert os.path.isfile(opt.init_image)
@@ -163,7 +178,7 @@ def do_run(device, model, opt):
                             for x_sample in x_samples_ddim:
                                 x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                                 Image.fromarray(x_sample.astype(np.uint8)).save(
-                                    os.path.join(sample_path, f"{base_count:05}.png"))
+                                    os.path.join(sample_path, f"{base_count:05}{opt.filetype}"), quality = opt.quality)
                                 base_count += 1
 
                         if not opt.skip_grid:
@@ -184,8 +199,8 @@ def do_run(device, model, opt):
 
                     # to image
                     grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-                    output_filename = os.path.join(outpath, f'{opt.batch_name}-{grid_count:04}.png')
-                    Image.fromarray(grid.astype(np.uint8)).save(output_filename, pnginfo=metadata)
+                    output_filename = os.path.join(outpath, f'{opt.batch_name}-{grid_count:04}{opt.filetype}')
+                    Image.fromarray(grid.astype(np.uint8)).save(output_filename, pnginfo=metadata, quality = opt.quality)
                     grid_count += 1
 
                 toc = time.time()
@@ -457,6 +472,7 @@ class Settings:
     gobig_realesrgan = False
     cool_down = 0.0
     checkpoint = "./models/sd-v1-4.ckpt"
+    use_jpg = False
     
     def apply_settings_file(self, filename, settings_file):
         print(f'Applying settings file: {filename}')
@@ -506,6 +522,8 @@ class Settings:
             self.cool_down = (settings_file["cool_down"])
         if is_json_key_present(settings_file, 'checkpoint'):
             self.checkpoint = (settings_file["checkpoint"])
+        if is_json_key_present(settings_file, 'use_jpg'):
+            self.use_jpg = (settings_file["use_jpg"])
 
 def esrgan_resize(input):
     input.save('_esrgan_orig.png')
@@ -569,7 +587,7 @@ def do_gobig(gobig_init, gobig_scale, device, model, opt):
         finished_slice = addalpha(betterslice, mask)
         finished_slices.append((finished_slice, x, y))
     final_output = grid_merge(target_image, finished_slices)
-    final_output.save(f'{result}-gobig.png')
+    final_output.save(f'{result}-gobig{opt.filetype}', quality = opt.quality)
 
 def main():
     cl_args = parse_args()
@@ -601,6 +619,8 @@ def main():
         settings.from_file = cl_args.from_file
 
     outdir = (f'./out/{settings.batch_name}')
+    filetype = ".jpg" if settings.use_jpg else ".png"
+    quality = 97 if settings.use_jpg else 100
 
     # setup the model
     ckpt = settings.checkpoint # "./models/sd-v1-3-full-ema.ckpt"
@@ -649,7 +669,9 @@ def main():
                 "gobig_maximize": settings.gobig_maximize,
                 "gobig_overlap": settings.gobig_overlap,
                 "gobig_realesrgan": settings.gobig_realesrgan,
-                "config": config
+                "config": config,
+                "filetype": filetype,
+                "quality": quality
             }
             opt = SimpleNamespace(**opt)
             # render the image(s)!
