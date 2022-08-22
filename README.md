@@ -158,20 +158,19 @@ machines that are not internet connected. See [Workaround for machines with limi
 7. Now you need to install the weights for the stable diffusion model.
 
 For running with the released weights, you will first need to set up an acount with Hugging Face (https://huggingface.co).
-Use your credentials to log in, and then point browser at https://huggingface.co/CompVis/stable-diffusion-v-1-4-original.
+Use your credentials to log in, and then point your browser at https://huggingface.co/CompVis/stable-diffusion-v-1-4-original.
 You may be asked to sign a license agreement at this point.
 
 Click on "Files and versions" near the top of the page, and then click on the file named "sd-v1-4.ckpt". You'll be taken
-to a page that prompts you to click the "download" link. Now save the file somewhere safe on your local machine.
+to a page that prompts you to click the "download" link. Save the file somewhere safe on your local machine.
 
-Now run the following commands from within the stable-diffusion directory to point it to the weights file.
+Now run the following commands from within the stable-diffusion directory. This will create a symbolic
+link from the stable-diffusion model.ckpt file, to the true location of the sd-v1-4.ckpt file.
    
 ```
 (ldm) ~/stable-diffusion$ mkdir -p models/ldm/stable-diffusion-v1
 (ldm) ~/stable-diffusion$ ln -sf /path/to/sd-v1-4.ckpt models/ldm/stable-diffusion-v1/model.ckpt
 ```
-
-The weight file is >4 GB in size, so downloading may take a while.
 
 8. Start generating images!
 ```
@@ -238,7 +237,7 @@ downloaded just-in-time)
 
 For running with the released weights, you will first need to set up
 an acount with Hugging Face (https://huggingface.co).  Use your
-credentials to log in, and then point browser at
+credentials to log in, and then point your browser at
 https://huggingface.co/CompVis/stable-diffusion-v-1-4-original.  You
 may be asked to sign a license agreement at this point.
 
@@ -249,15 +248,16 @@ safe on your local machine.  The weight file is >4 GB in size, so
 downloading may take a while.
 
 Now run the following commands from **within the stable-diffusion
-directory** to point it to the weights file:
+directory** to copy the weights file to the right place:
    
 ```
 mkdir -p models/ldm/stable-diffusion-v1
 copy C:\path\to\sd-v1-4.ckpt models\ldm\stable-diffusion-v1\model.ckpt
 ```
-
-Instead of copying the file, you may instead create a shortcut within the
-models\ldm\stable-diffusion-v1\ directory that points to it.
+Please replace "C:\path\to\sd-v1.4.ckpt" with the correct path to wherever
+you stashed this file. If you prefer not to copy or move the .ckpt file, 
+you may instead create a shortcut to it from within
+"models\ldm\stable-diffusion-v1\".
 
 10. Start generating images!
 ```
