@@ -482,7 +482,7 @@ class DeforumArgs():
         self.steps = 50 #@param
         self.scale = 7 #@param
         self.eta = 0.0 #@param
-        self.dynamic_threshold = 0 #@param
+        self.dynamic_threshold = None #@param
         self.static_threshold = None #@param    
 
         #@markdown **Batch Settings**
