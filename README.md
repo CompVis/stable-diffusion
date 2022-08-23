@@ -98,11 +98,14 @@ This will tell the sampler to invest 25% of its effort on the tabby
 cat aspect of the image and 75% on the white duck aspect
 (surprisingly, this example actually works). The prompt weights can
 use any combination of integers and floating point numbers, and they
-do not need to add up to 1. A practical example of using this type of
-weighting is described here:
-https://www.reddit.com/r/StableDiffusion/comments/wvb7q7/using_prompt_weights_to_tweak_an_image_with/
+do not need to add up to 1.
 
 ## Changes
+
+* v1.07 (23 August 2022)
+   * Image filenames will now never fill gaps in the sequence, but will be assigned the
+     next higher name in the chosen directory. This ensures that the alphabetic and chronological
+     sort orders are the same.
 
 * v1.06 (23 August 2022)
    * Added weighted prompt support contributed by [xraxra](https://github.com/xraxra)
@@ -496,6 +499,7 @@ optional arguments:
   --f F                 downsampling factor
   --n_samples N_SAMPLES
                         how many samples to produce for each given prompt. A.k.a. batch size
+                        (note that the seeds for each image in the batch will be unavailable)
   --n_rows N_ROWS       rows in the grid (default: n_samples)
   --scale SCALE         unconditional guidance scale: eps = eps(x, empty) + scale * (eps(x, cond) - eps(x, empty))
   --from-file FROM_FILE
