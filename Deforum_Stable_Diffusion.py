@@ -69,6 +69,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import shutil
+from types import SimpleNamespace
 from omegaconf import OmegaConf
 from PIL import Image
 from tqdm import tqdm, trange
@@ -457,52 +458,54 @@ if load_on_run_all:
 
 # %%
 # !! {"metadata":{
-# !!   "cellView": "form",
 # !!   "id": "qH74gBWDd2oq"
 # !! }}
-class DeforumArgs():
-    def __init__(self):
+def DeforumArgs():
+    #@markdown **Save & Display Settings**
+    batchdir = "test" #@param {type:"string"}
+    outdir = get_output_folder(output_path, batchdir)
+    save_grid = False
+    save_samples = True #@param {type:"boolean"}
+    save_settings = True #@param {type:"boolean"}
+    display_grid = False
+    display_samples = True #@param {type:"boolean"}
 
-        #@markdown **Save & Display Settings**
-        self.batchdir = "test" #@param {type:"string"}
-        self.outdir = get_output_folder(output_path, self.batchdir)
-        self.save_grid = False
-        self.save_samples = True #@param {type:"boolean"}
-        self.save_settings = True #@param {type:"boolean"}
-        self.display_grid = False
-        self.display_samples = True #@param {type:"boolean"}
-
-        #@markdown **Image Settings**
-        self.n_samples = 1 #@param
-        self.n_rows = 1 #@param
-        self.W = 512 #@param
-        self.H = 576 #@param
-        self.W, self.H = map(lambda x: x - x % 64, (self.W, self.H))  # resize to integer multiple of 64
+    #@markdown **Image Settings**
+    n_samples = 1 #@param
+    n_rows = 1 #@param
+    W = 512 #@param
+    H = 576 #@param
+    W, H = map(lambda x: x - x % 64, (W, H))  # resize to integer multiple of 64
 
 
-        #@markdown **Init Settings**
-        self.use_init = False #@param {type:"boolean"}
-        self.init_image = "/content/drive/MyDrive/AI/escape.jpg" #@param {type:"string"}
-        self.strength = 0.5 #@param {type:"number"}
+    #@markdown **Init Settings**
+    use_init = False #@param {type:"boolean"}
+    init_image = "/content/drive/MyDrive/AI/escape.jpg" #@param {type:"string"}
+    strength = 0.5 #@param {type:"number"}
 
-        #@markdown **Sampling Settings**
-        self.seed = 1 #@param
-        self.sampler = 'euler_ancestral' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
-        self.steps = 50 #@param
-        self.scale = 7 #@param
-        self.eta = 0.0 #@param
-        self.dynamic_threshold = None
-        self.static_threshold = None   
+    #@markdown **Sampling Settings**
+    seed = 1 #@param
+    sampler = 'euler_ancestral' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
+    steps = 50 #@param
+    scale = 7 #@param
+    eta = 0.0 #@param
+    dynamic_threshold = None
+    static_threshold = None   
 
-        #@markdown **Batch Settings**
-        self.n_batch = 2 #@param
+    #@markdown **Batch Settings**
+    n_batch = 2 #@param
 
-        self.precision = 'autocast' 
-        self.fixed_code = True
-        self.C = 4
-        self.f = 8
-        self.prompts = prompts
-        self.timestring = ""
+    precision = 'autocast' 
+    fixed_code = True
+    C = 4
+    f = 8
+    prompts = globals()['prompts']
+    timestring = ""
+
+    return locals()
+
+args = SimpleNamespace(**DeforumArgs())
+
 
 # %%
 # !! {"metadata":{
