@@ -76,15 +76,7 @@ class BERTTokenizer(AbstractEncoder):
     def __init__(self, device="cuda", vq_interface=True, max_length=77):
         super().__init__()
         from transformers import BertTokenizerFast  # TODO: add to reuquirements
-        # Modified to allow to run on non-internet connected compute nodes.
-        # Model needs to be loaded into cache from an internet-connected machine
-        # by running:
-        #   from transformers import BertTokenizerFast
-        #   BertTokenizerFast.from_pretrained("bert-base-uncased")
-        try:
-            self.tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased",local_files_only=True)
-        except OSError:
-            raise SystemExit("* Couldn't load Bert tokenizer files. Try running scripts/preload_models.py from an internet-conected machine.")
+        self.tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
         self.device = device
         self.vq_interface = vq_interface
         self.max_length = max_length
@@ -166,8 +158,8 @@ class FrozenCLIPEmbedder(AbstractEncoder):
     """Uses the CLIP transformer encoder for text (from Hugging Face)"""
     def __init__(self, version="openai/clip-vit-large-patch14", device="cuda", max_length=77):
         super().__init__()
-        self.tokenizer = CLIPTokenizer.from_pretrained(version,local_files_only=True)
-        self.transformer = CLIPTextModel.from_pretrained(version,local_files_only=True)
+        self.tokenizer = CLIPTokenizer.from_pretrained(version)
+        self.transformer = CLIPTextModel.from_pretrained(version)
         self.device = device
         self.max_length = max_length
         self.freeze()
