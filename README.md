@@ -57,16 +57,16 @@ dream> q
 00011.png: "there's a fly in my soup" -n6 -g -S 2685670268
 ~~~~
 
-The dream> prompt's arguments are pretty much
-identical to those used in the Discord bot, except you don't need to
-type "!dream" (it doesn't hurt if you do). A significant change is that creation of individual images 
-is now the default
-unless --grid (-g) is given. For backward compatibility, the -i switch is recognized.
-For command-line help type -h (or --help) at the dream> prompt.
+The dream> prompt's arguments are pretty much identical to those used
+in the Discord bot, except you don't need to type "!dream" (it doesn't
+hurt if you do). A significant change is that creation of individual
+images is now the default unless --grid (-g) is given. For backward
+compatibility, the -i switch is recognized.  For command-line help
+type -h (or --help) at the dream> prompt.
 
-The script itself also recognizes a series of command-line switches that will change
-important global defaults, such as the directory for image outputs and the location
-of the model weight files.
+The script itself also recognizes a series of command-line switches
+that will change important global defaults, such as the directory for
+image outputs and the location of the model weight files.
 
 ## Image-to-Image
 
@@ -84,7 +84,29 @@ The --init_img (-I) option gives the path to the seed picture. --strength (-f) c
 the original will be modified, ranging from 0.0 (keep the original intact), to 1.0 (ignore the original
 completely). The default is 0.75, and ranges from 0.25-0.75 give interesting results.
 
+## Weighted Prompts
+
+You may weight different sections of the prompt to tell the sampler to attach different levels of
+priority to them, by adding :(number) to the end of the section you wish to up- or downweight.
+For example consider this prompt:
+
+~~~~
+    tabby cat:0.25 white duck:0.75 hybrid
+~~~~
+
+This will tell the sampler to invest 25% of its effort on the tabby
+cat aspect of the image and 75% on the white duck aspect
+(surprisingly, this example actually works). The prompt weights can
+use any combination of integers and floating point numbers, and they
+do not need to add up to 1. A practical example of using this type of
+weighting is described here:
+https://www.reddit.com/r/StableDiffusion/comments/wvb7q7/using_prompt_weights_to_tweak_an_image_with/
+
 ## Changes
+
+* v1.06 (23 August 2022)
+   * Added weighted prompt support contributed by [xraxra](https://github.com/xraxra)
+   * Example of using weighted prompts to tweak a demonic figure contributed by [bmaltais](https://github.com/bmaltais)
 
 * v1.05 (22 August 2022 - after the drop)
    * Filenames now use the following formats:
