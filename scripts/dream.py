@@ -70,7 +70,7 @@ def main():
     # preload the model
     if not debugging:
         t2i.load_model()
-    print("\n* Initialization done! Awaiting your command (-h for help, q to quit)...")
+    print("\n* Initialization done! Awaiting your command (-h for help, 'q' to quit, 'cd' to change output dir, 'pwd' to print output dir)...")
 
     log_path   = os.path.join(opt.outdir,"dream_log.txt")
     with open(log_path,'a') as log:
@@ -99,10 +99,19 @@ def main_loop(t2i,parser,log):
         if len(elements)==0:
             continue
         
-        if elements[0]=='q':  # 
+        if elements[0]=='q':
             done = True
             break
 
+        if elements[0]=='cd' and len(elements)>1 and os.path.exists(elements[1]):
+            print(f"setting image output directory to {elements[1]}")
+            t2i.outdir=elements[1]
+            continue
+
+        if elements[0]=='pwd':
+            print(f"current output directory is {t2i.outdir}")
+            continue
+        
         if elements[0].startswith('!dream'): # in case a stored prompt still contains the !dream command
             elements.pop(0)
             
@@ -254,7 +263,8 @@ def create_cmd_parser():
 
 if readline_available:
     def setup_readline():
-        readline.set_completer(Completer(['--steps','-s','--seed','-S','--iterations','-n','--batch_size','-b',
+        readline.set_completer(Completer(['cd','pwd',
+                                          '--steps','-s','--seed','-S','--iterations','-n','--batch_size','-b',
                                           '--width','-W','--height','-H','--cfg_scale','-C','--grid','-g',
                                           '--individual','-i','--init_img','-I','--strength','-f']).complete)
         readline.set_completer_delims(" ")
@@ -282,7 +292,7 @@ if readline_available:
                 return self._path_completions(text,state,('.png'))
 
             if buffer.strip().endswith('cd') or text.startswith(('.','/')):
-                return self._directory_completions(text,state,())
+                return self._path_completions(text,state,())
 
             response = None
             if state == 0:
@@ -308,6 +318,8 @@ if readline_available:
                 path = text.replace('-I','',1).lstrip()
             elif text.startswith('--init_img='):
                 path = text.replace('--init_img=','',1).lstrip()
+            else:
+                path = text
 
             matches  = list()
 
