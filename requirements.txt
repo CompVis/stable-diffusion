@@ -1,0 +1,23 @@
+accelerate==0.12.0
+albumentations==0.4.3
+clip==1.0
+einops==0.3.0
+huggingface-hub==0.8.1
+imageio==2.9.0
+imageio-ffmpeg==0.4.2
+kornia==0.6.0
+numpy==1.19.2
+omegaconf==2.1.1
+opencv-python==4.1.2.30
+pudb==2019.2
+pytorch
+pytorch-lightning==1.4.2
+streamlit==1.12.0
+test-tube>=0.7.5
+torch-fidelity==0.3.0
+torchmetrics==0.6.0
+torchvision
+transformers==4.19.2
+-e git+https://github.com/openai/CLIP.git@main#egg=clip
+-e git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
+-e git+https://github.com/lstein/k-diffusion.git@master#egg=k-diffusion
