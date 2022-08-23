@@ -322,7 +322,7 @@ def unified(prompt: str, init_img, ddim_steps: int, sampler_index: int, toggles:
 
                 # to image
                 grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-                grid_file = f'grid-{grid_count:04}-{sampler_str}-{rng_seed}-{prompt.replace(' ', '_')[:128]}.jpg'
+                grid_file = f"grid-{grid_count:04}-{sampler_str}-{rng_seed}-{prompt.replace(' ', '_')[:128]}.jpg"
                 Image.fromarray(grid.astype(np.uint8)).save(os.path.join(outpath, grid_file), 'jpeg', quality=80, optimize=True)
                 grid_count += 1
 
