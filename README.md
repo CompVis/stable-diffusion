@@ -98,9 +98,7 @@ This will tell the sampler to invest 25% of its effort on the tabby
 cat aspect of the image and 75% on the white duck aspect
 (surprisingly, this example actually works). The prompt weights can
 use any combination of integers and floating point numbers, and they
-do not need to add up to 1. A practical example of using this type of
-weighting is described here:
-https://www.reddit.com/r/StableDiffusion/comments/wvb7q7/using_prompt_weights_to_tweak_an_image_with/
+do not need to add up to 1.
 
 ## Changes
 
