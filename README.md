@@ -86,6 +86,21 @@ completely). The default is 0.75, and ranges from 0.25-0.75 give interesting res
 
 ## Changes
 
+* v1.05 (22 August 2022 - after the drop)
+   * Filenames now use the following formats:
+       000010.95183149.png      -- Two files produced by the same command (e.g. -n2),
+       000010.26742632.png      -- distinguished by a different seed.
+
+       000011.455191342.01.png  -- Two files produced by the same command using
+       000011.455191342.02.png  -- a batch size>1 (e.g. -b2). They have the same seed.
+
+       000011.4160627868.grid#1-4.png  -- a grid of four images (-g); the whole grid can
+                                          be regenerated with the indicated key
+
+    * It should no longer be possible for one image to overwrite another
+    * You can use the "cd" and "pwd" commands at the dream> prompt to set and retrieve
+      the path of the output directory.
+     
 * v1.04 (22 August 2022 - after the drop)
    * Updated README to reflect installation of the released weights.
    * Suppressed very noisy and inconsequential warning when loading the frozen CLIP

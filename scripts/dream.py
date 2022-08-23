@@ -72,7 +72,7 @@ def main():
         t2i.load_model()
     print("\n* Initialization done! Awaiting your command (-h for help, 'q' to quit, 'cd' to change output dir, 'pwd' to print output dir)...")
 
-    log_path   = os.path.join(opt.outdir,"dream_log.txt")
+    log_path   = os.path.join(opt.outdir,'..','dream_log.txt')
     with open(log_path,'a') as log:
         cmd_parser = create_cmd_parser()
         main_loop(t2i,cmd_parser,log)
@@ -103,9 +103,12 @@ def main_loop(t2i,parser,log):
             done = True
             break
 
-        if elements[0]=='cd' and len(elements)>1 and os.path.exists(elements[1]):
-            print(f"setting image output directory to {elements[1]}")
-            t2i.outdir=elements[1]
+        if elements[0]=='cd' and len(elements)>1:
+            if os.path.exists(elements[1]):
+                print(f"setting image output directory to {elements[1]}")
+                t2i.outdir=elements[1]
+            else:
+                print(f"directory {elements[1]} does not exist")
             continue
 
         if elements[0]=='pwd':
@@ -166,7 +169,13 @@ def write_log_message(t2i,opt,results,logfile):
     img_num    = 1
     batch_size = opt.batch_size or t2i.batch_size
     seenit     = {}
-    
+
+    seeds = [a[1] for a in results]
+    if batch_size > 1:
+        seeds = f"(seeds for each batch row: {seeds})"
+    else:
+        seeds = f"(seeds for individual images: {seeds})"
+
     for r in results:
         seed = r[1]
         log_message = (f'{r[0]}: {prompt_str} -S{seed}')
@@ -185,7 +194,10 @@ def write_log_message(t2i,opt,results,logfile):
         if r[0] not in seenit:
             seenit[r[0]] = True
             try:
-                _write_prompt_to_png(r[0],f'{prompt_str} -S{seed}')
+                if opt.grid:
+                    _write_prompt_to_png(r[0],f'{prompt_str} -g -S{seed} {seeds}')
+                else:
+                    _write_prompt_to_png(r[0],f'{prompt_str} -S{seed}')
             except FileNotFoundError:
                 print(f"Could not open file '{r[0]}' for reading")
 

@@ -60,6 +60,7 @@ from torch import autocast
 from contextlib import contextmanager, nullcontext
 import time
 import math
+import re
 
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim     import DDIMSampler
@@ -171,7 +172,6 @@ The vast majority of these arguments default to reasonable values.
 
         # make directories and establish names for the output files
         os.makedirs(outdir, exist_ok=True)
-        base_count = len(os.listdir(outdir))-1
 
         start_code = None
         if self.fixed_code:
@@ -185,7 +185,7 @@ The vast majority of these arguments default to reasonable values.
         sampler         = self.sampler
         images = list()
         seeds  = list()
-
+        filename = None
         tic    = time.time()
         
         with torch.no_grad():
@@ -218,10 +218,11 @@ The vast majority of these arguments default to reasonable values.
                             if not grid:
                                 for x_sample in x_samples_ddim:
                                     x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                                    filename = os.path.join(outdir, f"{base_count:05}.png")
+                                    filename = self._unique_filename(outdir,previousname=filename,
+                                                                     seed=seed,isbatch=(batch_size>1))
+                                    assert not os.path.exists(filename)
                                     Image.fromarray(x_sample.astype(np.uint8)).save(filename)
                                     images.append([filename,seed])
-                                    base_count += 1
                             else:
                                 all_samples.append(x_samples_ddim)
                                 seeds.append(seed)
@@ -283,7 +284,6 @@ The vast majority of these arguments default to reasonable values.
 
         # make directories and establish names for the output files
         os.makedirs(outdir, exist_ok=True)
-        base_count = len(os.listdir(outdir))-1
 
         assert os.path.isfile(init_img)
         init_image = self._load_img(init_img).to(self.device)
@@ -304,7 +304,8 @@ The vast majority of these arguments default to reasonable values.
 
         images = list()
         seeds  = list()
-
+        filename = None
+        
         tic    = time.time()
         
         with torch.no_grad():
@@ -333,10 +334,10 @@ The vast majority of these arguments default to reasonable values.
                             if not grid:
                                 for x_sample in x_samples:
                                     x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                                    filename = os.path.join(outdir, f"{base_count:05}.png")
+                                    filename = self._unique_filename(outdir,filename,seed=seed,isbatch=(batch_size>1))
+                                    assert not os.path.exists(filename)
                                     Image.fromarray(x_sample.astype(np.uint8)).save(filename)
                                     images.append([filename,seed])
-                                    base_count += 1
                             else:
                                 all_samples.append(x_samples)
                                 seeds.append(seed)
@@ -357,7 +358,6 @@ The vast majority of these arguments default to reasonable values.
 
     def _make_grid(self,samples,seeds,batch_size,iterations,outdir):
         images = list()
-        base_count = len(os.listdir(outdir))-1
         n_rows = batch_size if batch_size>1 else int(math.sqrt(batch_size * iterations))
         # save as grid
         grid = torch.stack(samples, 0)
@@ -366,7 +366,7 @@ The vast majority of these arguments default to reasonable values.
 
         # to image
         grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-        filename = os.path.join(outdir, f"{base_count:05}.png")
+        filename = self._unique_filename(outdir,seed=seeds[0],grid_count=batch_size*iterations)
         Image.fromarray(grid.astype(np.uint8)).save(filename)
         for s in seeds:
             images.append([filename,s])
@@ -430,3 +430,40 @@ The vast majority of these arguments default to reasonable values.
         image = image[None].transpose(0, 3, 1, 2)
         image = torch.from_numpy(image)
         return 2.*image - 1.
+
+    def _unique_filename(self,outdir,previousname=None,seed=0,isbatch=False,grid_count=None):
+        revision = 1
+
+        if previousname is None:
+            # count up until we find an unfilled slot
+            dir_list  = [a.split('.',1)[0] for a in os.listdir(outdir)]
+            uniques   = dict.fromkeys(dir_list,True)
+            basecount = 1
+            while f'{basecount:06}' in uniques:
+                basecount += 1
+            if grid_count is not None:
+                grid_label = f'grid#1-{grid_count}'
+                filename = f'{basecount:06}.{seed}.{grid_label}.png'
+            elif isbatch:
+                filename = f'{basecount:06}.{seed}.01.png'
+            else:
+                filename = f'{basecount:06}.{seed}.png'
+            
+            return os.path.join(outdir,filename)
+
+        else:
+            previousname = os.path.basename(previousname)
+            x = re.match('^(\d+)\..*\.png',previousname)
+            if not x:
+                return self._unique_filename(outdir,previousname,seed)
+
+            basecount = int(x.groups()[0])
+            series = 0 
+            finished = False
+            while not finished:
+                series += 1
+                filename = f'{basecount:06}.{seed}.png'
+                if isbatch or os.path.exists(os.path.join(outdir,filename)):
+                    filename = f'{basecount:06}.{seed}.{series:02}.png'
+                finished = not os.path.exists(os.path.join(outdir,filename))
+            return os.path.join(outdir,filename)
