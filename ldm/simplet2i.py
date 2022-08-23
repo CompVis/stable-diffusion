@@ -237,10 +237,11 @@ The vast majority of these arguments default to reasonable values.
                                 if not grid:
                                     for x_sample in x_samples_ddim:
                                         x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                                        filename = os.path.join(outdir, f"{base_count:05}.png")
+                                        filename = self._unique_filename(outdir,previousname=filename,
+                                                                         seed=seed,isbatch=(batch_size>1))
+                                        assert not os.path.exists(filename)
                                         Image.fromarray(x_sample.astype(np.uint8)).save(filename)
                                         images.append([filename,seed])
-                                        base_count += 1
                                 else:
                                     all_samples.append(x_samples_ddim)
                                     seeds.append(seed)
@@ -329,6 +330,7 @@ The vast majority of these arguments default to reasonable values.
         seeds  = list()
         filename = None
         image_count = 0 # actual number of iterations performed
+        tic    = time.time()
 
         # Gawd. Too many levels of indent here. Need to refactor into smaller routines!
         try:
@@ -373,10 +375,11 @@ The vast majority of these arguments default to reasonable values.
                                 if not grid:
                                     for x_sample in x_samples:
                                         x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                                        filename = os.path.join(outdir, f"{base_count:05}.png")
+                                        filename = self._unique_filename(outdir,previousname=filename,
+                                                                         seed=seed,isbatch=(batch_size>1))
+                                        assert not os.path.exists(filename)
                                         Image.fromarray(x_sample.astype(np.uint8)).save(filename)
                                         images.append([filename,seed])
-                                        base_count += 1
                                 else:
                                     all_samples.append(x_samples)
                                     seeds.append(seed)
