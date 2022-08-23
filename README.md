@@ -1,3 +1,72 @@
+# Apple Silicon Mac Users
+
+These are Apple Silicon instructions. I haven't tested any of this on Intel Macs.
+
+Please discuss issues with Apple Silicon [here](https://github.com/CompVis/stable-diffusion/issues/25).
+
+How to:
+
+```
+git clone https://github.com/magnusviri/stable-diffusion.git
+cd stable-diffusion
+git checkout apple-silicon-mps-support
+```
+
+Follow the normal instructions below but instead of running `conda env create -f environment.yaml` run `conda env create -f environment-mac.yaml`.
+
+After you follow all the instructions, if you run txt2img.py you might get an error like the following.
+
+```
+  File "/opt/anaconda3/envs/ldm/lib/python3.8/site-packages/torch/nn/functional.py", line 2511, in layer_norm
+    return torch.layer_norm(input, normalized_shape, weight, bias, eps, torch.backends.cudnn.enabled)
+RuntimeError: view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead.
+```
+
+If you get that error, do one of the following.
+
+### Patch
+
+Copy the file that has the error (in my case it's "/opt/anaconda3/envs/ldm/lib/python3.8/site-packages/torch/nn/functional.py"). Use that path below.
+
+```
+patch /opt/anaconda3/envs/ldm/lib/python3.10/site-packages/torch/nn/functional.py < PatchFile
+```
+
+If you get this error:
+
+```
+patch: **** Can't rename file /tmp/po3mqAhy to /opt/anaconda3/envs/ldm/lib/python3.10/site-packages/torch/nn/functional.py : Permission denied
+```
+
+Just run the patch again but with sudo, like this.
+
+```
+sudo patch /opt/anaconda3/envs/ldm/lib/python3.10/site-packages/torch/nn/functional.py < PatchFile
+```
+
+### Or Manual Fix
+
+Instead of patching you can manually edit the file it says (in my case it's "/opt/anaconda3/envs/ldm/lib/python3.8/site-packages/torch/nn/functional.py") and find the line it says (2511 in my case), and add ".contiguous()" to the end of "input". Like this.
+
+```python
+    return torch.layer_norm(input, normalized_shape, weight, bias, eps, torch.backends.cudnn.enabled)
+```
+
+to
+
+```python
+    return torch.layer_norm(input.contiguous(), normalized_shape, weight, bias, eps, torch.backends.cudnn.enabled)
+```
+
+### Still slow?
+
+Finally! You should also reduce the number of samples or else it will still take forever. Like this.
+
+```bash
+python scripts/txt2img.py --prompt "ocean" --plms --n_samples=1 --n_rows=1 --n_iter=1
+```
+
+
 # Stable Diffusion
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
 
