@@ -104,6 +104,11 @@ https://www.reddit.com/r/StableDiffusion/comments/wvb7q7/using_prompt_weights_to
 
 ## Changes
 
+* v1.07 (23 August 2022)
+   * Image filenames will now never fill gaps in the sequence, but will be assigned the
+     next higher name in the chosen directory. This ensures that the alphabetic and chronological
+     sort orders are the same.
+
 * v1.06 (23 August 2022)
    * Added weighted prompt support contributed by [xraxra](https://github.com/xraxra)
    * Example of using weighted prompts to tweak a demonic figure contributed by [bmaltais](https://github.com/bmaltais)
@@ -496,6 +501,7 @@ optional arguments:
   --f F                 downsampling factor
   --n_samples N_SAMPLES
                         how many samples to produce for each given prompt. A.k.a. batch size
+                        (note that the seeds for each image in the batch will be unavailable)
   --n_rows N_ROWS       rows in the grid (default: n_samples)
   --scale SCALE         unconditional guidance scale: eps = eps(x, empty) + scale * (eps(x, cond) - eps(x, empty))
   --from-file FROM_FILE
