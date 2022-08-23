@@ -285,6 +285,7 @@ def create_cmd_parser():
     parser.add_argument('-i','--individual',action='store_true',help="generate individual files (default)")
     parser.add_argument('-I','--init_img',type=str,help="path to input image (supersedes width and height)")
     parser.add_argument('-f','--strength',default=0.75,type=float,help="strength for noising/unnoising. 0.0 preserves image exactly, 1.0 replaces it completely")
+    parser.add_argument('-x','--skip_normalize',action='store_true',help="skip subprompt weight normalization")
     return parser
 
 if readline_available:
