@@ -73,7 +73,7 @@ from torch import autocast
 from contextlib import contextmanager, nullcontext
 
 sys.path.append('./stable-diffusion/')
-
+from helpers import save_samples
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
@@ -280,28 +280,15 @@ def run(args, local_seed):
                         x_samples = model.decode_first_stage(samples)
                         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
                     
-                    # save samples
-                    if args.display_samples or args.save_samples:
-                        for index, x_sample in enumerate(x_samples):
-                            x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                            if args.display_samples:
-                                display.display(Image.fromarray(x_sample.astype(np.uint8)))
-                            if args.save_samples:
-                                Image.fromarray(x_sample.astype(np.uint8)).save(
-                                    os.path.join(args.outdir, f"{args.timestring}_{index:02}_{prompt_seed}.png"))                                    
 
-                    # save grid
-                    if args.display_grid or args.save_grid:
-                        grid = torch.stack([x_samples], 0)
-                        grid = rearrange(grid, 'n b c h w -> (n b) c h w')
-                        grid = make_grid(grid, nrow=n_rows, padding=0)
-
-                        # to image
-                        grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-                        if args.display_grid:
-                            display.display(Image.fromarray(grid.astype(np.uint8)))
-                        if args.save_grid:
-                            Image.fromarray(grid.astype(np.uint8)).save(os.path.join(args.outdir, f'{args.timestring}_{prompt_seed}_grid.png'))
+                    grid, images = save_samples(
+                        args, x_samples=x_samples, seed=prompt_seed, n_rows=n_rows
+                    )
+                    if args.display_samples:
+                        for im in images:
+                            display.display(im)
+                    if args.display_grid:
+                        display.display(grid)
 
                 # stop timer
                 toc = time.time()
