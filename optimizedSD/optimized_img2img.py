@@ -38,7 +38,7 @@ def load_img(path, h0, w0):
     if(h0 is not None and w0 is not None):
         h, w = h0, w0
     
-    w, h = map(lambda x: x - x % 32, (w0, h0))  # resize to integer multiple of 32
+    w, h = map(lambda x: x - x % 64, (w, h))  # resize to integer multiple of 32
 
     print(f"New image size ({w}, {h})")
     image = image.resize((w, h), resample = Image.LANCZOS)
@@ -160,7 +160,7 @@ parser.add_argument(
 parser.add_argument(
     "--seed",
     type=int,
-    default=42,
+    default=None,
     help="the seed (for reproducible sampling)",
 )
 parser.add_argument(
@@ -181,11 +181,12 @@ tic = time.time()
 os.makedirs(opt.outdir, exist_ok=True)
 outpath = opt.outdir
 
-sample_path = os.path.join(outpath, "_".join(opt.prompt.split()))[:255]
+sample_path = os.path.join(outpath, "_".join(opt.prompt.split()))[:150]
 os.makedirs(sample_path, exist_ok=True)
 base_count = len(os.listdir(sample_path))
 grid_count = len(os.listdir(outpath)) - 1
-seed_everything(opt.seed)
+if opt.seed:
+    seed_everything(opt.seed)
 
 
 sd = load_model_from_config(f"{ckpt}")

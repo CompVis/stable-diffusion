@@ -133,7 +133,7 @@ parser.add_argument(
 parser.add_argument(
     "--seed",
     type=int,
-    default=42,
+    default=None,
     help="the seed (for reproducible sampling)",
 )
 parser.add_argument(
@@ -154,11 +154,13 @@ tic = time.time()
 os.makedirs(opt.outdir, exist_ok=True)
 outpath = opt.outdir
 
-sample_path = os.path.join(outpath, "_".join(opt.prompt.split()))[:255]
+sample_path = os.path.join(outpath, "_".join(opt.prompt.split()))[:150]
 os.makedirs(sample_path, exist_ok=True)
 base_count = len(os.listdir(sample_path))
 grid_count = len(os.listdir(outpath)) - 1
-seed_everything(opt.seed)
+
+if opt.seed:
+    seed_everything(opt.seed)
 
 sd = load_model_from_config(f"{ckpt}")
 li = []
