@@ -5,6 +5,8 @@ Collection of additional scripts, k-diffusion, gradio, gfpgan etc
 TODO: combine versions.
 * k_gradio_mod has pynvml vram usage statistics 
 * k_gradio_mod saves grid as jpg
+* k_gradio_mod has checkboxes for save sample/grid and increment seed
+* n_rows slider for when you want a proper grid but you're a vramlet so restricted to samples=1
 * grid name fixes, sample name fixes
 * gfpgan has incremental seed
 * ????
