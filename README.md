@@ -17,7 +17,7 @@ Follow the normal instructions below but instead of running `conda env create -f
 After you follow all the instructions, if you run txt2img.py you might get an error like the following.
 
 ```
-  File "/opt/anaconda3/envs/ldm/lib/python3.8/site-packages/torch/nn/functional.py", line 2511, in layer_norm
+  File "/opt/anaconda3/envs/ldm/lib/python3.10/site-packages/torch/nn/functional.py", line 2511, in layer_norm
     return torch.layer_norm(input, normalized_shape, weight, bias, eps, torch.backends.cudnn.enabled)
 RuntimeError: view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead.
 ```
