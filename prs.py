@@ -17,6 +17,7 @@ from torch import autocast
 from contextlib import contextmanager, nullcontext
 import subprocess
 
+import k_diffusion as K
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
@@ -118,6 +119,8 @@ def do_run(device, model, opt):
         t_enc = int(opt.strength * opt.ddim_steps)
         print(f"target t_enc is {t_enc} steps")
     else:
+        model_wrap = K.external.CompVisDenoiser(model)
+        sigma_min, sigma_max = model_wrap.sigmas[0].item(), model_wrap.sigmas[-1].item()
         init_image = None
 
     start_code = None
@@ -150,15 +153,11 @@ def do_run(device, model, opt):
 
                         if init_image is None:
                             shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
-                            samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
-                                                            conditioning=c,
-                                                            batch_size=opt.n_samples,
-                                                            shape=shape,
-                                                            verbose=False,
-                                                            unconditional_guidance_scale=opt.scale,
-                                                            unconditional_conditioning=uc,
-                                                            eta=opt.ddim_eta,
-                                                            x_T=start_code)
+                            sigmas = model_wrap.get_sigmas(opt.ddim_steps)
+                            x = torch.randn([opt.n_samples, *shape], device=device) * sigmas[0]
+                            model_wrap_cfg = CFGDenoiser(model_wrap)
+                            extra_args = {'cond': c, 'uncond': uc, 'cond_scale': opt.scale}
+                            samples_ddim = K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args)
 
                         else:
                             # encode (scaled latent)
