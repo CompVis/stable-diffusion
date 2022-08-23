@@ -288,7 +288,7 @@ Now run the following commands from **within the stable-diffusion
 directory** to copy the weights file to the right place:
    
 ```
-mkdir -p models/ldm/stable-diffusion-v1
+mkdir -p models\ldm\stable-diffusion-v1
 copy C:\path\to\sd-v1-4.ckpt models\ldm\stable-diffusion-v1\model.ckpt
 ```
 Please replace "C:\path\to\sd-v1.4.ckpt" with the correct path to wherever
