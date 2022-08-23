@@ -192,6 +192,7 @@ def run(args, local_seed):
     
     # init image
     if args.use_init:
+        assert os.path.isfile(args.init_image)
         init_image = load_img(args.init_image, shape=(args.W, args.H)).to(device)
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
@@ -455,8 +456,7 @@ if load_on_run_all:
 
 # %%
 # !! {"metadata":{
-# !!   "id": "qH74gBWDd2oq",
-# !!   "cellView": "form"
+# !!   "id": "qH74gBWDd2oq"
 # !! }}
 def DeforumArgs():
     #@markdown **Save & Display Settings**
@@ -502,6 +502,8 @@ def DeforumArgs():
 
     return locals()
 
+args = SimpleNamespace(**DeforumArgs())
+
 
 # %%
 # !! {"metadata":{
@@ -519,7 +521,8 @@ prompts = [
 # !!   "id": "cxx8BzxjiaXg"
 # !! }}
 #@markdown **Run**
-args = SimpleNamespace(**DeforumArgs())
+args = DeforumArgs()
+args.filename = None
 args.prompts = prompts
 
 def do_batch_run():
