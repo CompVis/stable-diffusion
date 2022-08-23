@@ -107,6 +107,10 @@ def main_loop(t2i,parser,log,infile):
         if command.startswith(('#','//')):
             continue
 
+        # before splitting, escape single quotes so as not to mess
+        # up the parser
+        command = command.replace("'","\\'")
+
         try:
             elements = shlex.split(command)
         except ValueError as e:
