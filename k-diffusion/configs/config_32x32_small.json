@@ -1,0 +1,44 @@
+{
+    "model": {
+        "type": "image_v1",
+        "input_channels": 3,
+        "input_size": [32, 32],
+        "patch_size": 1,
+        "mapping_out": 256,
+        "depths": [2, 4, 4],
+        "channels": [128, 256, 512],
+        "self_attn_depths": [false, true, true],
+        "dropout_rate": 0.05,
+        "augment_prob": 0.12,
+        "sigma_data": 0.5,
+        "sigma_min": 1e-2,
+        "sigma_max": 80,
+        "sigma_sample_density": {
+            "type": "lognormal",
+            "mean": -1.2,
+            "std": 1.2
+        }
+    },
+    "dataset": {
+        "type": "imagefolder",
+        "location": "/path/to/dataset"
+    },
+    "optimizer": {
+        "type": "adamw",
+        "lr": 1e-4,
+        "betas": [0.95, 0.999],
+        "eps": 1e-6,
+        "weight_decay": 1e-3
+    },
+    "lr_sched": {
+        "type": "inverse",
+        "inv_gamma": 20000.0,
+        "power": 1.0,
+        "warmup": 0.99
+    },
+    "ema_sched": {
+        "type": "inverse",
+        "power": 0.6667,
+        "max_value": 0.9999
+    }
+}
