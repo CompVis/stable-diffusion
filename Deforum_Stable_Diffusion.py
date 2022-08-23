@@ -19,7 +19,6 @@ import subprocess
 sub_p_res = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,memory.free', '--format=csv,noheader'], stdout=subprocess.PIPE).stdout.decode('utf-8')
 print(sub_p_res)
 
-
 # %%
 # !! {"metadata":{
 # !!   "id": "VRNl2mfepEIe",
@@ -27,22 +26,25 @@ print(sub_p_res)
 # !! }}
 #@markdown **Setup Environment**
 
-setup_environment = False #@param {type:"boolean"}
+setup_environment = True #@param {type:"boolean"}
+print_subprocess = False #@param {type:"boolean"}
 
 if setup_environment:
-    pip_sub_p_res = subprocess.run(['pip', 'install', 'torch==1.11.0+cu113', 'torchvision==0.12.0+cu113', 'torchaudio==0.11.0', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'], stdout=subprocess.PIPE).stdout.decode('utf-8')
-    print(pip_sub_p_res)
-    pip_sub_p_res = subprocess.run(['pip', 'install', 'omegaconf==2.1.1', 'einops==0.3.0', 'pytorch-lightning==1.4.2', 'torchmetrics==0.6.0', 'torchtext==0.2.3', 'transformers==4.19.2', 'kornia==0.6'], stdout=subprocess.PIPE).stdout.decode('utf-8')
-    print(pip_sub_p_res)
-    sub_p_res = subprocess.run(['git', 'clone', 'https://github.com/deforum/stable-diffusion'], stdout=subprocess.PIPE).stdout.decode('utf-8')
-    print(sub_p_res)
-    pip_sub_p_res = subprocess.run(['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'], stdout=subprocess.PIPE).stdout.decode('utf-8')
-    print(pip_sub_p_res)
-    pip_sub_p_res = subprocess.run(['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'], stdout=subprocess.PIPE).stdout.decode('utf-8')
-    print(pip_sub_p_res)
-    pip_sub_p_res = subprocess.run(['pip', 'install', 'git+https://github.com/deforum/k-diffusion/'], stdout=subprocess.PIPE).stdout.decode('utf-8')
-    print(pip_sub_p_res)
+    import subprocess
+    print("...setting up environment")
+    all_process = [['pip', 'install', 'torch==1.11.0+cu113', 'torchvision==0.12.0+cu113', 'torchaudio==0.11.0', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'],
+                   ['pip', 'install', 'omegaconf==2.1.1', 'einops==0.3.0', 'pytorch-lightning==1.4.2', 'torchmetrics==0.6.0', 'torchtext==0.2.3', 'transformers==4.19.2', 'kornia==0.6'],
+                   ['git', 'clone', 'https://github.com/deforum/stable-diffusion'],
+                   ['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'],
+                   ['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'],
+                   ['pip', 'install', 'git+https://github.com/deforum/k-diffusion/']
+                 ]
+    for process in all_process:
+      running = subprocess.run(process,stdout=subprocess.PIPE).stdout.decode('utf-8')
+      if print_subprocess:
+        print(running)
     print("Runtime > Restart Runtime")
+    print("vv then continue below vv")
 
 # %%
 # !! {"metadata":{
@@ -159,9 +161,6 @@ def run(args, local_seed):
     seeds = torch.randint(-2 ** 63, 2 ** 63 - 1, [accelerator.num_processes])
     torch.manual_seed(seeds[accelerator.process_index].item())
 
-    # seed
-    seed_everything(local_seed)
-
     # plms
     if args.sampler=="plms":
         args.eta = 0
@@ -174,8 +173,6 @@ def run(args, local_seed):
 
     batch_size = args.n_samples
     n_rows = args.n_rows if args.n_rows > 0 else batch_size
-
-    print(args.prompts)
 
     data = list(chunk(args.prompts, batch_size))
     sample_index = 0
@@ -206,6 +203,7 @@ def run(args, local_seed):
             with model.ema_scope():
                 tic = time.time()
                 for prompt_index, prompts in enumerate(data):
+                    print(prompts)
                     prompt_seed = local_seed + prompt_index
                     seed_everything(prompt_seed)
 
@@ -223,7 +221,7 @@ def run(args, local_seed):
                     if args.sampler in ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral"]:
                         shape = [args.C, args.H // args.f, args.W // args.f]
                         sigmas = model_wrap.get_sigmas(args.steps)
-                        torch.manual_seed(local_seed)
+                        torch.manual_seed(prompt_seed)
                         x = torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
                         model_wrap_cfg = CFGDenoiser(model_wrap)
                         extra_args = {'cond': c, 'uncond': uc, 'cond_scale': args.scale}
@@ -272,7 +270,7 @@ def run(args, local_seed):
                             samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=args.scale,
                                                     unconditional_conditioning=uc,)
 
-                        x_samples = model.decode_first_stage(samples)
+                            x_samples = model.decode_first_stage(samples)
                         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
                     
                     # save samples
@@ -306,7 +304,7 @@ def run(args, local_seed):
 # %%
 # !! {"metadata":{
 # !!   "cellView": "form",
-# !!   "id": "CIUJ7lWI4v53"
+# !!   "id": "TxIOPT0G5Lx1"
 # !! }}
 #@markdown **Model Path Variables**
 # ask for the link
@@ -316,7 +314,7 @@ models_path = "/content/models" #@param {type:"string"}
 output_path = "/content/output" #@param {type:"string"}
 
 #@markdown **Google Drive Path Variables (Optional)**
-mount_google_drive = False #@param {type:"boolean"}
+mount_google_drive = True #@param {type:"boolean"}
 force_remount = False
 
 if mount_google_drive:
@@ -338,16 +336,29 @@ os.makedirs(output_path, exist_ok=True)
 print(f"models_path: {models_path}")
 print(f"output_path: {output_path}")
 
-# -----------------------------------------------------------------------------
+# %%
+# !! {"metadata":{
+# !!   "cellView": "form",
+# !!   "id": "CIUJ7lWI4v53"
+# !! }}
 #@markdown **Select Model**
 print("\nSelect Model:\n")
 
-model_config = "v1-inference.yaml" #@param ["v1-inference.yaml","custom"]
-model_checkpoint =  "sd-v1-3-full-ema.ckpt" #@param ["sd-v1-3-full-ema.ckpt","sd-v1-4.ckpt"]
+model_config = "v1-inference.yaml" #@param ["custom","v1-inference.yaml"]
+custom_config_path = "" #@param {type:"string"}
+model_checkpoint =  "sd-v1-4.ckpt" #@param ["custom","sd-v1-4.ckpt","sd-v1-3-full-ema.ckpt","sd-v1-3.ckpt","sd-v1-2-full-ema.ckpt","sd-v1-2.ckpt","sd-v1-1-full-ema.ckpt","sd-v1-1.ckpt"]
+custom_checkpoint_path = "" #@param {type:"string"}
+
 check_sha256 = True #@param {type:"boolean"}
 
 model_map = {
-    'sd-v1-3-full-ema.ckpt': {'downloaded': False, 'sha256': '54632c6e8a36eecae65e36cb0595fab314e1a1545a65209f24fde221a8d4b2ca', 'link': ['https://drinkordiecdn.lol/sd-v1-3-full-ema.ckpt'] },
+    "sd-v1-4.ckpt": {'sha256': 'fe4efff1e174c627256e44ec2991ba279b3816e364b49f9be2abc0b3ff3f8556'},
+    "sd-v1-3-full-ema.ckpt": {'sha256': '54632c6e8a36eecae65e36cb0595fab314e1a1545a65209f24fde221a8d4b2ca'},
+    "sd-v1-3.ckpt": {'sha256': '2cff93af4dcc07c3e03110205988ff98481e86539c51a8098d4f2236e41f7f2f'},
+    "sd-v1-2-full-ema.ckpt": {'sha256': 'bc5086a904d7b9d13d2a7bccf38f089824755be7261c7399d92e555e1e9ac69a'},
+    "sd-v1-2.ckpt": {'sha256': '3b87d30facd5bafca1cbed71cfb86648aad75d1c264663c0cc78c7aea8daec0d'},
+    "sd-v1-1-full-ema.ckpt": {'sha256': 'efdeb5dc418a025d9a8cc0a8617e106c69044bc2925abecc8a254b2910d69829'},
+    "sd-v1-1.ckpt": {'sha256': '86cd1d3ccb044d7ba8db743d717c9bac603c4043508ad2571383f954390f3cea'}
 }
 
 def wget(url, outputdir):
@@ -376,19 +387,28 @@ else:
 
 if check_sha256:
     import hashlib
-    print("...checking sha256")
+    print("\n...checking sha256")
     with open(models_path+'/'+model_checkpoint, "rb") as f:
         bytes = f.read() 
         hash = hashlib.sha256(bytes).hexdigest()
         del bytes
-    assert model_map[model_checkpoint]["sha256"] == hash
+    if model_map[model_checkpoint]["sha256"] == hash:
+        print("hash is correct\n")
+    else:
+        print("hash in not correct\n")
 
-config = models_path+'/'+model_config
-ckpt = models_path+'/'+model_checkpoint
+if model_config == "custom":
+  config = custom_config_path
+else:
+  config = models_path+'/'+model_config
+
+if model_checkpoint == "custom":
+  ckpt = custom_checkpoint_path
+else:
+  ckpt = models_path+'/'+model_checkpoint
 
 print(f"config: {config}")
 print(f"ckpt: {ckpt}")
-
 
 # %%
 # !! {"metadata":{
@@ -442,36 +462,34 @@ class DeforumArgs():
         #@markdown **Save & Display Settings**
         self.batchdir = "test" #@param {type:"string"}
         self.outdir = get_output_folder(output_path, self.batchdir)
-        self.save_settings = False #@param {type:"boolean"}
-        self.save_grid = True #@param {type:"boolean"}
-        self.display_grid = True #@param {type:"boolean"}
+        self.save_grid = False
         self.save_samples = True #@param {type:"boolean"}
-        self.display_samples = False #@param {type:"boolean"}
-
-        #@markdown **Prompt Settings**
-        self.seed = 1574552011 #@param
+        self.save_settings = False #@param {type:"boolean"}
+        self.display_grid = False
+        self.display_samples = True #@param {type:"boolean"}
 
         #@markdown **Image Settings**
         self.n_samples = 1 #@param
         self.n_rows = 1 #@param
         self.W = 512 #@param
-        self.H = 768 #@param
+        self.H = 576 #@param
 
         #@markdown **Init Settings**
         self.use_init = False #@param {type:"boolean"}
-        self.init_image = "/content/drive/MyDrive/AI/StableDiffusion/20220815180851_0.png" #@param {type:"string"}
+        self.init_image = "" #@param {type:"string"}
         self.strength = 0.1 #@param {type:"number"}
 
         #@markdown **Sampling Settings**
-        self.sampler = 'dpm2' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
-        self.steps = 10 #@param
+        self.seed = 1 #@param
+        self.sampler = 'klms' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
+        self.steps = 50 #@param
         self.scale = 7 #@param
         self.eta = 0.0 #@param
-        self.dynamic_threshold = None #@param
+        self.dynamic_threshold = 0 #@param
         self.static_threshold = None #@param    
 
         #@markdown **Batch Settings**
-        self.n_batch = 1 #@param
+        self.n_batch = 2 #@param
 
         self.precision = 'autocast' 
         self.fixed_code = True
@@ -487,7 +505,7 @@ class DeforumArgs():
 prompts = [
     "a beautiful forest by Asher Brown Durand, trending on Artstation", #the first prompt I want
     "a beautiful portrait of a woman by Artgerm, trending on Artstation", #the second prompt I want
-    #["the third prompt I don't want it I commented it with an #"],
+    #"the third prompt I don't want it I commented it with an",
 ]
 
 # %%
@@ -507,12 +525,6 @@ def do_batch_run():
     # current timestring for filenames
     args.timestring = time.strftime('%Y%m%d%H%M%S')
 
-    # random seed
-    if args.seed == -1:
-        local_seed = np.random.randint(0,4294967295)
-    else:
-        local_seed = args.seed
-
     # save settings for the batch
     if args.save_settings:
         filename = os.path.join(args.outdir, f"{args.timestring}_settings.txt")
@@ -520,9 +532,15 @@ def do_batch_run():
             json.dump(dict(args.__dict__), f, ensure_ascii=False, indent=4)
 
     for batch_index in range(args.n_batch):
+
+        # random seed
+        if args.seed == -1:
+            local_seed = np.random.randint(0,4294967295)
+        else:
+            local_seed = args.seed
+
         print(f"run {batch_index+1} of {args.n_batch}")
         run(args, local_seed)
-        local_seed += 1
 
 do_batch_run()
 
