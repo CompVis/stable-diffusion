@@ -161,7 +161,12 @@ def main_loop(t2i,parser,log,infile):
         if opt.init_img is None:
             results = t2i.txt2img(**vars(opt))
         else:
-            results = t2i.img2img(**vars(opt))
+            if os.path.exists(opt.init_img):
+                results = t2i.img2img(**vars(opt))
+            else:
+                print(f"An image was not present at {opt.init_img}. Try again with a valid image path!")
+                continue
+                
         print("Outputs:")
         write_log_message(t2i,opt,results,log)
             
