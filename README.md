@@ -1,6 +1,13 @@
-Environment.yaml working out of the box for k-diffusion, gradio, pynvml
+Environment.yaml working out of the box for k-diffusion, gradio, pynvml, gfpgan
 
-Collection of additional scripts, k-diffusion, gradio, etc
+Collection of additional scripts, k-diffusion, gradio, gfpgan etc
+
+TODO: combine versions.
+> k_gradio_mod has pynvml vram usage statistics 
+> k_gradio_mod saves grid as jpg
+> grid name fixes, sample name fixes
+> gfpgan has incremental seed
+> ????
 
 # Stable Diffusion
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
