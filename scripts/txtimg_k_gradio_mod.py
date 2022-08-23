@@ -331,7 +331,7 @@ def dream(prompt: str, ddim_steps: int, cfg_sampler: int, toggles: list, ddim_et
                                 for x_sample in x_samples_ddim:
                                     x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                                     if not skip_save:
-                                        Image.fromarray(x_sample.astype(np.uint8)).save(os.path.join(sample_path, f"{base_count:05}-{sampler_str}-{rng_seed}-{prompt.replace(' ', '_')}"[:200] + ".png"))
+                                        Image.fromarray(x_sample.astype(np.uint8)).save(os.path.join(sample_path, f"{base_count:05}-{sampler_str}-{rng_seed}-{prompt.replace(' ', '_')[:128]}.png"))
                                     output_images.append(Image.fromarray(x_sample.astype(np.uint8)))
                                     base_count += 1
 
@@ -346,7 +346,7 @@ def dream(prompt: str, ddim_steps: int, cfg_sampler: int, toggles: list, ddim_et
 
                         # to image
                         grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-                        grid_file = f'grid-{grid_count:04}.jpg'
+                        grid_file = f"grid-{sampler_str}-{rng_seed}-{prompt.replace(' ', '_')[:128]}.jpg"
                         Image.fromarray(grid.astype(np.uint8)).save(os.path.join(outpath, grid_file), 'jpeg', quality=80, optimize=True)
                         grid_count += 1
 
