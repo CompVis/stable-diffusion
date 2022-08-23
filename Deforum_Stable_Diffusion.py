@@ -54,7 +54,6 @@ if setup_environment:
     sys.path.append('./stable-diffusion/')
     sys.path.append('./k-diffusion')
 
-
 # %%
 # !! {"metadata":{
 # !!   "cellView": "form",
@@ -80,8 +79,6 @@ import time
 from pytorch_lightning import seed_everything
 from torch import autocast
 from contextlib import contextmanager, nullcontext
-from yaml import load as yml_load, dump as yml_dump, Dumper, Loader, safe_load
-from types import SimpleNamespace
 
 from helpers import save_samples
 from ldm.util import instantiate_from_config
@@ -91,7 +88,6 @@ from ldm.models.diffusion.plms import PLMSSampler
 import accelerate
 from k_diffusion import sampling
 from k_diffusion.external import CompVisDenoiser
-
 
 def chunk(it, size):
     it = iter(it)
@@ -169,40 +165,6 @@ def make_callback(sampler, dynamic_threshold=None, static_threshold=None):
 
     return callback
 
-
-def sampler_fn(
-    c: torch.Tensor,
-    uc: torch.Tensor,
-    args: 'DeforumArgs',
-    model_wrap: CompVisDenoiser,
-    accelerator: accelerate.Accelerator,
-    cb,
-) -> torch.Tensor:
-    shape = [args.C, args.H // args.f, args.W // args.f]
-    sigmas = model_wrap.get_sigmas(args.steps)
-    sampler_args = {
-        "model": CFGDenoiser(model_wrap),
-        "x": (torch.randn([args.n_samples, *shape], device=device) * sigmas[0]),
-        "sigmas": model_wrap.get_sigmas(args.steps),
-        "extra_args": {"cond": c, "uncond": uc, "cond_scale": args.scale},
-        "disable": accelerator.is_main_process,
-        "callback": cb,
-    }
-    sampler_map = {
-        "klms": sampling.sample_lms,
-        "dpm2": sampling.sample_dpm_2,
-        "dpm2_ancestral": sampling.sample_dpm_2_ancestral,
-        "heun": sampling.sample_heun,
-        "euler": sampling.sample_euler,
-        "euler_ancestral": sampling.sample_euler_ancestral,
-    }
-
-    samples = sampler_map[args.sampler](**sampler_args)
-    x_samples = model.decode_first_stage(samples)
-    x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
-    x_samples = accelerator.gather(x_samples)
-    return x_samples
-
 def run(args, local_seed):
 
     # load settings
@@ -269,10 +231,32 @@ def run(args, local_seed):
                     c = model.get_learned_conditioning(prompts)
 
                     if args.sampler in ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral"]:
+                        shape = [args.C, args.H // args.f, args.W // args.f]
+                        sigmas = model_wrap.get_sigmas(args.steps)
                         torch.manual_seed(prompt_seed)
-                        samples = sampler_fn(
-                            c=c, uc=uc, args=args, model_wrap=model_wrap, accelerator=accelerator, cb=callback
-                        )
+                        if args.use_init:
+                            sigmas = sigmas[t_enc:]
+                            x = init_latent + torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
+                        else:
+                            x = torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
+                        model_wrap_cfg = CFGDenoiser(model_wrap)
+                        extra_args = {'cond': c, 'uncond': uc, 'cond_scale': args.scale}
+                        if args.sampler=="klms":
+                            samples = sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
+                        elif args.sampler=="dpm2":
+                            samples = sampling.sample_dpm_2(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
+                        elif args.sampler=="dpm2_ancestral":
+                            samples = sampling.sample_dpm_2_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
+                        elif args.sampler=="heun":
+                            samples = sampling.sample_heun(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
+                        elif args.sampler=="euler":
+                            samples = sampling.sample_euler(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
+                        elif args.sampler=="euler_ancestral":
+                            samples = sampling.sample_euler_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
+
+                        x_samples = model.decode_first_stage(samples)
+                        x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
+                        x_samples = accelerator.gather(x_samples)
 
                     else:
 
@@ -361,8 +345,8 @@ print(f"output_path: {output_path}")
 print("\nSelect Model:\n")
 
 model_config = "v1-inference.yaml" #@param ["custom","v1-inference.yaml"]
-custom_config_path = "" #@param {type:"string"}
 model_checkpoint =  "sd-v1-4.ckpt" #@param ["custom","sd-v1-4.ckpt","sd-v1-3-full-ema.ckpt","sd-v1-3.ckpt","sd-v1-2-full-ema.ckpt","sd-v1-2.ckpt","sd-v1-1-full-ema.ckpt","sd-v1-1.ckpt"]
+custom_config_path = "" #@param {type:"string"}
 custom_checkpoint_path = "" #@param {type:"string"}
 
 check_sha256 = True #@param {type:"boolean"}
@@ -398,8 +382,8 @@ else:
 if os.path.exists(models_path+'/'+model_checkpoint):
     print(f"{models_path+'/'+model_checkpoint} exists")
 else:
-    print("...downloading checkpoint")
-    download_model(model_checkpoint)
+    print(f"download model checkpoint and place in {models_path+'/'+model_checkpoint}")
+    #download_model(model_checkpoint)
 
 if check_sha256:
     import hashlib
@@ -454,10 +438,14 @@ def load_model_from_config(config, ckpt, verbose=False, device='cuda'):
     model.eval()
     return model
 
-local_config = OmegaConf.load(f"{config}")
-model = load_model_from_config(local_config, f"{ckpt}")
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-model = model.to(device)
+load_on_run_all = True #@param {type: 'boolean'}
+
+if load_on_run_all:
+
+  local_config = OmegaConf.load(f"{config}")
+  model = load_model_from_config(local_config, f"{ckpt}")
+  device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+  model = model.to(device)
 
 # %%
 # !! {"metadata":{
@@ -480,7 +468,7 @@ class DeforumArgs():
         self.outdir = get_output_folder(output_path, self.batchdir)
         self.save_grid = False
         self.save_samples = True #@param {type:"boolean"}
-        self.save_settings = False #@param {type:"boolean"}
+        self.save_settings = True #@param {type:"boolean"}
         self.display_grid = False
         self.display_samples = True #@param {type:"boolean"}
 
@@ -494,17 +482,17 @@ class DeforumArgs():
 
         #@markdown **Init Settings**
         self.use_init = False #@param {type:"boolean"}
-        self.init_image = "" #@param {type:"string"}
-        self.strength = 0.1 #@param {type:"number"}
+        self.init_image = "/content/drive/MyDrive/AI/escape.jpg" #@param {type:"string"}
+        self.strength = 0.5 #@param {type:"number"}
 
         #@markdown **Sampling Settings**
         self.seed = 1 #@param
-        self.sampler = 'klms' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
+        self.sampler = 'euler_ancestral' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
         self.steps = 50 #@param
         self.scale = 7 #@param
         self.eta = 0.0 #@param
-        self.dynamic_threshold = None #@param
-        self.static_threshold = None #@param    
+        self.dynamic_threshold = None
+        self.static_threshold = None   
 
         #@markdown **Batch Settings**
         self.n_batch = 2 #@param
@@ -515,12 +503,7 @@ class DeforumArgs():
         self.f = 8
         self.prompts = prompts
         self.timestring = ""
-        
-    def save(self):
-        filename = os.path.join(self.outdir, f"{self.timestring}_settings.txt")
-        with open(filename, "w+", encoding="utf-8") as f:
-            yml_dump(dict(self.__dict__), stream=f, Dumper=Dumper, indent=4)
-            
+
 # %%
 # !! {"metadata":{
 # !!   "id": "2ujwkGZTcGev"
@@ -537,16 +520,9 @@ prompts = [
 # !!   "id": "cxx8BzxjiaXg"
 # !! }}
 #@markdown **Run**
-#@markdown Enter path of saved settings to load
-load_settings = "" #@param {type:"string"}
 args = DeforumArgs()
 args.filename = None
 args.prompts = prompts
-
-if load_settings:
-    loaded_dict = safe_load(open(load_settings,'r'))
-    new_args = SimpleNamespace(**loaded_dict)
-    args.__dict__.update(new_args.__dict__)
 
 def do_batch_run():
     # create output folder
@@ -557,7 +533,9 @@ def do_batch_run():
 
     # save settings for the batch
     if args.save_settings:
-            args.save()
+        filename = os.path.join(args.outdir, f"{args.timestring}_settings.txt")
+        with open(filename, "w+", encoding="utf-8") as f:
+            json.dump(dict(args.__dict__), f, ensure_ascii=False, indent=4)
 
     for batch_index in range(args.n_batch):
 
