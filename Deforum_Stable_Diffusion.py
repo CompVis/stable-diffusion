@@ -259,9 +259,6 @@ def run(args, local_seed):
                                                             x_T=start_code,
                                                             img_callback=callback)
 
-                            x_samples = model.decode_first_stage(samples)
-                            x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
-
                         # init image
                         else:
                             # encode (scaled latent)
@@ -270,7 +267,7 @@ def run(args, local_seed):
                             samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=args.scale,
                                                     unconditional_conditioning=uc,)
 
-                            x_samples = model.decode_first_stage(samples)
+                        x_samples = model.decode_first_stage(samples)
                         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
                     
                     # save samples
