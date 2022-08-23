@@ -1,6 +1,10 @@
-# Update: Added optimized_img2img.py
+# Update: Added support for specifying image seed
 
-This code can now generate a 512x512 image from prior images using less than 4GB of RAM (in less than 20 seconds on RTX 2060)
+- The code will now give the seed number along with each generated image. To generate the same image again, just specify the seed using `--seed` argument. Also, images will be saved with its seed number as its name.
+
+- eg. If the seed number for an image is `1234` and it's the 55th image in the folder, the image name will be named `seed_1234_00055.png`
+
+- If generating multiple images at once, the seed value will be incremented by 1 after each image generation. Also. if no seed is given as an argument, a random initial seed will be choosen.
 
 # Optimized Stable Diffusion (Sort of)
 
@@ -29,6 +33,12 @@ This code can now generate a 512x512 image from prior images using less than 4GB
 `python optimizedSD/optimized_txt2img.py --prompt "Cyberpunk style image of a Telsa car reflection in rain" --H 512 --W 512 --seed 27 --n_iter 2 --n_samples 10 --ddim_steps 50`
 
 ---
+
+- The code will give the seed number along with each generated image. To generate the same image again, just specify the seed using `--seed` argument. Also, images will be saved with its seed number as its name.
+
+- eg. If the seed number for an image is `1234` and it's the 55th image in the folder, the image name will be named `seed_1234_00055.png`
+
+- If generating multiple images at once, the seed value will be incremented by 1 after each image generation. Also. if no seed is given as an argument, a random initial seed will be choosen.
 
 - To get the lowest inference time per image, use the maximum batch size `--n_samples` that can fit on the GPU. Inference time per image will reduce on increasing the batch size, but the required VRAM will also increase.
 

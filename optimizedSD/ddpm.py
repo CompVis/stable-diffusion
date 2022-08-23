@@ -471,6 +471,7 @@ class UNet(DDPM):
                S,
                batch_size,
                shape,
+               seed,
                conditioning=None,
                callback=None,
                img_callback=None,
@@ -505,7 +506,7 @@ class UNet(DDPM):
         C, H, W = shape
         size = (batch_size, C, H, W)
         print(f'Data shape for PLMS sampling is {size}')
-        samples = self.plms_sampling(conditioning, size,
+        samples = self.plms_sampling(conditioning, size, seed,
                                                     callback=callback,
                                                     img_callback=img_callback,
                                                     quantize_denoised=quantize_x0,
@@ -524,7 +525,7 @@ class UNet(DDPM):
         return samples
 
     @torch.no_grad()
-    def plms_sampling(self, cond, shape,
+    def plms_sampling(self, cond, shape, seed,
                       x_T=None, ddim_use_original_steps=False,
                       callback=None, timesteps=None, quantize_denoised=False,
                       mask=None, x0=None, img_callback=None, log_every_t=100,
@@ -533,7 +534,17 @@ class UNet(DDPM):
         device = self.betas.device
         b = shape[0]
         if x_T is None:
-            img = torch.randn(shape, device=device)
+            # img = torch.randn(shape, device=device)
+            _, b1, b2, b3 = shape
+            img_shape = (1, b1, b2, b3)
+            tens = []
+            print("seeds used = ", [seed+s for s in range(b)])
+            for _ in range(b):
+                torch.manual_seed(seed)
+                tens.append(torch.randn(img_shape, device=device))
+                seed+=1
+            img = torch.cat(tens)
+            del tens
         else:
             img = x_T
 
@@ -644,7 +655,7 @@ class UNet(DDPM):
 
 
     @torch.no_grad()
-    def stochastic_encode(self, x0, t, use_original_steps=False, noise=None):
+    def stochastic_encode(self, x0, t, seed, use_original_steps=False, noise=None):
         # fast, but does not allow for exact reconstruction
         # t serves as an index to gather the correct alphas
         if use_original_steps:
@@ -655,7 +666,18 @@ class UNet(DDPM):
             sqrt_one_minus_alphas_cumprod = self.ddim_sqrt_one_minus_alphas
 
         if noise is None:
-            noise = torch.randn_like(x0)
+            b0, b1, b2, b3 = x0.shape
+            img_shape = (1, b1, b2, b3)
+            tens = []
+            print("seeds used = ", [seed+s for s in range(b0)])
+            for _ in range(b0):
+                torch.manual_seed(seed)
+                tens.append(torch.randn(img_shape, device=x0.device))
+                seed+=1
+            noise = torch.cat(tens)
+            del tens
+            # noise = torch.randn_like(x0)
+            # print(noise.shape)
         return (extract_into_tensor(sqrt_alphas_cumprod, t, x0.shape) * x0 +
                 extract_into_tensor(sqrt_one_minus_alphas_cumprod.to("cuda"), t, x0.shape) * noise)
 

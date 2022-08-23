@@ -1,7 +1,7 @@
 import argparse, os, sys, glob, random
 import torch
 import numpy as np
-import copy
+from random import randint
 from omegaconf import OmegaConf
 from PIL import Image
 from tqdm import tqdm, trange
@@ -185,9 +185,11 @@ sample_path = os.path.join(outpath, "_".join(opt.prompt.split()))[:150]
 os.makedirs(sample_path, exist_ok=True)
 base_count = len(os.listdir(sample_path))
 grid_count = len(os.listdir(outpath)) - 1
-if opt.seed:
-    seed_everything(opt.seed)
 
+if opt.seed == None:
+    opt.seed = randint(0, 1000000)
+print("init_seed = ", opt.seed)
+seed_everything(opt.seed)
 
 sd = load_model_from_config(f"{ckpt}")
 li = []
@@ -216,7 +218,7 @@ if opt.small_batch:
 else:
     config.modelUNet.params.small_batch = False
 
-
+assert os.path.isfile(opt.init_img)
 init_image = load_img(opt.init_img, opt.H, opt.W).to(device)
 
 model = instantiate_from_config(config.modelUNet)
@@ -236,8 +238,6 @@ if opt.precision == "autocast":
     modelCS.half()
     modelFS.half()
     init_image = init_image.half()
-    
-
 
 batch_size = opt.n_samples
 n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
@@ -254,8 +254,6 @@ else:
 
 modelFS.to(device)
 
-assert os.path.isfile(opt.init_img)
-# init_image = load_img(opt.init_img, opt.H, opt.W).to(device)
 init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
 init_latent = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image))  # move to latent space
 
@@ -291,7 +289,7 @@ with torch.no_grad():
                     time.sleep(1)
 
                 # encode (scaled latent)
-                z_enc = model.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
+                z_enc = model.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device), opt.seed)
                 # decode it
                 samples_ddim = model.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
                                             unconditional_conditioning=uc,)
@@ -303,10 +301,10 @@ with torch.no_grad():
                     
                     x_samples_ddim = modelFS.decode_first_stage(samples_ddim[i].unsqueeze(0))
                     x_sample = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
-                # for x_sample in x_samples_ddim:
                     x_sample = 255. * rearrange(x_sample[0].cpu().numpy(), 'c h w -> h w c')
                     Image.fromarray(x_sample.astype(np.uint8)).save(
-                        os.path.join(sample_path, f"{base_count:05}.png"))
+                        os.path.join(sample_path, "seed_" + str(opt.seed) + "_" + f"{base_count:05}.png"))
+                    opt.seed+=1
                     base_count += 1
 
 
@@ -315,21 +313,8 @@ with torch.no_grad():
                 while(torch.cuda.memory_allocated()/1e6 >= mem):
                     time.sleep(1)
 
-                # if not opt.skip_grid:
-                #     all_samples.append(x_samples_ddim)
                 del samples_ddim
                 print("memory_final = ", torch.cuda.memory_allocated()/1e6)
-
-        # if not skip_grid:
-        #     # additionally, save as grid
-        #     grid = torch.stack(all_samples, 0)
-        #     grid = rearrange(grid, 'n b c h w -> (n b) c h w')
-        #     grid = make_grid(grid, nrow=n_rows)
-
-        #     # to image
-        #     grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-        #     Image.fromarray(grid.astype(np.uint8)).save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
-        #     grid_count += 1
 
 toc = time.time()
 
