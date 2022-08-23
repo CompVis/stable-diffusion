@@ -37,14 +37,23 @@ if setup_environment:
                    ['git', 'clone', 'https://github.com/deforum/stable-diffusion'],
                    ['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'],
                    ['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'],
-                   ['pip', 'install', 'git+https://github.com/deforum/k-diffusion/']
+                   ['pip', 'install', 'accelerate', 'ftfy', 'jsonmerge', 'resize-right', 'torchdiffeq'],
                  ]
     for process in all_process:
-      running = subprocess.run(process,stdout=subprocess.PIPE).stdout.decode('utf-8')
-      if print_subprocess:
-        print(running)
-    print("Runtime > Restart Runtime")
-    print("vv then continue below vv")
+        running = subprocess.run(process,stdout=subprocess.PIPE).stdout.decode('utf-8')
+        if print_subprocess:
+            print(running)
+    
+    print(subprocess.run(['git', 'clone', 'https://github.com/deforum/k-diffusion/'], stdout=subprocess.PIPE).stdout.decode('utf-8'))
+    with open('k-diffusion/k_diffusion/__init__.py', 'w') as f:
+        f.write('')
+    
+    import sys
+    sys.path.append('./src/taming-transformers')
+    sys.path.append('./src/clip')
+    sys.path.append('./stable-diffusion/')
+    sys.path.append('./k-diffusion')
+
 
 # %%
 # !! {"metadata":{
@@ -72,14 +81,15 @@ from pytorch_lightning import seed_everything
 from torch import autocast
 from contextlib import contextmanager, nullcontext
 
-sys.path.append('./stable-diffusion/')
 from helpers import save_samples
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 
-import k_diffusion as K
 import accelerate
+from k_diffusion import sampling
+from k_diffusion.external import CompVisDenoiser
+
 
 def chunk(it, size):
     it = iter(it)
@@ -172,7 +182,7 @@ def run(args, local_seed):
     else:
         sampler = DDIMSampler(model)
 
-    model_wrap = K.external.CompVisDenoiser(model)
+    model_wrap = CompVisDenoiser(model)
     sigma_min, sigma_max = model_wrap.sigmas[0].item(), model_wrap.sigmas[-1].item()
 
     batch_size = args.n_samples
@@ -234,17 +244,17 @@ def run(args, local_seed):
                         model_wrap_cfg = CFGDenoiser(model_wrap)
                         extra_args = {'cond': c, 'uncond': uc, 'cond_scale': args.scale}
                         if args.sampler=="klms":
-                            samples = K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
+                            samples = sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
                         elif args.sampler=="dpm2":
-                            samples = K.sampling.sample_dpm_2(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
+                            samples = sampling.sample_dpm_2(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
                         elif args.sampler=="dpm2_ancestral":
-                            samples = K.sampling.sample_dpm_2_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
+                            samples = sampling.sample_dpm_2_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
                         elif args.sampler=="heun":
-                            samples = K.sampling.sample_heun(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
+                            samples = sampling.sample_heun(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
                         elif args.sampler=="euler":
-                            samples = K.sampling.sample_euler(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
+                            samples = sampling.sample_euler(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
                         elif args.sampler=="euler_ancestral":
-                            samples = K.sampling.sample_euler_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
+                            samples = sampling.sample_euler_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
 
                         x_samples = model.decode_first_stage(samples)
                         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
