@@ -57,7 +57,8 @@ def main():
               weights=weights,
               full_precision=opt.full_precision,
               config=config,
-              latent_diffusion_weights=opt.laion400m # this is solely for recreating the prompt
+              latent_diffusion_weights=opt.laion400m, # this is solely for recreating the prompt
+              device=opt.device
     )
 
     # make sure the output directory exists
@@ -268,6 +269,11 @@ def create_argv_parser():
                         type=str,
                         default="outputs/img-samples",
                         help="directory in which to place generated images and a log of prompts and seeds")
+    parser.add_argument('--device',
+                        '-d',
+                        type=str,
+                        default="cuda",
+                        help="device to run stable diffusion on. defaults to cuda `torch.cuda.current_device()` if avalible")
     return parser
                         
     
