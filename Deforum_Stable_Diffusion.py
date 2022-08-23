@@ -167,6 +167,40 @@ def make_callback(sampler, dynamic_threshold=None, static_threshold=None):
 
     return callback
 
+
+def sampler_fn(
+    c: torch.Tensor,
+    uc: torch.Tensor,
+    args: 'DeforumArgs',
+    model_wrap: CompVisDenoiser,
+    accelerator: accelerate.Accelerator,
+    cb,
+) -> torch.Tensor:
+    shape = [args.C, args.H // args.f, args.W // args.f]
+    sigmas = model_wrap.get_sigmas(args.steps)
+    sampler_args = {
+        "model": CFGDenoiser(model_wrap),
+        "x": (torch.randn([args.n_samples, *shape], device=device) * sigmas[0]),
+        "sigmas": model_wrap.get_sigmas(args.steps),
+        "extra_args": {"cond": c, "uncond": uc, "cond_scale": args.scale},
+        "disable": accelerator.is_main_process,
+        "callback": cb,
+    }
+    sampler_map = {
+        "klms": sampling.sample_lms,
+        "dpm2": sampling.sample_dpm_2,
+        "dpm2_ancestral": sampling.sample_dpm_2_ancestral,
+        "heun": sampling.sample_heun,
+        "euler": sampling.sample_euler,
+        "euler_ancestral": sampling.sample_euler_ancestral,
+    }
+
+    samples = sampler_map[args.sampler](**sampler_args)
+    x_samples = model.decode_first_stage(samples)
+    x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
+    x_samples = accelerator.gather(x_samples)
+    return x_samples
+
 def run(args, local_seed):
 
     # load settings
@@ -233,32 +267,10 @@ def run(args, local_seed):
                     c = model.get_learned_conditioning(prompts)
 
                     if args.sampler in ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral"]:
-                        shape = [args.C, args.H // args.f, args.W // args.f]
-                        sigmas = model_wrap.get_sigmas(args.steps)
                         torch.manual_seed(prompt_seed)
-                        if args.use_init:
-                            sigmas = sigmas[t_enc:]
-                            x = init_latent + torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
-                        else:
-                            x = torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
-                        model_wrap_cfg = CFGDenoiser(model_wrap)
-                        extra_args = {'cond': c, 'uncond': uc, 'cond_scale': args.scale}
-                        if args.sampler=="klms":
-                            samples = sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
-                        elif args.sampler=="dpm2":
-                            samples = sampling.sample_dpm_2(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
-                        elif args.sampler=="dpm2_ancestral":
-                            samples = sampling.sample_dpm_2_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
-                        elif args.sampler=="heun":
-                            samples = sampling.sample_heun(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
-                        elif args.sampler=="euler":
-                            samples = sampling.sample_euler(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
-                        elif args.sampler=="euler_ancestral":
-                            samples = sampling.sample_euler_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
-
-                        x_samples = model.decode_first_stage(samples)
-                        x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
-                        x_samples = accelerator.gather(x_samples)
+                        samples = sampler_fn(
+                            c=c, uc=uc, args=args, model_wrap=model_wrap, accelerator=accelerator, cb=callback
+                        )
 
                     else:
 
