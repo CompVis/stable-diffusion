@@ -104,7 +104,7 @@ The vast majority of these arguments default to reasonable values.
                  seed=None,
                  cfg_scale=7.5,
                  weights="models/ldm/stable-diffusion-v1/model.ckpt",
-                 config = "configs/latent-diffusion/txt2img-1p4B-eval.yaml",
+                 config = "configs/stable-diffusion/v1-inference.yaml",
                  sampler_name="klms",
                  latent_channels=4,
                  downsampling_factor=8,
