@@ -42,9 +42,6 @@ def load_model_from_config(config, ckpt, verbose=False):
     if len(u) > 0 and verbose:
         print("unexpected keys:")
         print(u)
-
-    model.cuda()
-    model.eval()
     return model
 
 def get_resampling_mode():
@@ -178,7 +175,7 @@ def do_run(device, model, opt):
                             for x_sample in x_samples_ddim:
                                 x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                                 Image.fromarray(x_sample.astype(np.uint8)).save(
-                                    os.path.join(sample_path, f"{base_count:05}{opt.filetype}"), quality = opt.quality)
+                                    os.path.join(sample_path, f"{opt.device_id}{base_count:05}{opt.filetype}"), quality = opt.quality)
                                 base_count += 1
 
                         if not opt.skip_grid:
@@ -199,7 +196,7 @@ def do_run(device, model, opt):
 
                     # to image
                     grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-                    output_filename = os.path.join(outpath, f'{opt.batch_name}-{grid_count:04}{opt.filetype}')
+                    output_filename = os.path.join(outpath, f'{opt.batch_name}{opt.device_id}-{grid_count:04}{opt.filetype}')
                     Image.fromarray(grid.astype(np.uint8)).save(output_filename, pnginfo=metadata, quality = opt.quality)
                     grid_count += 1
 
@@ -378,6 +375,13 @@ def parse_args():
         required=False,
         help='What scale to multiply your original image by. 2 is a good value. 3 is insane. Anything more and I wish you luck.'
     )
+    my_parser.add_argument(
+        '--device',
+        action='store',
+        default = "cuda:0",
+        required=False,
+        help='The device to use for pytorch.'
+    )
 
     return my_parser.parse_args()
 
@@ -525,8 +529,8 @@ class Settings:
         if is_json_key_present(settings_file, 'use_jpg'):
             self.use_jpg = (settings_file["use_jpg"])
 
-def esrgan_resize(input):
-    input.save('_esrgan_orig.png')
+def esrgan_resize(input, id):
+    input.save(f'_esrgan_orig{id}.png')
     try:
         subprocess.run(
             ['realesrgan-ncnn-vulkan', '-i', '_esrgan_orig.png', '-o', '_esrgan_.png'],
@@ -548,7 +552,7 @@ def do_gobig(gobig_init, gobig_scale, device, model, opt):
     target_W = opt.W * gobig_scale
     target_H = opt.H * gobig_scale
     if opt.gobig_realesrgan:
-        input_image = esrgan_resize(input_image)
+        input_image = esrgan_resize(input_image, opt.device_id)
     target_image = input_image.resize((target_W, target_H), get_resampling_mode())
     slices, new_canvas_size = grid_slice(target_image, overlap, (opt.W, opt.H))
     if opt.gobig_maximize == True:
@@ -558,7 +562,7 @@ def do_gobig(gobig_init, gobig_scale, device, model, opt):
     input_image.close()
     # now we trigger a do_run for each slice
     betterslices = []
-    slice_image = 'slice.png'
+    slice_image = f'slice{opt.device_id}.png'
     opt.seed = opt.seed + 1
     for count, chunk_w_coords in enumerate(slices):
         chunk, coord_x, coord_y = chunk_w_coords
@@ -587,7 +591,7 @@ def do_gobig(gobig_init, gobig_scale, device, model, opt):
         finished_slice = addalpha(betterslice, mask)
         finished_slices.append((finished_slice, x, y))
     final_output = grid_merge(target_image, finished_slices)
-    final_output.save(f'{result}-gobig{opt.filetype}', quality = opt.quality)
+    final_output.save(f'{result}_gobig{opt.filetype}', quality = opt.quality)
 
 def main():
     cl_args = parse_args()
@@ -622,15 +626,38 @@ def main():
     filetype = ".jpg" if settings.use_jpg else ".png"
     quality = 97 if settings.use_jpg else 100
 
+
     # setup the model
     ckpt = settings.checkpoint # "./models/sd-v1-3-full-ema.ckpt"
     inf_config = "./configs/stable-diffusion/v1-inference.yaml"
     print(f'Loading the model and checkpoint ({ckpt})...')
     config = OmegaConf.load(f"{inf_config}")
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = load_model_from_config(config, f"{ckpt}", verbose=False)
-    model = model.half() # proably needs to be optional if we want cpu/mps/etc.
+
+    # setup the device
+    device_id = "" # leave this blank unless it's a cuda device
+    if torch.cuda.is_available() and "cuda" in cl_args.device:
+        device = torch.device(f'{cl_args.device}')
+        device_id = ("_" + cl_args.device.rsplit(':',1)[1]) if "0" not in cl_args.device else ""
+    elif "mps" in cl_args.device:
+        device = torch.device("mps")
+    else:
+        # fallback to CPU if we don't recognize the device name given
+        device = torch.device("cpu")
+        cores = os.cpu_count()
+        torch.set_num_threads(cores)
+
+    print('Pytorch is using device:', device)
+
+    if "cuda" in str(device):
+        model.cuda()
+    model.eval()
+
+    # load the model to the device
+    if "cpu" not in str(device):
+        model = model.half() # half-precision mode for gpus, saves vram, good good
     model = model.to(device)
+
 
     prompts = []
     if settings.from_file is not None:
@@ -671,7 +698,8 @@ def main():
                 "gobig_realesrgan": settings.gobig_realesrgan,
                 "config": config,
                 "filetype": filetype,
-                "quality": quality
+                "quality": quality,
+                "device_id": device_id
             }
             opt = SimpleNamespace(**opt)
             # render the image(s)!
