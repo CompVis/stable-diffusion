@@ -301,7 +301,7 @@ lets you create images from a prompt in just three lines of code:
 ~~~~
 from ldm.simplet2i import T2I
 model   = T2I()
-outputs = model.text2image("a unicorn in manhattan")
+outputs = model.txt2img("a unicorn in manhattan")
 ~~~~
 
 Outputs is a list of lists in the format [[filename1,seed1],[filename2,seed2]...]
