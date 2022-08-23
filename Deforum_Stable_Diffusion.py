@@ -95,11 +95,15 @@ def get_output_folder(output_path,batch_folder=None):
     os.makedirs(out_path, exist_ok=True)
     return out_path
 
-def load_img(path):
+def load_img(path, shape=None):
     image = Image.open(path).convert("RGB")
     w, h = image.size
     print(f"loaded input image of size ({w}, {h}) from {path}")
-    w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
+    if shape is not None:
+        w, h = shape
+    w, h = map(lambda x: x - x % 64, (w, h))  # resize to integer multiple of 64
+    if image.size != (w, h):
+        print(f"Resizing input image to size ({w}, {h})")
     image = image.resize((w, h), resample=Image.LANCZOS)
     image = np.array(image).astype(np.float16) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
@@ -182,7 +186,7 @@ def run(args, local_seed):
     # init image
     if args.use_init:
         assert os.path.isfile(args.init_image)
-        init_image = load_img(args.init_image).to(device)
+        init_image = load_img(args.init_image, shape=(args.W, args.H)).to(device)
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
 
@@ -222,7 +226,11 @@ def run(args, local_seed):
                         shape = [args.C, args.H // args.f, args.W // args.f]
                         sigmas = model_wrap.get_sigmas(args.steps)
                         torch.manual_seed(prompt_seed)
-                        x = torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
+                        if args.use_init:
+                            sigmas = sigmas[t_enc:]
+                            x = init_latent + torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
+                        else:
+                            x = torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
                         model_wrap_cfg = CFGDenoiser(model_wrap)
                         extra_args = {'cond': c, 'uncond': uc, 'cond_scale': args.scale}
                         if args.sampler=="klms":
@@ -457,6 +465,8 @@ class DeforumArgs():
         self.n_rows = 1 #@param
         self.W = 512 #@param
         self.H = 576 #@param
+        self.W, self.H = map(lambda x: x - x % 64, (self.W, self.H))  # resize to integer multiple of 64
+
 
         #@markdown **Init Settings**
         self.use_init = False #@param {type:"boolean"}
