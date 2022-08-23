@@ -263,8 +263,8 @@ def create_argv_parser():
                         choices=['plms','ddim', 'klms'],
                         default='klms',
                         help="which sampler to use (klms) - can only be set on command line")
-    parser.add_argument('-o',
-                        '--outdir',
+    parser.add_argument('--outdir',
+                        '-o',
                         type=str,
                         default="outputs/img-samples",
                         help="directory in which to place generated images and a log of prompts and seeds")
@@ -276,8 +276,8 @@ def create_cmd_parser():
     parser.add_argument('prompt')
     parser.add_argument('-s','--steps',type=int,help="number of steps")
     parser.add_argument('-S','--seed',type=int,help="image seed")
-    parser.add_argument('-n','--iterations',type=int,default=1,help="number of samplings to perform")
-    parser.add_argument('-b','--batch_size',type=int,default=1,help="number of images to produce per sampling")
+    parser.add_argument('-n','--iterations',type=int,default=1,help="number of samplings to perform (slower, but will provide seeds for individual images)")
+    parser.add_argument('-b','--batch_size',type=int,default=1,help="number of images to produce per sampling (will not provide seeds for individual images!)")
     parser.add_argument('-W','--width',type=int,help="image width, multiple of 64")
     parser.add_argument('-H','--height',type=int,help="image height, multiple of 64")
     parser.add_argument('-C','--cfg_scale',default=7.5,type=float,help="prompt configuration scale")

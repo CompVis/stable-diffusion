@@ -86,6 +86,11 @@ completely). The default is 0.75, and ranges from 0.25-0.75 give interesting res
 
 ## Changes
 
+* v1.06 (23 August 2022)
+   * Image filenames will now never fill gaps in the sequence, but will be assigned the
+     next higher name in the chosen directory. This ensures that the alphabetic and chronological
+     sort orders are the same.
+
 * v1.05 (22 August 2022 - after the drop)
    * Filenames now use the following formats:
        000010.95183149.png      -- Two files produced by the same command (e.g. -n2),
@@ -474,6 +479,7 @@ optional arguments:
   --f F                 downsampling factor
   --n_samples N_SAMPLES
                         how many samples to produce for each given prompt. A.k.a. batch size
+                        (note that the seeds for each image in the batch will be unavailable)
   --n_rows N_ROWS       rows in the grid (default: n_samples)
   --scale SCALE         unconditional guidance scale: eps = eps(x, empty) + scale * (eps(x, cond) - eps(x, empty))
   --from-file FROM_FILE
