@@ -282,7 +282,9 @@ def dream(prompt: str, ddim_steps: int, sampler_name: str, use_GFPGAN: bool, pro
         if not opt.skip_grid:
             # additionally, save as grid
             grid = image_grid(output_images, batch_size, round_down=prompt_matrix)
-            grid.save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
+            
+            grid_file = f"grid-{grid_count:04}-{seed}_{prompts[i].replace(' ', '_').translate({ord(x): '' for x in invalid_filename_chars})[:128]}.jpg"
+            grid.save(os.path.join(outpath, grid_file), 'jpeg', quality=80, optimize=True)
             grid_count += 1
 
 
