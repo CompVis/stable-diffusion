@@ -1,0 +1,11 @@
+--- functional.py	2022-08-23 12:11:18.000000000 -0600
++++ /opt/anaconda3/envs/ldm/lib/python3.10/site-packages/torch/nn/functional.py	2022-08-23 12:11:38.000000000 -0600
+@@ -2508,7 +2508,7 @@
+         return handle_torch_function(
+             layer_norm, (input, weight, bias), input, normalized_shape, weight=weight, bias=bias, eps=eps
+         )
+-    return torch.layer_norm(input, normalized_shape, weight, bias, eps, torch.backends.cudnn.enabled)
++    return torch.layer_norm(input.contigous(), normalized_shape, weight, bias, eps, torch.backends.cudnn.enabled)
+ 
+ 
+ def group_norm(
