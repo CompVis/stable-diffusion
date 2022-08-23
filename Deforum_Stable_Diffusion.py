@@ -110,8 +110,6 @@ def load_img(path, shape=None):
     image = torch.from_numpy(image)
     return 2.*image - 1.
 
-def resize_img(image, shape):
-
 class CFGDenoiser(nn.Module):
     def __init__(self, model):
         super().__init__()
@@ -188,7 +186,7 @@ def run(args, local_seed):
     # init image
     if args.use_init:
         assert os.path.isfile(args.init_image)
-        init_image = load_img(args.init_image).to(device)
+        init_image = load_img(args.init_image, shape=(args.W, args.H)).to(device)
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
 
