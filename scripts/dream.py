@@ -102,6 +102,7 @@ def main_loop(t2i,parser,log):
         if elements[0]=='q':  # 
             done = True
             break
+
         if elements[0].startswith('!dream'): # in case a stored prompt still contains the !dream command
             elements.pop(0)
             
@@ -275,8 +276,13 @@ if readline_available:
             return
 
         def complete(self,text,state):
-            if text.startswith('-I') or text.startswith('--init_img'):
-                return self._image_completions(text,state)
+            buffer = readline.get_line_buffer()
+            
+            if text.startswith(('-I','--init_img')):
+                return self._path_completions(text,state,('.png'))
+
+            if buffer.strip().endswith('cd') or text.startswith(('.','/')):
+                return self._directory_completions(text,state,())
 
             response = None
             if state == 0:
@@ -296,7 +302,7 @@ if readline_available:
                 response = None
             return response
 
-        def _image_completions(self,text,state):
+        def _path_completions(self,text,state,extensions):
             # get the path so far
             if text.startswith('-I'):
                 path = text.replace('-I','',1).lstrip()
@@ -318,7 +324,7 @@ if readline_available:
                     if full_path.startswith(path):
                         if os.path.isdir(full_path):
                             matches.append(os.path.join(os.path.dirname(text),n)+'/')
-                        elif n.endswith('.png'):
+                        elif n.endswith(extensions):
                             matches.append(os.path.join(os.path.dirname(text),n))
 
             try:
@@ -326,7 +332,6 @@ if readline_available:
             except IndexError:
                 response = None
             return response
-        
 
 if __name__ == "__main__":
     main()
