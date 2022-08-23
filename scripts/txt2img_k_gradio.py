@@ -326,7 +326,7 @@ def dream(prompt: str, ddim_steps: int, plms: bool, fixed_code: bool, ddim_eta: 
 
                     # to image
                     grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-                    Image.fromarray(grid.astype(np.uint8)).save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
+                    Image.fromarray(grid.astype(np.uint8)).save(os.path.join(outpath, f"grid-{rng_seed}-{prompt.replace(' ', '_')[:128]}.png"))
                     grid_count += 1
 
                 toc = time.time()
