@@ -449,12 +449,12 @@ The vast majority of these arguments default to reasonable values.
         revision = 1
 
         if previousname is None:
-            # count up until we find an unfilled slot
-            dir_list  = [a.split('.',1)[0] for a in os.listdir(outdir)]
-            uniques   = dict.fromkeys(dir_list,True)
-            basecount = 1
-            while f'{basecount:06}' in uniques:
-                basecount += 1
+            # sort reverse alphabetically until we find max+1
+            dirlist   = sorted(os.listdir(outdir),reverse=True)
+            # find the first filename that matches our pattern or return 000000.0.png
+            filename   = next((f for f in dirlist if re.match('^(\d+)\..*\.png',f)),'0000000.0.png')
+            basecount  = int(filename.split('.',1)[0])
+            basecount += 1
             if grid_count is not None:
                 grid_label = f'grid#1-{grid_count}'
                 filename = f'{basecount:06}.{seed}.{grid_label}.png'
