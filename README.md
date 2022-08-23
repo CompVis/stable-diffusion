@@ -26,7 +26,7 @@ If you get that error, do one of the following.
 
 ### Patch
 
-Select the text for the file that has the error (in my case it's "/opt/anaconda3/envs/ldm/lib/python3.8/site-packages/torch/nn/functional.py"). Copy the path and use it in the command below.
+Select the text for the file that has the error (in my case it's "/opt/anaconda3/envs/ldm/lib/python3.10/site-packages/torch/nn/functional.py"). Copy the path and use it in the command below.
 
 ```
 patch /opt/anaconda3/envs/ldm/lib/python3.10/site-packages/torch/nn/functional.py < PatchFile
