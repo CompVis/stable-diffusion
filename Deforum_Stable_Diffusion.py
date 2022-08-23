@@ -80,6 +80,8 @@ import time
 from pytorch_lightning import seed_everything
 from torch import autocast
 from contextlib import contextmanager, nullcontext
+from yaml import load as yml_load, dump as yml_dump, Dumper, Loader, safe_load
+from types import SimpleNamespace
 
 from helpers import save_samples
 from ldm.util import instantiate_from_config
@@ -513,7 +515,12 @@ class DeforumArgs():
         self.f = 8
         self.prompts = prompts
         self.timestring = ""
-
+        
+    def save(self):
+        filename = os.path.join(self.outdir, f"{self.timestring}_settings.txt")
+        with open(filename, "w+", encoding="utf-8") as f:
+            yml_dump(dict(self.__dict__), stream=f, Dumper=Dumper, indent=4)
+            
 # %%
 # !! {"metadata":{
 # !!   "id": "2ujwkGZTcGev"
@@ -530,9 +537,16 @@ prompts = [
 # !!   "id": "cxx8BzxjiaXg"
 # !! }}
 #@markdown **Run**
+#@markdown Enter path of saved settings to load
+load_settings = "" #@param {type:"string"}
 args = DeforumArgs()
 args.filename = None
 args.prompts = prompts
+
+if load_settings:
+    loaded_dict = safe_load(open(load_settings,'r'))
+    new_args = SimpleNamespace(**loaded_dict)
+    args.__dict__.update(new_args.__dict__)
 
 def do_batch_run():
     # create output folder
@@ -543,9 +557,7 @@ def do_batch_run():
 
     # save settings for the batch
     if args.save_settings:
-        filename = os.path.join(args.outdir, f"{args.timestring}_settings.txt")
-        with open(filename, "w+", encoding="utf-8") as f:
-            json.dump(dict(args.__dict__), f, ensure_ascii=False, indent=4)
+            args.save()
 
     for batch_index in range(args.n_batch):
 
