@@ -226,6 +226,7 @@ def _reconstruct_switches(t2i,opt):
     switches.append(f'-W{opt.width        or t2i.width}')
     switches.append(f'-H{opt.height       or t2i.height}')
     switches.append(f'-C{opt.cfg_scale    or t2i.cfg_scale}')
+    switches.append(f'-m{t2i.sampler_name}')
     if opt.init_img:
         switches.append(f'-I{opt.init_img}')
     if opt.strength and opt.init_img is not None:
@@ -266,9 +267,9 @@ def create_argv_parser():
                         help="number of images to produce per iteration (faster, but doesn't generate individual seeds")
     parser.add_argument('--sampler','-m',
                         dest="sampler_name",
-                        choices=['plms','ddim', 'klms'],
-                        default='klms',
-                        help="which sampler to use (klms) - can only be set on command line")
+                        choices=['ddim', 'k_dpm_2_a', 'k_dpm_2', 'k_euler_a', 'k_euler', 'k_heun', 'k_lms', 'plms'],
+                        default='k_lms',
+                        help="which sampler to use (k_lms) - can only be set on command line")
     parser.add_argument('--outdir',
                         '-o',
                         type=str,
