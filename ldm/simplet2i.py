@@ -68,6 +68,7 @@ from contextlib import contextmanager, nullcontext
 import time
 import math
 import re
+import traceback
 
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim     import DDIMSampler
@@ -416,7 +417,8 @@ The vast majority of these arguments default to reasonable values.
             print('*interrupted*')
             print('Partial results will be returned; if --grid was requested, nothing will be returned.')
         except RuntimeError as e:
-            print(str(e))
+            print("Oops! A runtime error has occurred. If this is unexpected, please copy-and-paste this stack trace and post it as an Issue to http://github.com/lstein/stable-diffusion")
+            traceback.print_exc()
 
         toc = time.time()
         print(f'{image_count} images generated in',"%4.2fs"% (toc-tic))

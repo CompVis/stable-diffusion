@@ -1,0 +1,13 @@
+[submodule "taming-transformers"]
+	   path = src/taming-transformers
+	   url  = https://github.com/CompVis/taming-transformers.git
+	   ignore = dirty
+[submodule "clip"]
+	   path = src/clip
+	   url  = https://github.com/openai/CLIP.git
+	   ignore = dirty
+[submodule "k-diffusion"]
+	   path = src/k-diffusion
+	   url  = https://github.com/lstein/k-diffusion.git
+	   ignore = dirty
+	   
