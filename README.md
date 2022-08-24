@@ -84,6 +84,10 @@ The --init_img (-I) option gives the path to the seed picture. --strength (-f) c
 the original will be modified, ranging from 0.0 (keep the original intact), to 1.0 (ignore the original
 completely). The default is 0.75, and ranges from 0.25-0.75 give interesting results.
 
+You may also pass a -v<count> option to generate count variants on the original image. This is done by
+passing the first generated image back into img2img the requested number of times. It generates interesting
+variants.
+
 ## Weighted Prompts
 
 You may weight different sections of the prompt to tell the sampler to attach different levels of
@@ -128,10 +132,10 @@ samples, samples scaled for a sample of the prompt and one with the init word pr
 On a RTX3090, the process for SD will take ~1h @1.6 iterations/sec.
 
 Note: According to the associated paper, the optimal number of images
-is 3-5 any more images than that and your model might not converge.
+is 3-5. Your model may not converge if you use more images than that.
 
 Training will run indefinately, but you may wish to stop it before the
-heat death of the universe, when you fine a low loss epoch or around
+heat death of the universe, when you find a low loss epoch or around
 ~5000 iterations.
 
 Once the model is trained, specify the trained .pt file when starting
@@ -169,6 +173,7 @@ repository and associated paper for details and limitations.
 * v1.09 (24 August 2022)
    * A new -v option allows you to generate multiple variants of an initial image
      in img2img mode. (kudos to Oceanswave)
+   * Added ability to personalize text to image generation (kudos to nicolai256)
    
 * v1.08 (24 August 2022)
    * Escape single quotes on the dream> command before trying to parse. This avoids
