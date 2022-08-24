@@ -647,9 +647,7 @@ def render_image_batch(args):
                 index += 1
             args.seed = next_seed(args)
 
-prev_frame = None
 def render_animation(args):
-    global prev_frame
     # create output folder for the batch
     os.makedirs(args.outdir, exist_ok=True)
     print(f"Saving animation frames to {args.outdir}")
