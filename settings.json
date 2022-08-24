@@ -2,7 +2,7 @@
 // For example:
 // python prs.py -s settings/my_settings.json
 {
-    "prompt" : "A druid in his shop, selling potions and trinkets, fantasy painting by raphael lacoste and craig mullins",
+    "prompt" : "A druid in his shop, selling potions and trinkets, fantasy painting by Tomer Hanuka and Esao Andrews, detailed",
     "batch_name" : "Default", // Directory to save to inside "out"
     "width" : 512, // resolution (not used when doing init_image)
     "height" : 512, // resolution (not used when doing init_image)
@@ -26,5 +26,6 @@
     "from_file": null, // load prompts from this file instead of using a single prompt. Each prompt is rendered n_batches times
     "cool_down": 0.0, // number of seconds to pause between images, to keep GPU cool
     "checkpoint": "./models/sd-v1-4.ckpt",
-    "use_jpg": false // set this to save your output in JPG format to save space
+    "use_jpg": false, // set this to save your output in JPG format to save space
+    "hide_metadata": false // set to true if you don't want your prompt and seed in the PNG output metadata
 }

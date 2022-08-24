@@ -208,6 +208,7 @@ def do_run(device, model, opt):
                     grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
                     output_filename = os.path.join(outpath, f'{opt.batch_name}{opt.device_id}-{grid_count:04}{opt.filetype}')
                     Image.fromarray(grid.astype(np.uint8)).save(output_filename, pnginfo=metadata, quality = opt.quality)
+                    print(f'\nYour output was saved as "{output_filename}"\n')
                     grid_count += 1
 
                 toc = time.time()
@@ -608,7 +609,7 @@ def do_gobig(gobig_init, gobig_scale, device, model, opt):
 
 def main():
     print('\nPROG ROCK STABLE')
-    print('-------------------')
+    print('----------------')
 
     # rolling a d20 to see if I should pester you about supporting PRD.
     # Apologies if this offends you. At least it's only on a critical miss, right?
