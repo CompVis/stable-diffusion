@@ -183,8 +183,8 @@ def main_loop(t2i,parser,log,infile):
             newopt = copy.deepcopy(opt)
             newopt.variants = None
             for r in results:
-                newopt.init_img = resultPath = r[0]
-                print(f"\t generating variant for {resultPath}")
+                newopt.init_img = r[0]
+                print(f"\t generating variant for {newopt.init_img}")
                 for j in range(0, opt.variants):
                     try:
                         variantResults = t2i.img2img(**vars(newopt))
