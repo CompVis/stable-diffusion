@@ -87,6 +87,7 @@
           document.querySelector("#generate_form").addEventListener('submit', (e) => {
               e.preventDefault();
               const form = e.target;
+              const prompt = document.querySelector("#prompt").value;
 
               // Post as JSON
               fetch(form.action, {
@@ -96,8 +97,7 @@
                   result.json().then((data) => {
                       // Re-enable form, remove no-results-message
                       form.querySelector('fieldset').removeAttribute('disabled');
-                      document.querySelector("#prompt").value = '';
-                      save_fields(form);
+                      document.querySelector("#prompt").value = prompt;
 
                       if (data.outputs.length != 0) {
                           document.querySelector("#no_results_message")?.remove();
@@ -110,7 +110,7 @@
 
               // Disable form
               form.querySelector('fieldset').setAttribute('disabled','');
-              document.querySelector("#prompt").value = 'Generating...';
+              document.querySelector("#prompt").value = `Generating: "${prompt}"`;
           });
           document.querySelector("#generate_form").addEventListener('change', (e) => {
               save_fields(e.target.form);
