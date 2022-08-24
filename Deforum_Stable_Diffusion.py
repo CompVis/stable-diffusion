@@ -492,7 +492,7 @@ def DeforumArgs():
     #@markdown **Sampling Settings**
     seed = -1 #@param
     sampler = 'euler_ancestral' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
-    steps = 20 #@param
+    steps = 80 #@param
     scale = 7 #@param
     eta = 0.0 #@param
     dynamic_threshold = None
