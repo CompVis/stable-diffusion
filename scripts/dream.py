@@ -8,13 +8,7 @@ import os
 import sys
 import copy
 from PIL import Image,PngImagePlugin
-
-# readline unavailable on windows systems
-try:
-    import readline
-    readline_available = True
-except:
-    readline_available = False
+from ldm.dream_util import Completer,PngWriter
 
 debugging = False
 
@@ -131,13 +125,13 @@ def main_loop(t2i,parser,log,infile):
         if elements[0]=='cd' and len(elements)>1:
             if os.path.exists(elements[1]):
                 print(f"setting image output directory to {elements[1]}")
-                t2i.outdir=elements[1]
+                opt.outdir=elements[1]
             else:
                 print(f"directory {elements[1]} does not exist")
             continue
 
         if elements[0]=='pwd':
-            print(f"current output directory is {t2i.outdir}")
+            print(f"current output directory is {opt.outdir}")
             continue
         
         if elements[0].startswith('!dream'): # in case a stored prompt still contains the !dream command
@@ -167,46 +161,18 @@ def main_loop(t2i,parser,log,infile):
             continue
 
         try:
-            if opt.init_img is None:
-                results = t2i.txt2img(**vars(opt))
-            else:
-                assert os.path.exists(opt.init_img),f"No file found at {opt.init_img}. On Linux systems, pressing <tab> after -I will autocomplete a list of possible image files."
-                if None not in (opt.width,opt.height):
-                    print('Warning: width and height options are ignored when modifying an init image')
-                results = t2i.img2img(**vars(opt))
+            file_writer  = PngWriter(opt)
+            opt.callback = file_writer(write_image)
+            run_generator(**vars(opt))
+            results      = file_writer.files_written
         except AssertionError as e:
             print(e)
             continue
 
-
-        allVariantResults = []
-        if opt.variants is not None:
-            print(f"Generating {opt.variants} variant(s)...")
-            newopt = copy.deepcopy(opt)
-            newopt.variants = None
-            for r in results:
-                newopt.init_img = r[0]
-                print(f"\t generating variant for {newopt.init_img}")
-                for j in range(0, opt.variants):
-                    try:
-                        variantResults = t2i.img2img(**vars(newopt))
-                        allVariantResults.append([newopt,variantResults])
-                    except AssertionError as e:
-                        print(e)
-                        continue
-            print(f"{opt.variants} Variants generated!")
-
         print("Outputs:")
         write_log_message(t2i,opt,results,log)
-            
-        if allVariantResults:
-            print("Variant outputs:")
-            for vr in allVariantResults:
-                write_log_message(t2i,vr[0],vr[1],log)
-            
 
     print("goodbye!")
-
 
 def write_log_message(t2i,opt,results,logfile):
     ''' logs the name of the output image, its prompt and seed to the terminal, log file, and a Dream text chunk in the PNG metadata '''
@@ -339,89 +305,7 @@ def create_cmd_parser():
     parser.add_argument('-x','--skip_normalize',action='store_true',help="skip subprompt weight normalization")
     return parser
 
-if readline_available:
-    def setup_readline():
-        readline.set_completer(Completer(['cd','pwd',
-                                          '--steps','-s','--seed','-S','--iterations','-n','--batch_size','-b',
-                                          '--width','-W','--height','-H','--cfg_scale','-C','--grid','-g',
-                                          '--individual','-i','--init_img','-I','--strength','-f','-v','--variants']).complete)
-        readline.set_completer_delims(" ")
-        readline.parse_and_bind('tab: complete')
-        load_history()
 
-    def load_history():
-        histfile = os.path.join(os.path.expanduser('~'),".dream_history")
-        try:
-            readline.read_history_file(histfile)
-            readline.set_history_length(1000)
-        except FileNotFoundError:
-            pass
-        atexit.register(readline.write_history_file,histfile)
-
-    class Completer():
-        def __init__(self,options):
-            self.options = sorted(options)
-            return
-
-        def complete(self,text,state):
-            buffer = readline.get_line_buffer()
-            
-            if text.startswith(('-I','--init_img')):
-                return self._path_completions(text,state,('.png'))
-
-            if buffer.strip().endswith('cd') or text.startswith(('.','/')):
-                return self._path_completions(text,state,())
-
-            response = None
-            if state == 0:
-                # This is the first time for this text, so build a match list.
-                if text:
-                    self.matches = [s 
-                                    for s in self.options
-                                    if s and s.startswith(text)]
-                else:
-                    self.matches = self.options[:]
-
-            # Return the state'th item from the match list,
-            # if we have that many.
-            try:
-                response = self.matches[state]
-            except IndexError:
-                response = None
-            return response
-
-        def _path_completions(self,text,state,extensions):
-            # get the path so far
-            if text.startswith('-I'):
-                path = text.replace('-I','',1).lstrip()
-            elif text.startswith('--init_img='):
-                path = text.replace('--init_img=','',1).lstrip()
-            else:
-                path = text
-
-            matches  = list()
-
-            path = os.path.expanduser(path)
-            if len(path)==0:
-                matches.append(text+'./')
-            else:
-                dir  = os.path.dirname(path)
-                dir_list = os.listdir(dir)
-                for n in dir_list:
-                    if n.startswith('.') and len(n)>1:
-                        continue
-                    full_path = os.path.join(dir,n)
-                    if full_path.startswith(path):
-                        if os.path.isdir(full_path):
-                            matches.append(os.path.join(os.path.dirname(text),n)+'/')
-                        elif n.endswith(extensions):
-                            matches.append(os.path.join(os.path.dirname(text),n))
-
-            try:
-                response = matches[state]
-            except IndexError:
-                response = None
-            return response
 
 if __name__ == "__main__":
     main()

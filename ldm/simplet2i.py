@@ -23,7 +23,6 @@ t2i = T2I(outdir      = <path>        // outputs/txt2img-samples
           width       = <integer>     // image width, multiple of 64 (512)
           height      = <integer>     // image height, multiple of 64 (512)
           cfg_scale   = <float>       // unconditional guidance scale (7.5)
-          fixed_code  = <boolean>     // False
           )
 
 # do the slow model initialization
@@ -79,7 +78,6 @@ class T2I:
     """T2I class
     Attributes
     ----------
-    outdir
     model
     config
     iterations
@@ -87,12 +85,9 @@ class T2I:
     steps
     seed
     sampler_name
-    grid
-    individual
     width
     height
     cfg_scale
-    fixed_code
     latent_channels
     downsampling_factor
     precision
@@ -102,11 +97,8 @@ class T2I:
 The vast majority of these arguments default to reasonable values.
 """
     def __init__(self,
-                 outdir="outputs/txt2img-samples",
                  batch_size=1,
                  iterations = 1,
-                 width=512,
-                 height=512,
                  grid=False,
                  individual=None, # redundant
                  steps=50,
@@ -118,7 +110,6 @@ The vast majority of these arguments default to reasonable values.
                  latent_channels=4,
                  downsampling_factor=8,
                  ddim_eta=0.0,  # deterministic
-                 fixed_code=False,
                  precision='autocast',
                  full_precision=False,
                  strength=0.75, # default in scripts/img2img.py
@@ -126,7 +117,6 @@ The vast majority of these arguments default to reasonable values.
                  latent_diffusion_weights=False,  # just to keep track of this parameter when regenerating prompt
                  device='cuda'
     ):
-        self.outdir     = outdir
         self.batch_size      = batch_size
         self.iterations = iterations
         self.width      = width
@@ -137,7 +127,6 @@ The vast majority of these arguments default to reasonable values.
         self.weights    = weights
         self.config     = config
         self.sampler_name  = sampler_name
-        self.fixed_code    = fixed_code
         self.latent_channels     = latent_channels
         self.downsampling_factor = downsampling_factor
         self.ddim_eta            = ddim_eta
@@ -154,16 +143,25 @@ The vast majority of these arguments default to reasonable values.
         else:
             self.seed = seed
 
-    @torch.no_grad()
-    def txt2img(self,prompt,outdir=None,batch_size=None,iterations=None,
-                steps=None,seed=None,grid=None,individual=None,width=None,height=None,
-                cfg_scale=None,ddim_eta=None,strength=None,embedding_path=None,init_img=None,
-                skip_normalize=False,variants=None):    # note the "variants" option is an unused hack caused by how options are passed
-        """
-        Generate an image from the prompt, writing iteration images into the outdir
-        The output is a list of lists in the format: [[filename1,seed1], [filename2,seed2],...]
-        """
-        outdir     = outdir     or self.outdir
+    def generate(self,
+                 # these are common
+                 prompt,
+                 batch_size=None,
+                 iterations=None,
+                 steps=None,
+                 seed=None,
+                 cfg_scale=None,
+                 ddim_eta=None,
+                 skip_normalize=False,
+                 image_callback=None,
+                 # these are specific to txt2img
+                 width=None,
+                 height=None,
+                 # these are specific to img2img
+                 init_img=None,
+                 strength=None,
+                 variants=None):
+        '''ldm.generate() is the common entry point for txt2img() and img2img()'''
         steps      = steps      or self.steps
         seed       = seed       or self.seed
         width      = width      or self.width
@@ -172,41 +170,57 @@ The vast majority of these arguments default to reasonable values.
         ddim_eta   = ddim_eta   or self.ddim_eta
         batch_size = batch_size or self.batch_size
         iterations = iterations or self.iterations
-        strength   = strength   or self.strength     # not actually used here, but preserved for code refactoring
-        embedding_path = embedding_path or self.embedding_path
+        strength   = strength   or self.strength
 
         model = self.load_model()  # will instantiate the model or return it from cache
-
-        assert strength<1.0 and strength>=0.0, "strength (-f) must be >=0.0 and <1.0"
         assert cfg_scale>1.0, "CFG_Scale (-C) must be >1.0"
+        assert 0. <= strength <= 1., 'can only work with strength in [0.0, 1.0]'
 
-        # grid and individual are mutually exclusive, with individual taking priority.
-        # not necessary, but needed for compatability with dream bot
-        if (grid is None):
-            grid = self.grid
-        if individual:
-            grid = False
-        
         data = [batch_size * [prompt]]
+        scope = autocast if self.precision=="autocast" else nullcontext
+        if grid:
+            callback = self.image2png
+        else:
+            callback = None
 
-        # make directories and establish names for the output files
-        os.makedirs(outdir, exist_ok=True)
+        tic    = time.time()
+        if init_img:
+            assert os.path.exists(init_img),f'{init_img}: File not found'
+            results = self._img2img(prompt,
+                                    data=data,precision_scope=scope,
+                                    batch_size=batch_size,iterations=iterations,
+                                    steps=steps,seed=seed,cfg_scale=cfg_scale,ddim_eta=ddim_eta,
+                                    skip_normalize=skip_normalize,
+                                    init_img=init_img,strength=strength,variants=variants,
+                                    callback=image_callback)
+        else:
+            results = self._txt2img(prompt,
+                                    data=data,precision_scope=scope,
+                                    batch_size=batch_size,iterations=iterations,
+                                    steps=steps,seed=seed,cfg_scale=cfg_scale,ddim_eta=ddim_eta,
+                                    skip_normalize=skip_normalize,
+                                    width=width,height=height,
+                                    callback=image_callback)
+        toc  = time.time()
+        print(f'{len(results)} images generated in',"%4.2fs"% (toc-tic))
+        return results
+            
+    @torch.no_grad()
+    def _txt2img(self,prompt,
+                 data,precision_scope,
+                 batch_size,iterations,
+                 steps,seed,cfg_scale,ddim_eta,
+                 skip_normalize,
+                 width,height,
+                 callback=callback):    # the callback is called each time a new Image is generated
+        """
+        Generate an image from the prompt, writing iteration images into the outdir
+        The output is a list of lists in the format: [[image1,seed1], [image2,seed2],...]
+        """
 
-        start_code = None
-        if self.fixed_code:
-            start_code = torch.randn([batch_size,
-                                      self.latent_channels,
-                                      height // self.downsampling_factor,
-                                      width  // self.downsampling_factor],
-                                     device=self.device)
-
-        precision_scope = autocast if self.precision=="autocast" else nullcontext
         sampler         = self.sampler
         images = list()
-        seeds  = list()
-        filename = None
         image_count = 0
-        tic    = time.time()
 
         # Gawd. Too many levels of indent here. Need to refactor into smaller routines!
         try:
@@ -239,38 +253,24 @@ The vast majority of these arguments default to reasonable values.
 
                         shape = [self.latent_channels, height // self.downsampling_factor, width // self.downsampling_factor]
                         samples_ddim, _ = sampler.sample(S=steps,
-                                                            conditioning=c,
-                                                            batch_size=batch_size,
-                                                            shape=shape,
-                                                            verbose=False,
-                                                            unconditional_guidance_scale=cfg_scale,
-                                                            unconditional_conditioning=uc,
-                                                            eta=ddim_eta,
-                                                            x_T=start_code)
+                                                         conditioning=c,
+                                                         batch_size=batch_size,
+                                                         shape=shape,
+                                                         verbose=False,
+                                                         unconditional_guidance_scale=cfg_scale,
+                                                         unconditional_conditioning=uc,
+                                                         eta=ddim_eta)
 
                         x_samples_ddim = model.decode_first_stage(samples_ddim)
                         x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
-
-                        if not grid:
-                            for x_sample in x_samples_ddim:
-                                x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                                filename = self._unique_filename(outdir,previousname=filename,
-                                                                    seed=seed,isbatch=(batch_size>1))
-                                assert not os.path.exists(filename)
-                                Image.fromarray(x_sample.astype(np.uint8)).save(filename)
-                                images.append([filename,seed])
-                        else:
-                            all_samples.append(x_samples_ddim)
-                            seeds.append(seed)
-
-                    image_count += 1
+                        for x_sample in x_samples_ddim:
+                            x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
+                            image = Image.fromarray(x_sample.astype(np.uint8))
+                            images.append([image,seed])
+                            if callback is not None:
+                                callback(image,seed)
+                                
                     seed = self._new_seed()
-                if grid:
-                    images = self._make_grid(samples=all_samples,
-                                                seeds=seeds,
-                                                batch_size=batch_size,
-                                                iterations=iterations,
-                                                outdir=outdir)
         except KeyboardInterrupt:
             print('*interrupted*')
             print('Partial results will be returned; if --grid was requested, nothing will be returned.')
@@ -279,48 +279,20 @@ The vast majority of these arguments default to reasonable values.
 
         toc = time.time()
         print(f'{image_count} images generated in',"%4.2fs"% (toc-tic))
-
         return images
         
-    # There is lots of shared code between this and txt2img and should be refactored.
     @torch.no_grad()
-    def img2img(self,prompt,outdir=None,init_img=None,batch_size=None,iterations=None,
-                steps=None,seed=None,grid=None,individual=None,width=None,height=None,
-                cfg_scale=None,ddim_eta=None,strength=None,embedding_path=None,
-                skip_normalize=False,variants=None):   # note the "variants" option is an unused hack caused by how options are passed
+    def _img2img(self,prompt,
+                 data,precision_scope,
+                 batch_size,iterations,
+                 steps,seed,cfg_scale,ddim_eta,
+                 skip_normalize,
+                 init_img,strength,variants,
+                 callback):
         """
         Generate an image from the prompt and the initial image, writing iteration images into the outdir
-        The output is a list of lists in the format: [[filename1,seed1], [filename2,seed2],...]
+        The output is a list of lists in the format: [[image,seed1], [image,seed2],...]
         """
-        outdir     = outdir     or self.outdir
-        steps      = steps      or self.steps
-        seed       = seed       or self.seed
-        cfg_scale  = cfg_scale  or self.cfg_scale
-        ddim_eta   = ddim_eta   or self.ddim_eta
-        batch_size = batch_size or self.batch_size
-        iterations = iterations or self.iterations
-        strength   = strength   or self.strength
-        embedding_path = embedding_path or self.embedding_path
-
-        assert strength<1.0 and strength>=0.0, "strength (-f) must be >=0.0 and <1.0"
-        assert cfg_scale>1.0, "CFG_Scale (-C) must be >1.0"
-
-        if init_img is None:
-            print("no init_img provided!")
-            return []
-
-        model = self.load_model()  # will instantiate the model or return it from cache
-
-        precision_scope = autocast if self.precision=="autocast" else nullcontext
-
-        # grid and individual are mutually exclusive, with individual taking priority.
-        # not necessary, but needed for compatability with dream bot
-        if (grid is None):
-            grid = self.grid
-        if individual:
-            grid = False
-        
-        data = [batch_size * [prompt]]
 
         # PLMS sampler not supported yet, so ignore previous sampler
         if self.sampler_name!='ddim':
@@ -329,33 +301,18 @@ The vast majority of these arguments default to reasonable values.
         else:
             sampler = self.sampler
 
-        # make directories and establish names for the output files
-        os.makedirs(outdir, exist_ok=True)
-
-        assert os.path.isfile(init_img)
         init_image = self._load_img(init_img).to(self.device)
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         with precision_scope(self.device.type):
             init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
 
         sampler.make_schedule(ddim_num_steps=steps, ddim_eta=ddim_eta, verbose=False)
-
-        try:
-            assert 0. <= strength <= 1., 'can only work with strength in [0.0, 1.0]'
-        except AssertionError:
-            print(f"strength must be between 0.0 and 1.0, but received value {strength}")
-            return []
         
         t_enc = int(strength * steps)
         print(f"target t_enc is {t_enc} steps")
 
         images = list()
-        seeds  = list()
-        filename = None
-        image_count = 0 # actual number of iterations performed
-        tic    = time.time()
 
-        # Gawd. Too many levels of indent here. Need to refactor into smaller routines!
         try:
             with precision_scope(self.device.type), model.ema_scope():
                 all_samples = list()
@@ -393,25 +350,13 @@ The vast majority of these arguments default to reasonable values.
                         x_samples = model.decode_first_stage(samples)
                         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
 
-                        if not grid:
-                            for x_sample in x_samples:
-                                x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                                filename = self._unique_filename(outdir,previousname=filename,
-                                                                    seed=seed,isbatch=(batch_size>1))
-                                assert not os.path.exists(filename)
-                                Image.fromarray(x_sample.astype(np.uint8)).save(filename)
-                                images.append([filename,seed])
-                        else:
-                            all_samples.append(x_samples)
-                            seeds.append(seed)
-                    image_count +=1
+                        for x_sample in x_samples:
+                            x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
+                            image = Image.fromarray(x_sample.astype(np.uint8))
+                            images.append([image,seed])
+                            if callback is not None:
+                                callback(image,seed)
                     seed = self._new_seed()
-                if grid:
-                    images = self._make_grid(samples=all_samples,
-                                                seeds=seeds,
-                                                batch_size=batch_size,
-                                                iterations=iterations,
-                                                outdir=outdir)
 
         except KeyboardInterrupt:
             print('*interrupted*')
@@ -419,26 +364,6 @@ The vast majority of these arguments default to reasonable values.
         except RuntimeError as e:
             print("Oops! A runtime error has occurred. If this is unexpected, please copy-and-paste this stack trace and post it as an Issue to http://github.com/lstein/stable-diffusion")
             traceback.print_exc()
-
-        toc = time.time()
-        print(f'{image_count} images generated in',"%4.2fs"% (toc-tic))
-
-        return images
-
-    def _make_grid(self,samples,seeds,batch_size,iterations,outdir):
-        images = list()
-        n_rows = batch_size if batch_size>1 else int(math.sqrt(batch_size * iterations))
-        # save as grid
-        grid = torch.stack(samples, 0)
-        grid = rearrange(grid, 'n b c h w -> (n b) c h w')
-        grid = make_grid(grid, nrow=n_rows)
-
-        # to image
-        grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-        filename = self._unique_filename(outdir,seed=seeds[0],grid_count=batch_size*iterations)
-        Image.fromarray(grid.astype(np.uint8)).save(filename)
-        for s in seeds:
-            images.append([filename,s])
         return images
 
     def _new_seed(self):
@@ -512,43 +437,6 @@ The vast majority of these arguments default to reasonable values.
         image = image[None].transpose(0, 3, 1, 2)
         image = torch.from_numpy(image)
         return 2.*image - 1.
-
-    def _unique_filename(self,outdir,previousname=None,seed=0,isbatch=False,grid_count=None):
-        revision = 1
-
-        if previousname is None:
-            # sort reverse alphabetically until we find max+1
-            dirlist   = sorted(os.listdir(outdir),reverse=True)
-            # find the first filename that matches our pattern or return 000000.0.png
-            filename   = next((f for f in dirlist if re.match('^(\d+)\..*\.png',f)),'0000000.0.png')
-            basecount  = int(filename.split('.',1)[0])
-            basecount += 1
-            if grid_count is not None:
-                grid_label = f'grid#1-{grid_count}'
-                filename = f'{basecount:06}.{seed}.{grid_label}.png'
-            elif isbatch:
-                filename = f'{basecount:06}.{seed}.01.png'
-            else:
-                filename = f'{basecount:06}.{seed}.png'
-            
-            return os.path.join(outdir,filename)
-
-        else:
-            previousname = os.path.basename(previousname)
-            x = re.match('^(\d+)\..*\.png',previousname)
-            if not x:
-                return self._unique_filename(outdir,previousname,seed)
-
-            basecount = int(x.groups()[0])
-            series = 0 
-            finished = False
-            while not finished:
-                series += 1
-                filename = f'{basecount:06}.{seed}.png'
-                if isbatch or os.path.exists(os.path.join(outdir,filename)):
-                    filename = f'{basecount:06}.{seed}.{series:02}.png'
-                finished = not os.path.exists(os.path.join(outdir,filename))
-            return os.path.join(outdir,filename)
 
     def _split_weighted_subprompts(text):
         """
