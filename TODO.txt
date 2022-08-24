@@ -11,6 +11,14 @@ Feature requests:
 
 5. Support for inpainting masks #68.
 
+6. Support for loading variations of the stable-diffusion
+   weights #49
+
+7. Support for klms and other non-ddim samplers in img2img() #36
+
+8. Pass a shell command to open up an image viewer on the last
+   batch of images generated #29.
+
 Code Refactorization:
 
 1. Move the PNG file generation code out of simplet2i and into

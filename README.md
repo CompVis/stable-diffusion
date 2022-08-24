@@ -127,11 +127,15 @@ samples, samples scaled for a sample of the prompt and one with the init word pr
 
 On a RTX3090, the process for SD will take ~1h @1.6 iterations/sec.
 
-Note: According to the associated paper, the optimal number of images is 3-5 any more images than that and your model might not converge.
+Note: According to the associated paper, the optimal number of images
+is 3-5 any more images than that and your model might not converge.
 
-Training will run indefinately, but you may wish to stop it before the heat death of the universe, when you fine a low loss epoch or around ~5000 iterations.
+Training will run indefinately, but you may wish to stop it before the
+heat death of the universe, when you fine a low loss epoch or around
+~5000 iterations.
 
-Once the model is trained, specify the trained .pt file when starting dream using
+Once the model is trained, specify the trained .pt file when starting
+dream using
 
 ~~~~
 (ldm) ~/stable-diffusion$ python3 ./scripts/dream.py --embedding_path /path/to/embedding.pt --full_precision
@@ -156,13 +160,17 @@ It's also possible to train multiple tokens (modify the placeholder string in co
                                             --output_path /path/to/output/embedding.pt
 ~~~~
 
-Credit goes to @rinongal and the repository located at https://github.com/rinongal/textual_inversion Please see the repository and associated paper for details and limitations.
+Credit goes to @rinongal and the repository located at
+https://github.com/rinongal/textual_inversion Please see the
+repository and associated paper for details and limitations.
 
 ## Changes
 
 * v1.08 (24 August 2022)
    * Escape single quotes on the dream> command before trying to parse. This avoids
      parse errors.
+   * A new -v option allows you to generate multiple variants of an initial image
+     in img2img mode. (kudos to Oceanswave)
    * Removed instruction to get Python3.8 as first step in Windows install.
      Anaconda3 does it for you.
    * Added bounds checks for numeric arguments that could cause crashes.
@@ -439,7 +447,11 @@ to send me an email if you use and like the script.
 
 *Original Author:* Lincoln D. Stein <lincoln.stein@gmail.com>
 
-*Contributions by:* [Peter Kowalczyk](https://github.com/slix), [Henry Harrison](https://github.com/hwharrison), [xraxra](https://github.com/xraxra), and [bmaltais](https://github.com/bmaltais)
+*Contributions by:* 
+[Peter Kowalczyk](https://github.com/slix), [Henry Harrison](https://github.com/hwharrison),
+[xraxra](https://github.com/xraxra), [bmaltais](https://github.com/bmaltais), [Sean McLellan] (https://github.com/Oceanswave],
+[nicolai256](https://github.com/nicolai256], [Benjamin Warner](https://github.com/warner-benjamin),
+and [tildebyte](https://github.com/tildebyte)
 
 Original portions of the software are Copyright (c) 2020 Lincoln D. Stein (https://github.com/lstein)
 
