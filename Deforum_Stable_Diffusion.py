@@ -238,7 +238,7 @@ def run(args, local_seed):
                         sigmas = model_wrap.get_sigmas(args.steps)
                         torch.manual_seed(prompt_seed)
                         if args.use_init:
-                            sigmas = sigmas[t_enc:]
+                            sigmas = sigmas[len(sigmas)-t_enc-1:]
                             x = init_latent + torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
                         else:
                             x = torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
