@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (c) 2022 Lincoln D. Stein (https://github.com/lstein)
+
 import argparse
 import shlex
 import atexit
@@ -158,10 +160,14 @@ def main_loop(t2i,parser,log,infile):
             print("Try again with a prompt!")
             continue
 
-        if opt.init_img is None:
-            results = t2i.txt2img(**vars(opt))
-        else:
-            results = t2i.img2img(**vars(opt))
+        try:
+            if opt.init_img is None:
+                results = t2i.txt2img(**vars(opt))
+            else:
+                results = t2i.img2img(**vars(opt))
+        except AssertionError as e:
+            print(e)
+            continue
         print("Outputs:")
         write_log_message(t2i,opt,results,log)
             
@@ -374,3 +380,4 @@ if readline_available:
 
 if __name__ == "__main__":
     main()
+

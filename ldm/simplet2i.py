@@ -1,3 +1,10 @@
+# Copyright (c) 2022 Lincoln D. Stein (https://github.com/lstein)
+
+# Derived from source code carrying the following copyrights
+# Copyright (c) 2022 Machine Vision and Learning Group, LMU Munich
+# Copyright (c) 2022 Robin Rombach and Patrick Esser and contributors
+
+
 """Simplified text to image API for stable diffusion/latent diffusion
 
 Example Usage:
@@ -161,6 +168,9 @@ The vast majority of these arguments default to reasonable values.
 
         model = self.load_model()  # will instantiate the model or return it from cache
 
+        assert strength<1.0 and strength>=0.0, "strength (-f) must be >=0.0 and <1.0"
+        assert cfg_scale>1.0, "CFG_Scale (-C) must be >1.0"
+
         # grid and individual are mutually exclusive, with individual taking priority.
         # not necessary, but needed for compatability with dream bot
         if (grid is None):
@@ -281,6 +291,9 @@ The vast majority of these arguments default to reasonable values.
         batch_size = batch_size or self.batch_size
         iterations = iterations or self.iterations
         strength   = strength   or self.strength
+
+        assert strength<1.0 and strength>=0.0, "strength (-f) must be >=0.0 and <1.0"
+        assert cfg_scale>1.0, "CFG_Scale (-C) must be >1.0"
 
         if init_img is None:
             print("no init_img provided!")
