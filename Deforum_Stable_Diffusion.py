@@ -4,9 +4,9 @@
 # !! }}
 """
 # **Deforum Stable Diffusion**
-[Stable Diffusion](https://github.com/CompVis/stable-diffusion) by Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer and the [Stability.ai](https://stability.ai/) Team
+[Stable Diffusion](https://github.com/CompVis/stable-diffusion) by Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer and the [Stability.ai](https://stability.ai/) Team. [K Diffusion](https://github.com/crowsonkb/k-diffusion) by [Katherine Crowson](https://twitter.com/RiversHaveWings). Stable Diffusion model weights can be downloaded from https://huggingface.co/CompVis/
 
-Notebook by [deforum](https://twitter.com/deforum_art)
+Notebook by [deforum](https://discord.gg/upmXXsrwZc)
 """
 
 # %%
@@ -214,7 +214,10 @@ def run(args, local_seed):
                 tic = time.time()
                 for prompt_index, prompts in enumerate(data):
                     print(prompts)
-                    prompt_seed = local_seed + prompt_index
+                    if args.seed_behavior == "iter":
+                        prompt_seed = local_seed + prompt_index
+                    else:
+                        prompt_seed = local_seed
                     seed_everything(prompt_seed)
 
                     callback = make_callback(sampler=args.sampler,
@@ -482,7 +485,8 @@ def DeforumArgs():
     strength = 0.5 #@param {type:"number"}
 
     #@markdown **Sampling Settings**
-    seed = 1 #@param
+    seed = -1 #@param
+    seed_behavior = "fixed" # ["iter","fixed"]
     sampler = 'euler_ancestral' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
     steps = 50 #@param
     scale = 7 #@param
@@ -501,7 +505,6 @@ def DeforumArgs():
     timestring = ""
 
     return locals()
-
 
 # %%
 # !! {"metadata":{
