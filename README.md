@@ -10,7 +10,7 @@ Also available:
 # Installation instructions
 Download this repository either by zip file or via git:
 ```
-git clone --no-checkout https://github.com/lowfuel/progrock-stable prs
+git clone https://github.com/lowfuel/progrock-stable prs
 cd prs
 ```
 
