@@ -169,10 +169,12 @@ def main_loop(t2i,parser,log,infile):
             if opt.init_img is None:
                 results = t2i.txt2img(**vars(opt))
             else:
+                assert os.path.exists(opt.init_img),f"No file found at {opt.init_img}. On Linux systems, pressing <tab> after -I will autocomplete a list of possible image files."
                 results = t2i.img2img(**vars(opt))
         except AssertionError as e:
             print(e)
             continue
+
         print("Outputs:")
         write_log_message(t2i,opt,results,log)
             
