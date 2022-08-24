@@ -3,11 +3,9 @@
 
 import argparse
 import shlex
-import atexit
 import os
 import sys
 import copy
-from PIL import Image,PngImagePlugin
 from ldm.dream_util import Completer,PngWriter
 
 debugging = False
