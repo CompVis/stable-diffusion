@@ -17,7 +17,7 @@
           border: none;
       }
       #prompt {
-          width:500px;
+          width: 500px;
           border-radius: 20px 0px 0px 20px;
           padding: 5px 10px 5px 10px;
           border: 1px solid black;
@@ -35,12 +35,16 @@
           padding-top: 10px;
       }
       img {
-          height:30vh;
-          border-radius:5px;
-          margin:10px;
+          cursor: pointer;
+          height: 30vh;
+          border-radius: 5px;
+          margin: 10px;
       }
       input[type="number"] {
-          width:60px;
+          width: 60px;
+      }
+      #seed {
+          width: 150px;
       }
     </style>
     <script>
@@ -51,6 +55,10 @@
           let alt_text = output[1].toString() + " | " + output[2];
           output_node.alt = alt_text;
           output_node.title = alt_text;
+          // Update seed on click
+          output_node.addEventListener('click', () => {
+              document.querySelector("#seed").value = output[1];
+          });
 
           document.querySelector("#results").prepend(output_node);
       }
