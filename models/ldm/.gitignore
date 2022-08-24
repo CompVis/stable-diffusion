@@ -1,0 +1,3 @@
+# Exclude the heavyweight models:
+*.ckpt
+*.ckpt.*
