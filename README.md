@@ -113,7 +113,7 @@ To train, prepare a folder that contains images sized at 512x512 and execute the
                                             -t \
                                             --actual_resume ./models/ldm/stable-diffusion-v1/model.ckpt \
                                             -n my_cat \
-                                            -gpus 0, \
+                                            --gpus 0, \
                                             --data_root D:/textual-inversion/my_cat \
                                             --init_word 'cat'
 ~~~~
