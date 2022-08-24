@@ -170,6 +170,8 @@ def main_loop(t2i,parser,log,infile):
                 results = t2i.txt2img(**vars(opt))
             else:
                 assert os.path.exists(opt.init_img),f"No file found at {opt.init_img}. On Linux systems, pressing <tab> after -I will autocomplete a list of possible image files."
+                if None not in (opt.width,opt.height):
+                    print('Warning: width and height options are ignored when modifying an init image')
                 results = t2i.img2img(**vars(opt))
         except AssertionError as e:
             print(e)
