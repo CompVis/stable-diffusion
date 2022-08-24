@@ -100,7 +100,73 @@ cat aspect of the image and 75% on the white duck aspect
 use any combination of integers and floating point numbers, and they
 do not need to add up to 1.
 
+## Personalizing Text-to-Image Generation
+
+You may personalize the generated images to provide your own styles or objects by training a new LDM checkpoint
+and introducing a new vocabulary to the fixed model.
+
+To train, prepare a folder that contains images sized at 512x512 and execute the following:
+
+~~~~
+# As the default backend is not available on Windows, if you're using that platform, execute SET PL_TORCH_DISTRIBUTED_BACKEND=gloo
+(ldm) ~/stable-diffusion$ python3 ./main.py --base ./configs/stable-diffusion/v1-finetune.yaml \
+                                            -t \
+                                            --actual_resume ./models/ldm/stable-diffusion-v1/model.ckpt \
+                                            -n my_cat \
+                                            --gpus 0, \
+                                            --data_root D:/textual-inversion/my_cat \
+                                            --init_word 'cat'
+~~~~
+
+During the training process, files will be created in /logs/[project][time][project]/
+where you can see the process.
+
+conditioning* contains the training prompts
+inputs, reconstruction the input images for the training epoch
+samples, samples scaled for a sample of the prompt and one with the init word provided 
+
+On a RTX3090, the process for SD will take ~1h @1.6 iterations/sec.
+
+Note: According to the associated paper, the optimal number of images is 3-5 any more images than that and your model might not converge.
+
+Training will run indefinately, but you may wish to stop it before the heat death of the universe, when you fine a low loss epoch or around ~5000 iterations.
+
+Once the model is trained, specify the trained .pt file when starting dream using
+
+~~~~
+(ldm) ~/stable-diffusion$ python3 ./scripts/dream.py --embedding_path /path/to/embedding.pt --full_precision
+~~~~
+
+Then, to utilize your subject at the dream prompt
+
+~~~
+dream> "a photo of *"
+~~~
+
+this also works with image2image
+~~~~
+dream> "waterfall and rainbow in the style of *" --init_img=./init-images/crude_drawing.png --strength=0.5 -s100 -n4
+~~~~
+
+It's also possible to train multiple tokens (modify the placeholder string in configs/stable-diffusion/v1-finetune.yaml) and combine LDM checkpoints using:
+
+~~~~
+(ldm) ~/stable-diffusion$ python3 ./scripts/merge_embeddings.py \
+                                            --manager_ckpts /path/to/first/embedding.pt /path/to/second/embedding.pt [...] \
+                                            --output_path /path/to/output/embedding.pt
+~~~~
+
+Credit goes to @rinongal and the repository located at https://github.com/rinongal/textual_inversion Please see the repository and associated paper for details and limitations.
+
 ## Changes
+
+* v1.08 (24 August 2022)
+   * Escape single quotes on the dream> command before trying to parse. This avoids
+     parse errors.
+   * Removed instruction to get Python3.8 as first step in Windows install.
+     Anaconda3 does it for you.
+   * Added bounds checks for numeric arguments that could cause crashes.
+   * Cleaned up the copyright and license agreement files.
 
 * v1.07 (23 August 2022)
    * Image filenames will now never fill gaps in the sequence, but will be assigned the
@@ -236,34 +302,31 @@ This will bring your local copy into sync with the remote one.
 
 ### Windows
 
-1. Install Python version 3.8.5 from here: https://www.python.org/downloads/windows/
-   (note that several users have reported that later versions do not work properly)
+1. Install Anaconda3 (miniconda3 version) from here: https://docs.anaconda.com/anaconda/install/windows/
 
-2. Install Anaconda3 (miniconda3 version) from here: https://docs.anaconda.com/anaconda/install/windows/
+2. Install Git from here: https://git-scm.com/download/win
 
-3. Install Git from here: https://git-scm.com/download/win
+3. Launch Anaconda from the Windows Start menu. This will bring up a command window. Type all the remaining commands in this window.
 
-4. Launch Anaconda from the Windows Start menu. This will bring up a command window. Type all the remaining commands in this window.
-
-5. Run the command:
+4. Run the command:
 ```
 git clone https://github.com/lstein/stable-diffusion.git
 ```
 This will create stable-diffusion folder where you will follow the rest of the steps.
 
-6. Enter the newly-created stable-diffusion folder. From this step forward make sure that you are working in the stable-diffusion directory!
+5. Enter the newly-created stable-diffusion folder. From this step forward make sure that you are working in the stable-diffusion directory!
 ```
 cd stable-diffusion
 ```
 
-7. Run the following two commands:
+6. Run the following two commands:
 ```
-conda env create -f environment.yaml    (step 7a)
-conda activate ldm                      (step 7b)
+conda env create -f environment.yaml    (step 6a)
+conda activate ldm                      (step 6b)
 ```
 This will install all python requirements and activate the "ldm" environment which sets PATH and other environment variables properly.
 
-8. Run the command:
+7. Run the command:
 ```
 python scripts\preload_models.py
 ```
@@ -273,7 +336,7 @@ requires. (Note that this step is required. I created it because some people
 are using GPU systems that are behind a firewall and the models can't be
 downloaded just-in-time)
 
-9. Now you need to install the weights for the big stable diffusion model.
+8. Now you need to install the weights for the big stable diffusion model.
 
 For running with the released weights, you will first need to set up
 an acount with Hugging Face (https://huggingface.co).  Use your
@@ -299,7 +362,7 @@ you stashed this file. If you prefer not to copy or move the .ckpt file,
 you may instead create a shortcut to it from within
 "models\ldm\stable-diffusion-v1\".
 
-10. Start generating images!
+9. Start generating images!
 ```
 # for the pre-release weights
 python scripts\dream.py -l
@@ -307,7 +370,7 @@ python scripts\dream.py -l
 # for the post-release weights
 python scripts\dream.py
 ```
-11. Subsequently, to relaunch the script, first activate the Anaconda command window (step 4), enter the stable-diffusion directory (step 6, "cd \path\to\stable-diffusion"), run "conda activate ldm" (step 7b), and then launch the dream script (step 10).
+10. Subsequently, to relaunch the script, first activate the Anaconda command window (step 3), enter the stable-diffusion directory (step 5, "cd \path\to\stable-diffusion"), run "conda activate ldm" (step 6b), and then launch the dream script (step 9).
 
 #### Updating to newer versions of the script
 
@@ -378,213 +441,9 @@ to send me an email if you use and like the script.
 
 *Contributions by:* [Peter Kowalczyk](https://github.com/slix), [Henry Harrison](https://github.com/hwharrison), [xraxra](https://github.com/xraxra), and [bmaltais](https://github.com/bmaltais)
 
-# Original README from CompViz/stable-diffusion
-*Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
+Original portions of the software are Copyright (c) 2020 Lincoln D. Stein (https://github.com/lstein)
 
-[**High-Resolution Image Synthesis with Latent Diffusion Models**](https://ommer-lab.com/research/latent-diffusion-models/)<br/>
-[Robin Rombach](https://github.com/rromb)\*,
-[Andreas Blattmann](https://github.com/ablattmann)\*,
-[Dominik Lorenz](https://github.com/qp-qp)\,
-[Patrick Esser](https://github.com/pesser),
-[Björn Ommer](https://hci.iwr.uni-heidelberg.de/Staff/bommer)<br/>
+#Further Reading
 
-**CVPR '22 Oral**
-
-which is available on [GitHub](https://github.com/CompVis/latent-diffusion). PDF at [arXiv](https://arxiv.org/abs/2112.10752). Please also visit our [Project page](https://ommer-lab.com/research/latent-diffusion-models/).
-
-![txt2img-stable2](assets/stable-samples/txt2img/merged-0006.png)
-[Stable Diffusion](#stable-diffusion-v1) is a latent text-to-image diffusion
-model.
-Thanks to a generous compute donation from [Stability AI](https://stability.ai/) and support from [LAION](https://laion.ai/), we were able to train a Latent Diffusion Model on 512x512 images from a subset of the [LAION-5B](https://laion.ai/blog/laion-5b/) database. 
-Similar to Google's [Imagen](https://arxiv.org/abs/2205.11487), 
-this model uses a frozen CLIP ViT-L/14 text encoder to condition the model on text prompts.
-With its 860M UNet and 123M text encoder, the model is relatively lightweight and runs on a GPU with at least 10GB VRAM.
-See [this section](#stable-diffusion-v1) below and the [model card](https://huggingface.co/CompVis/stable-diffusion).
-
-  
-## Requirements
-
-A suitable [conda](https://conda.io/) environment named `ldm` can be created
-and activated with:
-
-```
-conda env create -f environment.yaml
-conda activate ldm
-```
-
-You can also update an existing [latent diffusion](https://github.com/CompVis/latent-diffusion) environment by running
-
-```
-conda install pytorch torchvision -c pytorch
-pip install transformers==4.19.2
-pip install -e .
-```
-
-## Stable Diffusion v1
-
-Stable Diffusion v1 refers to a specific configuration of the model
-architecture that uses a downsampling-factor 8 autoencoder with an 860M UNet
-and CLIP ViT-L/14 text encoder for the diffusion model. The model was pretrained on 256x256 images and 
-then finetuned on 512x512 images.
-
-*Note: Stable Diffusion v1 is a general text-to-image diffusion model and therefore mirrors biases and (mis-)conceptions that are present
-in its training data. 
-Details on the training procedure and data, as well as the intended use of the model can be found in the corresponding [model card](https://huggingface.co/CompVis/stable-diffusion).
-Research into the safe deployment of general text-to-image models is an ongoing effort. To prevent misuse and harm, we currently provide access to the checkpoints only for [academic research purposes upon request](https://stability.ai/academia-access-form).
-**This is an experiment in safe and community-driven publication of a capable and general text-to-image model. We are working on a public release with a more permissive license that also incorporates ethical considerations.***
-
-[Request access to Stable Diffusion v1 checkpoints for academic research](https://stability.ai/academia-access-form) 
-
-### Weights
-
-We currently provide three checkpoints, `sd-v1-1.ckpt`, `sd-v1-2.ckpt` and `sd-v1-3.ckpt`,
-which were trained as follows,
-
-- `sd-v1-1.ckpt`: 237k steps at resolution `256x256` on [laion2B-en](https://huggingface.co/datasets/laion/laion2B-en).
-  194k steps at resolution `512x512` on [laion-high-resolution](https://huggingface.co/datasets/laion/laion-high-resolution) (170M examples from LAION-5B with resolution `>= 1024x1024`).
-- `sd-v1-2.ckpt`: Resumed from `sd-v1-1.ckpt`.
-  515k steps at resolution `512x512` on "laion-improved-aesthetics" (a subset of laion2B-en,
-filtered to images with an original size `>= 512x512`, estimated aesthetics score `> 5.0`, and an estimated watermark probability `< 0.5`. The watermark estimate is from the LAION-5B metadata, the aesthetics score is estimated using an [improved aesthetics estimator](https://github.com/christophschuhmann/improved-aesthetic-predictor)).
-- `sd-v1-3.ckpt`: Resumed from `sd-v1-2.ckpt`. 195k steps at resolution `512x512` on "laion-improved-aesthetics" and 10\% dropping of the text-conditioning to improve [classifier-free guidance sampling](https://arxiv.org/abs/2207.12598).
-
-Evaluations with different classifier-free guidance scales (1.5, 2.0, 3.0, 4.0,
-5.0, 6.0, 7.0, 8.0) and 50 PLMS sampling
-steps show the relative improvements of the checkpoints:
-![sd evaluation results](assets/v1-variants-scores.jpg)
-
-
-
-### Text-to-Image with Stable Diffusion
-![txt2img-stable2](assets/stable-samples/txt2img/merged-0005.png)
-![txt2img-stable2](assets/stable-samples/txt2img/merged-0007.png)
-
-Stable Diffusion is a latent diffusion model conditioned on the (non-pooled) text embeddings of a CLIP ViT-L/14 text encoder.
-
-
-#### Sampling Script
-
-After [obtaining the weights](#weights), link them
-```
-mkdir -p models/ldm/stable-diffusion-v1/
-ln -s <path/to/model.ckpt> models/ldm/stable-diffusion-v1/model.ckpt 
-```
-and sample with
-```
-python scripts/txt2img.py --prompt "a photograph of an astronaut riding a horse" --plms 
-```
-
-By default, this uses a guidance scale of `--scale 7.5`, [Katherine Crowson's implementation](https://github.com/CompVis/latent-diffusion/pull/51) of the [PLMS](https://arxiv.org/abs/2202.09778) sampler, 
-and renders images of size 512x512 (which it was trained on) in 50 steps. All supported arguments are listed below (type `python scripts/txt2img.py --help`).
-
-```commandline
-usage: txt2img.py [-h] [--prompt [PROMPT]] [--outdir [OUTDIR]] [--skip_grid] [--skip_save] [--ddim_steps DDIM_STEPS] [--plms] [--laion400m] [--fixed_code] [--ddim_eta DDIM_ETA] [--n_iter N_ITER] [--H H] [--W W] [--C C] [--f F] [--n_samples N_SAMPLES] [--n_rows N_ROWS]
-                  [--scale SCALE] [--from-file FROM_FILE] [--config CONFIG] [--ckpt CKPT] [--seed SEED] [--precision {full,autocast}]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --prompt [PROMPT]     the prompt to render
-  --outdir [OUTDIR]     dir to write results to
-  --skip_grid           do not save a grid, only individual samples. Helpful when evaluating lots of samples
-  --skip_save           do not save individual samples. For speed measurements.
-  --ddim_steps DDIM_STEPS
-                        number of ddim sampling steps
-  --plms                use plms sampling
-  --laion400m           uses the LAION400M model
-  --fixed_code          if enabled, uses the same starting code across samples
-  --ddim_eta DDIM_ETA   ddim eta (eta=0.0 corresponds to deterministic sampling
-  --n_iter N_ITER       sample this often
-  --H H                 image height, in pixel space
-  --W W                 image width, in pixel space
-  --C C                 latent channels
-  --f F                 downsampling factor
-  --n_samples N_SAMPLES
-                        how many samples to produce for each given prompt. A.k.a. batch size
-                        (note that the seeds for each image in the batch will be unavailable)
-  --n_rows N_ROWS       rows in the grid (default: n_samples)
-  --scale SCALE         unconditional guidance scale: eps = eps(x, empty) + scale * (eps(x, cond) - eps(x, empty))
-  --from-file FROM_FILE
-                        if specified, load prompts from this file
-  --config CONFIG       path to config which constructs model
-  --ckpt CKPT           path to checkpoint of model
-  --seed SEED           the seed (for reproducible sampling)
-  --precision {full,autocast}
-                        evaluate at this precision
-
-```
-Note: The inference config for all v1 versions is designed to be used with EMA-only checkpoints. 
-For this reason `use_ema=False` is set in the configuration, otherwise the code will try to switch from
-non-EMA to EMA weights. If you want to examine the effect of EMA vs no EMA, we provide "full" checkpoints
-which contain both types of weights. For these, `use_ema=False` will load and use the non-EMA weights.
-
-
-#### Diffusers Integration
-
-Another way to download and sample Stable Diffusion is by using the [diffusers library](https://github.com/huggingface/diffusers/tree/main#new--stable-diffusion-is-now-fully-compatible-with-diffusers)
-```py
-# make sure you're logged in with `huggingface-cli login`
-from torch import autocast
-from diffusers import StableDiffusionPipeline, LMSDiscreteScheduler
-
-pipe = StableDiffusionPipeline.from_pretrained(
-	"CompVis/stable-diffusion-v1-3-diffusers", 
-	use_auth_token=True
-)
-
-prompt = "a photo of an astronaut riding a horse on mars"
-with autocast("cuda"):
-    image = pipe(prompt)["sample"][0]  
-    
-image.save("astronaut_rides_horse.png")
-```
-
-
-
-### Image Modification with Stable Diffusion
-
-By using a diffusion-denoising mechanism as first proposed by [SDEdit](https://arxiv.org/abs/2108.01073), the model can be used for different 
-tasks such as text-guided image-to-image translation and upscaling. Similar to the txt2img sampling script, 
-we provide a script to perform image modification with Stable Diffusion.  
-
-The following describes an example where a rough sketch made in [Pinta](https://www.pinta-project.com/) is converted into a detailed artwork.
-```
-python scripts/img2img.py --prompt "A fantasy landscape, trending on artstation" --init-img <path-to-img.jpg> --strength 0.8
-```
-Here, strength is a value between 0.0 and 1.0, that controls the amount of noise that is added to the input image. 
-Values that approach 1.0 allow for lots of variations but will also produce images that are not semantically consistent with the input. See the following example.
-
-**Input**
-
-![sketch-in](assets/stable-samples/img2img/sketch-mountains-input.jpg)
-
-**Outputs**
-
-![out3](assets/stable-samples/img2img/mountains-3.png)
-![out2](assets/stable-samples/img2img/mountains-2.png)
-
-This procedure can, for example, also be used to upscale samples from the base model.
-
-
-## Comments 
-
-- Our codebase for the diffusion models builds heavily on [OpenAI's ADM codebase](https://github.com/openai/guided-diffusion)
-and [https://github.com/lucidrains/denoising-diffusion-pytorch](https://github.com/lucidrains/denoising-diffusion-pytorch). 
-Thanks for open-sourcing!
-
-- The implementation of the transformer encoder is from [x-transformers](https://github.com/lucidrains/x-transformers) by [lucidrains](https://github.com/lucidrains?tab=repositories). 
-
-
-## BibTeX
-
-```
-@misc{rombach2021highresolution,
-      title={High-Resolution Image Synthesis with Latent Diffusion Models}, 
-      author={Robin Rombach and Andreas Blattmann and Dominik Lorenz and Patrick Esser and Björn Ommer},
-      year={2021},
-      eprint={2112.10752},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV}
-}
-
-```
-
-
+Please see the original README for more information on this software
+and underlying algorithm, located in the file README-CompViz.md.
