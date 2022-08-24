@@ -114,26 +114,6 @@ def load_img(path, shape):
     image = torch.from_numpy(image)
     return 2.*image - 1.
 
-def to_cv2_image(img):
-    if isinstance(img, np.ndarray):
-        return img
-    if isinstance(img, str):
-        return cv2.imread(img)
-    if isinstance(img, Image.Image):
-        return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-    assert(0)
-    return img        
-
-def to_pil_image(img):
-    if isinstance(img, Image.Image):
-        return img
-    if isinstance(img, str):
-        return Image.open(img).convert('RGB')
-    if isinstance(img, np.ndarray):        
-        return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
-    assert(0)
-    return img
-
 class CFGDenoiser(nn.Module):
     def __init__(self, model):
         super().__init__()
@@ -181,7 +161,7 @@ def make_callback(sampler, dynamic_threshold=None, static_threshold=None):
 
     return callback
 
-def generate(args):
+def generate(args, return_latent=False, return_sample=False):
     seed_everything(args.seed)
     os.makedirs(args.outdir, exist_ok=True)
 
@@ -197,7 +177,11 @@ def generate(args):
     data = [batch_size * [prompt]]
     init_latent = None
 
-    if args.init_image != None and args.init_image != '':
+    if args.init_latent is not None:
+        init_latent = args.init_latent
+    elif args.init_sample is not None:        
+        init_latent = model.get_first_stage_encoding(model.encode_first_stage(args.init_sample))
+    elif args.init_image != None and args.init_image != '':
         init_image = load_img(args.init_image, shape=(args.W, args.H)).to(device)
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
@@ -270,7 +254,13 @@ def generate(args):
                                                                     x_T=start_code,
                                                                     img_callback=callback)
 
+                        if return_latent:
+                            results.append(samples.cpu().numpy())
+
                         x_samples = model.decode_first_stage(samples)
+                        if return_sample:
+                            results.append(x_samples.cpu().numpy())
+
                         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
 
                         for x_sample in x_samples:
@@ -458,7 +448,7 @@ import cv2
 animation_mode = 'None' #@param ['None', '2D'] {type:'string'}
 
 key_frames = True #@param {type:"boolean"}
-max_frames = 10000#@param {type:"number"}
+max_frames = 1000#@param {type:"number"}
 
 interp_spline = 'Linear' #Do not change, currently will not look good. param ['Linear','Quadratic','Cubic']{type:"string"}
 angle = "0:(0)"#@param {type:"string"}
@@ -591,7 +581,7 @@ def DeforumArgs():
 
     #@markdown **Batch Settings**
     n_batch = 1 #@param
-    seed_behavior = "random" #@param ["iter","fixed","random"]
+    seed_behavior = "iter" #@param ["iter","fixed","random"]
 
     precision = 'autocast' 
     fixed_code = True
@@ -599,6 +589,8 @@ def DeforumArgs():
     f = 8
     prompt = ""
     timestring = ""
+    init_latent = None
+    init_sample = None
 
     return locals()
 
@@ -655,13 +647,15 @@ def render_image_batch(args):
                 index += 1
             args.seed = next_seed(args)
 
+prev_frame = None
 def render_animation(args):
+    global prev_frame
     # create output folder for the batch
     os.makedirs(args.outdir, exist_ok=True)
     print(f"Saving animation frames to {args.outdir}")
 
     # save settings for the batch
-    settings_filename = os.path.join(args.outdir, f"{args.timestring}_settings.txt")
+    settings_filename = os.path.join(args.outdir, f"{args.batchdir}_{args.timestring}_settings.txt")
     with open(settings_filename, "w+", encoding="utf-8") as f:
         json.dump(dict(args.__dict__), f, ensure_ascii=False, indent=4)
 
@@ -672,11 +666,11 @@ def render_animation(args):
     prompt_series = prompt_series.ffill().bfill()
 
     args.n_samples = 1
-    prev_frame = None
+    prev_sample = None
     for frame_idx in range(max_frames):
         print(f"Rendering animation frame {frame_idx} of {max_frames}")
 
-        if prev_frame != None:
+        if prev_sample is not None:
             if key_frames:
                 angle = angle_series[frame_idx]
                 zoom = zoom_series[frame_idx]
@@ -688,31 +682,36 @@ def render_animation(args):
                     f'translation_x: {translation_x}',
                     f'translation_y: {translation_y}',
                 )
-
             xform = make_xform_2d(args.W, args.H, translation_x, translation_y, angle, zoom)
-            prev_img = to_cv2_image(prev_frame)
-            prev_img = cv2.warpPerspective(
-                prev_img,
+
+            # transform previous frame
+            prev_img_f32 = rearrange(prev_sample.squeeze(), 'c h w -> h w c').astype(np.float32)
+            prev_img_f32 = cv2.warpPerspective(
+                prev_img_f32,
                 xform,
-                (prev_img.shape[1], prev_img.shape[0]),
+                (prev_img_f32.shape[1], prev_img_f32.shape[0]),
                 borderMode=cv2.BORDER_WRAP
             )
+            prev_sample = prev_img_f32[None].transpose(0, 3, 1, 2).astype(np.float16)
+            prev_sample = torch.from_numpy(prev_sample).to(device)
 
+            # use transformed previous frame as init for current
             args.use_init = True
-            args.init_image = 'temp.png'
+            args.init_sample = prev_sample
             args.strength = max(0.0, min(1.0, 1.0 - strength_previous_frame))
-            cv2.imwrite(args.init_image, prev_img)
 
         args.prompt = prompt_series[frame_idx]
         print(f"{args.prompt} {args.seed}")
-        results = generate(args)
+
+        results = generate(args, return_latent=False, return_sample=True)
+        sample, image = results[0], results[1]
 
         filename = f"{args.batchdir}_{args.timestring}_{frame_idx:04}.png"
-        results[0].save(os.path.join(args.outdir, filename))
-        prev_frame = results[0]
+        image.save(os.path.join(args.outdir, filename))
+        prev_sample = sample
         
         display.clear_output(wait=True)
-        display.display(results[0])
+        display.display(image)
 
         args.seed = next_seed(args)
 
@@ -775,7 +774,6 @@ else:
     mp4 = open(mp4_path,'rb').read()
     data_url = "data:video/mp4;base64," + b64encode(mp4).decode()
     display.display( display.HTML(f'<video controls loop><source src="{data_url}" type="video/mp4"></video>') )
-
 
 
 # %%
