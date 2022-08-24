@@ -174,6 +174,7 @@ repository and associated paper for details and limitations.
    * A new -v option allows you to generate multiple variants of an initial image
      in img2img mode. (kudos to Oceanswave)
    * Added ability to personalize text to image generation (kudos to nicolai256)
+   * Enabled all of the samplers from k_diffusion
    
 * v1.08 (24 August 2022)
    * Escape single quotes on the dream> command before trying to parse. This avoids
