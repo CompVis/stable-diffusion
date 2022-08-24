@@ -3,7 +3,7 @@
 # !!   "id": "c442uQJ_gUgy"
 # !! }}
 """
-# **Deforum Stable Diffusion**
+# **Deforum Stable Diffusion v0.0**
 [Stable Diffusion](https://github.com/CompVis/stable-diffusion) by Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer and the [Stability.ai](https://stability.ai/) Team. [K Diffusion](https://github.com/crowsonkb/k-diffusion) by [Katherine Crowson](https://twitter.com/RiversHaveWings). You need to get the ckpt file and put it on your Google Drive first to use this. It can be downloaded from [HuggingFace](https://huggingface.co/CompVis/stable-diffusion).
 
 Notebook by [deforum](https://discord.gg/upmXXsrwZc)
@@ -483,13 +483,13 @@ def DeforumArgs():
 
     #@markdown **Init Settings**
     use_init = False #@param {type:"boolean"}
-    init_image = "/content/drive/MyDrive/AI/escape.jpg" #@param {type:"string"}
-    strength = 0.5 #@param {type:"number"}
+    init_image = "https://cdn.pixabay.com/photo/2022/07/30/13/10/green-longhorn-beetle-7353749_1280.jpg" #@param {type:"string"}
+    strength = 0.3 #@param {type:"number"}
 
     #@markdown **Sampling Settings**
     seed = -1 #@param
-    sampler = 'klms' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
-    steps = 100 #@param
+    sampler = 'euler_ancestral' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
+    steps = 20 #@param
     scale = 7 #@param
     eta = 0.0 #@param
     dynamic_threshold = None
