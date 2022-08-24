@@ -198,9 +198,8 @@ def do_run(device, model, opt):
                     grid = rearrange(grid, 'n b c h w -> (n b) c h w')
                     grid = make_grid(grid, nrow=n_rows)
 
-                    add_metadata = True
-                    metadata = PngInfo()
-                    if add_metadata == True:
+                    if opt.hide_metadata == False:
+                        metadata = PngInfo()
                         metadata.add_text("prompt", str(prompts))
                         metadata.add_text("seed", str(opt.seed))
                         metadata.add_text("steps", str(opt.ddim_steps))
@@ -488,6 +487,7 @@ class Settings:
     cool_down = 0.0
     checkpoint = "./models/sd-v1-4.ckpt"
     use_jpg = False
+    hide_metadata = False
     
     def apply_settings_file(self, filename, settings_file):
         print(f'Applying settings file: {filename}')
@@ -539,6 +539,8 @@ class Settings:
             self.checkpoint = (settings_file["checkpoint"])
         if is_json_key_present(settings_file, 'use_jpg'):
             self.use_jpg = (settings_file["use_jpg"])
+        if is_json_key_present(settings_file, 'hide_metadata'):
+            self.hide_metadata = (settings_file["hide_metadata"])
 
 def esrgan_resize(input, id):
     input.save(f'_esrgan_orig{id}.png')
@@ -605,6 +607,17 @@ def do_gobig(gobig_init, gobig_scale, device, model, opt):
     final_output.save(f'{result}_gobig{opt.filetype}', quality = opt.quality)
 
 def main():
+    print('\nPROG ROCK STABLE')
+    print('-------------------')
+
+    # rolling a d20 to see if I should pester you about supporting PRD.
+    # Apologies if this offends you. At least it's only on a critical miss, right?
+    d20 = random.randint(1, 20)
+    if d20 == 1:
+        print('Please consider supporting my Patreon. Thanks! https://is.gd/rVX6IH')
+    else:
+        print('')
+
     cl_args = parse_args()
 
     # Load the JSON config files
@@ -709,6 +722,7 @@ def main():
                 "gobig_realesrgan": settings.gobig_realesrgan,
                 "config": config,
                 "filetype": filetype,
+                "hide_metadata": settings.hide_metadata,
                 "quality": quality,
                 "device_id": device_id
             }
