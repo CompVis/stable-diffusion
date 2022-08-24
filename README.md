@@ -102,11 +102,13 @@ do not need to add up to 1.
 
 ## Changes
 
-* v1.08 (?? August 2022)
+* v1.08 (24 August 2022)
    * Escape single quotes on the dream> command before trying to parse. This avoids
      parse errors.
-   * Removed instruction to install Python3.8 as first step in Windows installed.
-     Turns out that anaconda3 does it for you!
+   * Removed instruction to get Python3.8 as first step in Windows install.
+     Anaconda3 does it for you.
+   * Added bounds checks for numeric arguments that could cause crashes.
+   * Cleaned up the copyright and license agreement files.
 
 * v1.07 (23 August 2022)
    * Image filenames will now never fill gaps in the sequence, but will be assigned the
@@ -381,3 +383,9 @@ to send me an email if you use and like the script.
 
 *Contributions by:* [Peter Kowalczyk](https://github.com/slix), [Henry Harrison](https://github.com/hwharrison), [xraxra](https://github.com/xraxra), and [bmaltais](https://github.com/bmaltais)
 
+Original portions of the software are Copyright (c) 2020 Lincoln D. Stein (https://github.com/lstein)
+
+#Further Reading
+
+Please see the original README for more information on this software
+and underlying algorithm, located in the file README-CompViz.md.
