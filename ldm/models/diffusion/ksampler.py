@@ -67,7 +67,7 @@ class KSampler(object):
             x = torch.randn([batch_size, *shape], device=self.device) * sigmas[0] # for GPU draw
         model_wrap_cfg = CFGDenoiser(self.model)
         extra_args = {'cond': conditioning, 'uncond': unconditional_conditioning, 'cond_scale': unconditional_guidance_scale}
-        return (K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not self.accelerator.is_main_process),
+        return (K.sampling.__dict__[f'sample_{self.schedule}'](model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not self.accelerator.is_main_process),
                 None)
 
     def gather(samples_ddim):

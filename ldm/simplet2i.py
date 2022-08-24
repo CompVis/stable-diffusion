@@ -11,7 +11,7 @@ t2i = T2I(outdir      = <path>        // outputs/txt2img-samples
           batch_size       = <integer>     // how many images to generate per sampling (1)
           steps       = <integer>     // 50
           seed        = <integer>     // current system time
-          sampler_name= ['ddim','plms','klms']  // klms
+          sampler_name= ['ddim', 'k_dpm_2_a', 'k_dpm_2', 'k_euler_a', 'k_euler', 'k_heun', 'k_lms', 'plms']  // k_lms
           grid        = <boolean>     // false
           width       = <integer>     // image width, multiple of 64 (512)
           height      = <integer>     // image height, multiple of 64 (512)
@@ -435,18 +435,28 @@ The vast majority of these arguments default to reasonable values.
             except AttributeError:
                 raise SystemExit
 
+            msg = f'setting sampler to {self.sampler_name}'
             if self.sampler_name=='plms':
-                print("setting sampler to plms")
                 self.sampler = PLMSSampler(self.model)
             elif self.sampler_name == 'ddim':
-                print("setting sampler to ddim")
                 self.sampler = DDIMSampler(self.model)
-            elif self.sampler_name == 'klms':
-                print("setting sampler to klms")
+            elif self.sampler_name == 'k_dpm_2_a':
+                self.sampler = KSampler(self.model,'dpm_2_ancestral')
+            elif self.sampler_name == 'k_dpm_2':
+                self.sampler = KSampler(self.model,'dpm_2')
+            elif self.sampler_name == 'k_euler_a':
+                self.sampler = KSampler(self.model,'euler_ancestral')
+            elif self.sampler_name == 'k_euler':
+                self.sampler = KSampler(self.model,'euler')
+            elif self.sampler_name == 'k_heun':
+                self.sampler = KSampler(self.model,'heun')
+            elif self.sampler_name == 'k_lms':
                 self.sampler = KSampler(self.model,'lms')
             else:
-                print(f"unsupported sampler {self.sampler_name}, defaulting to plms")
+                msg = f'unsupported sampler {self.sampler_name}, defaulting to plms'
                 self.sampler = PLMSSampler(self.model)
+
+            print(msg)
 
         return self.model
                 
