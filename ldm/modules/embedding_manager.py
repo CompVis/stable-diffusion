@@ -16,7 +16,6 @@ def get_clip_token_for_string(tokenizer, string):
     batch_encoding = tokenizer(string, truncation=True, max_length=77, return_length=True,
                                return_overflowing_tokens=False, padding="max_length", return_tensors="pt")
     tokens = batch_encoding["input_ids"]
-    sys.stdout.write(f"tokeme: {tokens}")
     assert torch.count_nonzero(tokens - 49407) == 2, f"String '{string}' maps to more than a single token. Please use another string"
 
     return tokens[0, 1]
