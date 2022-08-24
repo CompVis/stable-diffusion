@@ -99,13 +99,13 @@ The vast majority of these arguments default to reasonable values.
     def __init__(self,
                  batch_size=1,
                  iterations = 1,
-                 grid=False,
-                 individual=None, # redundant
                  steps=50,
                  seed=None,
                  cfg_scale=7.5,
                  weights="models/ldm/stable-diffusion-v1/model.ckpt",
                  config = "configs/stable-diffusion/v1-inference.yaml",
+                 width=512,
+                 height=512,
                  sampler_name="klms",
                  latent_channels=4,
                  downsampling_factor=8,
@@ -121,7 +121,6 @@ The vast majority of these arguments default to reasonable values.
         self.iterations = iterations
         self.width      = width
         self.height     = height
-        self.grid       = grid
         self.steps      = steps
         self.cfg_scale  = cfg_scale
         self.weights    = weights
@@ -143,25 +142,26 @@ The vast majority of these arguments default to reasonable values.
         else:
             self.seed = seed
 
-    def generate(self,
-                 # these are common
-                 prompt,
-                 batch_size=None,
-                 iterations=None,
-                 steps=None,
-                 seed=None,
-                 cfg_scale=None,
-                 ddim_eta=None,
-                 skip_normalize=False,
-                 image_callback=None,
-                 # these are specific to txt2img
-                 width=None,
-                 height=None,
-                 # these are specific to img2img
-                 init_img=None,
-                 strength=None,
-                 variants=None):
-        '''ldm.generate() is the common entry point for txt2img() and img2img()'''
+    def prompt2image(self,
+                     # these are common
+                     prompt,
+                     batch_size=None,
+                     iterations=None,
+                     steps=None,
+                     seed=None,
+                     cfg_scale=None,
+                     ddim_eta=None,
+                     skip_normalize=False,
+                     image_callback=None,
+                     # these are specific to txt2img
+                     width=None,
+                     height=None,
+                     # these are specific to img2img
+                     init_img=None,
+                     strength=None,
+                     variants=None,
+                     **args):   # eat up additional cruft
+        '''ldm.prompt2image() is the common entry point for txt2img() and img2img()'''
         steps      = steps      or self.steps
         seed       = seed       or self.seed
         width      = width      or self.width
@@ -178,10 +178,6 @@ The vast majority of these arguments default to reasonable values.
 
         data = [batch_size * [prompt]]
         scope = autocast if self.precision=="autocast" else nullcontext
-        if grid:
-            callback = self.image2png
-        else:
-            callback = None
 
         tic    = time.time()
         if init_img:
@@ -212,7 +208,7 @@ The vast majority of these arguments default to reasonable values.
                  steps,seed,cfg_scale,ddim_eta,
                  skip_normalize,
                  width,height,
-                 callback=callback):    # the callback is called each time a new Image is generated
+                 callback):    # the callback is called each time a new Image is generated
         """
         Generate an image from the prompt, writing iteration images into the outdir
         The output is a list of lists in the format: [[image1,seed1], [image2,seed2],...]
@@ -224,14 +220,14 @@ The vast majority of these arguments default to reasonable values.
 
         # Gawd. Too many levels of indent here. Need to refactor into smaller routines!
         try:
-            with precision_scope(self.device.type), model.ema_scope():
+            with precision_scope(self.device.type), self.model.ema_scope():
                 all_samples = list()
                 for n in trange(iterations, desc="Sampling"):
                     seed_everything(seed)
                     for prompts in tqdm(data, desc="data", dynamic_ncols=True):
                         uc = None
                         if cfg_scale != 1.0:
-                            uc = model.get_learned_conditioning(batch_size * [""])
+                            uc = self.model.get_learned_conditioning(batch_size * [""])
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
 
@@ -247,9 +243,9 @@ The vast majority of these arguments default to reasonable values.
                                 weight = weights[i]
                                 if not skip_normalize:
                                     weight = weight / totalWeight
-                                c = torch.add(c,model.get_learned_conditioning(subprompts[i]), alpha=weight)
+                                c = torch.add(c,self.model.get_learned_conditioning(subprompts[i]), alpha=weight)
                         else: # just standard 1 prompt
-                            c = model.get_learned_conditioning(prompts)
+                            c = self.model.get_learned_conditioning(prompts)
 
                         shape = [self.latent_channels, height // self.downsampling_factor, width // self.downsampling_factor]
                         samples_ddim, _ = sampler.sample(S=steps,
@@ -261,7 +257,7 @@ The vast majority of these arguments default to reasonable values.
                                                          unconditional_conditioning=uc,
                                                          eta=ddim_eta)
 
-                        x_samples_ddim = model.decode_first_stage(samples_ddim)
+                        x_samples_ddim = self.model.decode_first_stage(samples_ddim)
                         x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
                         for x_sample in x_samples_ddim:
                             x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
@@ -277,8 +273,6 @@ The vast majority of these arguments default to reasonable values.
         except RuntimeError as e:
             print(str(e))
 
-        toc = time.time()
-        print(f'{image_count} images generated in',"%4.2fs"% (toc-tic))
         return images
         
     @torch.no_grad()
@@ -297,14 +291,14 @@ The vast majority of these arguments default to reasonable values.
         # PLMS sampler not supported yet, so ignore previous sampler
         if self.sampler_name!='ddim':
             print(f"sampler '{self.sampler_name}' is not yet supported. Using DDM sampler")
-            sampler = DDIMSampler(model, device=self.device)
+            sampler = DDIMSampler(self.model, device=self.device)
         else:
             sampler = self.sampler
 
         init_image = self._load_img(init_img).to(self.device)
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         with precision_scope(self.device.type):
-            init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
+            init_latent = self.model.get_first_stage_encoding(self.model.encode_first_stage(init_image))  # move to latent space
 
         sampler.make_schedule(ddim_num_steps=steps, ddim_eta=ddim_eta, verbose=False)
         
@@ -314,14 +308,14 @@ The vast majority of these arguments default to reasonable values.
         images = list()
 
         try:
-            with precision_scope(self.device.type), model.ema_scope():
+            with precision_scope(self.device.type), self.model.ema_scope():
                 all_samples = list()
                 for n in trange(iterations, desc="Sampling"):
                     seed_everything(seed)
                     for prompts in tqdm(data, desc="data", dynamic_ncols=True):
                         uc = None
                         if cfg_scale != 1.0:
-                            uc = model.get_learned_conditioning(batch_size * [""])
+                            uc = self.model.get_learned_conditioning(batch_size * [""])
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
 
@@ -337,9 +331,9 @@ The vast majority of these arguments default to reasonable values.
                                 weight = weights[i]
                                 if not skip_normalize:
                                     weight = weight / totalWeight
-                                c = torch.add(c,model.get_learned_conditioning(subprompts[i]), alpha=weight)
+                                c = torch.add(c,self.model.get_learned_conditioning(subprompts[i]), alpha=weight)
                         else: # just standard 1 prompt
-                            c = model.get_learned_conditioning(prompts)
+                            c = self.model.get_learned_conditioning(prompts)
 
                         # encode (scaled latent)
                         z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(self.device))
@@ -347,7 +341,7 @@ The vast majority of these arguments default to reasonable values.
                         samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=cfg_scale,
                                                     unconditional_conditioning=uc,)
 
-                        x_samples = model.decode_first_stage(samples)
+                        x_samples = self.model.decode_first_stage(samples)
                         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
 
                         for x_sample in x_samples:
