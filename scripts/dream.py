@@ -183,6 +183,7 @@ def main_loop(t2i,parser,log,infile):
         if opt.variants is not None:
             print(f"Generating {opt.variants} variant(s)...")
             newopt = copy.deepcopy(opt)
+            newopt.iterations = 1
             newopt.variants = None
             for r in results:
                 newopt.init_img = r[0]
