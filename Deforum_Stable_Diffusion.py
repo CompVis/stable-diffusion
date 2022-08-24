@@ -475,7 +475,7 @@ def DeforumArgs():
 
     #@markdown **Image Settings**
     n_samples = 1 #@param
-    n_rows = 1 #@param
+    n_rows = 1
     W = 512 #@param
     H = 576 #@param
     W, H = map(lambda x: x - x % 64, (W, H))  # resize to integer multiple of 64
