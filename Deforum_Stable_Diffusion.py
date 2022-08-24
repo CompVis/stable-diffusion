@@ -57,24 +57,23 @@ if setup_environment:
 import json
 from IPython import display
 
-import sys, os
-import argparse, glob
-import torch
-import torch.nn as nn
+import argparse, glob, os, sys, time
 import numpy as np
+import random
 import requests
 import shutil
-from types import SimpleNamespace
+import torch
+import torch.nn as nn
+from contextlib import contextmanager, nullcontext
+from einops import rearrange, repeat
+from itertools import islice
 from omegaconf import OmegaConf
 from PIL import Image
-from tqdm import tqdm, trange
-from itertools import islice
-from einops import rearrange, repeat
-from torchvision.utils import make_grid
-import time
 from pytorch_lightning import seed_everything
+from torchvision.utils import make_grid
+from tqdm import tqdm, trange
+from types import SimpleNamespace
 from torch import autocast
-from contextlib import contextmanager, nullcontext
 
 sys.path.append('./src/taming-transformers')
 sys.path.append('./src/clip')
@@ -86,7 +85,6 @@ from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 
-import accelerate
 from k_diffusion import sampling
 from k_diffusion.external import CompVisDenoiser
 
@@ -115,6 +113,26 @@ def load_img(path, shape):
     image = image[None].transpose(0, 3, 1, 2)
     image = torch.from_numpy(image)
     return 2.*image - 1.
+
+def to_cv2_image(img):
+    if isinstance(img, np.ndarray):
+        return img
+    if isinstance(img, str):
+        return cv2.imread(img)
+    if isinstance(img, Image.Image):
+        return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+    assert(0)
+    return img        
+
+def to_pil_image(img):
+    if isinstance(img, Image.Image):
+        return img
+    if isinstance(img, str):
+        return Image.open(img).convert('RGB')
+    if isinstance(img, np.ndarray):        
+        return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+    assert(0)
+    return img
 
 class CFGDenoiser(nn.Module):
     def __init__(self, model):
@@ -163,152 +181,104 @@ def make_callback(sampler, dynamic_threshold=None, static_threshold=None):
 
     return callback
 
-def run(args, local_seed):
+def generate(args):
+    seed_everything(args.seed)
+    os.makedirs(args.outdir, exist_ok=True)
 
-    # load settings
-    accelerator = accelerate.Accelerator()
-    device = accelerator.device
-    seeds = torch.randint(-2 ** 63, 2 ** 63 - 1, [accelerator.num_processes])
-    torch.manual_seed(seeds[accelerator.process_index].item())
-
-    # plms
-    if args.sampler=="plms":
-        args.eta = 0
+    if args.sampler == 'plms':
         sampler = PLMSSampler(model)
     else:
         sampler = DDIMSampler(model)
 
-    model_wrap = CompVisDenoiser(model)
-    sigma_min, sigma_max = model_wrap.sigmas[0].item(), model_wrap.sigmas[-1].item()
-
+    model_wrap = CompVisDenoiser(model)       
     batch_size = args.n_samples
-    n_rows = args.n_rows if args.n_rows > 0 else batch_size
+    prompt = args.prompt
+    assert prompt is not None
+    data = [batch_size * [prompt]]
+    init_latent = None
 
-    data = list(chunk(args.prompts, batch_size))
-    sample_index = 0
-
-    start_code = None
-    
-    # init image
-    if args.use_init:
+    if args.init_image != None and args.init_image != '':
         init_image = load_img(args.init_image, shape=(args.W, args.H)).to(device)
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
 
-        sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.eta, verbose=False)
+    sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.ddim_eta, verbose=False)
 
-        assert 0. <= args.strength <= 1., 'can only work with strength in [0.0, 1.0]'
-        if args.sampler == 'plms':
-            print("...inits have not been implemented for plms")
-            print("...using the klms sampler")
-            args.sampler = 'klms'
-        t_enc = int(args.strength * args.steps)
-        print(f"target t_enc is {t_enc} steps")
+    t_enc = int(args.strength * args.steps)
 
-    # no init image
-    else:
-        if args.fixed_code:
-            start_code = torch.randn([args.n_samples, args.C, args.H // args.f, args.W // args.f], device=device)
+    start_code = None
+    if args.fixed_code and init_latent == None:
+        start_code = torch.randn([args.n_samples, args.C, args.H // args.f, args.W // args.f], device=device)
 
-    precision_scope = autocast if args.precision=="autocast" else nullcontext
+    callback = make_callback(sampler=args.sampler,
+                            dynamic_threshold=args.dynamic_threshold, 
+                            static_threshold=args.static_threshold)
+
+    results = []
+    precision_scope = autocast if args.precision == "autocast" else nullcontext
     with torch.no_grad():
         with precision_scope("cuda"):
             with model.ema_scope():
-                tic = time.time()
-                for prompt_index, prompts in enumerate(data):
-                    
-                    args.timestring = time.strftime('%Y%m%d%H%M%S')
-                    
-                    print(prompts)
-                    if args.seed_behavior == "iter":
-                        prompt_seed = local_seed + prompt_index
-                    elif args.seed_behavior == "random":
-                        prompt_seed = np.random.randint(0,4294967295)
-                    else:
-                        prompt_seed = local_seed
-                    seed_everything(prompt_seed)
+                for n in range(args.n_samples):
+                    for prompts in data:
+                        uc = None
+                        if args.scale != 1.0:
+                            uc = model.get_learned_conditioning(batch_size * [""])
+                        if isinstance(prompts, tuple):
+                            prompts = list(prompts)
+                        c = model.get_learned_conditioning(prompts)
 
-                    callback = make_callback(sampler=args.sampler,
-                                            dynamic_threshold=args.dynamic_threshold, 
-                                            static_threshold=args.static_threshold)                            
-
-                    uc = None
-                    if args.scale != 1.0:
-                        uc = model.get_learned_conditioning(batch_size * [""])
-                    if isinstance(prompts, tuple):
-                        prompts = list(prompts)
-                    c = model.get_learned_conditioning(prompts)
-
-                    if args.sampler in ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral"]:
-                        shape = [args.C, args.H // args.f, args.W // args.f]
-                        sigmas = model_wrap.get_sigmas(args.steps)
-                        torch.manual_seed(prompt_seed)
-                        if args.use_init:
-                            sigmas = sigmas[len(sigmas)-t_enc-1:]
-                            x = init_latent + torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
-                        else:
-                            x = torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
-                        model_wrap_cfg = CFGDenoiser(model_wrap)
-                        extra_args = {'cond': c, 'uncond': uc, 'cond_scale': args.scale}
-                        if args.sampler=="klms":
-                            samples = sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
-                        elif args.sampler=="dpm2":
-                            samples = sampling.sample_dpm_2(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
-                        elif args.sampler=="dpm2_ancestral":
-                            samples = sampling.sample_dpm_2_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
-                        elif args.sampler=="heun":
-                            samples = sampling.sample_heun(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
-                        elif args.sampler=="euler":
-                            samples = sampling.sample_euler(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
-                        elif args.sampler=="euler_ancestral":
-                            samples = sampling.sample_euler_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process, callback=callback)
-
-                        x_samples = model.decode_first_stage(samples)
-                        x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
-                        x_samples = accelerator.gather(x_samples)
-
-                    else:
-
-                        # no init image
-                        if not args.use_init:
+                        if args.sampler in ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral"]:
                             shape = [args.C, args.H // args.f, args.W // args.f]
-
-                            samples, _ = sampler.sample(S=args.steps,
-                                                            conditioning=c,
-                                                            batch_size=args.n_samples,
-                                                            shape=shape,
-                                                            verbose=False,
-                                                            unconditional_guidance_scale=args.scale,
-                                                            unconditional_conditioning=uc,
-                                                            eta=args.eta,
-                                                            x_T=start_code,
-                                                            img_callback=callback)
-
-                        # init image
+                            sigmas = model_wrap.get_sigmas(args.steps)
+                            if args.use_init:
+                                sigmas = sigmas[len(sigmas)-t_enc-1:]
+                                x = init_latent + torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
+                            else:
+                                x = torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
+                            model_wrap_cfg = CFGDenoiser(model_wrap)
+                            extra_args = {'cond': c, 'uncond': uc, 'cond_scale': args.scale}
+                            if args.sampler=="klms":
+                                samples = sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=False, callback=callback)
+                            elif args.sampler=="dpm2":
+                                samples = sampling.sample_dpm_2(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=False, callback=callback)
+                            elif args.sampler=="dpm2_ancestral":
+                                samples = sampling.sample_dpm_2_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=False, callback=callback)
+                            elif args.sampler=="heun":
+                                samples = sampling.sample_heun(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=False, callback=callback)
+                            elif args.sampler=="euler":
+                                samples = sampling.sample_euler(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=False, callback=callback)
+                            elif args.sampler=="euler_ancestral":
+                                samples = sampling.sample_euler_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=False, callback=callback)
                         else:
-                            # encode (scaled latent)
-                            z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
-                            # decode it
-                            samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=args.scale,
-                                                    unconditional_conditioning=uc,)
+
+                            if init_latent != None:
+                                z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
+                                samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=args.scale,
+                                                        unconditional_conditioning=uc,)
+                            else:
+                                if args.sampler == 'plms' or args.sampler == 'ddim':
+                                    shape = [args.C, args.H // args.f, args.W // args.f]
+                                    samples, _ = sampler.sample(S=args.steps,
+                                                                    conditioning=c,
+                                                                    batch_size=args.n_samples,
+                                                                    shape=shape,
+                                                                    verbose=False,
+                                                                    unconditional_guidance_scale=args.scale,
+                                                                    unconditional_conditioning=uc,
+                                                                    eta=args.ddim_eta,
+                                                                    x_T=start_code,
+                                                                    img_callback=callback)
 
                         x_samples = model.decode_first_stage(samples)
                         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
-                    
 
-                    grid, images = save_samples(
-                        args, x_samples=x_samples, seed=prompt_seed, n_rows=n_rows
-                    )
-                    if args.display_samples:
-                        for im in images:
-                            display.display(im)
-                    if args.display_grid:
-                        display.display(grid)
+                        for x_sample in x_samples:
+                            x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
+                            image = Image.fromarray(x_sample.astype(np.uint8))
+                            results.append(image)
+    return results
 
-                # stop timer
-                toc = time.time()
-
-    #print(f"Your samples are ready and waiting for you here: \n{outpath} \n" f" \nEnjoy.")
 
 # %%
 # !! {"metadata":{
@@ -461,58 +431,107 @@ if load_on_run_all:
 # !!   "id": "ov3r4RD1tzsT"
 # !! }}
 """
-# **Run**
+# Settings
 """
 
 # %%
 # !! {"metadata":{
-# !!   "id": "qH74gBWDd2oq",
-# !!   "cellView": "form"
+# !!   "id": "0j7rgxvLvfay"
 # !! }}
-def DeforumArgs():
-    #@markdown **Save & Display Settings**
-    batchdir = "test" #@param {type:"string"}
-    outdir = get_output_folder(output_path, batchdir)
-    save_grid = False
-    save_samples = True #@param {type:"boolean"}
-    save_settings = True #@param {type:"boolean"}
-    display_grid = False
-    display_samples = True #@param {type:"boolean"}
+"""
+### Animation Settings
+"""
 
-    #@markdown **Image Settings**
-    n_samples = 1 #@param
-    n_rows = 1
-    W = 512 #@param
-    H = 576 #@param
-    W, H = map(lambda x: x - x % 64, (W, H))  # resize to integer multiple of 64
+# %%
+# !! {"metadata":{
+# !!   "cellView": "form",
+# !!   "id": "8HJN2TE3vh-J"
+# !! }}
+import pandas as pd
+import subprocess
+from glob import glob
+from resize_right import resize
+import torchvision.transforms as T
+import torchvision.transforms.functional as TF
+import cv2
+
+#@markdown ####**Animation Mode:**
+animation_mode = 'None' #@param ['None', '2D'] {type:'string'}
+
+key_frames = True #@param {type:"boolean"}
+max_frames = 10000#@param {type:"number"}
+
+interp_spline = 'Linear' #Do not change, currently will not look good. param ['Linear','Quadratic','Cubic']{type:"string"}
+angle = "0:(0)"#@param {type:"string"}
+zoom = "0: (1.02)"#@param {type:"string"}
+translation_x = "0: (0)"#@param {type:"string"}
+translation_y = "0: (0)"#@param {type:"string"}
+
+strength_previous_frame = 0.9 #@param {type:"number"}
+
+def make_xform_2d(width, height, translation_x, translation_y, angle, scale):
+    center = (height//2, width//2)
+    trans_mat = np.float32([[1, 0, translation_x], [0, 1, translation_y]])
+    rot_mat = cv2.getRotationMatrix2D(center, angle, scale)
+    trans_mat = np.vstack([trans_mat, [0,0,1]])
+    rot_mat = np.vstack([rot_mat, [0,0,1]])
+    return np.matmul(rot_mat, trans_mat)
+
+def parse_key_frames(string, prompt_parser=None):
+    import re
+    pattern = r'((?P<frame>[0-9]+):[\s]*[\(](?P<param>[\S\s]*?)[\)])'
+    frames = dict()
+    for match_object in re.finditer(pattern, string):
+        frame = int(match_object.groupdict()['frame'])
+        param = match_object.groupdict()['param']
+        if prompt_parser:
+            frames[frame] = prompt_parser(param)
+        else:
+            frames[frame] = param
+    if frames == {} and len(string) != 0:
+        raise RuntimeError('Key Frame string not correctly formatted')
+    return frames
+
+def get_inbetweens(key_frames, integer=False):
+    key_frame_series = pd.Series([np.nan for a in range(max_frames)])
+
+    for i, value in key_frames.items():
+        key_frame_series[i] = value
+    key_frame_series = key_frame_series.astype(float)
+    
+    interp_method = interp_spline
+    if interp_method == 'Cubic' and len(key_frames.items()) <=3:
+      interp_method = 'Quadratic'    
+    if interp_method == 'Quadratic' and len(key_frames.items()) <= 2:
+      interp_method = 'Linear'
+          
+    key_frame_series[0] = key_frame_series[key_frame_series.first_valid_index()]
+    key_frame_series[max_frames-1] = key_frame_series[key_frame_series.last_valid_index()]
+    # key_frame_series = key_frame_series.interpolate(method=intrp_method,order=1, limit_direction='both')
+    key_frame_series = key_frame_series.interpolate(method=interp_method.lower(),limit_direction='both')
+    if integer:
+        return key_frame_series.astype(int)
+    return key_frame_series
 
 
-    #@markdown **Init Settings**
-    use_init = False #@param {type:"boolean"}
-    init_image = "https://cdn.pixabay.com/photo/2022/07/30/13/10/green-longhorn-beetle-7353749_1280.jpg" #@param {type:"string"}
-    strength = 0.3 #@param {type:"number"}
+if animation_mode == 'None':
+    max_frames = 1
 
-    #@markdown **Sampling Settings**
-    seed = -1 #@param
-    sampler = 'euler_ancestral' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
-    steps = 80 #@param
-    scale = 7 #@param
-    eta = 0.0 #@param
-    dynamic_threshold = None
-    static_threshold = None   
+if key_frames:
+    angle_series = get_inbetweens(parse_key_frames(angle))
+    zoom_series = get_inbetweens(parse_key_frames(zoom))
+    translation_x_series = get_inbetweens(parse_key_frames(translation_x))
+    translation_y_series = get_inbetweens(parse_key_frames(translation_y))
 
-    #@markdown **Batch Settings**
-    n_batch = 2 #@param
-    seed_behavior = "fixed" #@param ["iter","fixed","random"]
 
-    precision = 'autocast' 
-    fixed_code = True
-    C = 4
-    f = 8
-    prompts = []
-    timestring = ""
-
-    return locals()
+# %%
+# !! {"metadata":{
+# !!   "id": "63UOJvU3xdPS"
+# !! }}
+"""
+### Prompts
+`animation_mode: None` batches on list of *prompts*. `animation_mode: 2D` uses *animation_prompts* key frame sequence
+"""
 
 # %%
 # !! {"metadata":{
@@ -524,21 +543,97 @@ prompts = [
     #"the third prompt I don't want it I commented it with an",
 ]
 
+animation_prompts = {
+    0: "a beautiful forest by Asher Brown Durand, trending on Artstation",
+    10: "a vast heavenly meadow in spring, by Ivan Shishkin, trending on Artstation",
+}
+
 # %%
 # !! {"metadata":{
-# !!   "cellView": "form",
-# !!   "id": "cxx8BzxjiaXg"
+# !!   "id": "s8RAo2zI-vQm"
 # !! }}
-#@markdown **Run**
+"""
+# Run
+"""
+
+# %%
+# !! {"metadata":{
+# !!   "id": "qH74gBWDd2oq",
+# !!   "cellView": "form"
+# !! }}
+
+def DeforumArgs():
+    #@markdown **Save & Display Settings**
+    batchdir = "test" #@param {type:"string"}
+    outdir = get_output_folder(output_path, batchdir)
+    save_grid = False
+    save_settings = True #@param {type:"boolean"}
+    save_samples = True #@param {type:"boolean"}
+    display_samples = True #@param {type:"boolean"}
+
+    #@markdown **Image Settings**
+    n_samples = 1 #@param
+    W = 512 #@param
+    H = 512 #@param
+    W, H = map(lambda x: x - x % 64, (W, H))  # resize to integer multiple of 64
+
+    #@markdown **Init Settings**
+    use_init = False #@param {type:"boolean"}
+    init_image = "https://cdn.pixabay.com/photo/2022/07/30/13/10/green-longhorn-beetle-7353749_1280.jpg" #@param {type:"string"}
+    strength = 0.1 #@param {type:"number"}
+
+    #@markdown **Sampling Settings**
+    seed = -1 #@param
+    sampler = 'klms' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
+    steps = 100 #@param
+    scale = 7 #@param
+    ddim_eta = 0.0 #@param
+    dynamic_threshold = None
+    static_threshold = None   
+
+    #@markdown **Batch Settings**
+    n_batch = 1 #@param
+    seed_behavior = "random" #@param ["iter","fixed","random"]
+
+    precision = 'autocast' 
+    fixed_code = True
+    C = 4
+    f = 8
+    prompt = ""
+    timestring = ""
+
+    return locals()
+
+def next_seed(args):
+    if args.seed_behavior == 'iter':
+        args.seed += 1
+    elif args.seed_behavior == 'fixed':
+        pass # always keep seed the same
+    else:
+        args.seed = random.randint(0, 2**32)
+    return args.seed
+
+
 args = SimpleNamespace(**DeforumArgs())
-args.prompts = prompts
+args.timestring = time.strftime('%Y%m%d%H%M%S')
+args.strength = max(0.0, min(1.0, 1.0 - args.strength))
 
-def do_batch_run():
-    # create output folder
+if args.seed == -1:
+    args.seed = random.randint(0, 2**32)
+if not args.use_init:
+    args.init_image = None
+    args.strength = 0
+if args.sampler == 'plms' and args.use_init or animation_mode != 'None':
+    print(f"Init images aren't supported with PLMS yet, switching to KLMS")
+    args.sampler = 'klms'
+if args.sampler != 'ddim':
+    args.ddim_eta = 0
+
+def render_image_batch(args):
+    # create output folder for the batch
     os.makedirs(args.outdir, exist_ok=True)
-
-    # current timestring for filenames
-    args.timestring = time.strftime('%Y%m%d%H%M%S')
+    if args.save_settings or args.save_samples:
+        print(f"Saving to {os.path.join(args.outdir, args.timestring)}_*")
 
     # save settings for the batch
     if args.save_settings:
@@ -546,18 +641,87 @@ def do_batch_run():
         with open(filename, "w+", encoding="utf-8") as f:
             json.dump(dict(args.__dict__), f, ensure_ascii=False, indent=4)
 
+    index = 0
     for batch_index in range(args.n_batch):
+        print(f"Batch {batch_index+1} of {args.n_batch}")
+        
+        for prompt in prompts:
+            args.prompt = prompt
+            results = generate(args)
+            for image in results:
+                if args.save_samples:
+                    filename = f"{args.timestring}_{index:04}_{args.seed}.png"
+                    image.save(os.path.join(args.outdir, filename))
+                if args.display_samples:
+                    display.display(image)
+                index += 1
+            args.seed = next_seed(args)
 
-        # random seed
-        if args.seed == -1:
-            local_seed = np.random.randint(0,4294967295)
-        else:
-            local_seed = args.seed
+def render_animation(args):
+    # create output folder for the batch
+    os.makedirs(args.outdir, exist_ok=True)
+    print(f"Saving animation frames to {args.outdir}")
 
-        print(f"run {batch_index+1} of {args.n_batch}")
-        run(args, local_seed)
+    # save settings for the batch
+    settings_filename = os.path.join(args.outdir, f"{args.timestring}_settings.txt")
+    with open(settings_filename, "w+", encoding="utf-8") as f:
+        json.dump(dict(args.__dict__), f, ensure_ascii=False, indent=4)
 
-do_batch_run()
+    # expand prompts out to per-frame
+    prompt_series = pd.Series([np.nan for a in range(max_frames)])
+    for i, prompt in animation_prompts.items():
+        prompt_series[i] = prompt
+    prompt_series = prompt_series.ffill().bfill()
+
+    args.n_samples = 1
+    prev_frame = None
+    for frame_idx in range(max_frames):
+        print(f"Rendering animation frame {frame_idx} of {max_frames}")
+        display.clear_output(wait=True)
+
+        if prev_frame != None:
+            if key_frames:
+                angle = angle_series[frame_idx]
+                zoom = zoom_series[frame_idx]
+                translation_x = translation_x_series[frame_idx]
+                translation_y = translation_y_series[frame_idx]
+                print(
+                    f'angle: {angle}',
+                    f'zoom: {zoom}',
+                    f'translation_x: {translation_x}',
+                    f'translation_y: {translation_y}',
+                )
+
+            xform = make_xform_2d(args.W, args.H, translation_x, translation_y, angle, zoom)
+            prev_img = to_cv2_image(prev_frame)
+            prev_img = cv2.warpPerspective(
+                prev_img,
+                xform,
+                (prev_img.shape[1], prev_img.shape[0]),
+                borderMode=cv2.BORDER_WRAP
+            )
+
+            args.use_init = True
+            args.init_image = 'temp.png'
+            args.strength = strength_previous_frame
+            cv2.imwrite(args.init_image, prev_img)
+
+        args.prompt = prompt_series[frame_idx]
+        print(f"{args.prompt} {args.seed}")
+        results = generate(args)
+
+        filename = f"{args.batchdir}_{args.timestring}_{frame_idx:04}.png"
+        results[0].save(os.path.join(args.outdir, filename))
+        prev_frame = results[0]
+
+        args.seed = next_seed(args)
+
+
+if animation_mode == '2D':
+    render_animation(args)
+else:
+    render_image_batch(args)    
+
 
 # %%
 # !! {"main_metadata":{
