@@ -220,6 +220,7 @@ def _reconstruct_switches(t2i,opt):
     switches.append(f'-W{opt.width        or t2i.width}')
     switches.append(f'-H{opt.height       or t2i.height}')
     switches.append(f'-C{opt.cfg_scale    or t2i.cfg_scale}')
+    switches.append(f'-m{t2i.sampler_name}')
     if opt.init_img:
         switches.append(f'-I{opt.init_img}')
     if opt.strength and opt.init_img is not None:
