@@ -47,12 +47,6 @@ if setup_environment:
     print(subprocess.run(['git', 'clone', 'https://github.com/deforum/k-diffusion/'], stdout=subprocess.PIPE).stdout.decode('utf-8'))
     with open('k-diffusion/k_diffusion/__init__.py', 'w') as f:
         f.write('')
-    
-    import sys
-    sys.path.append('./src/taming-transformers')
-    sys.path.append('./src/clip')
-    sys.path.append('./stable-diffusion/')
-    sys.path.append('./k-diffusion')
 
 # %%
 # !! {"metadata":{
@@ -81,6 +75,11 @@ import time
 from pytorch_lightning import seed_everything
 from torch import autocast
 from contextlib import contextmanager, nullcontext
+
+sys.path.append('./src/taming-transformers')
+sys.path.append('./src/clip')
+sys.path.append('./stable-diffusion/')
+sys.path.append('./k-diffusion')
 
 from helpers import save_samples
 from ldm.util import instantiate_from_config
