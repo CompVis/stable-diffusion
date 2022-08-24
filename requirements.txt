@@ -1,6 +1,5 @@
 accelerate==0.12.0
 albumentations==0.4.3
-clip==1.0
 einops==0.3.0
 huggingface-hub==0.8.1
 imageio==2.9.0
