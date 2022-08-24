@@ -583,7 +583,7 @@ class UNetModelEncode(nn.Module):
         )
         self._feature_size += ch
 
-    def forward(self, x, timesteps=None, context=None, y=None,**kwargs):
+    def forward(self, x, timesteps=None, context=None, y=None):
         """
         Apply the model to an input batch.
         :param x: an [N x C x ...] Tensor of inputs.
@@ -787,7 +787,7 @@ class UNetModelDecode(nn.Module):
             #nn.LogSoftmax(dim=1)  # change to cross_entropy and produce non-normalized logits
         )
 
-    def forward(self, h,emb,tp,hs, context=None, y=None,**kwargs):
+    def forward(self, h,emb,tp,hs, context=None, y=None):
         """
         Apply the model to an input batch.
         :param x: an [N x C x ...] Tensor of inputs.

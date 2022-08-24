@@ -334,7 +334,6 @@ class UNet(DDPM):
                  cond_stage_forward=None,
                  conditioning_key=None,
                  scale_factor=1.0,
-                 ddim_steps = 50,
                  small_batch = False,
                  scale_by_std=False,
                  *args, **kwargs):
@@ -353,7 +352,6 @@ class UNet(DDPM):
         self.num_downs = 0
         self.unetConfigEncode = unetConfigEncode
         self.unetConfigDecode = unetConfigDecode
-        self.make_schedule(ddim_num_steps=ddim_steps, ddim_eta=0.0, verbose=True)
         if not scale_by_std:
             self.scale_factor = scale_factor
         else:
@@ -488,8 +486,6 @@ class UNet(DDPM):
                log_every_t=100,
                unconditional_guidance_scale=1.,
                unconditional_conditioning=None,
-               # this has to come in the same format as the conditioning, # e.g. as encoded tokens, ...
-               **kwargs
                ):
         if conditioning is not None:
             if isinstance(conditioning, dict):
@@ -500,7 +496,7 @@ class UNet(DDPM):
                 if conditioning.shape[0] != batch_size:
                     print(f"Warning: Got {conditioning.shape[0]} conditionings but batch-size is {batch_size}")
 
-        # self.make_schedule(ddim_num_steps=S, ddim_eta=eta, verbose=verbose)
+        self.make_schedule(ddim_num_steps=S, ddim_eta=eta, verbose=False)
 
         # sampling
         C, H, W = shape
@@ -655,9 +651,11 @@ class UNet(DDPM):
 
 
     @torch.no_grad()
-    def stochastic_encode(self, x0, t, seed, use_original_steps=False, noise=None):
+    def stochastic_encode(self, x0, t, seed, ddim_steps,use_original_steps=False, noise=None):
         # fast, but does not allow for exact reconstruction
         # t serves as an index to gather the correct alphas
+        self.make_schedule(ddim_num_steps=ddim_steps, ddim_eta=0.0, verbose=False)
+
         if use_original_steps:
             sqrt_alphas_cumprod = self.sqrt_alphas_cumprod
             sqrt_one_minus_alphas_cumprod = self.sqrt_one_minus_alphas_cumprod
@@ -676,8 +674,6 @@ class UNet(DDPM):
                 seed+=1
             noise = torch.cat(tens)
             del tens
-            # noise = torch.randn_like(x0)
-            # print(noise.shape)
         return (extract_into_tensor(sqrt_alphas_cumprod, t, x0.shape) * x0 +
                 extract_into_tensor(sqrt_one_minus_alphas_cumprod.to("cuda"), t, x0.shape) * noise)
 

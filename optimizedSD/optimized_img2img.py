@@ -211,7 +211,6 @@ for key in lo:
     sd['model2.' + key[6:]] = sd.pop(key)
 
 config = OmegaConf.load(f"{config}")
-config.modelUNet.params.ddim_steps = opt.ddim_steps
 
 if opt.small_batch:
     config.modelUNet.params.small_batch = True
@@ -232,7 +231,7 @@ modelCS.eval()
 modelFS = instantiate_from_config(config.modelFirstStage)
 _, _ = modelFS.load_state_dict(sd, strict=False)
 modelFS.eval()
-
+del sd
 if opt.precision == "autocast":
     model.half()
     modelCS.half()
@@ -289,7 +288,7 @@ with torch.no_grad():
                     time.sleep(1)
 
                 # encode (scaled latent)
-                z_enc = model.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device), opt.seed)
+                z_enc = model.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device), opt.seed,opt.ddim_steps)
                 # decode it
                 samples_ddim = model.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
                                             unconditional_conditioning=uc,)

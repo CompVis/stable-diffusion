@@ -186,7 +186,6 @@ for key in lo:
     sd['model2.' + key[6:]] = sd.pop(key)
 
 config = OmegaConf.load(f"{config}")
-config.modelUNet.params.ddim_steps = opt.ddim_steps
 
 if opt.small_batch:
     config.modelUNet.params.small_batch = True
@@ -206,7 +205,7 @@ modelCS.eval()
 modelFS = instantiate_from_config(config.modelFirstStage)
 _, _ = modelFS.load_state_dict(sd, strict=False)
 modelFS.eval()
-
+del sd
 if opt.precision == "autocast":
     model.half()
     modelCS.half()
