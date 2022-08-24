@@ -8,15 +8,15 @@ kornia==0.6.0
 numpy==1.19.2
 omegaconf==2.1.1
 opencv-python==4.1.2.30
-pillow==9.0.1
+pillow==9.2.0
 pudb==2019.2
-pytorch
+torch==1.11.0
+torchvision==0.12.0
 pytorch-lightning==1.4.2
 streamlit==1.12.0
 test-tube>=0.7.5
 torch-fidelity==0.3.0
 torchmetrics==0.6.0
-torchvision
 transformers==4.19.2
 -e git+https://github.com/openai/CLIP.git@main#egg=clip
 -e git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
