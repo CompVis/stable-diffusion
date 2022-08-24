@@ -1,0 +1,23 @@
+Feature requests:
+
+1. "gobig" mode - split image into strips, scale up, add detail using
+   img2img and reassemble with feathering. Issue #66.
+
+2. Port basujindal low VRAM optimizations. Issue #62
+
+3. Store images under folders named after the prompt. Issue #27.
+
+4. Some sort of automation for generating variations. Issues #32 and #47.
+
+5. Support for inpainting masks #68.
+
+Code Refactorization:
+
+1. Move the PNG file generation code out of simplet2i and into
+   separate module. txt2img() and img2img() should return Image
+   objects, and parent code is responsible for filenaming logic.
+
+2. Refactor redundant code that is shared between txt2img() and
+   img2img().
+
+3. Experiment with replacing CompViz code with HuggingFace.
