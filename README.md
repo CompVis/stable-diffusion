@@ -166,11 +166,13 @@ repository and associated paper for details and limitations.
 
 ## Changes
 
+* v1.09 (24 August 2022)
+   * A new -v option allows you to generate multiple variants of an initial image
+     in img2img mode. (kudos to Oceanswave)
+   
 * v1.08 (24 August 2022)
    * Escape single quotes on the dream> command before trying to parse. This avoids
      parse errors.
-   * A new -v option allows you to generate multiple variants of an initial image
-     in img2img mode. (kudos to Oceanswave)
    * Removed instruction to get Python3.8 as first step in Windows install.
      Anaconda3 does it for you.
    * Added bounds checks for numeric arguments that could cause crashes.
