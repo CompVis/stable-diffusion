@@ -1,6 +1,6 @@
 import json
 import os
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 print("Loading model...")
 from ldm.simplet2i import T2I
@@ -50,7 +50,7 @@ class DreamServer(BaseHTTPRequestHandler):
         self.wfile.write(bytes(json.dumps(result), "utf-8"))
 
 if __name__ == "__main__":
-    dream_server = HTTPServer(("0.0.0.0", 9090), DreamServer)
+    dream_server = ThreadingHTTPServer(("0.0.0.0", 9090), DreamServer)
     print("Started Stable Diffusion dream server!")
 
     try:
