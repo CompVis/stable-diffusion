@@ -216,6 +216,8 @@ def run(args, local_seed):
                     print(prompts)
                     if args.seed_behavior == "iter":
                         prompt_seed = local_seed + prompt_index
+                    elif args.seed_behavior == "random":
+                        prompt_seed = np.random.randint(0,4294967295)
                     else:
                         prompt_seed = local_seed
                     seed_everything(prompt_seed)
@@ -486,7 +488,6 @@ def DeforumArgs():
 
     #@markdown **Sampling Settings**
     seed = -1 #@param
-    seed_behavior = "fixed" # ["iter","fixed"]
     sampler = 'euler_ancestral' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
     steps = 50 #@param
     scale = 7 #@param
@@ -496,6 +497,7 @@ def DeforumArgs():
 
     #@markdown **Batch Settings**
     n_batch = 2 #@param
+    seed_behavior = "fixed" #@param ["iter","fixed","random"]
 
     precision = 'autocast' 
     fixed_code = True
