@@ -4,6 +4,7 @@ import shlex
 import atexit
 import os
 import sys
+import copy
 from PIL import Image,PngImagePlugin
 
 # readline unavailable on windows systems
@@ -162,8 +163,29 @@ def main_loop(t2i,parser,log,infile):
             results = t2i.txt2img(**vars(opt))
         else:
             results = t2i.img2img(**vars(opt))
+
+        allVariantResults = []
+        if opt.variants is not None:
+            print(f"Generating {opt.variants} variant(s)...")
+            newopt = copy.deepcopy(opt)
+            newopt.variants = None
+            for r in results:
+                resultPath = r[0]
+                print(f"\t generating variant for {resultPath}")
+                for j in range(0, opt.variants):
+                    newopt.init_img = resultPath
+                    print(f"{newopt.init_img}")
+                    variantResults = t2i.img2img(**vars(newopt))
+                    allVariantResults.append([newopt,variantResults])
+            print(f"{opt.variants} Variants generated!")
+
         print("Outputs:")
         write_log_message(t2i,opt,results,log)
+
+        if len(allVariantResults)>0:
+            print("Variant outputs:")
+            for vr in allVariantResults:
+                write_log_message(t2i,vr[0],vr[1],log)
             
 
     print("goodbye!")
@@ -285,6 +307,7 @@ def create_cmd_parser():
     parser.add_argument('-i','--individual',action='store_true',help="generate individual files (default)")
     parser.add_argument('-I','--init_img',type=str,help="path to input image (supersedes width and height)")
     parser.add_argument('-f','--strength',default=0.75,type=float,help="strength for noising/unnoising. 0.0 preserves image exactly, 1.0 replaces it completely")
+    parser.add_argument('-v','--variants',type=int,help="number of variants to generate of each image")
     parser.add_argument('-x','--skip_normalize',action='store_true',help="skip subprompt weight normalization")
     return parser
 
@@ -293,7 +316,7 @@ if readline_available:
         readline.set_completer(Completer(['cd','pwd',
                                           '--steps','-s','--seed','-S','--iterations','-n','--batch_size','-b',
                                           '--width','-W','--height','-H','--cfg_scale','-C','--grid','-g',
-                                          '--individual','-i','--init_img','-I','--strength','-f']).complete)
+                                          '--individual','-i','--init_img','-I','--strength','-f','-v','--variants']).complete)
         readline.set_completer_delims(" ")
         readline.parse_and_bind('tab: complete')
         load_history()

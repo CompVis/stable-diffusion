@@ -143,7 +143,8 @@ The vast majority of these arguments default to reasonable values.
 
     def txt2img(self,prompt,outdir=None,batch_size=None,iterations=None,
                 steps=None,seed=None,grid=None,individual=None,width=None,height=None,
-                cfg_scale=None,ddim_eta=None,strength=None,init_img=None,skip_normalize=False):
+                cfg_scale=None,ddim_eta=None,strength=None,init_img=None,
+                skip_normalize=False,variants=None):
         """
         Generate an image from the prompt, writing iteration images into the outdir
         The output is a list of lists in the format: [[filename1,seed1], [filename2,seed2],...]
@@ -268,7 +269,7 @@ The vast majority of these arguments default to reasonable values.
     # There is lots of shared code between this and txt2img and should be refactored.
     def img2img(self,prompt,outdir=None,init_img=None,batch_size=None,iterations=None,
                 steps=None,seed=None,grid=None,individual=None,width=None,height=None,
-                cfg_scale=None,ddim_eta=None,strength=None,skip_normalize=False):
+                cfg_scale=None,ddim_eta=None,strength=None,skip_normalize=False,variants=None):
         """
         Generate an image from the prompt and the initial image, writing iteration images into the outdir
         The output is a list of lists in the format: [[filename1,seed1], [filename2,seed2],...]
