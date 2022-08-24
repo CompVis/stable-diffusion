@@ -22,10 +22,12 @@ from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionS
 from transformers import AutoFeatureExtractor
 
 
-# load safety model
-safety_model_id = "CompVis/stable-diffusion-safety-checker"
-safety_feature_extractor = AutoFeatureExtractor.from_pretrained(safety_model_id)
-safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
+# load safety model, return the extractor and checker
+def load_safety_module():
+    safety_model_id = "CompVis/stable-diffusion-safety-checker"
+    safety_feature_extractor = AutoFeatureExtractor.from_pretrained(safety_model_id)
+    safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
+    return safety_feature_extractor, safety_checker
 
 
 def chunk(it, size):
@@ -84,13 +86,17 @@ def load_replacement(x):
         return x
 
 
-def check_safety(x_image):
-    safety_checker_input = safety_feature_extractor(numpy_to_pil(x_image), return_tensors="pt")
-    x_checked_image, has_nsfw_concept = safety_checker(images=x_image, clip_input=safety_checker_input.pixel_values)
+def check_safety(x_image, extractor, checker):
+    if None in (extractor, checker):
+        return x_image
+
+    safety_checker_input = extractor(numpy_to_pil(x_image), return_tensors="pt")
+    x_checked_image, has_nsfw_concept = checker(images=x_image, clip_input=safety_checker_input.pixel_values)
     assert x_checked_image.shape[0] == len(has_nsfw_concept)
     for i in range(len(has_nsfw_concept)):
         if has_nsfw_concept[i]:
             x_checked_image[i] = load_replacement(x_checked_image[i])
+            print(f'One image is replaced by safety check. Use with argument `--unsafe` to keep all results temporarily.')
     return x_checked_image, has_nsfw_concept
 
 
@@ -226,6 +232,11 @@ def main():
         choices=["full", "autocast"],
         default="autocast"
     )
+    parser.add_argument(
+        "--unsafe",
+        action='store_true',
+        help='keep all results temporarily'
+    )
     opt = parser.parse_args()
 
     if opt.laion400m:
@@ -277,6 +288,10 @@ def main():
     if opt.fixed_code:
         start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
 
+    unsafe_extractor, unsafe_checker = None, None
+    if not opt.unsafe:
+        unsafe_extractor, unsafe_checker = load_safety_module()
+
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
     with torch.no_grad():
         with precision_scope("cuda"):
@@ -305,9 +320,7 @@ def main():
                         x_samples_ddim = model.decode_first_stage(samples_ddim)
                         x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
                         x_samples_ddim = x_samples_ddim.cpu().permute(0, 2, 3, 1).numpy()
-
-                        x_checked_image, has_nsfw_concept = check_safety(x_samples_ddim)
-
+                        x_checked_image, has_nsfw_concept = check_safety(x_samples_ddim, unsafe_extractor, unsafe_checker)
                         x_checked_image_torch = torch.from_numpy(x_checked_image).permute(0, 3, 1, 2)
 
                         if not opt.skip_save:
