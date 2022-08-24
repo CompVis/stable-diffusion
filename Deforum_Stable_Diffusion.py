@@ -198,6 +198,10 @@ def run(args, local_seed):
         sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.eta, verbose=False)
 
         assert 0. <= args.strength <= 1., 'can only work with strength in [0.0, 1.0]'
+        if args.sampler == 'plms':
+            print("...inits have not been implemented for plms")
+            print("...using the klms sampler")
+            args.sampler = 'klms'
         t_enc = int(args.strength * args.steps)
         print(f"target t_enc is {t_enc} steps")
 
