@@ -80,8 +80,7 @@ def main():
         exit(-1)
 
     # preload the model
-    if not debugging:
-        t2i.load_model()
+    t2i.load_model()
     print("\n* Initialization done! Awaiting your command (-h for help, 'q' to quit, 'cd' to change output dir, 'pwd' to print output dir)...")
 
     log_path   = os.path.join(opt.outdir,'dream_log.txt')
