@@ -191,16 +191,16 @@ def main_loop(t2i,parser,log,infile):
                     print(f"{newopt.init_img}")
                     try:
                         variantResults = t2i.img2img(**vars(newopt))
+                        allVariantResults.append([newopt,variantResults])
                     except AssertionError as e:
                         print(e)
                         continue
-                    allVariantResults.append([newopt,variantResults])
             print(f"{opt.variants} Variants generated!")
 
         print("Outputs:")
         write_log_message(t2i,opt,results,log)
             
-        if len(allVariantResults)>0:
+        if allVariantResults:
             print("Variant outputs:")
             for vr in allVariantResults:
                 write_log_message(t2i,vr[0],vr[1],log)
