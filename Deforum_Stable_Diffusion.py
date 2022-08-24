@@ -216,6 +216,9 @@ def run(args, local_seed):
             with model.ema_scope():
                 tic = time.time()
                 for prompt_index, prompts in enumerate(data):
+                    
+                    args.timestring = time.strftime('%Y%m%d%H%M%S')
+                    
                     print(prompts)
                     if args.seed_behavior == "iter":
                         prompt_seed = local_seed + prompt_index
