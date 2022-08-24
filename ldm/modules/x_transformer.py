@@ -485,7 +485,8 @@ class AttentionLayers(nn.Module):
             mask=None,
             context_mask=None,
             mems=None,
-            return_hiddens=False
+            return_hiddens=False,
+            **kwargs
     ):
         hiddens = []
         intermediates = []
@@ -603,11 +604,19 @@ class TransformerWrapper(nn.Module):
             return_mems=False,
             return_attn=False,
             mems=None,
+            embedding_manager=None,
             **kwargs
     ):
         b, n, device, num_mem = *x.shape, x.device, self.num_memory_tokens
-        x = self.token_emb(x)
-        x += self.pos_emb(x)
+
+        embedded_x = self.token_emb(x)
+        
+        if embedding_manager:
+            x = embedding_manager(x, embedded_x)
+        else:
+            x = embedded_x
+
+        x = x + self.pos_emb(x)
         x = self.emb_dropout(x)
 
         x = self.project_emb(x)

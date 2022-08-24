@@ -9,6 +9,7 @@ kornia==0.6.0
 numpy==1.19.2
 omegaconf==2.1.1
 opencv-python==4.1.2.30
+pillow==9.0.1
 pudb==2019.2
 pytorch
 pytorch-lightning==1.4.2

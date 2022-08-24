@@ -450,7 +450,8 @@ The vast majority of these arguments default to reasonable values.
                 config = OmegaConf.load(self.config)
                 self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
                 model = self._load_model_from_config(config,self.weights)
-                model.embedding_manager.load(self.embedding_path)
+                if self.embedding_path is not None:
+                    model.embedding_manager.load(self.embedding_path)
                 self.model = model.to(self.device)
             except AttributeError:
                 raise SystemExit

@@ -59,7 +59,8 @@ def main():
               weights=weights,
               full_precision=opt.full_precision,
               config=config,
-              latent_diffusion_weights=opt.laion400m # this is solely for recreating the prompt
+              latent_diffusion_weights=opt.laion400m, # this is solely for recreating the prompt
+              embedding_path=opt.embedding_path
     )
 
     # make sure the output directory exists
@@ -279,6 +280,10 @@ def create_argv_parser():
                         type=str,
                         default="outputs/img-samples",
                         help="directory in which to place generated images and a log of prompts and seeds")
+
+    parser.add_argument('--embedding_path',
+                        type=str,
+                        help="Path to a pre-trained embedding manager checkpoint - can only be set on command line")
     return parser
                         
     
