@@ -1,6 +1,7 @@
 import argparse, os, sys, glob
 import random
 import torch
+from torch import nn
 import numpy as np
 from omegaconf import OmegaConf
 import PIL
@@ -82,6 +83,17 @@ def thats_numberwang(dir, wildcard):
         numberwang = max(filenums) + 1
     return numberwang
 
+class CFGDenoiser(nn.Module):
+    def __init__(self, model):
+        super().__init__()
+        self.inner_model = model
+
+    def forward(self, x, sigma, uncond, cond, cond_scale):
+        x_in = torch.cat([x] * 2)
+        sigma_in = torch.cat([sigma] * 2)
+        cond_in = torch.cat([uncond, cond])
+        uncond, cond = self.inner_model(x_in, sigma_in, cond=cond_in).chunk(2)
+        return uncond + (cond - uncond) * cond_scale
 
 def do_run(device, model, opt):
     print('Starting render!')
@@ -129,7 +141,7 @@ def do_run(device, model, opt):
 
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
     with torch.no_grad():
-        with precision_scope("cuda"):
+        with precision_scope("cuda" if "cuda" in str(device) else "cpu"):
             with model.ema_scope():
                 tic = time.time()
                 all_samples = list()
