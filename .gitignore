@@ -10,9 +10,9 @@ __pycache__/
 # C extensions
 *.so
 
-# emacs autosave files
+# emacs autosave and recovery files
 *~
-#*
+.#*
 
 # Distribution / packaging
 .Python
