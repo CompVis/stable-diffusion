@@ -4,7 +4,7 @@
 # !! }}
 """
 # **Deforum Stable Diffusion**
-[Stable Diffusion](https://github.com/CompVis/stable-diffusion) by Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer and the [Stability.ai](https://stability.ai/) Team. [K Diffusion](https://github.com/crowsonkb/k-diffusion) by [Katherine Crowson](https://twitter.com/RiversHaveWings). Stable Diffusion model weights can be downloaded from https://huggingface.co/CompVis/
+[Stable Diffusion](https://github.com/CompVis/stable-diffusion) by Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer and the [Stability.ai](https://stability.ai/) Team. [K Diffusion](https://github.com/crowsonkb/k-diffusion) by [Katherine Crowson](https://twitter.com/RiversHaveWings). You need to get the ckpt file and put it on your Google Drive first to use this. It can be downloaded from [HuggingFace](https://huggingface.co/CompVis/stable-diffusion).
 
 Notebook by [deforum](https://discord.gg/upmXXsrwZc)
 """
@@ -488,8 +488,8 @@ def DeforumArgs():
 
     #@markdown **Sampling Settings**
     seed = -1 #@param
-    sampler = 'euler_ancestral' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
-    steps = 50 #@param
+    sampler = 'klms' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
+    steps = 100 #@param
     scale = 7 #@param
     eta = 0.0 #@param
     dynamic_threshold = None
