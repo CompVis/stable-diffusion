@@ -3,7 +3,7 @@
 # !!   "id": "c442uQJ_gUgy"
 # !! }}
 """
-# **Deforum Stable Diffusion v0.0**
+# **Deforum Stable Diffusion v0.1**
 [Stable Diffusion](https://github.com/CompVis/stable-diffusion) by Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer and the [Stability.ai](https://stability.ai/) Team. [K Diffusion](https://github.com/crowsonkb/k-diffusion) by [Katherine Crowson](https://twitter.com/RiversHaveWings). You need to get the ckpt file and put it on your Google Drive first to use this. It can be downloaded from [HuggingFace](https://huggingface.co/CompVis/stable-diffusion).
 
 Notebook by [deforum](https://discord.gg/upmXXsrwZc)
@@ -279,7 +279,6 @@ def generate(args):
                             results.append(image)
     return results
 
-
 # %%
 # !! {"metadata":{
 # !!   "cellView": "form",
@@ -467,7 +466,7 @@ zoom = "0: (1.02)"#@param {type:"string"}
 translation_x = "0: (0)"#@param {type:"string"}
 translation_y = "0: (0)"#@param {type:"string"}
 
-strength_previous_frame = 0.9 #@param {type:"number"}
+strength_previous_frame = 0.6 #@param {type:"number"}
 
 def make_xform_2d(width, height, translation_x, translation_y, angle, scale):
     center = (height//2, width//2)
@@ -522,7 +521,6 @@ if key_frames:
     zoom_series = get_inbetweens(parse_key_frames(zoom))
     translation_x_series = get_inbetweens(parse_key_frames(translation_x))
     translation_y_series = get_inbetweens(parse_key_frames(translation_y))
-
 
 # %%
 # !! {"metadata":{
@@ -677,7 +675,6 @@ def render_animation(args):
     prev_frame = None
     for frame_idx in range(max_frames):
         print(f"Rendering animation frame {frame_idx} of {max_frames}")
-        display.clear_output(wait=True)
 
         if prev_frame != None:
             if key_frames:
@@ -703,7 +700,7 @@ def render_animation(args):
 
             args.use_init = True
             args.init_image = 'temp.png'
-            args.strength = strength_previous_frame
+            args.strength = max(0.0, min(1.0, 1.0 - strength_previous_frame))
             cv2.imwrite(args.init_image, prev_img)
 
         args.prompt = prompt_series[frame_idx]
@@ -713,6 +710,9 @@ def render_animation(args):
         filename = f"{args.batchdir}_{args.timestring}_{frame_idx:04}.png"
         results[0].save(os.path.join(args.outdir, filename))
         prev_frame = results[0]
+        
+        display.clear_output(wait=True)
+        display.display(results[0])
 
         args.seed = next_seed(args)
 
@@ -721,6 +721,61 @@ if animation_mode == '2D':
     render_animation(args)
 else:
     render_image_batch(args)    
+
+# %%
+# !! {"metadata":{
+# !!   "id": "4zV0J_YbMCTx"
+# !! }}
+"""
+# Create video from frames
+"""
+
+# %%
+# !! {"metadata":{
+# !!   "cellView": "form",
+# !!   "id": "no2jP8HTMBM0"
+# !! }}
+skip_video_for_run_all = False #@param {type: 'boolean'}
+fps = 12#@param {type:"number"}
+
+if skip_video_for_run_all == True:
+    print('Skipping video creation, uncheck skip_video_for_run_all if you want to run it')
+else:
+    import subprocess
+    from base64 import b64encode
+
+    image_path = os.path.join(args.outdir, f"{args.batchdir}_{args.timestring}_%04d.png")
+    mp4_path = os.path.join(args.outdir, f"{args.batchdir}_{args.timestring}.mp4")
+
+    print(f"{image_path} -> {mp4_path}")
+
+    # make video
+    cmd = [
+        'ffmpeg',
+        '-y',
+        '-vcodec', 'png',
+        '-r', str(fps),
+        '-start_number', str(0),
+        '-i', image_path,
+        '-frames:v', str(max_frames),
+        '-c:v', 'libx264',
+        '-vf',
+        f'fps={fps}',
+        '-pix_fmt', 'yuv420p',
+        '-crf', '17',
+        '-preset', 'veryfast',
+        mp4_path
+    ]
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+    if process.returncode != 0:
+        print(stderr)
+        raise RuntimeError(stderr)
+
+    mp4 = open(mp4_path,'rb').read()
+    data_url = "data:video/mp4;base64," + b64encode(mp4).decode()
+    display.display( display.HTML(f'<video controls loop><source src="{data_url}" type="video/mp4"></video>') )
+
 
 
 # %%
