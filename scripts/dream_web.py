@@ -9,17 +9,20 @@ model = T2I()
 
 class DreamServer(BaseHTTPRequestHandler):
     def do_GET(self):
-        self.send_response(200)
         if self.path == "/":
+            self.send_response(200)
             self.send_header("Content-type", "text/html")
             self.end_headers()
             with open("./scripts/static/index.html", "rb") as content:
                 self.wfile.write(content.read())
-        else:
+        elif os.path.exists("." + self.path):
+            self.send_response(200)
             self.send_header("Content-type", "image/png")
             self.end_headers()
             with open("." + self.path, "rb") as content:
                 self.wfile.write(content.read())
+        else:
+            self.send_response(404)
 
     def do_POST(self):
         self.send_response(200)
