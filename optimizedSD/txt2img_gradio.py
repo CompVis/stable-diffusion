@@ -19,6 +19,9 @@ from pytorch_lightning import seed_everything
 from torch import autocast
 from contextlib import nullcontext
 from ldm.util import instantiate_from_config
+from split_subprompts import split_weighted_subprompts
+from transformers import logging
+logging.set_verbosity_error()
 
 
 def chunk(it, size):
@@ -71,15 +74,12 @@ _, _ = modelFS.load_state_dict(sd, strict=False)
 modelFS.eval()
 del sd
 
-def generate(prompt,ddim_steps,n_iter, batch_size, Height, Width, scale, seed, small_batch, full_precision,outdir):
+def generate(prompt,ddim_steps,n_iter, batch_size, Height, Width, scale, ddim_eta, seed, small_batch, full_precision,outdir):
    
-
     device = "cuda"
     C = 4
     f = 8
     start_code = None
-    ddim_eta = 0.0
-
 
     model.small_batch = small_batch
     if not full_precision:
@@ -118,8 +118,20 @@ def generate(prompt,ddim_steps,n_iter, batch_size, Height, Width, scale, seed, s
                         uc = modelCS.get_learned_conditioning(batch_size * [""])
                     if isinstance(prompts, tuple):
                         prompts = list(prompts)
-                    
-                    c = modelCS.get_learned_conditioning(prompts)
+
+                    subprompts,weights = split_weighted_subprompts(prompts[0])
+                    if len(subprompts) > 1:
+                        c = torch.zeros_like(uc)
+                        totalWeight = sum(weights)
+                        # normalize each "sub prompt" and add it
+                        for i in range(len(subprompts)):
+                            weight = weights[i]
+                            # if not skip_normalize:
+                            weight = weight / totalWeight
+                            c = torch.add(c,modelCS.get_learned_conditioning(subprompts[i]), alpha=weight)
+                    else:
+                        c = modelCS.get_learned_conditioning(prompts)
+
                     shape = [C, Height // f, Width // f]
                     mem = torch.cuda.memory_allocated()/1e6
                     modelCS.to("cpu")
@@ -174,7 +186,7 @@ def generate(prompt,ddim_steps,n_iter, batch_size, Height, Width, scale, seed, s
 demo = gr.Interface(
     fn=generate,
     inputs=["text",gr.Slider(1, 1000,value=50),gr.Slider(1, 100, step=1), gr.Slider(1, 100,step=1),
-    gr.Slider(64,4096,value = 512,step=64), gr.Slider(64,4096,value = 512,step=64), gr.Slider(0,50,value=7.5,step=0.1),"text","checkbox", "checkbox",gr.Text(value = "outputs/txt2img-samples")],
+    gr.Slider(64,4096,value = 512,step=64), gr.Slider(64,4096,value = 512,step=64), gr.Slider(0,50,value=7.5,step=0.1),gr.Slider(0,1,step=0.01),"text","checkbox", "checkbox",gr.Text(value = "outputs/txt2img-samples")],
     outputs=["image", "text"],
 )
 demo.launch()

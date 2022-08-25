@@ -14,7 +14,9 @@ from torch import autocast
 from contextlib import contextmanager, nullcontext
 from einops import rearrange, repeat
 from ldm.util import instantiate_from_config
-
+from split_subprompts import split_weighted_subprompts
+from transformers import logging
+logging.set_verbosity_error()
 
 def chunk(it, size):
     it = iter(it)
@@ -281,15 +283,27 @@ with torch.no_grad():
                     uc = modelCS.get_learned_conditioning(batch_size * [""])
                 if isinstance(prompts, tuple):
                     prompts = list(prompts)
-                
-                c = modelCS.get_learned_conditioning(prompts)
+
+                subprompts,weights = split_weighted_subprompts(prompts[0])
+                if len(subprompts) > 1:
+                    c = torch.zeros_like(uc)
+                    totalWeight = sum(weights)
+                    # normalize each "sub prompt" and add it
+                    for i in range(len(subprompts)):
+                        weight = weights[i]
+                        # if not skip_normalize:
+                        weight = weight / totalWeight
+                        c = torch.add(c,modelCS.get_learned_conditioning(subprompts[i]), alpha=weight)
+                else:
+                    c = modelCS.get_learned_conditioning(prompts)
+
                 mem = torch.cuda.memory_allocated()/1e6
                 modelCS.to("cpu")
                 while(torch.cuda.memory_allocated()/1e6 >= mem):
                     time.sleep(1)
 
                 # encode (scaled latent)
-                z_enc = model.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device), opt.seed,opt.ddim_steps)
+                z_enc = model.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device), opt.seed,opt.ddim_eta, opt.ddim_steps)
                 # decode it
                 # print("zenc = ", z_enc.shape)
                 samples_ddim = model.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,

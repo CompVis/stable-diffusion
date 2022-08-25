@@ -376,7 +376,7 @@ class UNet(DDPM):
 
     @rank_zero_only
     @torch.no_grad()
-    def on_train_batch_start(self, batch, batch_idx, dataloader_idx):
+    def on_train_batch_start(self, batch, batch_idx):
         # only for very first batch
         if self.scale_by_std and self.current_epoch == 0 and self.global_step == 0 and batch_idx == 0 and not self.restarted_from_ckpt:
             assert self.scale_factor == 1., 'rather not use custom rescaling and std-rescaling simultaneously'
@@ -437,8 +437,7 @@ class UNet(DDPM):
             setattr(self, name, attr)
 
     def make_schedule(self, ddim_num_steps, ddim_discretize="uniform", ddim_eta=0., verbose=True):
-        if ddim_eta != 0:
-            raise ValueError('ddim_eta must be 0 for PLMS')
+
         self.ddim_timesteps = make_ddim_timesteps(ddim_discr_method=ddim_discretize, num_ddim_timesteps=ddim_num_steps,
                                                   num_ddpm_timesteps=self.num_timesteps,verbose=verbose)
         alphas_cumprod = self.alphas_cumprod
@@ -530,7 +529,6 @@ class UNet(DDPM):
         device = self.betas.device
         b = shape[0]
         if x_T is None:
-            # img = torch.randn(shape, device=device)
             _, b1, b2, b3 = shape
             img_shape = (1, b1, b2, b3)
             tens = []
@@ -651,10 +649,10 @@ class UNet(DDPM):
 
 
     @torch.no_grad()
-    def stochastic_encode(self, x0, t, seed, ddim_steps,use_original_steps=False, noise=None, mask=None):
+    def stochastic_encode(self, x0, t, seed, ddim_eta,ddim_steps,use_original_steps=False, noise=None, mask=None):
         # fast, but does not allow for exact reconstruction
         # t serves as an index to gather the correct alphas
-        self.make_schedule(ddim_num_steps=ddim_steps, ddim_eta=0.0, verbose=False)
+        self.make_schedule(ddim_num_steps=ddim_steps, ddim_eta=ddim_eta, verbose=False)
 
         if use_original_steps:
             sqrt_alphas_cumprod = self.sqrt_alphas_cumprod
