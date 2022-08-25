@@ -773,7 +773,8 @@ def main():
                     "filetype": filetype,
                     "hide_metadata": settings.hide_metadata,
                     "quality": quality,
-                    "device_id": device_id
+                    "device_id": device_id,
+                    "method": settings.method
                 }
                 opt = SimpleNamespace(**opt)
                 # render the image(s)!
