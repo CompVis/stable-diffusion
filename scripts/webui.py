@@ -651,6 +651,7 @@ class Flagging(gr.FlaggingCallback):
             at_start = file.tell() == 0
             writer = csv.writer(file)
             if at_start:
+                writer.writerow(["sep=,"])
                 writer.writerow(["prompt", "seed", "width", "height", "sampler", "toggles", "n_iter", "n_samples", "cfg_scale", "steps", "filename"])
 
             filename_base = str(int(time.time() * 1000))
@@ -1013,10 +1014,13 @@ if GFPGAN is not None:
         theme="default",
     ), "GFPGAN"))
 
+css = "" if opt.no_progressbar_hiding else css_hide_progressbar
+css = css + '[data-testid="image"] {min-height: 512px !important}'
+
 demo = gr.TabbedInterface(
     interface_list=[x[0] for x in interfaces],
     tab_names=[x[1] for x in interfaces],
-    css=("" if opt.no_progressbar_hiding else css_hide_progressbar),
+    css=css,
     theme="default",
 )
 
