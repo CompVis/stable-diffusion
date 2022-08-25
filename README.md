@@ -172,8 +172,8 @@ repository and associated paper for details and limitations.
 
 * v1.09 (24 August 2022)
    * A new -v option allows you to generate multiple variants of an initial image
-     in img2img mode. (kudos to Oceanswave)
-   * Added ability to personalize text to image generation (kudos to nicolai256)
+     in img2img mode. (kudos to @Oceanswave. [See this discussion in the PR for examples and details on use](https://github.com/lstein/stable-diffusion/pull/71#issuecomment-1226700810))
+   * Added ability to personalize text to image generation (kudos to @Oceanswave and @nicolai256)
    * Enabled all of the samplers from k_diffusion
    
 * v1.08 (24 August 2022)
