@@ -16,18 +16,23 @@ pip install jsonmerge clean-fid resize-right torchdiffeq
 
 # Installation instructions
 
+## Download Prog Rock Stable
 Download this repository either by zip file (click the "Code" option above and select "Download ZIP"), or via git:
 ```
 git clone https://github.com/lowfuel/progrock-stable prs
 cd prs
 ```
-(MacOS M1/M2 users, see [here](#macos-setup) for instructions on setting up conda)
+
+## Setup a Conda environment
+*(MacOS M1/M2 users, see [here](#macos-setup) for Conda instructions, then move on to the next section)*
+
 Create a [conda](https://conda.io/) environment named `prs`:
 ```
 conda env create -f environment.yaml
 conda activate prs
 ```
 
+## Download Stable Diffusion Weights
 Download the [Stable Diffusion weights](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original) "sd-v1-4.ckpt", and place it in the `models` directory
 
 Run prs to make sure everything worked!
@@ -91,8 +96,12 @@ Restart your terminal, then:
 brew install miniforge
 conda init zsh
 ```
-Restart your terminal again, and continue the instructions above.
-
+Restart your terminal again, and setup your Conda environment:
+```
+conda env create -f mac-environment.yaml
+conda activate prs
+```
+You can now continue with [installation above](#download-stable-diffusion-weights).
 
 # About Stable Diffusion
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
