@@ -57,7 +57,7 @@ if setup_environment:
 import json
 from IPython import display
 
-import argparse, glob, os, sys, time
+import argparse, glob, os, pathlib, sys, time
 import numpy as np
 import random
 import requests
@@ -188,12 +188,12 @@ def generate(args, return_latent=False, return_sample=False):
     init_latent = None
     if args.init_latent is not None:
         init_latent = args.init_latent
-    elif args.init_sample is not None:        
+    elif args.init_sample is not None:
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(args.init_sample))
     elif args.init_image != None and args.init_image != '':
         init_image = load_img(args.init_image, shape=(args.W, args.H)).to(device)
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
-        init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
+        init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space        
 
     sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.ddim_eta, verbose=False)
 
@@ -459,7 +459,6 @@ if load_on_run_all:
 # !! }}
 import pandas as pd
 import subprocess
-from glob import glob
 from resize_right import resize
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
@@ -467,22 +466,26 @@ import cv2
 
 def DeforumAnimArgs():
 
-    #@markdown ####**Animation Mode:**
-    animation_mode = '2D' #@param ['None', '2D'] {type:'string'}
-
-    key_frames = True #@param {type:"boolean"}
+    #@markdown ####**Animation:**
+    animation_mode = 'None' #@param ['None', '2D', 'Video Input'] {type:'string'}
     max_frames = 1000#@param {type:"number"}
 
+    #@markdown ####**Motion Parameters:**
+    key_frames = True #@param {type:"boolean"}
     interp_spline = 'Linear' #Do not change, currently will not look good. param ['Linear','Quadratic','Cubic']{type:"string"}
     angle = "0:(0)"#@param {type:"string"}
     zoom = "0: (1.04)"#@param {type:"string"}
     translation_x = "0: (0)"#@param {type:"string"}
     translation_y = "0: (0)"#@param {type:"string"}
 
+    #@markdown ####**Coherence:**
+    color_coherence = 'MatchFrame0' #@param ['None', 'MatchFrame0'] {type:'string'}
     previous_frame_noise = 0.05#@param {type:"number"}
     previous_frame_strength = 0.65 #@param {type:"number"}
 
-    color_coherence = 'MatchFrame0' #@param ['None', 'MatchFrame0'] {type:'string'}
+    #@markdown ####**Video Input:**
+    video_init_path ='/content/video_in.mp4'#@param {type:"string"}
+    extract_nth_frame = 1#@param {type:"number"}    
 
     return locals()
 
@@ -581,7 +584,7 @@ animation_prompts = {
 
 def DeforumArgs():
     #@markdown **Save & Display Settings**
-    batchdir = "test" #@param {type:"string"}
+    batchdir = "StableFun" #@param {type:"string"}
     outdir = get_output_folder(output_path, batchdir)
     save_grid = False
     save_settings = True #@param {type:"boolean"}
@@ -597,7 +600,7 @@ def DeforumArgs():
     #@markdown **Init Settings**
     use_init = False #@param {type:"boolean"}
     init_image = "https://cdn.pixabay.com/photo/2022/07/30/13/10/green-longhorn-beetle-7353749_1280.jpg" #@param {type:"string"}
-    strength = 0.1 #@param {type:"number"}
+    strength = 0.5 #@param {type:"number"}
 
     #@markdown **Sampling Settings**
     seed = -1 #@param
@@ -640,6 +643,8 @@ args.strength = max(0.0, min(1.0, args.strength))
 
 if args.seed == -1:
     args.seed = random.randint(0, 2**32)
+if anim_args.animation_mode == 'Video Input':
+    args.use_init = True
 if not args.use_init:
     args.init_image = None
     args.strength = 0
@@ -698,12 +703,16 @@ def render_animation(args, anim_args):
         prompt_series[i] = prompt
     prompt_series = prompt_series.ffill().bfill()
 
+    # check for video inits
+    using_vid_init = anim_args.animation_mode == 'Video Input'
+
     args.n_samples = 1
     prev_sample = None
     color_match_sample = None
     for frame_idx in range(anim_args.max_frames):
         print(f"Rendering animation frame {frame_idx} of {anim_args.max_frames}")
 
+        # apply transforms to previous frame
         if prev_sample is not None:
             if anim_args.key_frames:
                 angle = angle_series[frame_idx]
@@ -742,81 +751,64 @@ def render_animation(args, anim_args):
             args.init_sample = noised_sample.half().to(device)
             args.strength = max(0.0, min(1.0, anim_args.previous_frame_strength))
 
+        # grab prompt for current frame
         args.prompt = prompt_series[frame_idx]
         print(f"{args.prompt} {args.seed}")
 
+        # grab init image for current frame
+        if using_vid_init:
+            init_frame = os.path.join(args.outdir, 'inputframes', f"{frame_idx+1:04}.jpg")            
+            print(f"Using video init frame {init_frame}")
+            args.init_image = init_frame
+
+        # sample the diffusion model
         results = generate(args, return_latent=False, return_sample=True)
         sample, image = results[0], results[1]
-
+    
         filename = f"{args.batchdir}_{args.timestring}_{frame_idx:04}.png"
         image.save(os.path.join(args.outdir, filename))
-        prev_sample = sample
+        if not using_vid_init:
+            prev_sample = sample
         
         display.clear_output(wait=True)
         display.display(image)
 
         args.seed = next_seed(args)
 
-def render_input_video(args):
-    # create output folder for the batch
-    os.makedirs(args.outdir, exist_ok=True)
-
-    #create a folder for the video input frames to live in
-    inputframesdirname = 'inputframes'
-    os.makedirs(f'{args.outdir}{inputframesdirname}', exist_ok=True)
-    print(f"Loading input frames from {args.outdir}{inputframesdirname} and Saving video frames to {args.outdir}")
+def render_input_video(args, anim_args):
+    # create a folder for the video input frames to live in
+    video_in_frame_path = os.path.join(args.outdir, 'inputframes') 
+    os.makedirs(os.path.join(args.outdir, video_in_frame_path), exist_ok=True)
     
-    #save the video frames from input video
-    print(f"Exporting Video Frames (1 every {anim_args.extract_nth_frame}) frames...")
+    # save the video frames from input video
+    print(f"Exporting Video Frames (1 every {anim_args.extract_nth_frame}) frames to {video_in_frame_path}...")
     try:
-      for f in pathlib.Path(f'{anim_args.inputframesdir}').glob('*.jpg'):
-        f.unlink()
+        for f in pathlib.Path(video_in_frame_path).glob('*.jpg'):
+            f.unlink()
     except:
-        vf = f'select=not(mod(n\,{anim_args.extract_nth_frame}))'
-        subprocess.run(['ffmpeg', '-i', f'{anim_args.video_init_path}', '-vf', f'{vf}', '-vsync', 'vfr', '-q:v', '2', '-loglevel', 'error', '-stats', f'{args.outdir}{inputframesdirname}/%04d.jpg'], stdout=subprocess.PIPE).stdout.decode('utf-8')
-    
-    #determine max frames from length of input frames
-    max_frames = len(glob(f'{args.outdir}{inputframesdirname}/*.jpg'))
-    # save settings for the batch
-    settings_filename = os.path.join(args.outdir, f"{args.batchdir}_{args.timestring}_settings.txt")
-    with open(settings_filename, "w+", encoding="utf-8") as f:
-        json.dump(dict(args.__dict__), f, ensure_ascii=False, indent=4)
+        pass
+    vf = f'select=not(mod(n\,{anim_args.extract_nth_frame}))'
+    subprocess.run([
+        'ffmpeg', '-i', f'{anim_args.video_init_path}', 
+        '-vf', f'{vf}', '-vsync', 'vfr', '-q:v', '2', 
+        '-loglevel', 'error', '-stats',  
+        os.path.join(video_in_frame_path, '%04d.jpg')
+    ], stdout=subprocess.PIPE).stdout.decode('utf-8')
 
-    # expand prompts out to per-frame
-    prompt_series = pd.Series([np.nan for a in range(max_frames)])
-    for i, prompt in animation_prompts.items():
-        prompt_series[i] = prompt
-    prompt_series = prompt_series.ffill().bfill()
+    # determine max frames from length of input frames
+    anim_args.max_frames = len([f for f in pathlib.Path(video_in_frame_path).glob('*.jpg')])
 
-    args.n_samples = 1
-    args.init_image = f'{args.outdir}{inputframesdirname}/{1:04}.jpg'
-    for frame_idx in range(max_frames):
-        print(f"Rendering video input frame {frame_idx} of {max_frames}")
-
-        args.prompt = prompt_series[frame_idx]
-        print(f"{args.prompt} {args.seed}")
-
-        results = generate(args, return_latent=False, return_sample=True)
-        sample, image = results[0], results[1]
-
-        filename = f"{args.batchdir}_{args.timestring}_{frame_idx:04}.png"
-        args.init_image = f'{args.outdir}{inputframesdirname}/{frame_idx+1:04}.jpg'
-        image.save(os.path.join(args.outdir, filename))
-        prev_sample = sample
-        
-        display.clear_output(wait=True)
-        display.display(image)
-
-        args.seed = next_seed(args)
+    args.use_init = True
+    print(f"Loading {anim_args.max_frames} input frames from {video_in_frame_path} and saving video frames to {args.outdir}")
+    render_animation(args, anim_args)
 
 
 if anim_args.animation_mode == '2D':
     render_animation(args, anim_args)
 elif anim_args.animation_mode == 'Video Input':
-    render_input_video(args)
+    render_input_video(args, anim_args)
 else:
     render_image_batch(args)    
-
 
 # %%
 # !! {"metadata":{
@@ -853,7 +845,7 @@ else:
         '-r', str(fps),
         '-start_number', str(0),
         '-i', image_path,
-        '-frames:v', str(max_frames),
+        '-frames:v', str(anim_args.max_frames),
         '-c:v', 'libx264',
         '-vf',
         f'fps={fps}',
