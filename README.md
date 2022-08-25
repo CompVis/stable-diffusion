@@ -15,10 +15,16 @@ pip install jsonmerge clean-fid resize-right torchdiffeq
 ```
 
 # Installation instructions
-Download this repository either by zip file (click the "Code" option above and select "Download ZIP"), or via git:
+Download this repository either by zip file or via git.
+
+## Zip File
+Make sure you're on the apple-silicon branch, then click "Code" and select "Download ZIP"
+
+## Via git
 ```
 git clone https://github.com/lowfuel/progrock-stable prs
 cd prs
+git checkout apple-silicon
 ```
 
 Create a [conda](https://conda.io/) environment named `prs`:
@@ -31,14 +37,14 @@ Download the [Stable Diffusion weights](https://huggingface.co/CompVis/stable-di
 
 Run prs to make sure everything worked!
 ```
-python prs.py
+python prs.py --device mps
 ```
 
 # Basic Use
 
 To use the default settings, but with your own text prompt:
 ```
-python prs.py -p "A painting of a troll under a bridge, by Hubert Robert"
+python prs.py --device mps -p "A painting of a troll under a bridge, by Hubert Robert"
 ```
 
 # Intermediate Use
@@ -47,7 +53,7 @@ It is recommended that you create your own settings file(s) inside the settings 
 
 To specify your own settings file, simply do:
 ```
-python prs.py -s settings\my_file.json
+python prs.py --device mps -s settings\my_file.json
 ```
 Note: You can supply multiple settings partial settings files, they will be layered on top of the previous ones in order, ALWAYS starting with the default settings.json. 
 
@@ -67,7 +73,7 @@ The simplest method is to add --gobig to your command line. This will render you
 
 However, more often than not you'll probably want to choose an existing render (or any image really) to start with. To do that, you add --gobig_init to your command *as well*.
 ```
-python prs.py --gobig --gobig_init "init_images/myfile.png"
+python prs.py --device mps --gobig --gobig_init "init_images/myfile.png"
 ```
 ## Fine-tuning GoBIG
 There are a few settings you can tweak to improve your results:
