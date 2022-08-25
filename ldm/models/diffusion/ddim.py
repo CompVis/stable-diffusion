@@ -145,7 +145,7 @@ class DDIMSampler(object):
                 assert x0 is not None
                 img_orig = self.model.q_sample(x0, ts)  # TODO: deterministic forward pass?
                 img = img_orig * mask + (1. - mask) * img
-
+            
             outs = self.p_sample_ddim(img, cond, ts, index=index, use_original_steps=ddim_use_original_steps,
                                       quantize_denoised=quantize_denoised, temperature=temperature,
                                       noise_dropout=noise_dropout, score_corrector=score_corrector,
@@ -174,6 +174,7 @@ class DDIMSampler(object):
             x_in = torch.cat([x] * 2)
             t_in = torch.cat([t] * 2)
             c_in = torch.cat([unconditional_conditioning, c])
+            #import pdb; pdb.set_trace()
             e_t_uncond, e_t = self.model.apply_model(x_in, t_in, c_in).chunk(2)
             e_t = e_t_uncond + unconditional_guidance_scale * (e_t - e_t_uncond)
 
@@ -214,10 +215,23 @@ class DDIMSampler(object):
             sqrt_alphas_cumprod = torch.sqrt(self.ddim_alphas)
             sqrt_one_minus_alphas_cumprod = self.ddim_sqrt_one_minus_alphas
 
+        # Replace the rightmost 25% (black empty area) with... something
+        #width = x0.shape[-1]
+        #right_thresh = width * 3 // 4
+        #x0[:, :, :, right_thresh:] = torch.flip(x0[:,:,:, width - 2*right_thresh:right_thresh], dims=[-1])
+
         if noise is None:
             noise = torch.randn_like(x0)
-        return (extract_into_tensor(sqrt_alphas_cumprod, t, x0.shape) * x0 +
+        # This is where we add noise to the latents
+        noisy_latents = (extract_into_tensor(sqrt_alphas_cumprod, t, x0.shape) * x0 +
                 extract_into_tensor(sqrt_one_minus_alphas_cumprod, t, x0.shape) * noise)
+
+        # Replace the rightmost 25% (black empty area) with mirror content
+        #noisy_latents[:, :, :, 36:48] = torch.flip(noisy_latents[:, :, :, 24:36], dims=[-1])
+        #noisy_latents[:, :, :, 44:48] = torch.flip(noise[:, :, :, 36:40], dims=[-1])
+        # Remove any noise from the leftmost 50% freeze it
+        #noisy_latents[:, :, :, :width//2] = x0[:, :, :, :width//2]
+        return noisy_latents
 
     @torch.no_grad()
     def decode(self, x_latent, cond, t_start, unconditional_guidance_scale=1.0, unconditional_conditioning=None,
@@ -235,7 +249,13 @@ class DDIMSampler(object):
         for i, step in enumerate(iterator):
             index = total_steps - i - 1
             ts = torch.full((x_latent.shape[0],), step, device=x_latent.device, dtype=torch.long)
+            width = x_dec.shape[-1]
+            left = x_dec[:, :, :, :width//2].clone()
             x_dec, _ = self.p_sample_ddim(x_dec, cond, ts, index=index, use_original_steps=use_original_steps,
                                           unconditional_guidance_scale=unconditional_guidance_scale,
                                           unconditional_conditioning=unconditional_conditioning)
+            # Freeze the leftmost 50%
+            #x_dec[:, :, :, :width//2] = left
+            import imutil
+            #imutil.show(self.model.first_stage_model.decode(x_dec))
         return x_dec

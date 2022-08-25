@@ -32,6 +32,7 @@ def load_model_from_config(config, ckpt, verbose=False):
         print(f"Global Step: {pl_sd['global_step']}")
     sd = pl_sd["state_dict"]
     model = instantiate_from_config(config.model)
+    #model = model.half()
     m, u = model.load_state_dict(sd, strict=False)
     if len(m) > 0 and verbose:
         print("missing keys:")
@@ -53,7 +54,7 @@ def load_img(path):
     image = image.resize((w, h), resample=PIL.Image.LANCZOS)
     image = np.array(image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
-    image = torch.from_numpy(image)
+    image = torch.from_numpy(image).half()
     return 2.*image - 1.
 
 
@@ -192,12 +193,17 @@ def main():
         choices=["full", "autocast"],
         default="autocast"
     )
+    parser.add_argument(
+        "--foobar",
+        type=float,
+        help="lerp val between 0 and 1",
+    )
 
     opt = parser.parse_args()
     seed_everything(opt.seed)
 
     config = OmegaConf.load(f"{opt.config}")
-    model = load_model_from_config(config, f"{opt.ckpt}")
+    model = load_model_from_config(config, f"{opt.ckpt}").half()
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
@@ -240,6 +246,12 @@ def main():
     t_enc = int(opt.strength * opt.ddim_steps)
     print(f"target t_enc is {t_enc} steps")
 
+    np.random.seed(42)
+    x = opt.foobar
+    noise1 = np.random.normal(0, 1, (1, 4, 64, 64))
+    noise2 = np.random.normal(0, 1, (1, 4, 64, 64))
+    noise = torch.tensor(x * noise1 + (1 - x) * noise2).to(device).half()
+
     precision_scope = autocast if opt.precision == "autocast" else nullcontext
     with torch.no_grad():
         with precision_scope("cuda"):
@@ -256,10 +268,16 @@ def main():
                         c = model.get_learned_conditioning(prompts)
 
                         # encode (scaled latent)
-                        z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
+                        z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device),
+                                noise=noise)
+                        #z_enc = z_enc.half()
                         # decode it
                         samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
                                                  unconditional_conditioning=uc,)
+
+                        #import imutil
+                        #for i in range(100):
+                        #    imutil.show(model.decode_first_stage((1-(i/100)) * samples + (i/100) * init_latent))
 
                         x_samples = model.decode_first_stage(samples)
                         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
@@ -287,6 +305,10 @@ def main():
 
     print(f"Your samples are ready and waiting for you here: \n{outpath} \n"
           f" \nEnjoy.")
+    import imutil
+    print('imutil saving...')
+    imutil.show(x_samples[0], filename='prevgreg.png', display=False)
+    imutil.show(x_samples[0], display=False)
 
 
 if __name__ == "__main__":
