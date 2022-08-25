@@ -1,8 +1,7 @@
-'''wrapper around part of Karen Crownson's k-duffsion library, making it call compatible with other Samplers'''
+'''wrapper around part of Katherine Crowson's k-diffusion library, making it call compatible with other Samplers'''
 import k_diffusion as K
 import torch
 import torch.nn as nn
-import accelerate
 
 class CFGDenoiser(nn.Module):
     def __init__(self, model):
@@ -17,12 +16,11 @@ class CFGDenoiser(nn.Module):
         return uncond + (cond - uncond) * cond_scale
 
 class KSampler(object):
-    def __init__(self,model,schedule="lms", **kwargs):
+    def __init__(self, model, schedule="lms", device="cuda", **kwargs):
         super().__init__()
-        self.model        = K.external.CompVisDenoiser(model)
-        self.accelerator  = accelerate.Accelerator()
-        self.device       = self.accelerator.device
+        self.model = K.external.CompVisDenoiser(model)
         self.schedule = schedule
+        self.device = device
 
         def forward(self, x, sigma, uncond, cond, cond_scale):
             x_in = torch.cat([x] * 2)
@@ -67,8 +65,5 @@ class KSampler(object):
             x = torch.randn([batch_size, *shape], device=self.device) * sigmas[0] # for GPU draw
         model_wrap_cfg = CFGDenoiser(self.model)
         extra_args = {'cond': conditioning, 'uncond': unconditional_conditioning, 'cond_scale': unconditional_guidance_scale}
-        return (K.sampling.__dict__[f'sample_{self.schedule}'](model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not self.accelerator.is_main_process),
+        return (K.sampling.__dict__[f'sample_{self.schedule}'](model_wrap_cfg, x, sigmas, extra_args=extra_args),
                 None)
-
-    def gather(samples_ddim):
-        return self.accelerator.gather(samples_ddim)
