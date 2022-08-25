@@ -1,9 +1,7 @@
 # Stable Diffusion Dream Script
 
 This is a fork of CompVis/stable-diffusion, the wonderful open source
-text-to-image generator.
-
-The original has been modified in several ways:
+text-to-image generator. The original has been improved in several ways:
 
 ## Interactive command-line interface similar to the Discord bot
 
