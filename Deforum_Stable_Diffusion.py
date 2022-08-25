@@ -757,9 +757,63 @@ def render_animation(args, anim_args):
 
         args.seed = next_seed(args)
 
+def render_input_video(args):
+    # create output folder for the batch
+    os.makedirs(args.outdir, exist_ok=True)
+
+    #create a folder for the video input frames to live in
+    inputframesdirname = 'inputframes'
+    os.makedirs(f'{args.outdir}{inputframesdirname}', exist_ok=True)
+    print(f"Loading input frames from {args.outdir}{inputframesdirname} and Saving video frames to {args.outdir}")
+    
+    #save the video frames from input video
+    print(f"Exporting Video Frames (1 every {anim_args.extract_nth_frame}) frames...")
+    try:
+      for f in pathlib.Path(f'{anim_args.inputframesdir}').glob('*.jpg'):
+        f.unlink()
+    except:
+        vf = f'select=not(mod(n\,{anim_args.extract_nth_frame}))'
+        subprocess.run(['ffmpeg', '-i', f'{anim_args.video_init_path}', '-vf', f'{vf}', '-vsync', 'vfr', '-q:v', '2', '-loglevel', 'error', '-stats', f'{args.outdir}{inputframesdirname}/%04d.jpg'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+    
+    #determine max frames from length of input frames
+    max_frames = len(glob(f'{args.outdir}{inputframesdirname}/*.jpg'))
+    # save settings for the batch
+    settings_filename = os.path.join(args.outdir, f"{args.batchdir}_{args.timestring}_settings.txt")
+    with open(settings_filename, "w+", encoding="utf-8") as f:
+        json.dump(dict(args.__dict__), f, ensure_ascii=False, indent=4)
+
+    # expand prompts out to per-frame
+    prompt_series = pd.Series([np.nan for a in range(max_frames)])
+    for i, prompt in animation_prompts.items():
+        prompt_series[i] = prompt
+    prompt_series = prompt_series.ffill().bfill()
+
+    args.n_samples = 1
+    args.init_image = f'{args.outdir}{inputframesdirname}/{1:04}.jpg'
+    for frame_idx in range(max_frames):
+        print(f"Rendering video input frame {frame_idx} of {max_frames}")
+
+        args.prompt = prompt_series[frame_idx]
+        print(f"{args.prompt} {args.seed}")
+
+        results = generate(args, return_latent=False, return_sample=True)
+        sample, image = results[0], results[1]
+
+        filename = f"{args.batchdir}_{args.timestring}_{frame_idx:04}.png"
+        args.init_image = f'{args.outdir}{inputframesdirname}/{frame_idx+1:04}.jpg'
+        image.save(os.path.join(args.outdir, filename))
+        prev_sample = sample
+        
+        display.clear_output(wait=True)
+        display.display(image)
+
+        args.seed = next_seed(args)
+
 
 if anim_args.animation_mode == '2D':
     render_animation(args, anim_args)
+elif anim_args.animation_mode == 'Video Input':
+    render_input_video(args)
 else:
     render_image_batch(args)    
 
