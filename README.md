@@ -15,12 +15,13 @@ pip install jsonmerge clean-fid resize-right torchdiffeq
 ```
 
 # Installation instructions
+
 Download this repository either by zip file (click the "Code" option above and select "Download ZIP"), or via git:
 ```
 git clone https://github.com/lowfuel/progrock-stable prs
 cd prs
 ```
-
+(MacOS M1/M2 users, see [here]((#macos-setup)) for instructions on setting up conda)
 Create a [conda](https://conda.io/) environment named `prs`:
 ```
 conda env create -f environment.yaml
@@ -78,6 +79,19 @@ There are a few settings you can tweak to improve your results:
 - Lastly, consider tweaking the prompt from your original image to one that focuses more on texture and detail. Keep in mind that each section of the image will use the prompt, so if the image you are upscaling has a singular subject in one area (say, a bird), as it re-renders each section if "bird" is in the prompt it may try to add a bird to those smaller sections, resulting in an upscaled image that is not what you wanted.
 
 - Not every image does well with GoBIG. It is best used on images that have lots of content and fine detail everywhere. So, don't force it! Sometimes a simple upscaler like RealESRGAN will do a better job, especially on those images where your prompt might not apply to every section.
+
+# MacOS Setup
+
+Install Homebrew:
+```
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+Restart your terminal, then:
+```
+brew install miniforge
+conda init zsh
+```
+Restart your terminal again, and continue the instructions above.
 
 
 # About Stable Diffusion
