@@ -23,7 +23,7 @@ class DreamServer(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "text/html")
             self.end_headers()
-            with open("./static/index.html", "rb") as content:
+            with open("./static/dream_web/index.html", "rb") as content:
                 self.wfile.write(content.read())
         elif os.path.exists("." + self.path):
             mime_type = mimetypes.guess_type(self.path)[0]
