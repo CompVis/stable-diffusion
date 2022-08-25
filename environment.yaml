@@ -1,5 +1,6 @@
 name: prs
 channels:
+  - conda-forge
   - pytorch-nightly
   - defaults
 dependencies:
