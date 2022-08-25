@@ -153,13 +153,18 @@ def main_loop(t2i,outdir,parser,log,infile):
             continue
 
         normalized_prompt      = PromptFormatter(t2i,opt).normalize_prompt()
+        variants               = None
+
         try:
-            file_writer        = PngWriter(outdir,opt,normalized_prompt)
+            file_writer        = PngWriter(outdir,normalized_prompt,opt.batch_size)
             callback           = file_writer.write_image
 
             t2i.prompt2image(image_callback=callback,
                              **vars(opt))
             results      = file_writer.files_written
+
+            if None not in (opt.variants,opt.init_img):
+                variants = generate_variants(t2i,outdir,opt,results)
 
         except AssertionError as e:
             print(e)
@@ -167,11 +172,39 @@ def main_loop(t2i,outdir,parser,log,infile):
 
         print("Outputs:")
         write_log_message(t2i,normalized_prompt,results,log)
+        if variants is not None:
+            print('Variants:')
+            for vr in variants:
+                write_log_message(t2i,vr[0],vr[1],log)
 
     print("goodbye!")
 
+def generate_variants(t2i,outdir,opt,previous_gens):
+    variants = []
+    print(f"Generating {opt.variants} variant(s)...")
+    newopt = copy.deepcopy(opt)
+    newopt.iterations = 1
+    newopt.variants   = None
+    for r in previous_gens:
+        newopt.init_img = r[0]
+        prompt            = PromptFormatter(t2i,newopt).normalize_prompt()
+        print(f"] generating variant for {newopt.init_img}")
+        for j in range(0,opt.variants):
+            try:
+                file_writer        = PngWriter(outdir,prompt,newopt.batch_size)
+                callback           = file_writer.write_image
+                t2i.prompt2image(image_callback=callback,**vars(newopt))
+                results           = file_writer.files_written
+                variants.append([prompt,results])
+            except AssertionError as e:
+                print(e)
+                continue
+    print(f'{opt.variants} variants generated')
+    return variants
+                
+
 def write_log_message(t2i,prompt,results,logfile):
-    ''' logs the name of the output image, its prompt and seed to the terminal, log file, and a Dream text chunk in the PNG metadata '''
+    ''' logs the name of the output image, its prompt and seed to the terminal, log file, and a Dream text chunk in the PNG metadata'''
     last_seed  = None
     img_num    = 1
     seenit     = {}
