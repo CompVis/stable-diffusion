@@ -1,5 +1,6 @@
 import json
 import base64
+import mimetypes
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -16,11 +17,15 @@ class DreamServer(BaseHTTPRequestHandler):
             with open("./scripts/static/index.html", "rb") as content:
                 self.wfile.write(content.read())
         elif os.path.exists("." + self.path):
-            self.send_response(200)
-            self.send_header("Content-type", "image/png")
-            self.end_headers()
-            with open("." + self.path, "rb") as content:
-                self.wfile.write(content.read())
+            mime_type = mimetypes.guess_type(self.path)[0]
+            if mime_type is not None:
+                self.send_response(200)
+                self.send_header("Content-type", mime_type)
+                self.end_headers()
+                with open("." + self.path, "rb") as content:
+                    self.wfile.write(content.read())
+            else:
+                self.send_response(404)
         else:
             self.send_response(404)
 

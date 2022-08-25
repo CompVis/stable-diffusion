@@ -1,0 +1,49 @@
+* {
+    font-family: 'Arial';
+}
+#header {
+    text-decoration: dotted underline;
+}
+#search {
+    margin-top: 20vh;
+    text-align: center;
+}
+fieldset {
+    border: none;
+}
+#prompt {
+    width: 500px;
+    border-radius: 20px 0px 0px 20px;
+    padding: 5px 10px 5px 10px;
+    border: 1px solid black;
+    outline: none;
+}
+#submit {
+    border-radius: 0px 20px 20px 0px;
+    padding: 5px 10px 5px 10px;
+    border: 1px solid black;
+}
+#results {
+    text-align: center;
+    padding-left: 20vw;
+    padding-right: 20vw;
+    padding-top: 10px;
+}
+img {
+    cursor: pointer;
+    height: 30vh;
+    border-radius: 5px;
+    margin: 10px;
+}
+#generate-config {
+    line-height:2em;
+}
+input[type="number"] {
+    width: 60px;
+}
+#seed {
+    width: 150px;
+}
+hr {
+    width: 200px;
+}
