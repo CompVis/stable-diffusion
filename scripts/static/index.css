@@ -6,16 +6,25 @@
 }
 #search {
     margin-top: 20vh;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 800px;
+
     text-align: center;
 }
 fieldset {
     border: none;
 }
+#fieldset-search {
+    display: flex;
+}
 #prompt {
-    width: 500px;
+    flex-grow: 1;
+
     border-radius: 20px 0px 0px 20px;
     padding: 5px 10px 5px 10px;
     border: 1px solid black;
+    border-right: none;
     outline: none;
 }
 #submit {
@@ -25,8 +34,8 @@ fieldset {
 }
 #results {
     text-align: center;
-    padding-left: 20vw;
-    padding-right: 20vw;
+    max-width: 1000px;
+    margin: auto;
     padding-top: 10px;
 }
 img {
@@ -35,7 +44,7 @@ img {
     border-radius: 5px;
     margin: 10px;
 }
-#generate-config {
+#fieldset-config {
     line-height:2em;
 }
 input[type="number"] {
@@ -46,4 +55,7 @@ input[type="number"] {
 }
 hr {
     width: 200px;
+}
+label {
+    white-space: nowrap;
 }

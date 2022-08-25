@@ -2,6 +2,7 @@
   <head>
     <title>Stable Diffusion WebUI</title>
     <link rel="icon" href="data:,">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <link rel="stylesheet" href="scripts/static/index.css">
     <script src="scripts/static/index.js"></script>
@@ -11,11 +12,11 @@
       <h2 id="header">Stable Diffusion</h2>
 
       <form id="generate-form" method="post" action="#">
-        <fieldset>
+        <fieldset id="fieldset-search">
           <input type="text" id="prompt" name="prompt">
           <input type="submit" id="submit" value="Generate">
         </fieldset>
-        <fieldset id="generate-config">
+        <fieldset id="fieldset-config">
           <label for="batch">Batch Size:</label>
           <input value="1" type="number" id="batch" name="batch">
           <label for="steps">Steps:</label>
