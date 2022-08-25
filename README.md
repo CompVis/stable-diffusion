@@ -21,7 +21,7 @@ Download this repository either by zip file (click the "Code" option above and s
 git clone https://github.com/lowfuel/progrock-stable prs
 cd prs
 ```
-(MacOS M1/M2 users, see [here]((#macos-setup)) for instructions on setting up conda)
+(MacOS M1/M2 users, see [here](#macos-setup) for instructions on setting up conda)
 Create a [conda](https://conda.io/) environment named `prs`:
 ```
 conda env create -f environment.yaml
