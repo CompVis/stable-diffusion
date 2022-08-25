@@ -2,6 +2,7 @@
 import os
 import atexit
 import re
+from math import sqrt,floor,ceil
 from PIL import Image,PngImagePlugin
 
 # -------------------image generation utils-----
@@ -24,7 +25,7 @@ class PngWriter:
             print(e)
         self.files_written.append([self.filepath,seed])
 
-    def unique_filename(self,seed,previouspath):
+    def unique_filename(self,seed,previouspath=None):
         revision = 1
 
         if previouspath is None:
@@ -61,6 +62,22 @@ class PngWriter:
         info = PngImagePlugin.PngInfo()
         info.add_text("Dream",prompt)
         image.save(path,"PNG",pnginfo=info)
+
+    def make_grid(self,image_list,rows=None,cols=None):
+        image_cnt = len(image_list)
+        if None in (rows,cols):
+            rows = floor(sqrt(image_cnt))  # try to make it square
+            cols = ceil(image_cnt/rows)
+        width  = image_list[0].width
+        height = image_list[0].height
+
+        grid_img = Image.new('RGB',(width*cols,height*rows))
+        for r in range(0,rows):
+            for c in range (0,cols):
+                i = r*rows + c
+                grid_img.paste(image_list[i],(c*width,r*height))
+
+        return grid_img
     
 class PromptFormatter():
     def __init__(self,t2i,opt):
@@ -80,8 +97,6 @@ class PromptFormatter():
         switches.append(f'-H{opt.height       or t2i.height}')
         switches.append(f'-C{opt.cfg_scale    or t2i.cfg_scale}')
         switches.append(f'-m{t2i.sampler_name}')
-        if opt.variants:
-            switches.append(f'-v{opt.variants}')
         if opt.init_img:
             switches.append(f'-I{opt.init_img}')
         if opt.strength and opt.init_img is not None:

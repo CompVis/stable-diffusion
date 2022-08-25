@@ -153,54 +153,60 @@ def main_loop(t2i,outdir,parser,log,infile):
             continue
 
         normalized_prompt      = PromptFormatter(t2i,opt).normalize_prompt()
-        variants               = None
+        individual_images      = not opt.grid
 
         try:
             file_writer        = PngWriter(outdir,normalized_prompt,opt.batch_size)
-            callback           = file_writer.write_image
+            callback           = file_writer.write_image if individual_images else None
 
-            t2i.prompt2image(image_callback=callback,
-                             **vars(opt))
-            results      = file_writer.files_written
+            image_list   = t2i.prompt2image(image_callback=callback,**vars(opt))
+            results      = file_writer.files_written     if individual_images else image_list
 
-            if None not in (opt.variants,opt.init_img):
-                variants = generate_variants(t2i,outdir,opt,results)
+            if opt.grid and len(results) > 0:
+                grid_img = file_writer.make_grid([r[0] for r in results])
+                filename = file_writer.unique_filename(results[0][1])
+                seeds    = [a[1] for a in results]
+                results  = [[filename,seeds]]
+                metadata_prompt   = f'{normalized_prompt} -S{results[0][1]}'
+                file_writer.save_image_and_prompt_to_png(grid_img,metadata_prompt,filename)
 
         except AssertionError as e:
             print(e)
             continue
 
+        except OSError as e:
+            print(e)
+            continue
+
         print("Outputs:")
         write_log_message(t2i,normalized_prompt,results,log)
-        if variants is not None:
-            print('Variants:')
-            for vr in variants:
-                write_log_message(t2i,vr[0],vr[1],log)
 
     print("goodbye!")
 
-def generate_variants(t2i,outdir,opt,previous_gens):
-    variants = []
-    print(f"Generating {opt.variants} variant(s)...")
-    newopt = copy.deepcopy(opt)
-    newopt.iterations = 1
-    newopt.variants   = None
-    for r in previous_gens:
-        newopt.init_img = r[0]
-        prompt            = PromptFormatter(t2i,newopt).normalize_prompt()
-        print(f"] generating variant for {newopt.init_img}")
-        for j in range(0,opt.variants):
-            try:
-                file_writer        = PngWriter(outdir,prompt,newopt.batch_size)
-                callback           = file_writer.write_image
-                t2i.prompt2image(image_callback=callback,**vars(newopt))
-                results           = file_writer.files_written
-                variants.append([prompt,results])
-            except AssertionError as e:
-                print(e)
-                continue
-    print(f'{opt.variants} variants generated')
-    return variants
+# variant generation is going to be superseded by a generalized
+# "prompt-morph" functionality
+# def generate_variants(t2i,outdir,opt,previous_gens):
+#     variants = []
+#     print(f"Generating {opt.variants} variant(s)...")
+#     newopt = copy.deepcopy(opt)
+#     newopt.iterations = 1
+#     newopt.variants   = None
+#     for r in previous_gens:
+#         newopt.init_img = r[0]
+#         prompt            = PromptFormatter(t2i,newopt).normalize_prompt()
+#         print(f"] generating variant for {newopt.init_img}")
+#         for j in range(0,opt.variants):
+#             try:
+#                 file_writer        = PngWriter(outdir,prompt,newopt.batch_size)
+#                 callback           = file_writer.write_image
+#                 t2i.prompt2image(image_callback=callback,**vars(newopt))
+#                 results           = file_writer.files_written
+#                 variants.append([prompt,results])
+#             except AssertionError as e:
+#                 print(e)
+#                 continue
+#     print(f'{opt.variants} variants generated')
+#     return variants
                 
 
 def write_log_message(t2i,prompt,results,logfile):
@@ -208,9 +214,6 @@ def write_log_message(t2i,prompt,results,logfile):
     last_seed  = None
     img_num    = 1
     seenit     = {}
-
-    seeds = [a[1] for a in results]
-    seeds = f"(seeds for individual images: {seeds})"
 
     for r in results:
         seed = r[1]
@@ -275,7 +278,8 @@ def create_cmd_parser():
     parser.add_argument('-i','--individual',action='store_true',help="generate individual files (default)")
     parser.add_argument('-I','--init_img',type=str,help="path to input image for img2img mode (supersedes width and height)")
     parser.add_argument('-f','--strength',default=0.75,type=float,help="strength for noising/unnoising. 0.0 preserves image exactly, 1.0 replaces it completely")
-    parser.add_argument('-v','--variants',type=int,help="in img2img mode, the first generated image will get passed back to img2img to generate the requested number of variants")
+# variants is going to be superseded by a generalized "prompt-morph" function
+#    parser.add_argument('-v','--variants',type=int,help="in img2img mode, the first generated image will get passed back to img2img to generate the requested number of variants")
     parser.add_argument('-x','--skip_normalize',action='store_true',help="skip subprompt weight normalization")
     return parser
 
