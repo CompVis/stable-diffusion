@@ -100,9 +100,9 @@ def do_run(device, model, opt):
     seed_everything(opt.seed)
 
     if opt.plms:
-        sampler = PLMSSampler(model)
+        sampler = PLMSSampler(model, device)
     else:
-        sampler = DDIMSampler(model)
+        sampler = DDIMSampler(model, device)
 
     os.makedirs(opt.outdir, exist_ok=True)
     outpath = opt.outdir
