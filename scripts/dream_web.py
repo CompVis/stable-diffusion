@@ -81,6 +81,12 @@ class DreamServer(BaseHTTPRequestHandler):
         self.wfile.write(bytes(json.dumps(result), "utf-8"))
 
 if __name__ == "__main__":
+    # Change working directory to the stable-diffusion directory
+    os.chdir(
+        os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..'))
+    )
+
+    # Start server
     dream_server = ThreadingHTTPServer(("0.0.0.0", 9090), DreamServer)
     print("Started Stable Diffusion dream server!")
 
