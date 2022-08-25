@@ -88,6 +88,26 @@ You may also pass a -v<count> option to generate count variants on the original 
 passing the first generated image back into img2img the requested number of times. It generates interesting
 variants.
 
+## Reading Prompts from a File
+
+You can automate dream.py by providing a text file with the prompts
+you want to run, one line per prompt. The text file must be composed
+with a text editor (e.g. Notepad) and not a word processor. Each line
+should look like what you would type at the dream> prompt:
+
+~~~~
+a beautiful sunny day in the park, children playing -n4 -C10
+stormy weather on a mountain top, goats grazing     -s100
+innovative packaging for a squid's dinner           -S137038382
+~~~~
+
+Then pass this file's name to dream.py when you invoke it:
+
+~~~~
+(ldm) ~/stable-diffusion$ python3 scripts/dream.py --from_file="path/to/prompts.txt"
+~~~~
+
+
 ## Weighted Prompts
 
 You may weight different sections of the prompt to tell the sampler to attach different levels of
