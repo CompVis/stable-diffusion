@@ -96,7 +96,7 @@ class CFGDenoiser(nn.Module):
         return uncond + (cond - uncond) * cond_scale
 
 def do_run(device, model, opt):
-    print('Starting render!')
+    print(f'Starting render!')
     seed_everything(opt.seed)
 
     if opt.plms:
@@ -501,6 +501,7 @@ class Settings:
     dyn = None
     from_file = None
     seed = "random"
+    frozen_seed = False
     init_image = None
     init_strength = 0.5
     gobig_maximize = True
@@ -546,6 +547,8 @@ class Settings:
             self.seed = (settings_file["seed"])
             if self.seed == "random":
                 self.seed = random.randint(1, 10000000)
+        if is_json_key_present(settings_file, 'frozen_seed'):
+            self.frozen_seed = (settings_file["frozen_seed"])
         if is_json_key_present(settings_file, 'init_strength'):
             self.init_strength = (settings_file["init_strength"])
         if is_json_key_present(settings_file, 'init_image'):
@@ -788,6 +791,8 @@ def main():
                 if settings.cool_down > 0 and i < (settings.n_batches - 1):
                     print(f'Pausing {settings.cool_down} seconds to give your poor GPU a rest...')
                     time.sleep(settings.cool_down)
+            if not settings.frozen_seed:
+                settings.seed = settings.seed + 1
         if cl_args.interactive == False:
             #only doing one render, so we stop after this
             there_is_work_to_do = False
