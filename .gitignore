@@ -2,6 +2,9 @@
 outputs/
 models/ldm/stable-diffusion-v1/model.ckpt
 
+# ignore a directory which serves as a place for initial images
+inputs/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
