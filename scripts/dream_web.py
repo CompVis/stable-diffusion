@@ -45,7 +45,7 @@ class DreamServer(BaseHTTPRequestHandler):
                                 steps = steps);
         print(f"Prompt generated with output: {outputs}")
 
-        outputs = [x + [prompt] for x in outputs] # Append prompt to each output
+        outputs = [x + [post_data] for x in outputs] # Append config to each output
         result = {'outputs': outputs}
         self.wfile.write(bytes(json.dumps(result), "utf-8"))
 

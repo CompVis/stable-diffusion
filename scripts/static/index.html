@@ -52,12 +52,20 @@
           let output_node = document.createElement("img");
           output_node.src = output[0];
 
-          let alt_text = output[1].toString() + " | " + output[2];
+          let output_config = output[2];
+          let alt_text = output[1].toString() + " | " + output_config.prompt;
           output_node.alt = alt_text;
           output_node.title = alt_text;
-          // Update seed on click
+
+          // Reload image config
           output_node.addEventListener('click', () => {
+              let form = document.querySelector("#generate_form");
+              for (const [k, v] of new FormData(form)) {
+                  form.querySelector(`*[name=${k}]`).value = output_config[k];
+              }
               document.querySelector("#seed").value = output[1];
+
+              save_fields(document.querySelector("#generate_form"));
           });
 
           document.querySelector("#results").prepend(output_node);
@@ -115,6 +123,10 @@
           document.querySelector("#generate_form").addEventListener('change', (e) => {
               save_fields(e.target.form);
           });
+          document.querySelector("#reset").addEventListener('click', (e) => {
+              document.querySelector("#seed").value = -1;
+              save_fields(e.target.form);
+          });
           load_fields(document.querySelector("#generate_form"));
       };
     </script>
@@ -143,6 +155,7 @@
           <span>&bull;</span>
           <label title="Set to -1 for random seed" for="seed">Seed:</label>
           <input value="-1" type="number" id="seed" name="seed">
+          <button type="button" id="reset">&olarr;</button>
         </fieldset>
       </form>
     </div>
