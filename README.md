@@ -179,10 +179,10 @@ repository and associated paper for details and limitations.
 
 ## Changes
 
-*v1.10 (25 August 2022)
+* v1.10 (25 August 2022)
    * A barebones but fully functional interactive web server for online generation of txt2img and img2img.
    
-*v1.09 (24 August 2022)
+* v1.09 (24 August 2022)
    * A new -v option allows you to generate multiple variants of an initial image
      in img2img mode. (kudos to [Oceanswave](https://github.com/Oceanswave). [See this discussion in the PR for examples and details on use](https://github.com/lstein/stable-diffusion/pull/71#issuecomment-1226700810))
    * Added ability to personalize text to image generation (kudos to [Oceanswave](https://github.com/Oceanswave) and [nicolai256](https://github.com/nicolai256))
