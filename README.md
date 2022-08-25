@@ -5,11 +5,19 @@ You will need administrator privileges for installing Miniconda and the setup sc
 2. Download the model checkpoint. (e.g. from huggingface)
 3. Place the model into 'models\ldm\stable-diffusion-v1' and rename it to 'model.ckpt'.
 4. Download and install Miniconda 3 **for all users.**
+```
+5. Run webui.cmd
+```
+
+OR
+
+```
 5. Click "Setup Waifu Diffusion".
 6. Change the terminal's directory into the root path of the repo (e.g `cd "C:\Users\Anon\Desktop\stable-diffusion-main"`)
 7. Type the word 'setup' and hit Enter.
+```
 
-After installation has completed, you can click "Launch Waifu Diffusion" to run the program anytime.
+After installation has completed, you can open webui.cmd OR "Launch Waifu Diffusion" to run the program anytime.
 
 ---
 
