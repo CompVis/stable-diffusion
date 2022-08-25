@@ -138,10 +138,14 @@ def do_run(device, model, opt):
     start_code = None
     if opt.fixed_code:
         start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
-
+    
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
+    # apple silicon support
+    if device.type == 'mps':
+        precision_scope = nullcontext
+
     with torch.no_grad():
-        with precision_scope("cuda" if "cuda" in str(device) else "cpu"):
+        with precision_scope(device.type):
             with model.ema_scope():
                 tic = time.time()
                 all_samples = list()
@@ -165,11 +169,22 @@ def do_run(device, model, opt):
 
                         if init_image is None:
                             shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
-                            sigmas = model_wrap.get_sigmas(opt.ddim_steps)
-                            x = torch.randn([opt.n_samples, *shape], device=device) * sigmas[0]
-                            model_wrap_cfg = CFGDenoiser(model_wrap)
-                            extra_args = {'cond': c, 'uncond': uc, 'cond_scale': opt.scale}
-                            samples_ddim = K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args)
+                            if opt.method == "k_lms":
+                                sigmas = model_wrap.get_sigmas(opt.ddim_steps)
+                                x = torch.randn([opt.n_samples, *shape], device=device) * sigmas[0]
+                                model_wrap_cfg = CFGDenoiser(model_wrap)
+                                extra_args = {'cond': c, 'uncond': uc, 'cond_scale': opt.scale}
+                                samples_ddim = K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args)
+                            else:
+                                samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
+                                                                conditioning=c,
+                                                                batch_size=opt.n_samples,
+                                                                shape=shape,
+                                                                verbose=False,
+                                                                unconditional_guidance_scale=opt.scale,
+                                                                unconditional_conditioning=uc,
+                                                                eta=opt.ddim_eta,
+                                                                x_T=start_code)
 
                         else:
                             # encode (scaled latent)
@@ -495,6 +510,7 @@ class Settings:
     checkpoint = "./models/sd-v1-4.ckpt"
     use_jpg = False
     hide_metadata = False
+    method = "k_lms"
     
     def apply_settings_file(self, filename, settings_file):
         print(f'Applying settings file: {filename}')
@@ -670,13 +686,15 @@ def main():
     if torch.cuda.is_available() and "cuda" in cl_args.device:
         device = torch.device(f'{cl_args.device}')
         device_id = ("_" + cl_args.device.rsplit(':',1)[1]) if "0" not in cl_args.device else ""
-    elif "mps" in cl_args.device:
+    elif ("mps" in cl_args.device) or (torch.backends.mps.is_available()):
         device = torch.device("mps")
+        settings.method = "ddim" # k_diffusion currently not working on anything other than cuda
     else:
         # fallback to CPU if we don't recognize the device name given
         device = torch.device("cpu")
         cores = os.cpu_count()
         torch.set_num_threads(cores)
+        settings.method = "ddim" # k_diffusion currently not working on anything other than cuda
 
     print('Pytorch is using device:', device)
 
@@ -685,7 +703,7 @@ def main():
     model.eval()
 
     # load the model to the device
-    if "cpu" not in str(device):
+    if "cuda" in str(device):
         model = model.half() # half-precision mode for gpus, saves vram, good good
     model = model.to(device)
 
