@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>Stable Diffusion WebUI</title>
+    <title>Stable Diffusion Dream Server</title>
     <link rel="icon" href="data:,">
     <style>
       * {
@@ -156,7 +156,7 @@
   </head>
   <body>
     <div id="search">
-      <h2 id="header">Stable Diffusion</h2>
+      <h2 id="header">Stable Diffusion Dream Server</h2>
 
       <form id="generate-form" method="post" action="#">
         <fieldset>
@@ -164,8 +164,8 @@
           <input type="submit" id="submit" value="Generate">
         </fieldset>
         <fieldset id="generate-config">
-          <label for="batch">Batch Size:</label>
-          <input value="1" type="number" id="batch" name="batch">
+          <label for="iterations">Images to generate:</label>
+          <input value="1" type="number" id="iterations" name="iterations">
           <label for="steps">Steps:</label>
           <input value="50" type="number" id="steps" name="steps">
           <label for="cfgscale">Cfg Scale:</label>
@@ -183,6 +183,7 @@
           <button type="button" id="reset">&olarr;</button>
         </fieldset>
       </form>
+      <div id="about">For news and support for this web service, visit our <a href="http://github.com/lstein/stable-diffusion">GitHub site</a></div>
     </div>
     <hr style="width: 200px">
     <div id="results">

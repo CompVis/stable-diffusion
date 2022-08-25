@@ -88,6 +88,23 @@ You may also pass a -v<count> option to generate count variants on the original 
 passing the first generated image back into img2img the requested number of times. It generates interesting
 variants.
 
+## Barebones Web Server
+
+As of version 1.10, this distribution comes with a bare bones web server (see screenshot). To use it,
+run the command:
+
+~~~~
+(ldm) ~/stable-diffusion$ python3 scripts/dream_web.py
+~~~~
+
+You can then connect to the server by pointing your web browser at
+http://localhost:9090, or to the network name or IP address of the server.
+
+Kudos to [Tesseract Cat](https://github.com/TesseractCat) for
+contributing this code.
+
+![Dream Web Server](static/dream_web_server.png)
+
 ## Weighted Prompts
 
 You may weight different sections of the prompt to tell the sampler to attach different levels of
@@ -171,6 +188,7 @@ repository and associated paper for details and limitations.
 ## Changes
 
 * v1.09 (24 August 2022)
+   * A barebone web server for interactive online generation of txt2img and img2img.
    * A new -v option allows you to generate multiple variants of an initial image
      in img2img mode. (kudos to [Oceanswave](https://github.com/Oceanswave). [See this discussion in the PR for examples and details on use](https://github.com/lstein/stable-diffusion/pull/71#issuecomment-1226700810))
    * Added ability to personalize text to image generation (kudos to [Oceanswave](https://github.com/Oceanswave) and [nicolai256](https://github.com/nicolai256))
@@ -459,7 +477,9 @@ to send me an email if you use and like the script.
 [Peter Kowalczyk](https://github.com/slix), [Henry Harrison](https://github.com/hwharrison),
 [xraxra](https://github.com/xraxra), [bmaltais](https://github.com/bmaltais), [Sean McLellan](https://github.com/Oceanswave),
 [nicolai256](https://github.com/nicolai256), [Benjamin Warner](https://github.com/warner-benjamin),
-and [tildebyte](https://github.com/tildebyte)
+[tildebyte](https://github.com/tildebyte),
+and [Tesseract Cat](https://github.com/TesseractCat)
+
 
 Original portions of the software are Copyright (c) 2020 Lincoln D. Stein (https://github.com/lstein)
 
