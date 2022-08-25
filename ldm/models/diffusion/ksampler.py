@@ -1,4 +1,4 @@
-'''wrapper around part of Karen Crownson's k-duffsion library, making it call compatible with other Samplers'''
+'''wrapper around part of Katherine Crowson's k-diffusion library, making it call compatible with other Samplers'''
 import k_diffusion as K
 import torch
 import torch.nn as nn
