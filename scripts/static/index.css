@@ -1,0 +1,61 @@
+* {
+    font-family: 'Arial';
+}
+#header {
+    text-decoration: dotted underline;
+}
+#search {
+    margin-top: 20vh;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 800px;
+
+    text-align: center;
+}
+fieldset {
+    border: none;
+}
+#fieldset-search {
+    display: flex;
+}
+#prompt {
+    flex-grow: 1;
+
+    border-radius: 20px 0px 0px 20px;
+    padding: 5px 10px 5px 10px;
+    border: 1px solid black;
+    border-right: none;
+    outline: none;
+}
+#submit {
+    border-radius: 0px 20px 20px 0px;
+    padding: 5px 10px 5px 10px;
+    border: 1px solid black;
+}
+#results {
+    text-align: center;
+    max-width: 1000px;
+    margin: auto;
+    padding-top: 10px;
+}
+img {
+    cursor: pointer;
+    height: 30vh;
+    border-radius: 5px;
+    margin: 10px;
+}
+#fieldset-config {
+    line-height:2em;
+}
+input[type="number"] {
+    width: 60px;
+}
+#seed {
+    width: 150px;
+}
+hr {
+    width: 200px;
+}
+label {
+    white-space: nowrap;
+}

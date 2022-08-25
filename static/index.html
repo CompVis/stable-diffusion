@@ -2,170 +2,23 @@
   <head>
     <title>Stable Diffusion Dream Server</title>
     <link rel="icon" href="data:,">
-    <style>
-      * {
-          font-family: 'Arial';
-      }
-      #header {
-          text-decoration: dotted underline;
-      }
-      #search {
-          margin-top: 20vh;
-          text-align: center;
-      }
-      fieldset {
-          border: none;
-      }
-      #prompt {
-          width: 500px;
-          border-radius: 20px 0px 0px 20px;
-          padding: 5px 10px 5px 10px;
-          border: 1px solid black;
-          outline: none;
-      }
-      #submit {
-          border-radius: 0px 20px 20px 0px;
-          padding: 5px 10px 5px 10px;
-          border: 1px solid black;
-      }
-      #results {
-          text-align: center;
-          padding-left: 20vw;
-          padding-right: 20vw;
-          padding-top: 10px;
-      }
-      img {
-          cursor: pointer;
-          height: 30vh;
-          border-radius: 5px;
-          margin: 10px;
-      }
-      #generate-config {
-          line-height:2em;
-      }
-      input[type="number"] {
-          width: 60px;
-      }
-      #seed {
-          width: 150px;
-      }
-    </style>
-    <script>
-      function toBase64(file) {
-          return new Promise((resolve, reject) => {
-              const r = new FileReader();
-              r.readAsDataURL(file);
-              r.onload = () => resolve(r.result);
-              r.onerror = (error) => reject(error);
-          });
-      }
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-      function appendOutput(output) {
-          let outputNode = document.createElement("img");
-          outputNode.src = output[0];
-
-          let outputConfig = output[2];
-          let altText = output[1].toString() + " | " + outputConfig.prompt;
-          outputNode.alt = altText;
-          outputNode.title = altText;
-
-          // Reload image config
-          outputNode.addEventListener('click', () => {
-              let form = document.querySelector("#generate-form");
-              for (const [k, v] of new FormData(form)) {
-                  form.querySelector(`*[name=${k}]`).value = outputConfig[k];
-              }
-              document.querySelector("#seed").value = output[1];
-
-              saveFields(document.querySelector("#generate-form"));
-          });
-
-          document.querySelector("#results").prepend(outputNode);
-      }
-
-      function appendOutputs(outputs) {
-          for (const output of outputs) {
-              appendOutput(output);
-          }
-      }
-
-      function saveFields(form) {
-          for (const [k, v] of new FormData(form)) {
-              if (typeof v !== 'object') { // Don't save 'file' type
-                  localStorage.setItem(k, v);
-              }
-          }
-      }
-      function loadFields(form) {
-          for (const [k, v] of new FormData(form)) {
-              const item = localStorage.getItem(k);
-              if (item != null) {
-                  form.querySelector(`*[name=${k}]`).value = item;
-              }
-          }
-      }
-
-      async function generateSubmit(form) {
-          const prompt = document.querySelector("#prompt").value;
-
-          // Convert file data to base64
-          let formData = Object.fromEntries(new FormData(form));
-          formData.initimg = formData.initimg.name !== '' ? await toBase64(formData.initimg) : null;
-
-          // Post as JSON
-          fetch(form.action, {
-              method: form.method,
-              body: JSON.stringify(formData),
-          }).then(async (result) => {
-              let data = await result.json();
-
-              // Re-enable form, remove no-results-message
-              form.querySelector('fieldset').removeAttribute('disabled');
-              document.querySelector("#prompt").value = prompt;
-
-              if (data.outputs.length != 0) {
-                  document.querySelector("#no-results-message")?.remove();
-                  appendOutputs(data.outputs);
-              } else {
-                  alert("Error occurred while generating.");
-              }
-          });
-
-          // Disable form while generating
-          form.querySelector('fieldset').setAttribute('disabled','');
-          document.querySelector("#prompt").value = `Generating: "${prompt}"`;
-      }
-      
-      window.onload = () => {
-          document.querySelector("#generate-form").addEventListener('submit', (e) => {
-              e.preventDefault();
-              const form = e.target;
-
-              generateSubmit(form);
-          });
-          document.querySelector("#generate-form").addEventListener('change', (e) => {
-              saveFields(e.target.form);
-          });
-          document.querySelector("#reset").addEventListener('click', (e) => {
-              document.querySelector("#seed").value = -1;
-              saveFields(e.target.form);
-          });
-          loadFields(document.querySelector("#generate-form"));
-      };
-    </script>
+    <link rel="stylesheet" href="scripts/static/index.css">
+    <script src="scripts/static/index.js"></script>
   </head>
   <body>
     <div id="search">
       <h2 id="header">Stable Diffusion Dream Server</h2>
 
       <form id="generate-form" method="post" action="#">
-        <fieldset>
+        <fieldset id="fieldset-search">
           <input type="text" id="prompt" name="prompt">
           <input type="submit" id="submit" value="Generate">
         </fieldset>
-        <fieldset id="generate-config">
+        <fieldset id="fieldset-config">
           <label for="iterations">Images to generate:</label>
-          <input value="1" type="number" id="iterations" name="iterations">
+          <input value="1" type="number" id="batch" name="batch">
           <label for="steps">Steps:</label>
           <input value="50" type="number" id="steps" name="steps">
           <label for="cfgscale">Cfg Scale:</label>
@@ -185,7 +38,7 @@
       </form>
       <div id="about">For news and support for this web service, visit our <a href="http://github.com/lstein/stable-diffusion">GitHub site</a></div>
     </div>
-    <hr style="width: 200px">
+    <hr>
     <div id="results">
       <div id="no-results-message">
         <i><p>No results...</p></i>
