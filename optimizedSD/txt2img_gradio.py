@@ -71,7 +71,7 @@ _, _ = modelFS.load_state_dict(sd, strict=False)
 modelFS.eval()
 del sd
 
-def generate(prompt,ddim_steps,n_iter, batch_size, Height, Width, seed, small_batch, full_precision,outdir):
+def generate(prompt,ddim_steps,n_iter, batch_size, Height, Width, scale, seed, small_batch, full_precision,outdir):
    
 
     device = "cuda"
@@ -79,9 +79,9 @@ def generate(prompt,ddim_steps,n_iter, batch_size, Height, Width, seed, small_ba
     f = 8
     start_code = None
     ddim_eta = 0.0
-    scale = 7.5
-    model.small_batch = small_batch
 
+
+    model.small_batch = small_batch
     if not full_precision:
         model.half()
         modelCS.half()
@@ -174,7 +174,7 @@ def generate(prompt,ddim_steps,n_iter, batch_size, Height, Width, seed, small_ba
 demo = gr.Interface(
     fn=generate,
     inputs=["text",gr.Slider(1, 1000,value=50),gr.Slider(1, 100, step=1), gr.Slider(1, 100,step=1),
-    gr.Slider(512, 4096, step=64), gr.Slider(512,4096,step=64), "text","checkbox", "checkbox",gr.Text(value = "outputs/txt2img-samples")],
+    gr.Slider(64,4096,value = 512,step=64), gr.Slider(64,4096,value = 512,step=64), gr.Slider(0,50,value=7.5,step=0.1),"text","checkbox", "checkbox",gr.Text(value = "outputs/txt2img-samples")],
     outputs=["image", "text"],
 )
 demo.launch()

@@ -36,7 +36,7 @@ def load_model_from_config(ckpt, verbose=False):
 
 def load_img(image, h0, w0):
    
-    image = Image.fromarray(image)
+    image = image.convert("RGB")
     w, h = image.size
     print(f"loaded input image of size ({w}, {h})")   
     if(h0 is not None and w0 is not None):
@@ -88,10 +88,9 @@ _, _ = modelFS.load_state_dict(sd, strict=False)
 modelFS.eval()
 del sd
 
-def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width, seed, small_batch = "False", full_precision = "False",outdir = "outputs/txt2img-samples"):
+def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width, scale, seed, small_batch = "False", full_precision = "False",outdir = "outputs/txt2img-samples"):
    
     device = "cuda"
-    scale = 7.5
     model.small_batch = small_batch
     
     init_image = load_img(image, Height, Width).to(device)
@@ -195,8 +194,8 @@ def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width
 
 demo = gr.Interface(
     fn=generate,
-    inputs=["image","text",gr.Slider(0, 1,value=0.75),gr.Slider(1, 1000,value=50),gr.Slider(1, 100, step=1), gr.Slider(1, 100,step=1),
-    gr.Slider(512, 4096, step=64), gr.Slider(512,4096,step=64), "text","checkbox", "checkbox",gr.Text(value = "outputs/txt2img-samples")],
-    outputs=[gr.Image(tool="editor", type="pil"), "text"],
+    inputs=[gr.Image(tool="editor", type="pil"),"text",gr.Slider(0, 1,value=0.75),gr.Slider(1, 1000,value=50),gr.Slider(1, 100, step=1), gr.Slider(1, 100,step=1),
+    gr.Slider(64,4096,value = 512,step=64), gr.Slider(64,4096,value = 512,step=64), gr.Slider(0,50,value=7.5,step=0.1),"text","checkbox", "checkbox",gr.Text(value = "outputs/img2img-samples")],
+    outputs=["image", "text"],
 )
 demo.launch()

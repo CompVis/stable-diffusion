@@ -249,6 +249,7 @@ else:
     print(f"reading prompts from {opt.from_file}")
     with open(opt.from_file, "r") as f:
         data = f.read().splitlines()
+        data = batch_size * list(data)
         data = list(chunk(data, batch_size))
 
 modelFS.to(device)
@@ -290,6 +291,7 @@ with torch.no_grad():
                 # encode (scaled latent)
                 z_enc = model.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device), opt.seed,opt.ddim_steps)
                 # decode it
+                # print("zenc = ", z_enc.shape)
                 samples_ddim = model.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
                                             unconditional_conditioning=uc,)
 
