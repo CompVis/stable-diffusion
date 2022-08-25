@@ -1,6 +1,7 @@
 import argparse, os, sys, glob
 import random
 import torch
+from torch import nn
 import numpy as np
 from omegaconf import OmegaConf
 import PIL
@@ -17,6 +18,7 @@ from torch import autocast
 from contextlib import contextmanager, nullcontext
 import subprocess
 
+import k_diffusion as K
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
@@ -81,6 +83,17 @@ def thats_numberwang(dir, wildcard):
         numberwang = max(filenums) + 1
     return numberwang
 
+class CFGDenoiser(nn.Module):
+    def __init__(self, model):
+        super().__init__()
+        self.inner_model = model
+
+    def forward(self, x, sigma, uncond, cond, cond_scale):
+        x_in = torch.cat([x] * 2)
+        sigma_in = torch.cat([sigma] * 2)
+        cond_in = torch.cat([uncond, cond])
+        uncond, cond = self.inner_model(x_in, sigma_in, cond=cond_in).chunk(2)
+        return uncond + (cond - uncond) * cond_scale
 
 def do_run(device, model, opt):
     print('Starting render!')
@@ -108,7 +121,7 @@ def do_run(device, model, opt):
 
     if opt.init_image is not None:
         assert os.path.isfile(opt.init_image)
-        init_image = load_img(opt.init_image).to(device)
+        init_image = load_img(opt.init_image).to(device).half()
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
         sampler.make_schedule(ddim_num_steps=opt.ddim_steps, ddim_eta=opt.ddim_eta, verbose=False)
@@ -118,6 +131,8 @@ def do_run(device, model, opt):
         t_enc = int(opt.strength * opt.ddim_steps)
         print(f"target t_enc is {t_enc} steps")
     else:
+        model_wrap = K.external.CompVisDenoiser(model)
+        sigma_min, sigma_max = model_wrap.sigmas[0].item(), model_wrap.sigmas[-1].item()
         init_image = None
 
     start_code = None
@@ -126,7 +141,7 @@ def do_run(device, model, opt):
 
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
     with torch.no_grad():
-        with precision_scope("cuda"):
+        with precision_scope("cuda" if "cuda" in str(device) else "cpu"):
             with model.ema_scope():
                 tic = time.time()
                 all_samples = list()
@@ -150,15 +165,11 @@ def do_run(device, model, opt):
 
                         if init_image is None:
                             shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
-                            samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
-                                                            conditioning=c,
-                                                            batch_size=opt.n_samples,
-                                                            shape=shape,
-                                                            verbose=False,
-                                                            unconditional_guidance_scale=opt.scale,
-                                                            unconditional_conditioning=uc,
-                                                            eta=opt.ddim_eta,
-                                                            x_T=start_code)
+                            sigmas = model_wrap.get_sigmas(opt.ddim_steps)
+                            x = torch.randn([opt.n_samples, *shape], device=device) * sigmas[0]
+                            model_wrap_cfg = CFGDenoiser(model_wrap)
+                            extra_args = {'cond': c, 'uncond': uc, 'cond_scale': opt.scale}
+                            samples_ddim = K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args)
 
                         else:
                             # encode (scaled latent)
@@ -187,9 +198,8 @@ def do_run(device, model, opt):
                     grid = rearrange(grid, 'n b c h w -> (n b) c h w')
                     grid = make_grid(grid, nrow=n_rows)
 
-                    add_metadata = True
-                    metadata = PngInfo()
-                    if add_metadata == True:
+                    if opt.hide_metadata == False:
+                        metadata = PngInfo()
                         metadata.add_text("prompt", str(prompts))
                         metadata.add_text("seed", str(opt.seed))
                         metadata.add_text("steps", str(opt.ddim_steps))
@@ -198,6 +208,7 @@ def do_run(device, model, opt):
                     grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
                     output_filename = os.path.join(outpath, f'{opt.batch_name}{opt.device_id}-{grid_count:04}{opt.filetype}')
                     Image.fromarray(grid.astype(np.uint8)).save(output_filename, pnginfo=metadata, quality = opt.quality)
+                    print(f'\nYour output was saved as "{output_filename}"\n')
                     grid_count += 1
 
                 toc = time.time()
@@ -382,6 +393,12 @@ def parse_args():
         required=False,
         help='The device to use for pytorch.'
     )
+    my_parser.add_argument(
+        '--interactive',
+        action='store_true',
+        required=False,
+        help='Advanced option for bots and such. Wait for a job file, render it, then wait some more.'
+    )
 
     return my_parser.parse_args()
 
@@ -477,6 +494,7 @@ class Settings:
     cool_down = 0.0
     checkpoint = "./models/sd-v1-4.ckpt"
     use_jpg = False
+    hide_metadata = False
     
     def apply_settings_file(self, filename, settings_file):
         print(f'Applying settings file: {filename}')
@@ -528,6 +546,8 @@ class Settings:
             self.checkpoint = (settings_file["checkpoint"])
         if is_json_key_present(settings_file, 'use_jpg'):
             self.use_jpg = (settings_file["use_jpg"])
+        if is_json_key_present(settings_file, 'hide_metadata'):
+            self.hide_metadata = (settings_file["hide_metadata"])
 
 def esrgan_resize(input, id):
     input.save(f'_esrgan_orig{id}.png')
@@ -594,6 +614,17 @@ def do_gobig(gobig_init, gobig_scale, device, model, opt):
     final_output.save(f'{result}_gobig{opt.filetype}', quality = opt.quality)
 
 def main():
+    print('\nPROG ROCK STABLE')
+    print('----------------')
+
+    # rolling a d20 to see if I should pester you about supporting PRD.
+    # Apologies if this offends you. At least it's only on a critical miss, right?
+    d20 = random.randint(1, 20)
+    if d20 == 1:
+        print('Please consider supporting my Patreon. Thanks! https://is.gd/rVX6IH')
+    else:
+        print('')
+
     cl_args = parse_args()
 
     # Load the JSON config files
@@ -665,54 +696,85 @@ def main():
             prompts = f.read().splitlines()
     else:
         prompts.append(settings.prompt)
+    
+    there_is_work_to_do = True
+    while there_is_work_to_do:
+        if cl_args.interactive:
+            # Interactive mode waits for a job json, runs it, then goes back to waiting
+            job_json = ("job_" + cl_args.device + ".json").replace(":","_")
+            print(f'\nInteractive Mode On! Waiting for {job_json}')
+            job_ready = False
+            while job_ready == False:
+                if os.path.exists(job_json):
+                    print(f'Job file found! Processing.')
+                    try:
+                        with open(job_json, 'r', encoding="utf-8") as json_file:
+                            settings_file = json.load(json_file)
+                            settings.apply_settings_file(job_json, settings_file)
+                            prompts = []
+                            prompts.append(settings.prompt)
+                        job_ready = True
+                    except Exception as e:
+                        print('Failed to open or parse ' + job_json + ' - Check formatting.')
+                        print(e)
+                        os.remove(job_json)
+                else:
+                    time.sleep(0.5)
 
-    for prompt in prompts:
-        for i in range(settings.n_batches):
-            # pack up our settings into a simple namespace for the renderer
-            opt = {
-                "prompt" : prompt,
-                "batch_name" : settings.batch_name,
-                "outdir" : outdir,
-                "skip_grid" : False,
-                "skip_save" : False,
-                "ddim_steps" : settings.steps,
-                "plms" : settings.plms,
-                "ddim_eta" : settings.eta,
-                "n_iter" : settings.n_iter,
-                "W" : settings.width,
-                "H" : settings.height,
-                "C" : 4,
-                "f" : 8,
-                "n_samples" : settings.n_samples,
-                "n_rows" : settings.n_rows,
-                "scale" : settings.scale,
-                "dyn" : settings.dyn,
-                "from_file": settings.from_file,
-                "seed" : settings.seed + i,
-                "fixed_code": False,
-                "precision": "autocast",
-                "init_image": settings.init_image,
-                "strength": 1.0 - settings.init_strength,
-                "gobig_maximize": settings.gobig_maximize,
-                "gobig_overlap": settings.gobig_overlap,
-                "gobig_realesrgan": settings.gobig_realesrgan,
-                "config": config,
-                "filetype": filetype,
-                "quality": quality,
-                "device_id": device_id
-            }
-            opt = SimpleNamespace(**opt)
-            # render the image(s)!
-            if cl_args.gobig_init == None:
-                # either just a regular render, or a regular render that will next go_big
-                gobig_init = do_run(device, model, opt)
-            else:
-                gobig_init = cl_args.gobig_init
-            if cl_args.gobig:
-                do_gobig(gobig_init, cl_args.gobig_scale, device, model, opt)
-            if settings.cool_down > 0 and i < (settings.n_batches - 1):
-                print(f'Pausing {settings.cool_down} seconds to give your poor GPU a rest...')
-                time.sleep(settings.cool_down)
+        for prompt in prompts:
+            for i in range(settings.n_batches):
+                # pack up our settings into a simple namespace for the renderer
+                opt = {
+                    "prompt" : prompt,
+                    "batch_name" : settings.batch_name,
+                    "outdir" : outdir,
+                    "skip_grid" : False,
+                    "skip_save" : False,
+                    "ddim_steps" : settings.steps,
+                    "plms" : settings.plms,
+                    "ddim_eta" : settings.eta,
+                    "n_iter" : settings.n_iter,
+                    "W" : settings.width,
+                    "H" : settings.height,
+                    "C" : 4,
+                    "f" : 8,
+                    "n_samples" : settings.n_samples,
+                    "n_rows" : settings.n_rows,
+                    "scale" : settings.scale,
+                    "dyn" : settings.dyn,
+                    "from_file": settings.from_file,
+                    "seed" : settings.seed + i,
+                    "fixed_code": False,
+                    "precision": "autocast",
+                    "init_image": settings.init_image,
+                    "strength": 1.0 - settings.init_strength,
+                    "gobig_maximize": settings.gobig_maximize,
+                    "gobig_overlap": settings.gobig_overlap,
+                    "gobig_realesrgan": settings.gobig_realesrgan,
+                    "config": config,
+                    "filetype": filetype,
+                    "hide_metadata": settings.hide_metadata,
+                    "quality": quality,
+                    "device_id": device_id
+                }
+                opt = SimpleNamespace(**opt)
+                # render the image(s)!
+                if cl_args.gobig_init == None:
+                    # either just a regular render, or a regular render that will next go_big
+                    gobig_init = do_run(device, model, opt)
+                else:
+                    gobig_init = cl_args.gobig_init
+                if cl_args.gobig:
+                    do_gobig(gobig_init, cl_args.gobig_scale, device, model, opt)
+                if settings.cool_down > 0 and i < (settings.n_batches - 1):
+                    print(f'Pausing {settings.cool_down} seconds to give your poor GPU a rest...')
+                    time.sleep(settings.cool_down)
+        if cl_args.interactive == False:
+            #only doing one render, so we stop after this
+            there_is_work_to_do = False
+        else:
+            print('\nJob finished! And so we wait...\n')
+            os.remove(job_json)
 
 if __name__ == "__main__":
     main()

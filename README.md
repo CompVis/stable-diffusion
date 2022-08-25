@@ -7,8 +7,15 @@ Also available:
 - [Prog Rock Diffusion](https://github.com/lowfuel/progrockdiffusion) (command line Disco Diffusion, with Go_Big and other enhancements)
 - [Disco Diffusion notebook](https://github.com/lowfuel/DiscoDiffusion-Warp-gobig) with Go_Big
 
+# Quick updating note:
+If you installed before 8/24/2022 and have just grabbed the latest code, you'll need to manually install a few extra items.
+Make sure you're in your prs conda environment, then do:
+```
+pip install jsonmerge clean-fid resize-right torchdiffeq
+```
+
 # Installation instructions
-Download this repository either by zip file or via git:
+Download this repository either by zip file (click the "Code" option above and select "Download ZIP"), or via git:
 ```
 git clone https://github.com/lowfuel/progrock-stable prs
 cd prs
