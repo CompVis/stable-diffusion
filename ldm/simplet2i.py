@@ -486,6 +486,7 @@ The vast majority of these arguments default to reasonable values.
         sd = pl_sd["state_dict"]
         model = instantiate_from_config(config.model)
         m, u = model.load_state_dict(sd, strict=False)
+        model.cuda() # fixes performance issue
         model.eval()
         if self.full_precision:
             print('Using slower but more accurate full-precision math (--full_precision)')
