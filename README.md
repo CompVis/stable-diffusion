@@ -6,18 +6,12 @@ You will need administrator privileges for installing Miniconda and the setup sc
 3. Place the model into 'models\ldm\stable-diffusion-v1' and rename it to 'model.ckpt'.
 4. Download and install Miniconda 3 **for all users.**
 ```
-5. Run webui.cmd
+5. Run webui.cmd (if your environment is named ldo) or webuildm.cmd (if your environment is named ldm)
 ```
 
-OR
+After installation has completed, you can open webui.cmd (if your environment is named ldo) or webuildm.cmd (if your environment is named ldm)
 
-```
-5. Click "Setup Waifu Diffusion".
-6. Change the terminal's directory into the root path of the repo (e.g `cd "C:\Users\Anon\Desktop\stable-diffusion-main"`)
-7. Type the word 'setup' and hit Enter.
-```
-
-After installation has completed, you can open webui.cmd OR "Launch Waifu Diffusion" to run the program anytime.
+Legacy support: Only if your environment is named ldm "Launch Waifu Diffusion" to run the program anytime.
 
 ---
 
@@ -26,7 +20,7 @@ Environment.yaml working out of the box for k-diffusion, gradio, pynvml, gfpgan
 Collection of additional scripts, k-diffusion, gradio, gfpgan etc
 
 TODO: webui changes to cli version, unified
-* ???? 
+* --cli :heavy_check_mark:
 
 TODO: **combine versions.** 
 * k_gradio_mod has pynvml vram usage statistics :heavy_check_mark:
