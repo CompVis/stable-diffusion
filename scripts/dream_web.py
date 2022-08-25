@@ -1,5 +1,6 @@
 import json
 import base64
+import mimetypes
 import os
 from pytorch_lightning import logging
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -25,11 +26,15 @@ class DreamServer(BaseHTTPRequestHandler):
             with open("./static/index.html", "rb") as content:
                 self.wfile.write(content.read())
         elif os.path.exists("." + self.path):
-            self.send_response(200)
-            self.send_header("Content-type", "image/png")
-            self.end_headers()
-            with open("." + self.path, "rb") as content:
-                self.wfile.write(content.read())
+            mime_type = mimetypes.guess_type(self.path)[0]
+            if mime_type is not None:
+                self.send_response(200)
+                self.send_header("Content-type", mime_type)
+                self.end_headers()
+                with open("." + self.path, "rb") as content:
+                    self.wfile.write(content.read())
+            else:
+                self.send_response(404)
         else:
             self.send_response(404)
 
@@ -85,6 +90,12 @@ class DreamServer(BaseHTTPRequestHandler):
         self.wfile.write(bytes(json.dumps(result), "utf-8"))
 
 if __name__ == "__main__":
+    # Change working directory to the stable-diffusion directory
+    os.chdir(
+        os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..'))
+    )
+
+    # Start server
     dream_server = ThreadingHTTPServer(("0.0.0.0", 9090), DreamServer)
     print("\n\n* Started Stable Diffusion dream server! Point your browser at http://localhost:9090 or use the host's DNS name or IP address. *")
 
