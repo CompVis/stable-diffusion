@@ -31,13 +31,7 @@ runs from the command-line (CMD or Terminal window), and does not have a GUI.
 (ldm) ~/stable-diffusion$ python3 ./scripts/dream.py
 * Initializing, be patient...
 Loading model from models/ldm/text2img-large/model.ckpt
-LatentDiffusion: Running in eps-prediction mode
-DiffusionWrapper has 872.30 M params.
-making attention of type 'vanilla' with 512 in_channels
-Working with z of shape (1, 4, 32, 32) = 4096 dimensions.
-making attention of type 'vanilla' with 512 in_channels
-Loading Bert tokenizer from "models/bert"
-setting sampler to plms
+(...more initialization messages...)
 
 * Initialization done! Awaiting your command...
 dream> ashley judd riding a camel -n2 -s150
