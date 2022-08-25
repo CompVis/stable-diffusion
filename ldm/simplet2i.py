@@ -467,17 +467,17 @@ The vast majority of these arguments default to reasonable values.
             elif self.sampler_name == 'ddim':
                 self.sampler = DDIMSampler(self.model, device=self.device)
             elif self.sampler_name == 'k_dpm_2_a':
-                self.sampler = KSampler(self.model,'dpm_2_ancestral')
+                self.sampler = KSampler(self.model, 'dpm_2_ancestral', device=self.device)
             elif self.sampler_name == 'k_dpm_2':
-                self.sampler = KSampler(self.model,'dpm_2')
+                self.sampler = KSampler(self.model, 'dpm_2', device=self.device)
             elif self.sampler_name == 'k_euler_a':
-                self.sampler = KSampler(self.model,'euler_ancestral')
+                self.sampler = KSampler(self.model, 'euler_ancestral', device=self.device)
             elif self.sampler_name == 'k_euler':
-                self.sampler = KSampler(self.model,'euler')
+                self.sampler = KSampler(self.model, 'euler', device=self.device)
             elif self.sampler_name == 'k_heun':
-                self.sampler = KSampler(self.model,'heun')
+                self.sampler = KSampler(self.model, 'heun', device=self.device)
             elif self.sampler_name == 'k_lms':
-                self.sampler = KSampler(self.model,'lms')
+                self.sampler = KSampler(self.model, 'lms', device=self.device)
             else:
                 msg = f'unsupported sampler {self.sampler_name}, defaulting to plms'
                 self.sampler = PLMSSampler(self.model, device=self.device)

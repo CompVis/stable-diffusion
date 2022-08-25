@@ -1,4 +1,3 @@
-accelerate==0.12.0
 albumentations==0.4.3
 einops==0.3.0
 huggingface-hub==0.8.1
