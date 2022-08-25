@@ -25,8 +25,9 @@ class DDIMSampler(object):
     def register_buffer(self, name, attr):
         if type(attr) == torch.Tensor:
             if attr.device != torch.device(self.device_available):
-                attr = attr.to(torch.device(self.device_available))
+                attr = attr.to(torch.float32).to(torch.device(self.device_available))
         setattr(self, name, attr)
+
 
     def make_schedule(self, ddim_num_steps, ddim_discretize="uniform", ddim_eta=0., verbose=True):
         self.ddim_timesteps = make_ddim_timesteps(ddim_discr_method=ddim_discretize, num_ddim_timesteps=ddim_num_steps,
