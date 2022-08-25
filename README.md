@@ -15,7 +15,12 @@ pip install jsonmerge clean-fid resize-right torchdiffeq
 ```
 
 # Installation instructions
-Download this repository either by zip file (click the "Code" option above and select "Download ZIP"), or via git:
+Download this repository either by zip file or via git.
+
+## Zip File
+Make sure you're on the apple-silicon branch, then click "Code" and select "Download ZIP"
+
+## Via git
 ```
 git clone https://github.com/lowfuel/progrock-stable prs
 cd prs
