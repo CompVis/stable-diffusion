@@ -21,6 +21,43 @@ print(sub_p_res)
 
 # %%
 # !! {"metadata":{
+# !!   "cellView": "form",
+# !!   "id": "TxIOPT0G5Lx1"
+# !! }}
+#@markdown **Model Path Variables**
+# ask for the link
+print("Local Path Variables:\n")
+
+models_path = "/content/models" #@param {type:"string"}
+output_path = "/content/output" #@param {type:"string"}
+
+#@markdown **Google Drive Path Variables (Optional)**
+mount_google_drive = True #@param {type:"boolean"}
+force_remount = False
+
+if mount_google_drive:
+    from google.colab import drive
+    try:
+        drive_path = "/content/drive"
+        drive.mount(drive_path,force_remount=force_remount)
+        models_path_gdrive = "/content/drive/MyDrive/AI/models" #@param {type:"string"}
+        output_path_gdrive = "/content/drive/MyDrive/AI/StableDiffusion" #@param {type:"string"}
+        models_path = models_path_gdrive
+        output_path = output_path_gdrive
+    except:
+        print("...error mounting drive or with drive path variables")
+        print("...reverting to default path variables")
+
+import os
+os.makedirs(models_path, exist_ok=True)
+os.makedirs(output_path, exist_ok=True)
+
+print(f"models_path: {models_path}")
+print(f"output_path: {output_path}")
+
+
+# %%
+# !! {"metadata":{
 # !!   "id": "VRNl2mfepEIe",
 # !!   "cellView": "form"
 # !! }}
@@ -294,40 +331,6 @@ def sample_to_cv2(sample: torch.Tensor) -> np.ndarray:
     sample_int8 = (sample_f32 * 255).astype(np.uint8)
     return sample_int8
 
-# %%
-# !! {"metadata":{
-# !!   "cellView": "form",
-# !!   "id": "TxIOPT0G5Lx1"
-# !! }}
-#@markdown **Model Path Variables**
-# ask for the link
-print("Local Path Variables:\n")
-
-models_path = "/content/models" #@param {type:"string"}
-output_path = "/content/output" #@param {type:"string"}
-
-#@markdown **Google Drive Path Variables (Optional)**
-mount_google_drive = True #@param {type:"boolean"}
-force_remount = False
-
-if mount_google_drive:
-    from google.colab import drive
-    try:
-        drive_path = "/content/drive"
-        drive.mount(drive_path,force_remount=force_remount)
-        models_path_gdrive = "/content/drive/MyDrive/AI/models" #@param {type:"string"}
-        output_path_gdrive = "/content/drive/MyDrive/AI/StableDiffusion" #@param {type:"string"}
-        models_path = models_path_gdrive
-        output_path = output_path_gdrive
-    except:
-        print("...error mounting drive or with drive path variables")
-        print("...reverting to default path variables")
-
-os.makedirs(models_path, exist_ok=True)
-os.makedirs(output_path, exist_ok=True)
-
-print(f"models_path: {models_path}")
-print(f"output_path: {output_path}")
 
 # %%
 # !! {"metadata":{
@@ -598,8 +601,8 @@ def DeforumArgs():
 
     #@markdown **Init Settings**
     use_init = False #@param {type:"boolean"}
-    init_image = "https://cdn.pixabay.com/photo/2022/07/30/13/10/green-longhorn-beetle-7353749_1280.jpg" #@param {type:"string"}
     strength = 0.5 #@param {type:"number"}
+    init_image = "https://cdn.pixabay.com/photo/2022/07/30/13/10/green-longhorn-beetle-7353749_1280.jpg" #@param {type:"string"}
 
     #@markdown **Sampling Settings**
     seed = -1 #@param
