@@ -57,13 +57,17 @@ if setup_environment:
 import json
 from IPython import display
 
-import argparse, glob, os, pathlib, sys, time
+import argparse, glob, os, pathlib, subprocess, sys, time
+import cv2
 import numpy as np
+import pandas as pd
 import random
 import requests
 import shutil
 import torch
 import torch.nn as nn
+import torchvision.transforms as T
+import torchvision.transforms.functional as TF
 from contextlib import contextmanager, nullcontext
 from einops import rearrange, repeat
 from itertools import islice
@@ -457,18 +461,13 @@ if load_on_run_all:
 # !!   "cellView": "form",
 # !!   "id": "8HJN2TE3vh-J"
 # !! }}
-import pandas as pd
-import subprocess
-from resize_right import resize
-import torchvision.transforms as T
-import torchvision.transforms.functional as TF
-import cv2
 
 def DeforumAnimArgs():
 
     #@markdown ####**Animation:**
     animation_mode = 'None' #@param ['None', '2D', 'Video Input'] {type:'string'}
     max_frames = 1000#@param {type:"number"}
+    border = 'wrap' #@param ['wrap', 'replicate'] {type:'string'}
 
     #@markdown ####**Motion Parameters:**
     key_frames = True #@param {type:"boolean"}
@@ -480,7 +479,7 @@ def DeforumAnimArgs():
 
     #@markdown ####**Coherence:**
     color_coherence = 'MatchFrame0' #@param ['None', 'MatchFrame0'] {type:'string'}
-    previous_frame_noise = 0.05#@param {type:"number"}
+    previous_frame_noise = 0.02#@param {type:"number"}
     previous_frame_strength = 0.65 #@param {type:"number"}
 
     #@markdown ####**Video Input:**
@@ -733,7 +732,7 @@ def render_animation(args, anim_args):
                 prev_img,
                 xform,
                 (prev_img.shape[1], prev_img.shape[0]),
-                borderMode=cv2.BORDER_WRAP
+                borderMode=cv2.BORDER_WRAP if anim_args.border == 'wrap' else cv2.BORDER_REPLICATE
             )
 
             # apply color matching
