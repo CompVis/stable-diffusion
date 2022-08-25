@@ -70,6 +70,7 @@ from itertools import islice
 from omegaconf import OmegaConf
 from PIL import Image
 from pytorch_lightning import seed_everything
+from skimage.exposure import match_histograms
 from torchvision.utils import make_grid
 from tqdm import tqdm, trange
 from types import SimpleNamespace
@@ -88,9 +89,20 @@ from ldm.models.diffusion.plms import PLMSSampler
 from k_diffusion import sampling
 from k_diffusion.external import CompVisDenoiser
 
-def chunk(it, size):
-    it = iter(it)
-    return iter(lambda: tuple(islice(it, size)), ())
+class CFGDenoiser(nn.Module):
+    def __init__(self, model):
+        super().__init__()
+        self.inner_model = model
+
+    def forward(self, x, sigma, uncond, cond, cond_scale):
+        x_in = torch.cat([x] * 2)
+        sigma_in = torch.cat([sigma] * 2)
+        cond_in = torch.cat([uncond, cond])
+        uncond, cond = self.inner_model(x_in, sigma_in, cond=cond_in).chunk(2)
+        return uncond + (cond - uncond) * cond_scale
+
+def add_noise(sample: torch.Tensor, noise_amt: float):
+    return sample + torch.randn(sample.shape, device=sample.device) * noise_amt
 
 def get_output_folder(output_path,batch_folder=None):
     yearMonth = time.strftime('%Y-%m/')
@@ -114,17 +126,14 @@ def load_img(path, shape):
     image = torch.from_numpy(image)
     return 2.*image - 1.
 
-class CFGDenoiser(nn.Module):
-    def __init__(self, model):
-        super().__init__()
-        self.inner_model = model
-
-    def forward(self, x, sigma, uncond, cond, cond_scale):
-        x_in = torch.cat([x] * 2)
-        sigma_in = torch.cat([sigma] * 2)
-        cond_in = torch.cat([uncond, cond])
-        uncond, cond = self.inner_model(x_in, sigma_in, cond=cond_in).chunk(2)
-        return uncond + (cond - uncond) * cond_scale
+def maintain_colors(prev_img, color_match_sample, hsv=False):
+    if hsv:
+        prev_img_hsv = cv2.cvtColor(prev_img, cv2.COLOR_RGB2HSV)
+        color_match_hsv = cv2.cvtColor(color_match_sample, cv2.COLOR_RGB2HSV)
+        matched_hsv = match_histograms(prev_img_hsv, color_match_hsv, multichannel=True)
+        return cv2.cvtColor(matched_hsv, cv2.COLOR_HSV2RGB)
+    else:
+        return match_histograms(prev_img, color_match_sample, multichannel=True)
 
 def make_callback(sampler, dynamic_threshold=None, static_threshold=None):  
     # Creates the callback function to be passed into the samplers
@@ -175,8 +184,8 @@ def generate(args, return_latent=False, return_sample=False):
     prompt = args.prompt
     assert prompt is not None
     data = [batch_size * [prompt]]
-    init_latent = None
 
+    init_latent = None
     if args.init_latent is not None:
         init_latent = args.init_latent
     elif args.init_sample is not None:        
@@ -188,7 +197,7 @@ def generate(args, return_latent=False, return_sample=False):
 
     sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.ddim_eta, verbose=False)
 
-    t_enc = int(args.strength * args.steps)
+    t_enc = int((1.0-args.strength) * args.steps)
 
     start_code = None
     if args.fixed_code and init_latent == None:
@@ -255,11 +264,11 @@ def generate(args, return_latent=False, return_sample=False):
                                                                     img_callback=callback)
 
                         if return_latent:
-                            results.append(samples.cpu().numpy())
+                            results.append(samples.clone())
 
                         x_samples = model.decode_first_stage(samples)
                         if return_sample:
-                            results.append(x_samples.cpu().numpy())
+                            results.append(x_samples.clone())
 
                         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
 
@@ -268,6 +277,18 @@ def generate(args, return_latent=False, return_sample=False):
                             image = Image.fromarray(x_sample.astype(np.uint8))
                             results.append(image)
     return results
+
+def sample_from_cv2(sample: np.ndarray) -> torch.Tensor:
+    sample = ((sample.astype(float) / 255.0) * 2) - 1
+    sample = sample[None].transpose(0, 3, 1, 2).astype(np.float16)
+    sample = torch.from_numpy(sample)
+    return sample
+
+def sample_to_cv2(sample: torch.Tensor) -> np.ndarray:
+    sample_f32 = rearrange(sample.squeeze().cpu().numpy(), "c h w -> h w c").astype(np.float32)
+    sample_f32 = ((sample_f32 * 0.5) + 0.5).clip(0, 1)
+    sample_int8 = (sample_f32 * 255).astype(np.uint8)
+    return sample_int8
 
 # %%
 # !! {"metadata":{
@@ -444,19 +465,28 @@ import torchvision.transforms as T
 import torchvision.transforms.functional as TF
 import cv2
 
-#@markdown ####**Animation Mode:**
-animation_mode = 'None' #@param ['None', '2D'] {type:'string'}
+def DeforumAnimArgs():
 
-key_frames = True #@param {type:"boolean"}
-max_frames = 1000#@param {type:"number"}
+    #@markdown ####**Animation Mode:**
+    animation_mode = '2D' #@param ['None', '2D'] {type:'string'}
 
-interp_spline = 'Linear' #Do not change, currently will not look good. param ['Linear','Quadratic','Cubic']{type:"string"}
-angle = "0:(0)"#@param {type:"string"}
-zoom = "0: (1.02)"#@param {type:"string"}
-translation_x = "0: (0)"#@param {type:"string"}
-translation_y = "0: (0)"#@param {type:"string"}
+    key_frames = True #@param {type:"boolean"}
+    max_frames = 1000#@param {type:"number"}
 
-strength_previous_frame = 0.6 #@param {type:"number"}
+    interp_spline = 'Linear' #Do not change, currently will not look good. param ['Linear','Quadratic','Cubic']{type:"string"}
+    angle = "0:(0)"#@param {type:"string"}
+    zoom = "0: (1.04)"#@param {type:"string"}
+    translation_x = "0: (0)"#@param {type:"string"}
+    translation_y = "0: (0)"#@param {type:"string"}
+
+    previous_frame_noise = 0.05#@param {type:"number"}
+    previous_frame_strength = 0.65 #@param {type:"number"}
+
+    color_coherence = 'MatchFrame0' #@param ['None', 'MatchFrame0'] {type:'string'}
+
+    return locals()
+
+anim_args = SimpleNamespace(**DeforumAnimArgs())
 
 def make_xform_2d(width, height, translation_x, translation_y, angle, scale):
     center = (height//2, width//2)
@@ -482,35 +512,34 @@ def parse_key_frames(string, prompt_parser=None):
     return frames
 
 def get_inbetweens(key_frames, integer=False):
-    key_frame_series = pd.Series([np.nan for a in range(max_frames)])
+    key_frame_series = pd.Series([np.nan for a in range(anim_args.max_frames)])
 
     for i, value in key_frames.items():
         key_frame_series[i] = value
     key_frame_series = key_frame_series.astype(float)
     
-    interp_method = interp_spline
+    interp_method = anim_args.interp_spline
     if interp_method == 'Cubic' and len(key_frames.items()) <=3:
       interp_method = 'Quadratic'    
     if interp_method == 'Quadratic' and len(key_frames.items()) <= 2:
       interp_method = 'Linear'
           
     key_frame_series[0] = key_frame_series[key_frame_series.first_valid_index()]
-    key_frame_series[max_frames-1] = key_frame_series[key_frame_series.last_valid_index()]
-    # key_frame_series = key_frame_series.interpolate(method=intrp_method,order=1, limit_direction='both')
+    key_frame_series[anim_args.max_frames-1] = key_frame_series[key_frame_series.last_valid_index()]
     key_frame_series = key_frame_series.interpolate(method=interp_method.lower(),limit_direction='both')
     if integer:
         return key_frame_series.astype(int)
     return key_frame_series
 
 
-if animation_mode == 'None':
-    max_frames = 1
+if anim_args.animation_mode == 'None':
+    anim_args.max_frames = 1
 
-if key_frames:
-    angle_series = get_inbetweens(parse_key_frames(angle))
-    zoom_series = get_inbetweens(parse_key_frames(zoom))
-    translation_x_series = get_inbetweens(parse_key_frames(translation_x))
-    translation_y_series = get_inbetweens(parse_key_frames(translation_y))
+if anim_args.key_frames:
+    angle_series = get_inbetweens(parse_key_frames(anim_args.angle))
+    zoom_series = get_inbetweens(parse_key_frames(anim_args.zoom))
+    translation_x_series = get_inbetweens(parse_key_frames(anim_args.translation_x))
+    translation_y_series = get_inbetweens(parse_key_frames(anim_args.translation_y))
 
 # %%
 # !! {"metadata":{
@@ -587,6 +616,7 @@ def DeforumArgs():
     fixed_code = True
     C = 4
     f = 8
+
     prompt = ""
     timestring = ""
     init_latent = None
@@ -606,14 +636,14 @@ def next_seed(args):
 
 args = SimpleNamespace(**DeforumArgs())
 args.timestring = time.strftime('%Y%m%d%H%M%S')
-args.strength = max(0.0, min(1.0, 1.0 - args.strength))
+args.strength = max(0.0, min(1.0, args.strength))
 
 if args.seed == -1:
     args.seed = random.randint(0, 2**32)
 if not args.use_init:
     args.init_image = None
     args.strength = 0
-if args.sampler == 'plms' and args.use_init or animation_mode != 'None':
+if args.sampler == 'plms' and (args.use_init or anim_args.animation_mode != 'None'):
     print(f"Init images aren't supported with PLMS yet, switching to KLMS")
     args.sampler = 'klms'
 if args.sampler != 'ddim':
@@ -647,29 +677,35 @@ def render_image_batch(args):
                 index += 1
             args.seed = next_seed(args)
 
-def render_animation(args):
+
+def render_animation(args, anim_args):
+    # animations use key framed prompts
+    args.prompts = animation_prompts
+
     # create output folder for the batch
     os.makedirs(args.outdir, exist_ok=True)
     print(f"Saving animation frames to {args.outdir}")
 
     # save settings for the batch
-    settings_filename = os.path.join(args.outdir, f"{args.batchdir}_{args.timestring}_settings.txt")
+    settings_filename = os.path.join(args.outdir, f"{args.outdir}_{args.timestring}_settings.txt")
     with open(settings_filename, "w+", encoding="utf-8") as f:
-        json.dump(dict(args.__dict__), f, ensure_ascii=False, indent=4)
+        s = {**dict(args.__dict__), **dict(anim_args.__dict__)}
+        json.dump(s, f, ensure_ascii=False, indent=4)
 
     # expand prompts out to per-frame
-    prompt_series = pd.Series([np.nan for a in range(max_frames)])
+    prompt_series = pd.Series([np.nan for a in range(anim_args.max_frames)])
     for i, prompt in animation_prompts.items():
         prompt_series[i] = prompt
     prompt_series = prompt_series.ffill().bfill()
 
     args.n_samples = 1
     prev_sample = None
-    for frame_idx in range(max_frames):
-        print(f"Rendering animation frame {frame_idx} of {max_frames}")
+    color_match_sample = None
+    for frame_idx in range(anim_args.max_frames):
+        print(f"Rendering animation frame {frame_idx} of {anim_args.max_frames}")
 
         if prev_sample is not None:
-            if key_frames:
+            if anim_args.key_frames:
                 angle = angle_series[frame_idx]
                 zoom = zoom_series[frame_idx]
                 translation_x = translation_x_series[frame_idx]
@@ -683,20 +719,28 @@ def render_animation(args):
             xform = make_xform_2d(args.W, args.H, translation_x, translation_y, angle, zoom)
 
             # transform previous frame
-            prev_img_f32 = rearrange(prev_sample.squeeze(), 'c h w -> h w c').astype(np.float32)
-            prev_img_f32 = cv2.warpPerspective(
-                prev_img_f32,
+            prev_img = sample_to_cv2(prev_sample)
+            prev_img = cv2.warpPerspective(
+                prev_img,
                 xform,
-                (prev_img_f32.shape[1], prev_img_f32.shape[0]),
+                (prev_img.shape[1], prev_img.shape[0]),
                 borderMode=cv2.BORDER_WRAP
             )
-            prev_sample = prev_img_f32[None].transpose(0, 3, 1, 2).astype(np.float16)
-            prev_sample = torch.from_numpy(prev_sample).to(device)
+
+            # apply color matching
+            if anim_args.color_coherence == 'MatchFrame0':
+                if color_match_sample is None:
+                    color_match_sample = prev_img.copy()
+                else:
+                    prev_img = maintain_colors(prev_img, color_match_sample, (frame_idx%2) == 0)
+
+            # apply frame noising
+            noised_sample = add_noise(sample_from_cv2(prev_img), anim_args.previous_frame_noise)
 
             # use transformed previous frame as init for current
             args.use_init = True
-            args.init_sample = prev_sample
-            args.strength = max(0.0, min(1.0, 1.0 - strength_previous_frame))
+            args.init_sample = noised_sample.half().to(device)
+            args.strength = max(0.0, min(1.0, anim_args.previous_frame_strength))
 
         args.prompt = prompt_series[frame_idx]
         print(f"{args.prompt} {args.seed}")
@@ -714,10 +758,11 @@ def render_animation(args):
         args.seed = next_seed(args)
 
 
-if animation_mode == '2D':
-    render_animation(args)
+if anim_args.animation_mode == '2D':
+    render_animation(args, anim_args)
 else:
     render_image_batch(args)    
+
 
 # %%
 # !! {"metadata":{
@@ -732,7 +777,7 @@ else:
 # !!   "cellView": "form",
 # !!   "id": "no2jP8HTMBM0"
 # !! }}
-skip_video_for_run_all = False #@param {type: 'boolean'}
+skip_video_for_run_all = True #@param {type: 'boolean'}
 fps = 12#@param {type:"number"}
 
 if skip_video_for_run_all == True:
@@ -772,7 +817,6 @@ else:
     mp4 = open(mp4_path,'rb').read()
     data_url = "data:video/mp4;base64," + b64encode(mp4).decode()
     display.display( display.HTML(f'<video controls loop><source src="{data_url}" type="video/mp4"></video>') )
-
 
 # %%
 # !! {"main_metadata":{
