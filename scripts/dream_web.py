@@ -1,4 +1,5 @@
 import json
+import base64
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -28,6 +29,7 @@ class DreamServer(BaseHTTPRequestHandler):
         content_length = int(self.headers['Content-Length'])
         post_data = json.loads(self.rfile.read(content_length))
         prompt = post_data['prompt']
+        initimg = post_data['initimg']
         batch = int(post_data['batch'])
         steps = int(post_data['steps'])
         width = int(post_data['width'])
@@ -35,16 +37,37 @@ class DreamServer(BaseHTTPRequestHandler):
         cfgscale = float(post_data['cfgscale'])
         seed = None if int(post_data['seed']) == -1 else int(post_data['seed'])
 
-        print(f"Request to generate with data: {post_data}")
-        outputs = model.txt2img(prompt,
-                                batch_size = batch,
-                                cfg_scale = cfgscale,
-                                width = width,
-                                height = height,
-                                seed = seed,
-                                steps = steps);
+        print(f"Request to generate with prompt: {prompt}")
+
+        outputs = []
+        if initimg is None:
+            # Run txt2img
+            outputs = model.txt2img(prompt,
+                                    batch_size = batch,
+                                    cfg_scale = cfgscale,
+                                    width = width,
+                                    height = height,
+                                    seed = seed,
+                                    steps = steps)
+        else:
+            # Decode initimg as base64 to temp file
+            with open("./img2img-tmp.png", "wb") as f:
+                initimg = initimg.split(",")[1] # Ignore mime type
+                f.write(base64.b64decode(initimg))
+
+                # Run img2img
+                outputs = model.img2img(prompt,
+                                        init_img = "./img2img-tmp.png",
+                                        batch_size = batch,
+                                        cfg_scale = cfgscale,
+                                        seed = seed,
+                                        steps = steps)
+            # Remove the temp file
+            os.remove("./img2img-tmp.png")
+
         print(f"Prompt generated with output: {outputs}")
 
+        post_data['initimg'] = '' # Don't send init image back
         outputs = [x + [post_data] for x in outputs] # Append config to each output
         result = {'outputs': outputs}
         self.wfile.write(bytes(json.dumps(result), "utf-8"))

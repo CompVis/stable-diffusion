@@ -40,6 +40,9 @@
           border-radius: 5px;
           margin: 10px;
       }
+      #generate-config {
+          line-height:2em;
+      }
       input[type="number"] {
           width: 60px;
       }
@@ -48,41 +51,52 @@
       }
     </style>
     <script>
-      function append_output(output) {
-          let output_node = document.createElement("img");
-          output_node.src = output[0];
+      function toBase64(file) {
+          return new Promise((resolve, reject) => {
+              const r = new FileReader();
+              r.readAsDataURL(file);
+              r.onload = () => resolve(r.result);
+              r.onerror = (error) => reject(error);
+          });
+      }
 
-          let output_config = output[2];
-          let alt_text = output[1].toString() + " | " + output_config.prompt;
-          output_node.alt = alt_text;
-          output_node.title = alt_text;
+      function appendOutput(output) {
+          let outputNode = document.createElement("img");
+          outputNode.src = output[0];
+
+          let outputConfig = output[2];
+          let altText = output[1].toString() + " | " + outputConfig.prompt;
+          outputNode.alt = altText;
+          outputNode.title = altText;
 
           // Reload image config
-          output_node.addEventListener('click', () => {
-              let form = document.querySelector("#generate_form");
+          outputNode.addEventListener('click', () => {
+              let form = document.querySelector("#generate-form");
               for (const [k, v] of new FormData(form)) {
-                  form.querySelector(`*[name=${k}]`).value = output_config[k];
+                  form.querySelector(`*[name=${k}]`).value = outputConfig[k];
               }
               document.querySelector("#seed").value = output[1];
 
-              save_fields(document.querySelector("#generate_form"));
+              saveFields(document.querySelector("#generate-form"));
           });
 
-          document.querySelector("#results").prepend(output_node);
+          document.querySelector("#results").prepend(outputNode);
       }
 
-      function append_outputs(outputs) {
+      function appendOutputs(outputs) {
           for (const output of outputs) {
-              append_output(output);
+              appendOutput(output);
           }
       }
 
-      function save_fields(form) {
+      function saveFields(form) {
           for (const [k, v] of new FormData(form)) {
-              localStorage.setItem(k, v);
+              if (typeof v !== 'object') { // Don't save 'file' type
+                  localStorage.setItem(k, v);
+              }
           }
       }
-      function load_fields(form) {
+      function loadFields(form) {
           for (const [k, v] of new FormData(form)) {
               const item = localStorage.getItem(k);
               if (item != null) {
@@ -90,44 +104,53 @@
               }
           }
       }
+
+      async function generateSubmit(form) {
+          const prompt = document.querySelector("#prompt").value;
+
+          // Convert file data to base64
+          let formData = Object.fromEntries(new FormData(form));
+          formData.initimg = formData.initimg.name !== '' ? await toBase64(formData.initimg) : null;
+
+          // Post as JSON
+          fetch(form.action, {
+              method: form.method,
+              body: JSON.stringify(formData),
+          }).then(async (result) => {
+              let data = await result.json();
+
+              // Re-enable form, remove no-results-message
+              form.querySelector('fieldset').removeAttribute('disabled');
+              document.querySelector("#prompt").value = prompt;
+
+              if (data.outputs.length != 0) {
+                  document.querySelector("#no-results-message")?.remove();
+                  appendOutputs(data.outputs);
+              } else {
+                  alert("Error occurred while generating.");
+              }
+          });
+
+          // Disable form while generating
+          form.querySelector('fieldset').setAttribute('disabled','');
+          document.querySelector("#prompt").value = `Generating: "${prompt}"`;
+      }
       
       window.onload = () => {
-          document.querySelector("#generate_form").addEventListener('submit', (e) => {
+          document.querySelector("#generate-form").addEventListener('submit', (e) => {
               e.preventDefault();
               const form = e.target;
-              const prompt = document.querySelector("#prompt").value;
 
-              // Post as JSON
-              fetch(form.action, {
-                  method: form.method,
-                  body: JSON.stringify(Object.fromEntries(new FormData(form))),
-              }).then((result) => {
-                  result.json().then((data) => {
-                      // Re-enable form, remove no-results-message
-                      form.querySelector('fieldset').removeAttribute('disabled');
-                      document.querySelector("#prompt").value = prompt;
-
-                      if (data.outputs.length != 0) {
-                          document.querySelector("#no_results_message")?.remove();
-                          append_outputs(data.outputs);
-                      } else {
-                          alert("Error occurred while generating.");
-                      }
-                  });
-              });
-
-              // Disable form
-              form.querySelector('fieldset').setAttribute('disabled','');
-              document.querySelector("#prompt").value = `Generating: "${prompt}"`;
+              generateSubmit(form);
           });
-          document.querySelector("#generate_form").addEventListener('change', (e) => {
-              save_fields(e.target.form);
+          document.querySelector("#generate-form").addEventListener('change', (e) => {
+              saveFields(e.target.form);
           });
           document.querySelector("#reset").addEventListener('click', (e) => {
               document.querySelector("#seed").value = -1;
-              save_fields(e.target.form);
+              saveFields(e.target.form);
           });
-          load_fields(document.querySelector("#generate_form"));
+          loadFields(document.querySelector("#generate-form"));
       };
     </script>
   </head>
@@ -135,12 +158,12 @@
     <div id="search">
       <h2 id="header">Stable Diffusion</h2>
 
-      <form id="generate_form" method="post" action="#">
+      <form id="generate-form" method="post" action="#">
         <fieldset>
           <input type="text" id="prompt" name="prompt">
           <input type="submit" id="submit" value="Generate">
         </fieldset>
-        <fieldset>
+        <fieldset id="generate-config">
           <label for="batch">Batch Size:</label>
           <input value="1" type="number" id="batch" name="batch">
           <label for="steps">Steps:</label>
@@ -152,7 +175,9 @@
           <input value="512" type="number" id="width" name="width">
           <label title="Set to multiple of 64" for="height">Height:</label>
           <input value="512" type="number" id="height" name="height">
-          <span>&bull;</span>
+          <br>
+          <label title="Upload an image to use img2img" for="initimg">Img2Img Init:</label>
+          <input type="file" id="initimg" name="initimg" accept=".jpg, .jpeg, .png">
           <label title="Set to -1 for random seed" for="seed">Seed:</label>
           <input value="-1" type="number" id="seed" name="seed">
           <button type="button" id="reset">&olarr;</button>
@@ -161,7 +186,7 @@
     </div>
     <hr style="width: 200px">
     <div id="results">
-      <div id="no_results_message">
+      <div id="no-results-message">
         <i><p>No results...</p></i>
       </div>
     </div>
