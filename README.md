@@ -457,7 +457,7 @@ to send me an email if you use and like the script.
 
 *Contributions by:* 
 [Peter Kowalczyk](https://github.com/slix), [Henry Harrison](https://github.com/hwharrison),
-[xraxra](https://github.com/xraxra), [bmaltais](https://github.com/bmaltais), [Sean McLellan] (https://github.com/Oceanswave),
+[xraxra](https://github.com/xraxra), [bmaltais](https://github.com/bmaltais), [Sean McLellan](https://github.com/Oceanswave),
 [nicolai256](https://github.com/nicolai256), [Benjamin Warner](https://github.com/warner-benjamin),
 and [tildebyte](https://github.com/tildebyte)
 
