@@ -39,6 +39,9 @@ Run prs to make sure everything worked!
 ```
 python prs.py
 ```
+## Optional - A GUI is available!
+
+See instructions on the [Visual Diffusion](https://github.com/KnoBuddy/visualdiffusion/) repo page.
 
 # Basic Use
 
