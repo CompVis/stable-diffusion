@@ -399,8 +399,8 @@ The vast majority of these arguments default to reasonable values.
             try:
                 if gfpgan_strength > 0:
                     image = self._run_gfpgan(image, gfpgan_strength)
-            except Exception:
-                print(f"Error running GFPGAN - Your image was not enhanced.")
+            except Exception as e:
+                print(f"Error running GFPGAN - Your image was not enhanced.\n{e}")
             images.append(image)
         return images
 
