@@ -312,7 +312,7 @@ def load_gfpgan_bg_upsampler(bg_upsampler, bg_tile=400):
 ### the t2i variable doesn't seem to be necessary here. maybe remove it?
 def write_log_message(t2i, prompt, results, log_path):
     """logs the name of the output image, its prompt and seed to the terminal, log file, and a Dream text chunk in the PNG metadata"""
-    log_lines = [f"{r[0]}: {prompt} -S{seed}\n" for r in results]
+    log_lines = [f"{r[0]}: {prompt} -S{r[1]}\n" for r in results]
     print(*log_lines, sep="")
 
     with open(log_path, "a") as file:
