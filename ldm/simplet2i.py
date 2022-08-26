@@ -132,7 +132,8 @@ The vast majority of these arguments default to reasonable values.
                  strength=0.75, # default in scripts/img2img.py
                  embedding_path=None,
                  latent_diffusion_weights=False,  # just to keep track of this parameter when regenerating prompt
-                 device='cuda'
+                 device='cuda',
+                 gfpgan=None,
     ):
         self.batch_size      = batch_size
         self.iterations = iterations
@@ -154,6 +155,7 @@ The vast majority of these arguments default to reasonable values.
         self.sampler    = None
         self.latent_diffusion_weights=latent_diffusion_weights
         self.device = device
+        self.gfpgan = gfpgan
         if seed is None:
             self.seed = self._new_seed()
         else:
@@ -199,6 +201,7 @@ The vast majority of these arguments default to reasonable values.
                      # these are specific to img2img
                      init_img=None,
                      strength=None,
+                     gfpgan_strength=None,
                      variants=None,
                      **args):   # eat up additional cruft
         '''
@@ -214,6 +217,7 @@ The vast majority of these arguments default to reasonable values.
            cfg_scale                       // how strongly the prompt influences the image (7.5) (must be >1)
            init_img                        // path to an initial image - its dimensions override width and height
            strength                        // strength for noising/unnoising init_img. 0.0 preserves image exactly, 1.0 replaces it completely
+           gfpgan_strength                 // strength for GFPGAN. 0.0 preserves image exactly, 1.0 replaces it completely
            ddim_eta                        // image randomness (eta=0.0 means the same seed always produces the same image)
            variants                        // if >0, the 1st generated image will be passed back to img2img to generate the requested number of variants
            image_callback                  // a function or method that will be called each time an image is generated
@@ -262,6 +266,7 @@ The vast majority of these arguments default to reasonable values.
                                         batch_size=batch_size,
                                         steps=steps,cfg_scale=cfg_scale,ddim_eta=ddim_eta,
                                         skip_normalize=skip_normalize,
+                                        gfpgan_strength=gfpgan_strength,
                                         init_img=init_img,strength=strength)
             else:
                 images_iterator = self._txt2img(prompt,
@@ -269,6 +274,7 @@ The vast majority of these arguments default to reasonable values.
                                         batch_size=batch_size,
                                         steps=steps,cfg_scale=cfg_scale,ddim_eta=ddim_eta,
                                         skip_normalize=skip_normalize,
+                                        gfpgan_strength=gfpgan_strength,
                                         width=width,height=height)
 
             with scope(self.device.type), self.model.ema_scope():
@@ -299,10 +305,12 @@ The vast majority of these arguments default to reasonable values.
                  batch_size,
                  steps,cfg_scale,ddim_eta,
                  skip_normalize,
+                 gfpgan_strength,
                  width,height):
         """
         An infinite iterator of images from the prompt.
         """
+
 
         sampler = self.sampler
 
@@ -317,7 +325,7 @@ The vast majority of these arguments default to reasonable values.
                                                 unconditional_guidance_scale=cfg_scale,
                                                 unconditional_conditioning=uc,
                                                 eta=ddim_eta)
-            yield self._samples_to_images(samples)
+            yield self._samples_to_images(samples, gfpgan_strength=gfpgan_strength)
 
     @torch.no_grad()
     def _img2img(self,
@@ -326,6 +334,7 @@ The vast majority of these arguments default to reasonable values.
                  batch_size,
                  steps,cfg_scale,ddim_eta,
                  skip_normalize,
+                 gfpgan_strength,
                  init_img,strength):
         """
         An infinite iterator of images from the prompt and the initial image
@@ -356,7 +365,7 @@ The vast majority of these arguments default to reasonable values.
             # decode it
             samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=cfg_scale,
                                         unconditional_conditioning=uc,)
-            yield self._samples_to_images(samples)
+            yield self._samples_to_images(samples, gfpgan_strength)
 
     # TODO: does this actually need to run every loop? does anything in it vary by random seed?
     def _get_uc_and_c(self, prompt, batch_size, skip_normalize):
@@ -380,13 +389,18 @@ The vast majority of these arguments default to reasonable values.
             c = self.model.get_learned_conditioning(batch_size * [prompt])
         return (uc, c)
 
-    def _samples_to_images(self, samples):
+    def _samples_to_images(self, samples, gfpgan_strength=0):
         x_samples = self.model.decode_first_stage(samples)
         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
         images = list()
         for x_sample in x_samples:
             x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
             image = Image.fromarray(x_sample.astype(np.uint8))
+            try:
+                if gfpgan_strength > 0:
+                    image = self._run_gfpgan(image, gfpgan_strength)
+            except Exception as e:
+                print(f"Error running GFPGAN - Your image was not enhanced.\n{e}")
             images.append(image)
         return images
 
@@ -507,3 +521,18 @@ The vast majority of these arguments default to reasonable values.
                     weights.append(1.0)
                 remaining = 0
         return prompts, weights
+
+    def _run_gfpgan(self, image, strength):
+        if (self.gfpgan is None):
+            print(f"GFPGAN not initialized, it must be loaded via the --gfpgan argument")
+            return image
+        
+        image = image.convert("RGB")
+
+        cropped_faces, restored_faces, restored_img = self.gfpgan.enhance(np.array(image, dtype=np.uint8), has_aligned=False, only_center_face=False, paste_back=True)
+        res = Image.fromarray(restored_img)
+
+        if strength < 1.0:
+            res = Image.blend(image, res, strength)
+
+        return res
