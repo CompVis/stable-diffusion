@@ -109,6 +109,8 @@ class PromptFormatter():
             switches.append(f'-I{opt.init_img}')
         if opt.strength and opt.init_img is not None:
             switches.append(f'-f{opt.strength or t2i.strength}')
+        if opt.gfpgan_strength:
+            switches.append(f'-G{opt.gfpgan_strength}')
         if t2i.full_precision:
             switches.append('-F')
         return ' '.join(switches)

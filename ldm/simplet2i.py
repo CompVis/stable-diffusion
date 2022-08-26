@@ -266,7 +266,6 @@ The vast majority of these arguments default to reasonable values.
                                         batch_size=batch_size,
                                         steps=steps,cfg_scale=cfg_scale,ddim_eta=ddim_eta,
                                         skip_normalize=skip_normalize,
-                                        gfpgan_strength=gfpgan_strength,
                                         init_img=init_img,strength=strength)
             else:
                 images_iterator = self._txt2img(prompt,
@@ -274,7 +273,6 @@ The vast majority of these arguments default to reasonable values.
                                         batch_size=batch_size,
                                         steps=steps,cfg_scale=cfg_scale,ddim_eta=ddim_eta,
                                         skip_normalize=skip_normalize,
-                                        gfpgan_strength=gfpgan_strength,
                                         width=width,height=height)
 
             with scope(self.device.type), self.model.ema_scope():
@@ -282,6 +280,11 @@ The vast majority of these arguments default to reasonable values.
                     seed_everything(seed)
                     iter_images = next(images_iterator)
                     for image in iter_images:
+                        try:
+                            if gfpgan_strength > 0:
+                                image = self._run_gfpgan(image, gfpgan_strength)
+                        except Exception as e:
+                            print(f"Error running GFPGAN - Your image was not enhanced.\n{e}")
                         results.append([image, seed])
                         if image_callback is not None:
                             image_callback(image,seed)
@@ -305,7 +308,6 @@ The vast majority of these arguments default to reasonable values.
                  batch_size,
                  steps,cfg_scale,ddim_eta,
                  skip_normalize,
-                 gfpgan_strength,
                  width,height):
         """
         An infinite iterator of images from the prompt.
@@ -325,7 +327,7 @@ The vast majority of these arguments default to reasonable values.
                                                 unconditional_guidance_scale=cfg_scale,
                                                 unconditional_conditioning=uc,
                                                 eta=ddim_eta)
-            yield self._samples_to_images(samples, gfpgan_strength=gfpgan_strength)
+            yield self._samples_to_images(samples)
 
     @torch.no_grad()
     def _img2img(self,
@@ -334,7 +336,6 @@ The vast majority of these arguments default to reasonable values.
                  batch_size,
                  steps,cfg_scale,ddim_eta,
                  skip_normalize,
-                 gfpgan_strength,
                  init_img,strength):
         """
         An infinite iterator of images from the prompt and the initial image
@@ -365,7 +366,7 @@ The vast majority of these arguments default to reasonable values.
             # decode it
             samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=cfg_scale,
                                         unconditional_conditioning=uc,)
-            yield self._samples_to_images(samples, gfpgan_strength)
+            yield self._samples_to_images(samples)
 
     # TODO: does this actually need to run every loop? does anything in it vary by random seed?
     def _get_uc_and_c(self, prompt, batch_size, skip_normalize):
@@ -389,18 +390,13 @@ The vast majority of these arguments default to reasonable values.
             c = self.model.get_learned_conditioning(batch_size * [prompt])
         return (uc, c)
 
-    def _samples_to_images(self, samples, gfpgan_strength=0):
+    def _samples_to_images(self, samples):
         x_samples = self.model.decode_first_stage(samples)
         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
         images = list()
         for x_sample in x_samples:
             x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
             image = Image.fromarray(x_sample.astype(np.uint8))
-            try:
-                if gfpgan_strength > 0:
-                    image = self._run_gfpgan(image, gfpgan_strength)
-            except Exception as e:
-                print(f"Error running GFPGAN - Your image was not enhanced.\n{e}")
             images.append(image)
         return images
 
@@ -533,6 +529,9 @@ The vast majority of these arguments default to reasonable values.
         res = Image.fromarray(restored_img)
 
         if strength < 1.0:
+            # Resize the image to the new image if the sizes have changed
+            if restored_img.size != image.size:
+                image = image.resize(res.size)
             res = Image.blend(image, res, strength)
 
         return res

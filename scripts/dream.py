@@ -106,7 +106,8 @@ def main():
 
 def main_loop(t2i,outdir,parser,log,infile):
     ''' prompt/read/execute loop '''
-    done = False
+    done       = False
+    last_seeds = []
     
     while not done:
         try:
@@ -176,7 +177,14 @@ def main_loop(t2i,outdir,parser,log,infile):
         if len(opt.prompt)==0:
             print("Try again with a prompt!")
             continue
-
+        if opt.seed is not None and opt.seed<0: # retrieve previous value!
+            try:
+                opt.seed = last_seeds[opt.seed]
+                print(f"reusing previous seed {opt.seed}")
+            except IndexError:
+                print(f"No previous seed at position {opt.seed} found")
+                opt.seed = None
+                
         normalized_prompt      = PromptFormatter(t2i,opt).normalize_prompt()
         individual_images      = not opt.grid
 
@@ -194,6 +202,8 @@ def main_loop(t2i,outdir,parser,log,infile):
                 results  = [[filename,seeds]]
                 metadata_prompt   = f'{normalized_prompt} -S{results[0][1]}'
                 file_writer.save_image_and_prompt_to_png(grid_img,metadata_prompt,filename)
+
+            last_seeds = [r[1] for r in results]
 
         except AssertionError as e:
             print(e)
@@ -344,7 +354,7 @@ def create_cmd_parser():
     parser = argparse.ArgumentParser(description='Example: dream> a fantastic alien landscape -W1024 -H960 -s100 -n12')
     parser.add_argument('prompt')
     parser.add_argument('-s','--steps',type=int,help="number of steps")
-    parser.add_argument('-S','--seed',type=int,help="image seed")
+    parser.add_argument('-S','--seed',type=int,help="image seed; a +ve integer, or use -1 for the previous seed, -2 for the one before that, etc")
     parser.add_argument('-n','--iterations',type=int,default=1,help="number of samplings to perform (slower, but will provide seeds for individual images)")
     parser.add_argument('-b','--batch_size',type=int,default=1,help="number of images to produce per sampling (will not provide seeds for individual images!)")
     parser.add_argument('-W','--width',type=int,help="image width, multiple of 64")
