@@ -454,7 +454,7 @@ The vast majority of these arguments default to reasonable values.
                 self.device = torch.device(self.device) if torch.cuda.is_available() else torch.device("cpu")
                 model = self._load_model_from_config(config,self.weights)
                 if self.embedding_path is not None:
-                    model.embedding_manager.load(self.embedding_path)
+                    model.embedding_manager.load(self.embedding_path, self.full_precision)
                 self.model = model.to(self.device)
                 # model.to doesn't change the cond_stage_model.device used to move the tokenizer output, so set it here
                 self.model.cond_stage_model.device = self.device

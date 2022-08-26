@@ -135,11 +135,13 @@ class EmbeddingManager(nn.Module):
         torch.save({"string_to_token": self.string_to_token_dict,
                     "string_to_param": self.string_to_param_dict}, ckpt_path)
 
-    def load(self, ckpt_path):
+    def load(self, ckpt_path, full=True):
         ckpt = torch.load(ckpt_path, map_location='cpu')
-
         self.string_to_token_dict = ckpt["string_to_token"]
         self.string_to_param_dict = ckpt["string_to_param"]
+        if not full:
+            for key, value in self.string_to_param_dict.items():
+                self.string_to_param_dict[key] = torch.nn.Parameter(value.half())
 
     def get_embedding_norms_squared(self):
         all_params = torch.cat(list(self.string_to_param_dict.values()), axis=0) # num_placeholders x embedding_dim
