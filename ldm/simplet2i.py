@@ -27,7 +27,7 @@ from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim     import DDIMSampler
 from ldm.models.diffusion.plms     import PLMSSampler
 from ldm.models.diffusion.ksampler import KSampler
-from ldm.dream_util                import PngWriter
+from ldm.dream.pngwriter           import PngWriter
 
 """Simplified text to image API for stable diffusion/latent diffusion
 
