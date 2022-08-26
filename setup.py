@@ -1,13 +1,6 @@
-from setuptools import setup, find_packages
+#!/usr/bin/env python
 
-setup(
-    name='latent-diffusion',
-    version='0.0.1',
-    description='',
-    packages=find_packages(),
-    install_requires=[
-        'torch',
-        'numpy',
-        'tqdm',
-    ],
-)
+import setuptools
+
+if __name__ == '__main__':
+    setuptools.setup()

@@ -1,3 +1,8 @@
 __pycache__
+build/
+inputs/
 outputs/
 *.egg-info/
+dist/
+*.zip
+*.ckpt
