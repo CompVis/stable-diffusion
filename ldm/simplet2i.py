@@ -529,6 +529,9 @@ The vast majority of these arguments default to reasonable values.
         res = Image.fromarray(restored_img)
 
         if strength < 1.0:
+            # Resize the image to the new image if the sizes have changed
+            if restored_img.size != image.size:
+                res = res.resize(image.size)
             res = Image.blend(image, res, strength)
 
         return res
