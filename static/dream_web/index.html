@@ -25,9 +25,27 @@
           <input value="7.5" type="number" id="cfgscale" name="cfgscale" step="any">
           <span>&bull;</span>
           <label title="Set to multiple of 64" for="width">Width:</label>
-          <input value="512" type="number" id="width" name="width">
+          <select id="width" name="width" value="512">
+            <option value="64">64</option> <option value="128">128</option>
+            <option value="192">192</option> <option value="256">256</option>
+            <option value="320">320</option> <option value="384">384</option>
+            <option value="448">448</option> <option value="512">512</option>
+            <option value="576">576</option> <option value="640">640</option>
+            <option value="704">704</option> <option value="768">768</option>
+            <option value="832">832</option> <option value="896">896</option>
+            <option value="960">960</option> <option value="1024">1024</option>
+          </select>
           <label title="Set to multiple of 64" for="height">Height:</label>
-          <input value="512" type="number" id="height" name="height">
+          <select id="height" name="height" value="512">
+            <option value="64">64</option> <option value="128">128</option>
+            <option value="192">192</option> <option value="256">256</option>
+            <option value="320">320</option> <option value="384">384</option>
+            <option value="448">448</option> <option value="512">512</option>
+            <option value="576">576</option> <option value="640">640</option>
+            <option value="704">704</option> <option value="768">768</option>
+            <option value="832">832</option> <option value="896">896</option>
+            <option value="960">960</option> <option value="1024">1024</option>
+          </select>
           <br>
           <label title="Upload an image to use img2img" for="initimg">Img2Img Init:</label>
           <input type="file" id="initimg" name="initimg" accept=".jpg, .jpeg, .png">
