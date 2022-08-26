@@ -597,14 +597,14 @@ def esrgan_resize(input, id):
         print(e)
         quit()
 
-def do_gobig(gobig_init, gobig_scale, device, model, opt):
+def do_gobig(gobig_init, device, model, opt):
     overlap = opt.gobig_overlap
     outpath = opt.outdir
     # get our render size for each slice, and our target size
     input_image = Image.open(gobig_init).convert('RGBA')
     opt.W, opt.H = input_image.size
-    target_W = opt.W * gobig_scale
-    target_H = opt.H * gobig_scale
+    target_W = opt.W * opt.gobig_scale
+    target_H = opt.H * opt.gobig_scale
     if opt.gobig_realesrgan:
         input_image = esrgan_resize(input_image, opt.device_id)
     target_image = input_image.resize((target_W, target_H), get_resampling_mode())
@@ -795,6 +795,7 @@ def main():
                     "precision": "autocast",
                     "init_image": settings.init_image,
                     "strength": 1.0 - settings.init_strength,
+                    "gobig_scale": cl_args.gobig_scale,
                     "gobig_maximize": settings.gobig_maximize,
                     "gobig_overlap": settings.gobig_overlap,
                     "gobig_realesrgan": settings.gobig_realesrgan,
@@ -813,7 +814,7 @@ def main():
                 else:
                     gobig_init = cl_args.gobig_init
                 if cl_args.gobig:
-                    do_gobig(gobig_init, cl_args.gobig_scale, device, model, opt)
+                    do_gobig(gobig_init, device, model, opt)
                 if settings.cool_down > 0 and i < (settings.n_batches - 1):
                     print(f'Pausing {settings.cool_down} seconds to give your poor GPU a rest...')
                     time.sleep(settings.cool_down)
