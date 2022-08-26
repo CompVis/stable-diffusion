@@ -23,7 +23,7 @@ txt2img to generate an image based only on a prompt
 
 - It can generate _512x512 images from a prior image and prompt on a 4GB VRAM GPU in under 20 seconds per image_ (RTX 2060 in my case).
 
-- You can use the `--H` & `--W` arguments to set the size of the generated image.The maximum size that can fit on 6GB GPU (RTX 2060) is around 576x768.
+- The maximum size that can fit on 6GB GPU (RTX 2060) is around 576x768.
 
 - For example, the following command will generate 20 512x512 images:
 
@@ -33,13 +33,17 @@ txt2img to generate an image based only on a prompt
 
 - It can generate _512x512 images from a prompt on a 4GB VRAM GPU in under 25 seconds per image_ (RTX 2060 in my case).
 
-- You can use the `--H` & `--W` arguments to set the size of the generated image.
-
 - For example, the following command will generate 20 512x512 images:
 
 `python optimizedSD/optimized_txt2img.py --prompt "Cyberpunk style image of a Telsa car reflection in rain" --H 512 --W 512 --seed 27 --n_iter 2 --n_samples 10 --ddim_steps 50`
 
 ---
+
+## Optional arguments
+
+### `--turbo` (Faster inference)
+
+- If generating small batch of images (~ 1 to 4), use this argument to generate a single 512x512 image in under 25 seconds (on RTX 2060, excluding the time to load the model) using using only around 1GB of extra VRAM (4.3 GB instead of 3.3GB)
 
 ### `--seed` (Seed)
 
@@ -53,19 +57,31 @@ txt2img to generate an image based only on a prompt
 
 - If you get a CUDA out of memory error, try reducing the batch size `--n_samples`. If it doesn't work, the other option is to reduce the image width `--W` or height `--H` or both.
 
+### `--n_iter`
+
+- Equivalent to running the script n_iter number of times. Only difference is that the model is loaded only once per n_iter iterations. Unlike `n_samples`, reducing it doesn't have an effect on VRAM required or inference time.
+
 ### `--H` & `--W` (Height & Width)
 
 - Both height and width should be a multiple of 64
 
 ### `--precision autocast` or `--precision full` (Full or Mixed Precision)
 
-- Mixed Precision is enabled by default. If you don't have a GPU with tensor cores, you can still use mixed precision to run the code using lesser VRAM but the inference time may be larger. And if you feel that the inference is slower, try using the `--precision full` argument to disable it.
+- Mixed Precision is enabled by default. If you don't have a GPU with tensor cores (RTX 10xx series), you may not be able use mixed precision. Use `--precision full` argument to disable it.
+
+### `--unet_bs`
+
+- Batch size for the unet model. Takes up a lot of extra RAM for very little improvement in inference time. unet_bs > 1 is not recommended!
+
+- Should be a multiple of 2x(n_samples)
 
 ### Gradio for Graphical User Interface
 
 - You can also use gradio interface for img2img & txt2img instead of the CLI. Just activate the conda env and install the latest version of gradio using `pip install gradio` .
 
 - Run img2img using `python optimizedSD/img2img_gradio.py` and txt2img using `python optimizedSD/img2img_gradio.py`.
+
+-- img2img_gradio.py has the feature to crop images. Look for the pen symbol in the image box after selecting the image.
 
 ### Weighted Prompts
 

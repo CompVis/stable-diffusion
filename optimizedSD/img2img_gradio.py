@@ -78,7 +78,6 @@ for key in lo:
     sd['model2.' + key[6:]] = sd.pop(key)
 
 config = OmegaConf.load(f"{config}")
-config.modelUNet.params.small_batch = False
 
 model = instantiate_from_config(config.modelUNet)
 _, _ = model.load_state_dict(sd, strict=False)
@@ -93,12 +92,14 @@ _, _ = modelFS.load_state_dict(sd, strict=False)
 modelFS.eval()
 del sd
 
-def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width, scale,ddim_eta, device,seed, small_batch, full_precision,outdir):
+def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width, scale,ddim_eta, unet_bs,device,seed,outdir, turbo, full_precision):
 
-    model.small_batch = small_batch
+    seeds = ''
+    init_image = load_img(image, Height, Width).to(device)
+    model.unet_bs = unet_bs
+    model.turbo = turbo
     model.cdevice = device
     modelCS.cond_stage_model.device = device
-    init_image = load_img(image, Height, Width).to(device)
 
     if device != 'cpu' and full_precision == False:
         model.half()
@@ -192,6 +193,7 @@ def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width
                         x_sample = 255. * rearrange(x_sample[0].cpu().numpy(), 'c h w -> h w c')
                         Image.fromarray(x_sample.astype(np.uint8)).save(
                             os.path.join(sample_path, "seed_" + str(seed) + "_" + f"{base_count:05}.png"))
+                        seeds+= str(seed) + ','
                         seed+=1
                         base_count += 1
 
@@ -214,13 +216,17 @@ def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width
     grid = make_grid(grid, nrow=n_iter)
     grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
     
-    txt = "Your samples are ready in " + str(round(time_taken, 3)) + " minutes and waiting for you here \n" + sample_path
+    txt = "Your samples are ready in " + str(round(time_taken, 3)) + " minutes and waiting for you here \n" + sample_path + "\nSeeds used = " + seeds[:-1]
     return Image.fromarray(grid.astype(np.uint8)), txt
 
 demo = gr.Interface(
     fn=generate,
-    inputs=[gr.Image(tool="editor", type="pil"),"text",gr.Slider(0, 1,value=0.75),gr.Slider(1, 1000,value=50),gr.Slider(1, 100, step=1), gr.Slider(1, 100,step=1),
-    gr.Slider(64,4096,value = 512,step=64), gr.Slider(64,4096,value = 512,step=64), gr.Slider(0,50,value=7.5,step=0.1),gr.Slider(0,1,step=0.01),gr.Text(value = "cuda"),"text","checkbox", "checkbox",gr.Text(value = "outputs/img2img-samples")],
+    inputs=[gr.Image(tool="editor", type="pil"),"text",gr.Slider(0, 1,value=0.75),
+            gr.Slider(1, 1000,value=50),gr.Slider(1, 100, step=1), gr.Slider(1, 100,step=1),
+            gr.Slider(64,4096,value = 512,step=64), gr.Slider(64,4096,value = 512,step=64), 
+            gr.Slider(0,50,value=7.5,step=0.1),gr.Slider(0,1,step=0.01),
+            gr.Slider(1,2,value = 1,step=1),gr.Text(value = "cuda"), "text",
+            gr.Text(value = "outputs/img2img-samples"),"checkbox", "checkbox",],
     outputs=["image", "text"],
 )
 demo.launch()

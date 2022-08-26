@@ -68,7 +68,6 @@ parser.add_argument(
     help="dir to write results to",
     default="outputs/img2img-samples"
 )
-
 parser.add_argument(
     "--init-img",
     type=str,
@@ -124,18 +123,6 @@ parser.add_argument(
     help="strength for noising/unnoising. 1.0 corresponds to full destruction of information in init image",
 )
 parser.add_argument(
-    "--C",
-    type=int,
-    default=4,
-    help="latent channels",
-)
-parser.add_argument(
-    "--f",
-    type=int,
-    default=8,
-    help="downsampling factor",
-)
-parser.add_argument(
     "--n_samples",
     type=int,
     default=5,
@@ -171,9 +158,15 @@ parser.add_argument(
     help="CPU or GPU (cuda/cuda:0/cuda:1/...)",
 )
 parser.add_argument(
-    "--small_batch",
+    "--unet_bs",
+    type=int,
+    default=1,
+    help="Slightly reduces inference time at the expense of high VRAM (value > 1 not recommended )",
+)
+parser.add_argument(
+    "--turbo",
     action='store_true',
-    help="Reduce inference time when generate a smaller batch of images",
+    help="Reduces inference time on the expense of 1GB VRAM",
 )
 parser.add_argument(
     "--precision",
@@ -218,12 +211,6 @@ for key in lo:
 
 config = OmegaConf.load(f"{config}")
 
-if opt.small_batch:
-    config.modelUNet.params.small_batch = True
-else:
-    config.modelUNet.params.small_batch = False
-config.modelCondStage.params.cond_stage_config.params.device = opt.device
-
 assert os.path.isfile(opt.init_img)
 init_image = load_img(opt.init_img, opt.H, opt.W).to(opt.device)
 
@@ -231,10 +218,13 @@ model = instantiate_from_config(config.modelUNet)
 _, _ = model.load_state_dict(sd, strict=False)
 model.eval()
 model.cdevice = opt.device
+model.unet_bs = opt.unet_bs
+model.turbo = opt.turbo
     
 modelCS = instantiate_from_config(config.modelCondStage)
 _, _ = modelCS.load_state_dict(sd, strict=False)
 modelCS.eval()
+modelCS.cond_stage_model.device = opt.device
     
 modelFS = instantiate_from_config(config.modelFirstStage)
 _, _ = modelFS.load_state_dict(sd, strict=False)
@@ -282,6 +272,7 @@ if opt.precision=="autocast" and opt.device != "cpu":
 else:
     precision_scope = nullcontext
 
+seeds = ''
 with torch.no_grad():
 
     all_samples = list()
@@ -330,6 +321,7 @@ with torch.no_grad():
                     x_sample = 255. * rearrange(x_sample[0].cpu().numpy(), 'c h w -> h w c')
                     Image.fromarray(x_sample.astype(np.uint8)).save(
                         os.path.join(sample_path, "seed_" + str(opt.seed) + "_" + f"{base_count:05}.png"))
+                    seeds+= str(opt.seed) + ','
                     opt.seed+=1
                     base_count += 1
 
@@ -347,4 +339,4 @@ toc = time.time()
 
 time_taken = (toc-tic)/60.0
 
-print(("Your samples are ready in {0:.2f} minutes and waiting for you here \n" + sample_path).format(time_taken))
+print(("Your samples are ready in {0:.2f} minutes and waiting for you here " + sample_path + "\n Seeds used = " + seeds[:-1]).format(time_taken))
