@@ -1,0 +1,22 @@
+version: '3.3'
+
+services:
+  stabile-diffusion:
+    container_name: sd
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/src
+      - ./outputs:/src/outputs
+      - conda_env:/opt/conda
+    ports:
+      - '7860:7860'
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+volumes:
+  conda_env:

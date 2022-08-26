@@ -1,0 +1,5 @@
+__pycache__
+*.egg-info
+outputs/
+models/ldm/stable-diffusion-v1/model.ckpt
+src/gfpgan/experiments/pretrained_models/GFPGANv1.3.pth

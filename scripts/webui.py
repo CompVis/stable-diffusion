@@ -406,7 +406,7 @@ def draw_prompt_matrix(im, width, height, all_prompts):
 
     fontsize = (width + height) // 25
     line_spacing = fontsize // 2
-    fonts = ["arial.ttf", "DejaVuSans.ttf"]
+    fonts = ["data/DejaVuSans.ttf", "arial.ttf", "DejaVuSans.ttf"]
     for font_name in fonts:
         try:
             fnt = ImageFont.truetype(font_name, fontsize)
