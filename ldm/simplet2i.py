@@ -545,7 +545,9 @@ class T2I:
         return model
 
     def _load_img(self, path):
-        image = Image.open(path).convert('RGB')
+        with Image.open(path) as img:
+            image = img.convert("RGB")
+
         w, h = image.size
         print(f'loaded input image of size ({w}, {h}) from {path}')
         w, h = map(
