@@ -1,5 +1,7 @@
 name: ldm
 channels:
+  - apple
+  - conda-forge
   - pytorch-nightly
   - defaults
 dependencies:
