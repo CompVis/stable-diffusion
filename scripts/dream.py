@@ -252,7 +252,7 @@ def create_argv_parser():
                         '-o',
                         type=str,
                         default="outputs/img-samples",
-                        help="directory in which to place generated images and a log of prompts and seeds")
+                        help="directory in which to place generated images and a log of prompts and seeds (outputs/img-samples")
     parser.add_argument('--embedding_path',
                         type=str,
                         help="Path to a pre-trained embedding manager checkpoint - can only be set on command line")

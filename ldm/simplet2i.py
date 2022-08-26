@@ -286,6 +286,7 @@ The vast majority of these arguments default to reasonable values.
             print('Partial results will be returned; if --grid was requested, nothing will be returned.')
         except RuntimeError as e:
             print(str(e))
+            print('Are you sure your system has an adequate NVIDIA GPU?')
 
         toc  = time.time()
         print(f'{len(results)} images generated in',"%4.2fs"% (toc-tic))
