@@ -55,7 +55,6 @@ os.makedirs(output_path, exist_ok=True)
 print(f"models_path: {models_path}")
 print(f"output_path: {output_path}")
 
-
 # %%
 # !! {"metadata":{
 # !!   "id": "VRNl2mfepEIe",
@@ -87,8 +86,8 @@ if setup_environment:
 
 # %%
 # !! {"metadata":{
-# !!   "cellView": "form",
-# !!   "id": "81qmVZbrm4uu"
+# !!   "id": "81qmVZbrm4uu",
+# !!   "cellView": "form"
 # !! }}
 #@markdown **Python Definitions**
 import json
@@ -211,7 +210,7 @@ def make_callback(sampler, dynamic_threshold=None, static_threshold=None):
 
     return callback
 
-def generate(args, return_latent=False, return_sample=False):
+def generate(args, return_latent=False, return_sample=False, return_c=False):
     seed_everything(args.seed)
     os.makedirs(args.outdir, exist_ok=True)
 
@@ -261,6 +260,9 @@ def generate(args, return_latent=False, return_sample=False):
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
                         c = model.get_learned_conditioning(prompts)
+
+                        if args.init_c != None:
+                          c = args.init_c
 
                         if args.sampler in ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral"]:
                             shape = [args.C, args.H // args.f, args.W // args.f]
@@ -313,6 +315,9 @@ def generate(args, return_latent=False, return_sample=False):
 
                         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
 
+                        if return_c:
+                            results.append(c.clone())
+
                         for x_sample in x_samples:
                             x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                             image = Image.fromarray(x_sample.astype(np.uint8))
@@ -330,7 +335,6 @@ def sample_to_cv2(sample: torch.Tensor) -> np.ndarray:
     sample_f32 = ((sample_f32 * 0.5) + 0.5).clip(0, 1)
     sample_int8 = (sample_f32 * 255).astype(np.uint8)
     return sample_int8
-
 
 # %%
 # !! {"metadata":{
@@ -468,7 +472,7 @@ if load_on_run_all:
 def DeforumAnimArgs():
 
     #@markdown ####**Animation:**
-    animation_mode = 'None' #@param ['None', '2D', 'Video Input'] {type:'string'}
+    animation_mode = 'Interpolation' #@param ['None', '2D', 'Video Input', 'Interpolation'] {type:'string'}
     max_frames = 1000#@param {type:"number"}
     border = 'wrap' #@param ['wrap', 'replicate'] {type:'string'}
 
@@ -487,7 +491,10 @@ def DeforumAnimArgs():
 
     #@markdown ####**Video Input:**
     video_init_path ='/content/video_in.mp4'#@param {type:"string"}
-    extract_nth_frame = 1#@param {type:"number"}    
+    extract_nth_frame = 1#@param {type:"number"}
+
+    #@markdown ####**Interpolation:**
+    interpolate_x_frames = 4 #@param {type:"number"}
 
     return locals()
 
@@ -566,8 +573,10 @@ prompts = [
 ]
 
 animation_prompts = {
-    0: "a beautiful forest by Asher Brown Durand, trending on Artstation",
-    10: "a vast heavenly meadow in spring, by Ivan Shishkin, trending on Artstation",
+    0: "a beautiful apple, trending on Artstation",
+    10: "a beautiful banana, trending on Artstation",
+    100: "a beautiful coconut, trending on Artstation",
+    101: "a beautiful durian, trending on Artstation",
 }
 
 # %%
@@ -583,7 +592,6 @@ animation_prompts = {
 # !!   "id": "qH74gBWDd2oq",
 # !!   "cellView": "form"
 # !! }}
-
 def DeforumArgs():
     #@markdown **Save & Display Settings**
     batch_name = "StableFun" #@param {type:"string"}
@@ -607,7 +615,7 @@ def DeforumArgs():
     #@markdown **Sampling Settings**
     seed = -1 #@param
     sampler = 'klms' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
-    steps = 100 #@param
+    steps = 10 #@param
     scale = 7 #@param
     ddim_eta = 0.0 #@param
     dynamic_threshold = None
@@ -626,6 +634,7 @@ def DeforumArgs():
     timestring = ""
     init_latent = None
     init_sample = None
+    init_c = None
 
     return locals()
 
@@ -804,11 +813,85 @@ def render_input_video(args, anim_args):
     print(f"Loading {anim_args.max_frames} input frames from {video_in_frame_path} and saving video frames to {args.outdir}")
     render_animation(args, anim_args)
 
+def render_interpolation(args, anim_args):
+    # animations use key framed prompts
+    args.prompts = animation_prompts
+
+    # create output folder for the batch
+    os.makedirs(args.outdir, exist_ok=True)
+    print(f"Saving animation frames to {args.outdir}")
+
+    # save settings for the batch
+    settings_filename = os.path.join(args.outdir, f"{args.timestring}_settings.txt")
+    with open(settings_filename, "w+", encoding="utf-8") as f:
+        s = {**dict(args.__dict__), **dict(anim_args.__dict__)}
+        json.dump(s, f, ensure_ascii=False, indent=4)
+    
+    # Interpolation Settings
+    args.n_samples = 1
+    args.seed_behavior = 'fixed' # force fix seed at the moment bc only 1 seed is available
+    prompts_c_s = [] # cache all the text embeddings
+
+    print(f"Preparing for interpolation of the following...")
+
+    for i, prompt in animation_prompts.items():
+      args.prompt = prompt
+
+      # sample the diffusion model
+      results = generate(args, return_c=True)
+      c, image = results[0], results[1]
+      prompts_c_s.append(c) 
+      
+      # display.clear_output(wait=True)
+      display.display(image)
+      
+      args.seed = next_seed(args)
+
+    display.clear_output(wait=True)
+    print(f"Interpolation start...")
+
+    frame_idx = 0
+
+    for i in range(len(prompts_c_s)-1):
+      for j in range(anim_args.interpolate_x_frames+1):
+        # interpolate the text embedding
+        prompt1_c = prompts_c_s[i]
+        prompt2_c = prompts_c_s[i+1]  
+        args.init_c = prompt1_c.add(prompt2_c.sub(prompt1_c).mul(j * 1/(anim_args.interpolate_x_frames+1)))
+
+        # sample the diffusion model
+        results = generate(args)
+        image = results[0]
+
+        filename = f"{args.timestring}_{frame_idx:05}.png"
+        image.save(os.path.join(args.outdir, filename))
+        frame_idx += 1
+
+        display.clear_output(wait=True)
+        display.display(image)
+
+        args.seed = next_seed(args)
+
+    # generate the last prompt
+    args.init_c = prompts_c_s[-1]
+    results = generate(args)
+    image = results[0]
+    filename = f"{args.timestring}_{frame_idx:05}.png"
+    image.save(os.path.join(args.outdir, filename))
+
+    display.clear_output(wait=True)
+    display.display(image)
+    args.seed = next_seed(args)
+
+    #clear init_c
+    args.init_c = None
 
 if anim_args.animation_mode == '2D':
     render_animation(args, anim_args)
 elif anim_args.animation_mode == 'Video Input':
     render_input_video(args, anim_args)
+elif anim_args.animation_mode == 'Interpolation':
+    render_interpolation(args, anim_args)
 else:
     render_image_batch(args)    
 
@@ -871,9 +954,8 @@ else:
 # !!   "accelerator": "GPU",
 # !!   "colab": {
 # !!     "collapsed_sections": [],
-# !!     "name": "Deforum_Stable_Diffusion.ipynb",
-# !!     "provenance": [],
-# !!     "private_outputs": true
+# !!     "name": "Deforum_Stable_Diffusion + Interpolation.ipynb",
+# !!     "provenance": []
 # !!   },
 # !!   "gpuClass": "standard",
 # !!   "kernelspec": {
