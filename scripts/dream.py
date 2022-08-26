@@ -82,7 +82,7 @@ def main():
             from gfpgan import GFPGANer
 
             bg_upsampler = None
-            if opt.gfpgan_bg_upsampler is not None:
+            if opt.gfpgan_bg_upsampler == 'realesrgan':
                 bg_upsampler = load_gfpgan_bg_upsampler(opt.gfpgan_bg_upsampler, opt.gfpgan_bg_tile)
 
             t2i.gfpgan = GFPGANer(model_path=model_path, upscale=opt.gfpgan_upscale, arch='clean', channel_multiplier=2, bg_upsampler=bg_upsampler)

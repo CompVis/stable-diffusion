@@ -88,7 +88,7 @@ and optionally upscale the image to a higher resolution.
 To use the ability, clone the [GFPGAN repository](https://github.com/TencentARC/GFPGAN) and follow their
 installation instructions. By default, we expect GFPGAN to be installed in a 'GFPGAN' sibling directory.
 
-You may also want to install Real-ESRGAN, if you want to enhance non-face regions in the image by installing
+You may also want to install Real-ESRGAN, if you want to enhance non-face regions in the image, by installing
 the pip Real-ESRGAN package.
 ```
 pip install realesrgan
