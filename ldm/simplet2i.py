@@ -274,12 +274,11 @@ The vast majority of these arguments default to reasonable values.
             with scope(self.device.type), self.model.ema_scope():
                 for n in trange(iterations, desc="Sampling"):
                     seed_everything(seed)
-                    for batch_item in tqdm(range(batch_size), desc="data", dynamic_ncols=True):
-                        iter_images = next(images_iterator)
-                        for image in iter_images:
-                            results.append([image, seed])
-                            if image_callback is not None:
-                                image_callback(image,seed)
+                    iter_images = next(images_iterator)
+                    for image in iter_images:
+                        results.append([image, seed])
+                        if image_callback is not None:
+                            image_callback(image,seed)
                     seed = self._new_seed()
 
         except KeyboardInterrupt:
@@ -359,14 +358,12 @@ The vast majority of these arguments default to reasonable values.
             yield self._samples_to_images(samples)
 
     # TODO: does this actually need to run every loop? does anything in it vary by random seed?
-    def _get_uc_and_c(self, prompts, batch_size, skip_normalize):
-        if isinstance(prompts, tuple):
-            prompts = list(prompts)
+    def _get_uc_and_c(self, prompt, batch_size, skip_normalize):
 
         uc = self.model.get_learned_conditioning(batch_size * [""])
 
         # weighted sub-prompts
-        subprompts,weights = T2I._split_weighted_subprompts(prompts[0])
+        subprompts,weights = T2I._split_weighted_subprompts(prompt)
         if len(subprompts) > 1:
             # i dont know if this is correct.. but it works
             c = torch.zeros_like(uc)
@@ -377,9 +374,9 @@ The vast majority of these arguments default to reasonable values.
                 weight = weights[i]
                 if not skip_normalize:
                     weight = weight / totalWeight
-                c = torch.add(c,self.model.get_learned_conditioning(subprompts[i]), alpha=weight)
+                c = torch.add(c, self.model.get_learned_conditioning(batch_size * [subprompts[i]]), alpha=weight)
         else: # just standard 1 prompt
-            c = self.model.get_learned_conditioning(prompts)
+            c = self.model.get_learned_conditioning(batch_size * [prompt])
         return (uc, c)
 
     def _samples_to_images(self, samples):
