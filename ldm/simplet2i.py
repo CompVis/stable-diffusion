@@ -305,9 +305,11 @@ class T2I:
                     iter_images = next(images_iterator)
                     for image in iter_images:
                         try:
-                            # if gfpgan strength is none or less than 0.0 then don't use GFPGAN
-                            # if the user specified -G x, and the --gfpgan wasn't specified, then
-                            # the net result is a message gets printed - nothing else happens
+                            # if gfpgan strength is none or less than or equal to 0.0 then 
+                            # don't even attempt to use GFPGAN.
+                            # if the user specified a value of -G that satisifies the condition and 
+                            # --gfpgan wasn't specified, at startup then
+                            # the net result is a message gets printed - nothing else happens.
                             if gfpgan_strength is not None and gfpgan_strength > 0.0:
                                 image = self.gfpgan.generate(
                                     image, gfpgan_strength=gfpgan_strength
