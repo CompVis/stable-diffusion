@@ -41,13 +41,10 @@ A browser interface based on Gradio library for Stable Diffusion.
 
 Original script with Gradio UI was written by a kind anonymopus user. This is a modification.
 
-![](images/txt2img.jpg)
-
-![](images/img2img.jpg)
-
-![](images/gfpgan.jpg)
-
-![](images/esrgan.jpg)
+![](https://github.com/hlky/stable-diffusion-webui/blob/master/images/txt2img.jpg)
+![](https://github.com/hlky/stable-diffusion-webui/blob/master/images/img2img.jpg)
+![](https://github.com/hlky/stable-diffusion-webui/blob/master/images/gfpgan.jpg)
+![](https://github.com/hlky/stable-diffusion-webui/blob/master/images/esrgan.jpg)
 
 ### GFPGAN
 
