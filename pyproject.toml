@@ -6,7 +6,6 @@ build-backend = "setuptools.build_meta"
 name = "latent-diffusion"
 version = "0.0.1"
 description = ""
-requires-python = ">=3.9"
 #license = {file = "LICENSE.txt"}
 keywords = ["stable-diffusion"]
 dependencies = [
