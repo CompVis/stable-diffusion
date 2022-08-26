@@ -80,6 +80,36 @@ You may also pass a -v<count> option to generate count variants on the original 
 passing the first generated image back into img2img the requested number of times. It generates interesting
 variants.
 
+## GFPGAN Support
+
+This script also provides the ability to invoke GFPGAN after image generation. Doing so will enhance faces
+and optionally upscale the image to a higher resolution.
+
+To use the ability, clone the [GFPGAN repository](https://github.com/TencentARC/GFPGAN) and follow their
+installation instructions. By default, we expect GFPGAN to be installed in a 'gfpgan' sibling directory.
+
+You may also want to install Real-ESRGAN, if you want to enhance non-face regions in the image by installing
+the pip Real-ESRGAN package.
+```
+pip install realesrgan
+
+```
+
+Now, you can run this script by adding the --gfpgan option. Any issues with GFPGAN will be reported on initialization.
+
+When generating prompts, add a -G or --gfpgan_strenth option to control the strength of the GFPGAN enhancement.
+0.0 is no enhancement, 1.0 is maximum enhancement.
+
+So for instance, to apply the maximum strength:
+~~~~
+dream> a man wearing a pineapple hat -G 1
+~~~~
+
+That's it!
+
+There's also a bunch of options to control GFPGAN settings when starting the script for different configs that you can
+read about in the help text. This will let you control where GFPGAN is installed, if upsampling is enapled, the upsampler to use and the model path.
+
 ## Barebones Web Server
 
 As of version 1.10, this distribution comes with a bare bones web server (see screenshot). To use it,

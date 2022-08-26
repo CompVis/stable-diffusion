@@ -6,6 +6,7 @@ import shlex
 import os
 import sys
 import copy
+
 from ldm.dream_util import Completer,PngWriter,PromptFormatter
 
 debugging = False
@@ -68,6 +69,28 @@ def main():
 
     # preload the model
     t2i.load_model()
+
+    # load GFPGAN if requested
+    if opt.use_gfpgan:
+        print("\n* --gfpgan was specified, loading gfpgan...")
+        try:
+            model_path = os.path.join(opt.gfpgan_dir, opt.gfpgan_model_path)
+            if not os.path.isfile(model_path):
+                raise Exception("GFPGAN model not found at path "+model_path)
+
+            sys.path.append(os.path.abspath(opt.gfpgan_dir))
+            from gfpgan import GFPGANer
+
+            bg_upsampler = None
+            if opt.gfpgan_bg_upsampler is not None:
+                bg_upsampler = load_gfpgan_bg_upsampler(opt.gfpgan_bg_upsampler, opt.gfpgan_bg_tile)
+
+            t2i.gfpgan = GFPGANer(model_path=model_path, upscale=opt.gfpgan_upscale, arch='clean', channel_multiplier=2, bg_upsampler=bg_upsampler)
+        except Exception:
+            import traceback
+            print("Error loading GFPGAN:", file=sys.stderr)
+            print(traceback.format_exc(), file=sys.stderr)
+
     print("\n* Initialization done! Awaiting your command (-h for help, 'q' to quit, 'cd' to change output dir, 'pwd' to print output dir)...")
 
     log_path   = os.path.join(opt.outdir,'dream_log.txt')
@@ -183,6 +206,32 @@ def main_loop(t2i,outdir,parser,log,infile):
 
     print("goodbye!")
 
+def load_gfpgan_bg_upsampler(bg_upsampler, bg_tile=400):
+    import torch
+
+    if bg_upsampler == 'realesrgan':
+        if not torch.cuda.is_available():  # CPU
+            import warnings
+            warnings.warn('The unoptimized RealESRGAN is slow on CPU. We do not use it. '
+                          'If you really want to use it, please modify the corresponding codes.')
+            bg_upsampler = None
+        else:
+            from basicsr.archs.rrdbnet_arch import RRDBNet
+            from realesrgan import RealESRGANer
+            model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=2)
+            bg_upsampler = RealESRGANer(
+                scale=2,
+                model_path='https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth',
+                model=model,
+                tile=bg_tile,
+                tile_pad=10,
+                pre_pad=0,
+                half=True)  # need to set False in CPU mode
+    else:
+        bg_upsampler = None
+
+    return bg_upsampler
+
 # variant generation is going to be superseded by a generalized
 # "prompt-morph" functionality
 # def generate_variants(t2i,outdir,opt,previous_gens):
@@ -261,6 +310,31 @@ def create_argv_parser():
                         type=str,
                         default="cuda",
                         help="device to run stable diffusion on. defaults to cuda `torch.cuda.current_device()` if avalible")
+    # GFPGAN related args
+    parser.add_argument('--gfpgan',
+                        dest='use_gfpgan',
+                        action='store_true',
+                        help="load gfpgan for use in the dreambot. Note: Enabling GFPGAN will require more GPU memory")
+    parser.add_argument("--gfpgan_upscale",
+                        type=int,
+                        default=2,
+                        help="The final upsampling scale of the image. Default: 2. Only used if --gfpgan is specified")
+    parser.add_argument("--gfpgan_bg_upsampler",
+                        type=str,
+                        default='realesrgan',
+                        help="Background upsampler. Default: None. Options: realesrgan, none. Only used if --gfpgan is specified")
+    parser.add_argument("--gfpgan_bg_tile",
+                        type=int,
+                        default=400,
+                        help="Tile size for background sampler, 0 for no tile during testing. Default: 400. Only used if --gfpgan is specified")
+    parser.add_argument("--gfpgan_model_path",
+                        type=str,
+                        default='experiments/pretrained_models/GFPGANv1.3.pth',
+                        help="indicates the path to the GFPGAN model, relative to --gfpgan_dir. Only used if --gfpgan is specified")
+    parser.add_argument("--gfpgan_dir",
+                        type=str,
+                        default='../gfpgan',
+                        help="indicates the directory containing the GFPGAN code. Only used if --gfpgan is specified")
     return parser
                         
     
@@ -278,6 +352,7 @@ def create_cmd_parser():
     parser.add_argument('-i','--individual',action='store_true',help="generate individual files (default)")
     parser.add_argument('-I','--init_img',type=str,help="path to input image for img2img mode (supersedes width and height)")
     parser.add_argument('-f','--strength',default=0.75,type=float,help="strength for noising/unnoising. 0.0 preserves image exactly, 1.0 replaces it completely")
+    parser.add_argument('-G','--gfpgan_strength', default=0.5, type=float, help="The strength at which to apply the GFPGAN model to the result, in order to improve faces.")
 # variants is going to be superseded by a generalized "prompt-morph" function
 #    parser.add_argument('-v','--variants',type=int,help="in img2img mode, the first generated image will get passed back to img2img to generate the requested number of variants")
     parser.add_argument('-x','--skip_normalize',action='store_true',help="skip subprompt weight normalization")
