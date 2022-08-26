@@ -305,7 +305,7 @@ class T2I:
                     iter_images = next(images_iterator)
                     for image in iter_images:
                         try:
-                            # if gfpgan strength is not none or less than 0.0 then don't use GFPGAN
+                            # if gfpgan strength is none or less than 0.0 then don't use GFPGAN
                             # if the user specified -G x, and the --gfpgan wasn't specified, then
                             # the net result is a message gets printed - nothing else happens
                             if gfpgan_strength is not None and gfpgan_strength > 0.0:
