@@ -34,5 +34,6 @@ dependencies:
     - -e git+https://github.com/CompVis/taming-transformers#egg=taming-transformers
     - -e git+https://github.com/openai/CLIP#egg=clip
     - -e git+https://github.com/TencentARC/GFPGAN#egg=GFPGAN
+    - -e git+https://github.com/xinntao/Real-ESRGAN#egg=realesrgan
     - -e git+https://github.com/hlky/k-diffusion-sd#egg=k_diffusion
     - -e .
