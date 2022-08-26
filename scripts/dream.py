@@ -118,12 +118,11 @@ def main():
     )
 
     log_path = os.path.join(opt.outdir, 'dream_log.txt')
-    with open(log_path, 'a') as log:
-        cmd_parser = create_cmd_parser()
-        main_loop(t2i, opt.outdir, cmd_parser, log, infile)
+    cmd_parser = create_cmd_parser()
+    main_loop(t2i, opt.outdir, cmd_parser, log_path, infile)
 
 
-def main_loop(t2i, outdir, parser, log, infile):
+def main_loop(t2i, outdir, parser, log_path, infile):
     """prompt/read/execute loop"""
     done = False
     last_seeds = []
@@ -240,7 +239,7 @@ def main_loop(t2i, outdir, parser, log, infile):
             continue
 
         print('Outputs:')
-        write_log_message(t2i, normalized_prompt, results, log)
+        write_log_message(t2i, normalized_prompt, results, log_path)
 
     print('goodbye!')
 
@@ -310,19 +309,14 @@ def load_gfpgan_bg_upsampler(bg_upsampler, bg_tile=400):
 #     return variants
 
 
-def write_log_message(t2i, prompt, results, logfile):
+### the results variable doesn't seem to be necessary. maybe remove it?
+def write_log_message(t2i, prompt, results, log_path):
     """logs the name of the output image, its prompt and seed to the terminal, log file, and a Dream text chunk in the PNG metadata"""
-    last_seed = None
-    img_num = 1
-    seenit = {}
+    log_lines = [f"{r[0]}: {prompt} -S{seed}\n" for r in results]
+    print(*log_lines, sep="")
 
-    for r in results:
-        seed = r[1]
-        log_message = f'{r[0]}: {prompt} -S{seed}'
-
-        print(log_message)
-        logfile.write(log_message + '\n')
-        logfile.flush()
+    with open(log_path, "a") as file:
+        file.writelines(log_lines)
 
 
 def create_argv_parser():
