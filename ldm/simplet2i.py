@@ -266,7 +266,6 @@ The vast majority of these arguments default to reasonable values.
                                         batch_size=batch_size,
                                         steps=steps,cfg_scale=cfg_scale,ddim_eta=ddim_eta,
                                         skip_normalize=skip_normalize,
-                                        gfpgan_strength=gfpgan_strength,
                                         init_img=init_img,strength=strength)
             else:
                 images_iterator = self._txt2img(prompt,
@@ -274,7 +273,6 @@ The vast majority of these arguments default to reasonable values.
                                         batch_size=batch_size,
                                         steps=steps,cfg_scale=cfg_scale,ddim_eta=ddim_eta,
                                         skip_normalize=skip_normalize,
-                                        gfpgan_strength=gfpgan_strength,
                                         width=width,height=height)
 
             with scope(self.device.type), self.model.ema_scope():
