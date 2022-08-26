@@ -26,6 +26,6 @@ dependencies:
     - kornia==0.6
     - gradio==3.1.6
     - -e git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
-    - -e git+https://github.com/openai/CLIP.git@main#egg=clip\\
+    - -e git+https://github.com/openai/CLIP.git@main#egg=clip
     - -e git+https://github.com/crowsonkb/k-diffusion
     - -e .
