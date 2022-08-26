@@ -66,7 +66,7 @@ def main():
 
     infile = None
     try:
-        if opt.infile is not None:
+        if opt.infile:
             infile = open(opt.infile, 'r')
     except FileNotFoundError as e:
         print(e)
