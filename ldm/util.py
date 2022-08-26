@@ -14,6 +14,22 @@ from inspect import isfunction
 from PIL import Image, ImageDraw, ImageFont
 
 
+# noinspection PyBroadException
+def get_device():
+    try:
+        if torch.cuda.is_available():
+            return 'cuda'
+        elif torch.backends.mps.is_available():
+            return 'mps'
+        else:
+            return 'cpu'
+    except Exception:
+        return 'cpu'
+
+
+torch_device = torch.device(get_device())
+
+
 def log_txt_as_img(wh, xc, size=10):
     # wh a tuple of (width, height)
     # xc a list of captions to plot

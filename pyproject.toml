@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools", "wheel", "setuptools-scm[toml]"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "latent-diffusion"
+version = "0.0.1"
+description = ""
+#license = {file = "LICENSE.txt"}
+keywords = ["stable-diffusion"]
+dependencies = [
+    "einops",  # tensor utils used in LDM
+    "gradio",  # GUI
+    "numpy",  # core
+    "omegaconf",  # used to load model config YAMLs
+    "pytorch-lightning",  # core
+    "torch",  # core
+    "transformers",  # downloads CLIP from huggingface
+    "tqdm",  # progress bar
+    "taming-transformers @ git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers",  #core
+    "clip @ git+https://github.com/openai/CLIP.git@main#egg=clip",  # core
+]
+
+[project.urls]
+homepage = "https://github.com/CompVis/stable-diffusion"
+repository = "https://github.com/CompVis/stable-diffusion"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"*" = ["*", "*/*", "*/*/*", "*/*/*/*"]  # apparently setuptools doesn't support **/*
+
+[tool.setuptools.exclude-package-data]
+"*" = ["__pycache__", "**/*.ckpt", "**/*.zip"]
+
+[tool.setuptools.packages.find]
+include = ["ldm", "assets", "configs", "data", "models"]

@@ -15,7 +15,7 @@ from contextlib import nullcontext
 import time
 from pytorch_lightning import seed_everything
 
-from ldm.util import instantiate_from_config
+from ldm.util import instantiate_from_config, torch_device as device
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 
@@ -40,7 +40,7 @@ def load_model_from_config(config, ckpt, verbose=False):
         print("unexpected keys:")
         print(u)
 
-    model.cuda()
+    model.to(device)
     model.eval()
     return model
 
@@ -199,7 +199,6 @@ def main():
     config = OmegaConf.load(f"{opt.config}")
     model = load_model_from_config(config, f"{opt.ckpt}")
 
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
 
     if opt.plms:
@@ -230,7 +229,7 @@ def main():
     grid_count = len(os.listdir(outpath)) - 1
 
     assert os.path.isfile(opt.init_img)
-    init_image = load_img(opt.init_img).to(device)
+    init_image = load_img(opt.init_img).to(torch_device)
     init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
     init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
 
@@ -240,9 +239,12 @@ def main():
     t_enc = int(opt.strength * opt.ddim_steps)
     print(f"target t_enc is {t_enc} steps")
 
-    precision_scope = autocast if opt.precision == "autocast" else nullcontext
+    if torch_device.type in ['mps', 'cpu']:
+        precision_scope = nullcontext  # have to use f32 on mps
+    else:
+        precision_scope = autocast if opt.precision == "autocast" else nullcontext
     with torch.no_grad():
-        with precision_scope("cuda"):
+        with precision_scope(torch_device.type):
             with model.ema_scope():
                 tic = time.time()
                 all_samples = list()
@@ -256,7 +258,7 @@ def main():
                         c = model.get_learned_conditioning(prompts)
 
                         # encode (scaled latent)
-                        z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
+                        z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(torch_device))
                         # decode it
                         samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
                                                  unconditional_conditioning=uc,)

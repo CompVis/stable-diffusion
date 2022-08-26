@@ -3,7 +3,7 @@
 import torch
 import numpy as np
 from tqdm import tqdm
-from functools import partial
+from ldm.util import torch_device
 
 from ldm.modules.diffusionmodules.util import make_ddim_sampling_parameters, make_ddim_timesteps, noise_like
 
@@ -14,11 +14,12 @@ class PLMSSampler(object):
         self.model = model
         self.ddpm_num_timesteps = model.num_timesteps
         self.schedule = schedule
+        self.device_available = torch_device.type
 
     def register_buffer(self, name, attr):
         if type(attr) == torch.Tensor:
-            if attr.device != torch.device("cuda"):
-                attr = attr.to(torch.device("cuda"))
+            if attr.device != torch.device(self.device_available):
+                attr = attr.to(torch.float32).to(torch.device(self.device_available))   
         setattr(self, name, attr)
 
     def make_schedule(self, ddim_num_steps, ddim_discretize="uniform", ddim_eta=0., verbose=True):

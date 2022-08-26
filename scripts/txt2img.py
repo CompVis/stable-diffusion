@@ -1,22 +1,27 @@
-import argparse, os, sys, glob
 import cv2
-import torch
+import argparse
+import os
+import time
+import intel_extension_for_pytorch as ipex
+
 import numpy as np
-from omegaconf import OmegaConf
+import torch
+
+from contextlib import nullcontext
 from PIL import Image
-from tqdm import tqdm, trange
 from imwatermark import WatermarkEncoder
 from itertools import islice
 from einops import rearrange
-from torchvision.utils import make_grid
-import time
+from omegaconf import OmegaConf
 from pytorch_lightning import seed_everything
 from torch import autocast
-from contextlib import contextmanager, nullcontext
+from torchvision.utils import make_grid
+from tqdm import tqdm, trange
 
-from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
+from ldm.util import instantiate_from_config, torch_device as device
+
 
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
@@ -60,7 +65,7 @@ def load_model_from_config(config, ckpt, verbose=False):
         print("unexpected keys:")
         print(u)
 
-    model.cuda()
+    model.to(device)
     model.eval()
     return model
 
@@ -238,9 +243,7 @@ def main():
 
     config = OmegaConf.load(f"{opt.config}")
     model = load_model_from_config(config, f"{opt.ckpt}")
-
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    model = model.to(device)
+    model = ipex.optimize(model)
 
     if opt.plms:
         sampler = PLMSSampler(model)
@@ -277,13 +280,16 @@ def main():
     if opt.fixed_code:
         start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
 
-    precision_scope = autocast if opt.precision=="autocast" else nullcontext
+    if device.type in ['mps', 'cpu']:
+        precision_scope = nullcontext  # have to use f32 on mps
+    else:
+        precision_scope = autocast if opt.precision == "autocast" else nullcontext
     with torch.no_grad():
-        with precision_scope("cuda"):
+        with precision_scope(device.type):
             with model.ema_scope():
                 tic = time.time()
                 all_samples = list()
-                for n in trange(opt.n_iter, desc="Sampling"):
+                for _ in trange(opt.n_iter, desc="Sampling"):
                     for prompts in tqdm(data, desc="data"):
                         uc = None
                         if opt.scale != 1.0:
