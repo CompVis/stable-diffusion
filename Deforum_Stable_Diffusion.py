@@ -586,8 +586,8 @@ animation_prompts = {
 
 def DeforumArgs():
     #@markdown **Save & Display Settings**
-    batchdir = "StableFun" #@param {type:"string"}
-    outdir = get_output_folder(output_path, batchdir)
+    batch_name = "StableFun" #@param {type:"string"}
+    outdir = get_output_folder(output_path, batch_name)
     save_grid = False
     save_settings = True #@param {type:"boolean"}
     save_samples = True #@param {type:"boolean"}
@@ -677,7 +677,7 @@ def render_image_batch(args):
             results = generate(args)
             for image in results:
                 if args.save_samples:
-                    filename = f"{args.timestring}_{index:04}_{args.seed}.png"
+                    filename = f"{args.timestring}_{index:05}_{args.seed}.png"
                     image.save(os.path.join(args.outdir, filename))
                 if args.display_samples:
                     display.display(image)
@@ -694,7 +694,7 @@ def render_animation(args, anim_args):
     print(f"Saving animation frames to {args.outdir}")
 
     # save settings for the batch
-    settings_filename = os.path.join(args.outdir, f"{args.outdir}_{args.timestring}_settings.txt")
+    settings_filename = os.path.join(args.outdir, f"{args.timestring}_settings.txt")
     with open(settings_filename, "w+", encoding="utf-8") as f:
         s = {**dict(args.__dict__), **dict(anim_args.__dict__)}
         json.dump(s, f, ensure_ascii=False, indent=4)
@@ -767,7 +767,7 @@ def render_animation(args, anim_args):
         results = generate(args, return_latent=False, return_sample=True)
         sample, image = results[0], results[1]
     
-        filename = f"{args.batchdir}_{args.timestring}_{frame_idx:04}.png"
+        filename = f"{args.timestring}_{frame_idx:05}.png"
         image.save(os.path.join(args.outdir, filename))
         if not using_vid_init:
             prev_sample = sample
@@ -834,8 +834,8 @@ else:
     import subprocess
     from base64 import b64encode
 
-    image_path = os.path.join(args.outdir, f"{args.batchdir}_{args.timestring}_%04d.png")
-    mp4_path = os.path.join(args.outdir, f"{args.batchdir}_{args.timestring}.mp4")
+    image_path = os.path.join(args.outdir, f"{args.timestring}_%05d.png")
+    mp4_path = os.path.join(args.outdir, f"{args.timestring}.mp4")
 
     print(f"{image_path} -> {mp4_path}")
 
