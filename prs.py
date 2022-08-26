@@ -99,11 +99,6 @@ def do_run(device, model, opt):
     print(f'Starting render!')
     seed_everything(opt.seed)
 
-    if opt.plms:
-        sampler = PLMSSampler(model, device)
-    else:
-        sampler = DDIMSampler(model, device)
-
     os.makedirs(opt.outdir, exist_ok=True)
     outpath = opt.outdir
 
@@ -118,6 +113,8 @@ def do_run(device, model, opt):
     os.makedirs(sample_path, exist_ok=True)
     base_count = thats_numberwang(sample_path, opt.batch_name)
     grid_count = thats_numberwang(outpath, opt.batch_name)
+
+    sampler = DDIMSampler(model, device)
 
     if opt.init_image is not None:
         assert os.path.isfile(opt.init_image)
@@ -169,12 +166,23 @@ def do_run(device, model, opt):
 
                         if init_image is None:
                             shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
-                            if opt.method == "k_lms":
+                            if opt.method != "ddim":
                                 sigmas = model_wrap.get_sigmas(opt.ddim_steps)
                                 x = torch.randn([opt.n_samples, *shape], device=device) * sigmas[0]
                                 model_wrap_cfg = CFGDenoiser(model_wrap)
                                 extra_args = {'cond': c, 'uncond': uc, 'cond_scale': opt.scale}
-                                samples_ddim = K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args)
+                                if opt.method == "k_euler":
+                                    samples_ddim = K.sampling.sample_euler(model_wrap_cfg, x, sigmas, extra_args=extra_args)
+                                elif opt.method == "k_euler_ancestral":
+                                    samples_ddim = K.sampling.sample_euler_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args)
+                                elif opt.method == "k_heun":
+                                    samples_ddim = K.sampling.sample_heun(model_wrap_cfg, x, sigmas, extra_args=extra_args)
+                                elif opt.method == "k_dpm_2":
+                                    samples_ddim = K.sampling.sample_dpm_2(model_wrap_cfg, x, sigmas, extra_args=extra_args)
+                                elif opt.method == "k_dpm_2_ancestral":
+                                    samples_ddim = K.sampling.sample_dpm_2_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args)
+                                else: # k_lms
+                                    samples_ddim = K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args)
                             else:
                                 samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
                                                                 conditioning=c,
@@ -375,6 +383,13 @@ def parse_args():
         help='How many images to generate'
     )
     my_parser.add_argument(
+        '--seed',
+        type=int,
+        action='store',
+        required=False,
+        help='Specify the numeric seed to be used'
+    )
+    my_parser.add_argument(
         '-f',
         '--from_file',
         action='store',
@@ -490,7 +505,6 @@ class Settings:
     batch_name = "default"
     n_batches = 1
     steps = 50
-    plms = False
     eta = 0.0
     n_iter = 1
     width = 512
@@ -523,8 +537,6 @@ class Settings:
             self.n_batches = (settings_file["n_batches"])
         if is_json_key_present(settings_file, 'steps'):
             self.steps = (settings_file["steps"])
-        if is_json_key_present(settings_file, 'plms'):
-            self.plms = (settings_file["plms"])
         if is_json_key_present(settings_file, 'eta'):
             self.eta = (settings_file["eta"])
         if is_json_key_present(settings_file, 'n_iter'):
@@ -567,6 +579,9 @@ class Settings:
             self.use_jpg = (settings_file["use_jpg"])
         if is_json_key_present(settings_file, 'hide_metadata'):
             self.hide_metadata = (settings_file["hide_metadata"])
+        if is_json_key_present(settings_file, 'method'):
+            self.method = (settings_file["method"])
+        
 
 def esrgan_resize(input, id):
     input.save(f'_esrgan_orig{id}.png')
@@ -672,10 +687,22 @@ def main():
     if cl_args.from_file:
         settings.from_file = cl_args.from_file
 
+    if cl_args.seed:
+        settings.seed = cl_args.seed
+
     outdir = (f'./out/{settings.batch_name}')
     filetype = ".jpg" if settings.use_jpg else ".png"
     quality = 97 if settings.use_jpg else 100
 
+    valid_methods = ['k_lms', 'k_dpm_2_ancestral', 'k_dpm_2', 'k_heun', 'k_euler_ancestral', 'k_euler', 'ddim']
+    if any(settings.method in s for s in valid_methods):
+        print(f'Using {settings.method} sampling method.')
+    else:
+        print(f'Method {settings.method} is not available. The valid choices are:')
+        print(valid_methods)
+        print()
+        print(f'Falling back k_lms')
+        settings.method = 'k_lms'
 
     # setup the model
     ckpt = settings.checkpoint # "./models/sd-v1-3-full-ema.ckpt"
@@ -752,7 +779,6 @@ def main():
                     "skip_grid" : False,
                     "skip_save" : False,
                     "ddim_steps" : settings.steps,
-                    "plms" : settings.plms,
                     "ddim_eta" : settings.eta,
                     "n_iter" : settings.n_iter,
                     "W" : settings.width,
