@@ -121,7 +121,6 @@ def main():
     with open(log_path, 'a') as log:
         cmd_parser = create_cmd_parser()
         main_loop(t2i, opt.outdir, cmd_parser, log, infile)
-        log.close()
 
 
 def main_loop(t2i, outdir, parser, log, infile):
