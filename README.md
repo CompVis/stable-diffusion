@@ -13,22 +13,8 @@ After installation has completed, you can open webui.cmd (if your environment is
 
 Legacy support: Only if your environment is named ldm "Launch Waifu Diffusion" to run the program anytime.
 
----
+--------------
 
-Environment.yaml working out of the box for k-diffusion, gradio, pynvml, gfpgan
-
-Collection of additional scripts, k-diffusion, gradio, gfpgan etc
-
-TODO: webui changes to cli version, unified
-* --cli :heavy_check_mark:
-
-TODO: **combine versions.** 
-* k_gradio_mod has pynvml vram usage statistics :heavy_check_mark:
-* k_gradio_mod saves grid as jpg :heavy_check_mark:
-* k_gradio_mod has checkboxes for save sample/grid and increment seed :heavy_check_mark:
-* grid name fixes, sample name fixes :heavy_check_mark:
-* gfpgan has incremental seed :heavy_check_mark:
-* ???? :heavy_check_mark:
 
 # Stable Diffusion
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
