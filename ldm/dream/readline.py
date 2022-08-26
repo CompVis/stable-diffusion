@@ -1,37 +1,40 @@
-'''
+"""
 Readline helper functions for dream.py (linux and mac only).
-'''
+"""
 import os
 import re
 import atexit
+
 # ---------------readline utilities---------------------
 try:
     import readline
+
     readline_available = True
 except:
     readline_available = False
 
-class Completer():
-    def __init__(self,options):
+
+class Completer:
+    def __init__(self, options):
         self.options = sorted(options)
         return
 
-    def complete(self,text,state):
+    def complete(self, text, state):
         buffer = readline.get_line_buffer()
 
-        if text.startswith(('-I','--init_img')):
-            return self._path_completions(text,state,('.png'))
+        if text.startswith(('-I', '--init_img')):
+            return self._path_completions(text, state, ('.png'))
 
-        if buffer.strip().endswith('cd') or text.startswith(('.','/')):
-            return self._path_completions(text,state,())
+        if buffer.strip().endswith('cd') or text.startswith(('.', '/')):
+            return self._path_completions(text, state, ())
 
         response = None
         if state == 0:
             # This is the first time for this text, so build a match list.
             if text:
-                self.matches = [s 
-                                for s in self.options
-                                if s and s.startswith(text)]
+                self.matches = [
+                    s for s in self.options if s and s.startswith(text)
+                ]
             else:
                 self.matches = self.options[:]
 
@@ -43,32 +46,34 @@ class Completer():
             response = None
         return response
 
-    def _path_completions(self,text,state,extensions):
+    def _path_completions(self, text, state, extensions):
         # get the path so far
         if text.startswith('-I'):
-            path = text.replace('-I','',1).lstrip()
+            path = text.replace('-I', '', 1).lstrip()
         elif text.startswith('--init_img='):
-            path = text.replace('--init_img=','',1).lstrip()
+            path = text.replace('--init_img=', '', 1).lstrip()
         else:
             path = text
 
-        matches  = list()
+        matches = list()
 
         path = os.path.expanduser(path)
-        if len(path)==0:
-            matches.append(text+'./')
+        if len(path) == 0:
+            matches.append(text + './')
         else:
-            dir  = os.path.dirname(path)
+            dir = os.path.dirname(path)
             dir_list = os.listdir(dir)
             for n in dir_list:
-                if n.startswith('.') and len(n)>1:
+                if n.startswith('.') and len(n) > 1:
                     continue
-                full_path = os.path.join(dir,n)
+                full_path = os.path.join(dir, n)
                 if full_path.startswith(path):
                     if os.path.isdir(full_path):
-                        matches.append(os.path.join(os.path.dirname(text),n)+'/')
+                        matches.append(
+                            os.path.join(os.path.dirname(text), n) + '/'
+                        )
                     elif n.endswith(extensions):
-                        matches.append(os.path.join(os.path.dirname(text),n))
+                        matches.append(os.path.join(os.path.dirname(text), n))
 
         try:
             response = matches[state]
@@ -76,19 +81,47 @@ class Completer():
             response = None
         return response
 
+
 if readline_available:
-    readline.set_completer(Completer(['cd','pwd',
-                                      '--steps','-s','--seed','-S','--iterations','-n','--batch_size','-b',
-                                      '--width','-W','--height','-H','--cfg_scale','-C','--grid','-g',
-                                      '--individual','-i','--init_img','-I','--strength','-f','-v','--variants']).complete)
-    readline.set_completer_delims(" ")
+    readline.set_completer(
+        Completer(
+            [
+                'cd',
+                'pwd',
+                '--steps',
+                '-s',
+                '--seed',
+                '-S',
+                '--iterations',
+                '-n',
+                '--batch_size',
+                '-b',
+                '--width',
+                '-W',
+                '--height',
+                '-H',
+                '--cfg_scale',
+                '-C',
+                '--grid',
+                '-g',
+                '--individual',
+                '-i',
+                '--init_img',
+                '-I',
+                '--strength',
+                '-f',
+                '-v',
+                '--variants',
+            ]
+        ).complete
+    )
+    readline.set_completer_delims(' ')
     readline.parse_and_bind('tab: complete')
 
-    histfile = os.path.join(os.path.expanduser('~'),".dream_history")
+    histfile = os.path.join(os.path.expanduser('~'), '.dream_history')
     try:
         readline.read_history_file(histfile)
         readline.set_history_length(1000)
     except FileNotFoundError:
         pass
-    atexit.register(readline.write_history_file,histfile)
-
+    atexit.register(readline.write_history_file, histfile)
