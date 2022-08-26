@@ -146,11 +146,12 @@ def add_noise(sample: torch.Tensor, noise_amt: float):
 
 def get_output_folder(output_path,batch_folder=None):
     yearMonth = time.strftime('%Y-%m/')
-    out_path = output_path+"/"+yearMonth
+    out_path = os.path.join(output_path,yearMonth)
     if batch_folder != "":
-        out_path += batch_folder
-        if out_path[-1] != "/":
-            out_path += "/"
+        out_path = os.path.join(out_path,batch_folder)
+        # we will also make sure the path suffix is a slash if linux and a backslash if windows
+        if out_path[-1] != os.path.sep:
+            out_path += os.path.sep
     os.makedirs(out_path, exist_ok=True)
     return out_path
 
@@ -352,6 +353,7 @@ custom_checkpoint_path = "" #@param {type:"string"}
 check_sha256 = True #@param {type:"boolean"}
 
 model_map = {
+    "sd-v1-4-full-ema.ckpt": {'sha256': '14749efc0ae8ef0329391ad4436feb781b402f4fece4883c7ad8d10556d8a36a'},
     "sd-v1-4.ckpt": {'sha256': 'fe4efff1e174c627256e44ec2991ba279b3816e364b49f9be2abc0b3ff3f8556'},
     "sd-v1-3-full-ema.ckpt": {'sha256': '54632c6e8a36eecae65e36cb0595fab314e1a1545a65209f24fde221a8d4b2ca'},
     "sd-v1-3.ckpt": {'sha256': '2cff93af4dcc07c3e03110205988ff98481e86539c51a8098d4f2236e41f7f2f'},
@@ -501,7 +503,7 @@ def DeforumAnimArgs():
 anim_args = SimpleNamespace(**DeforumAnimArgs())
 
 def make_xform_2d(width, height, translation_x, translation_y, angle, scale):
-    center = (height//2, width//2)
+    center = (width // 2, height // 2)
     trans_mat = np.float32([[1, 0, translation_x], [0, 1, translation_y]])
     rot_mat = cv2.getRotationMatrix2D(center, angle, scale)
     trans_mat = np.vstack([trans_mat, [0,0,1]])
@@ -666,6 +668,8 @@ if args.sampler != 'ddim':
     args.ddim_eta = 0
 
 def render_image_batch(args):
+    args.prompts = prompts
+    
     # create output folder for the batch
     os.makedirs(args.outdir, exist_ok=True)
     if args.save_settings or args.save_samples:
