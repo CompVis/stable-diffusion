@@ -116,8 +116,6 @@ Then pass this file's name to dream.py when you invoke it:
 (ldm) ~/stable-diffusion$ python3 scripts/dream.py --from_file="path/to/prompts.txt"
 ~~~~
 
->>>>>>> big-refactoring
-
 ## Weighted Prompts
 
 You may weight different sections of the prompt to tell the sampler to attach different levels of
