@@ -333,7 +333,7 @@ def create_argv_parser():
                         help="indicates the path to the GFPGAN model, relative to --gfpgan_dir. Only used if --gfpgan is specified")
     parser.add_argument("--gfpgan_dir",
                         type=str,
-                        default='../gfpgan',
+                        default='../GFPGAN',
                         help="indicates the directory containing the GFPGAN code. Only used if --gfpgan is specified")
     return parser
                         

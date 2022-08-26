@@ -86,7 +86,7 @@ This script also provides the ability to invoke GFPGAN after image generation. D
 and optionally upscale the image to a higher resolution.
 
 To use the ability, clone the [GFPGAN repository](https://github.com/TencentARC/GFPGAN) and follow their
-installation instructions. By default, we expect GFPGAN to be installed in a 'gfpgan' sibling directory.
+installation instructions. By default, we expect GFPGAN to be installed in a 'GFPGAN' sibling directory.
 
 You may also want to install Real-ESRGAN, if you want to enhance non-face regions in the image by installing
 the pip Real-ESRGAN package.
@@ -96,6 +96,15 @@ pip install realesrgan
 ```
 
 Now, you can run this script by adding the --gfpgan option. Any issues with GFPGAN will be reported on initialization.
+
+~~~~
+(ldm) ~/stable-diffusion$ python3 ./scripts/dream.py
+* Initializing, be patient...
+(...more initialization messages...)
+* --gfpgan was specified, loading gfpgan...
+(...even more initialization messages...)
+* Initialization done! Awaiting your command...
+~~~~
 
 When generating prompts, add a -G or --gfpgan_strenth option to control the strength of the GFPGAN enhancement.
 0.0 is no enhancement, 1.0 is maximum enhancement.
@@ -115,7 +124,8 @@ That's it!
 There's also a bunch of options to control GFPGAN settings when starting the script for different configs that you can
 read about in the help text. This will let you control where GFPGAN is installed, if upsampling is enapled, the upsampler to use and the model path.
 
-Note that loading GFPGAN consumes additional GPU memory, additionaly, a couple of seconds will be tacked on when generating your images.
+Note that loading GFPGAN consumes additional GPU memory, but hey, 3090s with 24Gi of VRAM are cheap now *cough*.
+Additionally, a couple of seconds will be tacked on when generating your images, but hey, it's worth it.
 
 ## Barebones Web Server
 
