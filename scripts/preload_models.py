@@ -5,30 +5,68 @@
 # two machines must share a common .cache directory.
 import sys
 import transformers
+import os
+import warnings
 
 transformers.logging.set_verbosity_error()
 
 # this will preload the Bert tokenizer fles
-print("preloading bert tokenizer...")
+print('preloading bert tokenizer...')
 from transformers import BertTokenizerFast
-tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
-print("...success")
+
+tokenizer = BertTokenizerFast.from_pretrained('bert-base-uncased')
+print('...success')
 
 # this will download requirements for Kornia
-print("preloading Kornia requirements (ignore the warnings)...")
-import kornia
-print("...success")
+print('preloading Kornia requirements (ignore the deprecation warnings)...')
+with warnings.catch_warnings():
+    warnings.filterwarnings('ignore', category=DeprecationWarning)
+    import kornia
+print('...success')
 
-# doesn't work - probably wrong logger
-# logging.getLogger('transformers.tokenization_utils').setLevel(logging.ERROR)
-version='openai/clip-vit-large-patch14'
+version = 'openai/clip-vit-large-patch14'
 
-print('preloading CLIP model (Ignore the warnings)...')
+print('preloading CLIP model (Ignore the deprecation warnings)...')
 sys.stdout.flush()
 import clip
 from transformers import CLIPTokenizer, CLIPTextModel
-tokenizer  =CLIPTokenizer.from_pretrained(version)
-transformer=CLIPTextModel.from_pretrained(version)
+
+tokenizer = CLIPTokenizer.from_pretrained(version)
+transformer = CLIPTextModel.from_pretrained(version)
 print('\n\n...success')
 
+# In the event that the user has installed GFPGAN and also elected to use
+# RealESRGAN, this will attempt to download the model needed by RealESRGANer
+gfpgan = False
+try:
+    from realesrgan import RealESRGANer
 
+    gfpgan = True
+except ModuleNotFoundError:
+    pass
+
+if gfpgan:
+    print('Loading models from RealESRGAN and facexlib')
+    try:
+        from basicsr.archs.rrdbnet_arch import RRDBNet
+        from facexlib.utils.face_restoration_helper import FaceRestoreHelper
+
+        RealESRGANer(
+            scale=2,
+            model_path='https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth',
+            model=RRDBNet(
+                num_in_ch=3,
+                num_out_ch=3,
+                num_feat=64,
+                num_block=23,
+                num_grow_ch=32,
+                scale=2,
+            ),
+        )
+        FaceRestoreHelper(1, det_model='retinaface_resnet50')
+        print('...success')
+    except Exception:
+        import traceback
+
+        print('Error loading GFPGAN:')
+        print(traceback.format_exc())

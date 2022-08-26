@@ -1,0 +1,48 @@
+<html>
+  <head>
+    <title>Stable Diffusion Dream Server</title>
+    <link rel="icon" href="data:,">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="static/dream_web/index.css">
+    <script src="static/dream_web/index.js"></script>
+  </head>
+  <body>
+    <div id="search">
+      <h2 id="header">Stable Diffusion Dream Server</h2>
+
+      <form id="generate-form" method="post" action="#">
+        <fieldset id="fieldset-search">
+          <input type="text" id="prompt" name="prompt">
+          <input type="submit" id="submit" value="Generate">
+        </fieldset>
+        <fieldset id="fieldset-config">
+          <label for="iterations">Images to generate:</label>
+          <input value="1" type="number" id="iterations" name="iterations">
+          <label for="steps">Steps:</label>
+          <input value="50" type="number" id="steps" name="steps">
+          <label for="cfgscale">Cfg Scale:</label>
+          <input value="7.5" type="number" id="cfgscale" name="cfgscale" step="any">
+          <span>&bull;</span>
+          <label title="Set to multiple of 64" for="width">Width:</label>
+          <input value="512" type="number" id="width" name="width">
+          <label title="Set to multiple of 64" for="height">Height:</label>
+          <input value="512" type="number" id="height" name="height">
+          <br>
+          <label title="Upload an image to use img2img" for="initimg">Img2Img Init:</label>
+          <input type="file" id="initimg" name="initimg" accept=".jpg, .jpeg, .png">
+          <label title="Set to -1 for random seed" for="seed">Seed:</label>
+          <input value="-1" type="number" id="seed" name="seed">
+          <button type="button" id="reset">&olarr;</button>
+        </fieldset>
+      </form>
+      <div id="about">For news and support for this web service, visit our <a href="http://github.com/lstein/stable-diffusion">GitHub site</a></div>
+    </div>
+    <hr>
+    <div id="results">
+      <div id="no-results-message">
+        <i><p>No results...</p></i>
+      </div>
+    </div>
+  </body>
+</html>

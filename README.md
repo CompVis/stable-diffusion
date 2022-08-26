@@ -1,9 +1,7 @@
 # Stable Diffusion Dream Script
 
 This is a fork of CompVis/stable-diffusion, the wonderful open source
-text-to-image generator.
-
-The original has been modified in several ways:
+text-to-image generator. The original has been improved in several ways:
 
 ## Interactive command-line interface similar to the Discord bot
 
@@ -31,13 +29,7 @@ runs from the command-line (CMD or Terminal window), and does not have a GUI.
 (ldm) ~/stable-diffusion$ python3 ./scripts/dream.py
 * Initializing, be patient...
 Loading model from models/ldm/text2img-large/model.ckpt
-LatentDiffusion: Running in eps-prediction mode
-DiffusionWrapper has 872.30 M params.
-making attention of type 'vanilla' with 512 in_channels
-Working with z of shape (1, 4, 32, 32) = 4096 dimensions.
-making attention of type 'vanilla' with 512 in_channels
-Loading Bert tokenizer from "models/bert"
-setting sampler to plms
+(...more initialization messages...)
 
 * Initialization done! Awaiting your command...
 dream> ashley judd riding a camel -n2 -s150
@@ -87,6 +79,142 @@ completely). The default is 0.75, and ranges from 0.25-0.75 give interesting res
 You may also pass a -v<count> option to generate count variants on the original image. This is done by
 passing the first generated image back into img2img the requested number of times. It generates interesting
 variants.
+
+## GFPGAN Support
+
+This script also provides the ability to invoke GFPGAN after image
+generation. Doing so will enhance faces and optionally upscale the
+image to a higher resolution.
+
+To use the ability, clone the [GFPGAN
+repository](https://github.com/TencentARC/GFPGAN) and follow their
+installation instructions. By default, we expect GFPGAN to be
+installed in a 'GFPGAN' sibling directory. Be sure that the "ldm"
+conda environment is active as you install GFPGAN.
+
+You may also want to install Real-ESRGAN, if you want to enhance
+non-face regions in the image, by installing the pip Real-ESRGAN
+package.
+
+```
+pip install realesrgan
+
+```
+
+Users whose GPU machines are isolated from the Internet (e.g. on a
+University cluster) should be aware that the first time you run
+dream.py with GFPGAN turned on, it will try to download model files
+from the Internet. To rectify this, you may run `python3
+scripts/preload_models.pl` after you have installed GFPGAN and all its
+dependencies.
+
+Now, you can run this script by adding the **--gfpgan** option. Any
+issues with GFPGAN will be reported on initialization.
+
+~~~~
+(ldm) ~/stable-diffusion$ python3 ./scripts/dream.py --gfpgan
+* Initializing, be patient...
+(...more initialization messages...)
+* --gfpgan was specified, loading gfpgan...
+(...even more initialization messages...)
+* Initialization done! Awaiting your command...
+~~~~
+
+When generating prompts, add a -G or --gfpgan_strenth option to
+control the strength of the GFPGAN enhancement. 0.0 is no
+enhancement, 1.0 is maximum enhancement.
+
+So for instance, to apply the maximum strength:
+~~~~
+dream> a man wearing a pineapple hat -G 1
+~~~~
+
+This also works with img2img:
+~~~
+dream> a man wearing a pineapple hat -I path/to/your/file.png -G 1
+~~~
+
+That's it!
+
+There's also a bunch of options to control GFPGAN settings when
+starting the script for different configs that you can read about in
+the help text. This will let you control where GFPGAN is installed, if
+upsampling is enabled, the upsampler to use and the model path.
+
+By default, images will be upscaled by 2-fold, meaning that the old
+Stable Diffusion default size of 512x512 will now be a glorious
+detailed 1024x1024. The extent of upscaling is set when you run the
+script, and can't be changed while it's running. However, at any time
+you may specify **-G0** to turn off upscaling and facial enhancement
+for that image or set of images.
+
+Note that loading GFPGAN consumes additional GPU memory, and will add
+a few seconds to image generation. However, if can afford a 3090s with
+24Gi, the results are well worth it.
+
+## Barebones Web Server
+
+As of version 1.10, this distribution comes with a bare bones web
+server (see screenshot). To use it, run the command:
+
+~~~~
+(ldm) ~/stable-diffusion$ python3 scripts/dream_web.py
+~~~~
+
+You can then connect to the server by pointing your web browser at
+http://localhost:9090, or to the network name or IP address of the server.
+
+Kudos to [Tesseract Cat](https://github.com/TesseractCat) for
+contributing this code.
+
+![Dream Web Server](static/dream_web_server.png)
+
+## Reading Prompts from a File
+
+You can automate dream.py by providing a text file with the prompts
+you want to run, one line per prompt. The text file must be composed
+with a text editor (e.g. Notepad) and not a word processor. Each line
+should look like what you would type at the dream> prompt:
+
+~~~~
+a beautiful sunny day in the park, children playing -n4 -C10
+stormy weather on a mountain top, goats grazing     -s100
+innovative packaging for a squid's dinner           -S137038382
+~~~~
+
+Then pass this file's name to dream.py when you invoke it:
+
+~~~~
+(ldm) ~/stable-diffusion$ python3 scripts/dream.py --from_file="path/to/prompts.txt"
+~~~~
+
+## Shortcut for reusing seeds from the previous command
+
+Since it is so common to reuse seeds while refining a prompt, there is
+now a shortcut as of version 1.11. Provide a **-S** (or **--seed**)
+switch of -1 to use the seed of the most recent image generated. If
+you produced multiple images with the **-n** switch, then you can go
+back further using -2, -3, etc. up to the first image generated by the
+previous command. Sorry, but you can't go back further than one
+command.
+
+Here's an example of using this to do a quick refinement. It also
+illustrates using the new **-G** switch to turn on upscaling and
+face enhancement (see previous section):
+
+~~~~
+dream> a cute child playing hopscotch -G0.5
+[...]
+outputs/img-samples/000039.3498014304.png: "a cute child playing hopscotch" -s50 -b1 -W512 -H512 -C7.5 -mk_lms -S3498014304
+
+# I wonder what it will look like if I bump up the steps and set facial enhancement to full strength?
+dream> a cute child playing hopscotch -G1.0 -s100 -S -1
+reusing previous seed 3498014304
+[...]
+outputs/img-samples/000040.3498014304.png: "a cute child playing hopscotch" -G1.0 -s100 -b1 -W512 -H512 -C7.5 -mk_lms -S3498014304
+~~~~
+
+
 
 ## Weighted Prompts
 
@@ -170,10 +298,24 @@ repository and associated paper for details and limitations.
 
 ## Changes
 
+ * v1.11 (26 August 2022)
+   * NEW FEATURE: Support upscaling and face enhancement using the GFPGAN module. (kudos to [Oceanswave](https://github.com/Oceanswave)
+   * You now can specify a seed of -1 to use the previous image's seed, -2 to use the seed for the image generated before that, etc.
+     Seed memory only extends back to the previous command, but will work on all images generated with the -n# switch.
+   * Variant generation support temporarily disabled pending more general solution.
+   * Created a feature branch named **yunsaki-morphing-dream** which adds experimental support for
+     iteratively modifying the prompt and its parameters. Please see[ Pull Request #86](https://github.com/lstein/stable-diffusion/pull/86)
+     for a synopsis of how this works. Note that when this feature is eventually added to the main branch, it will may be modified
+     significantly.
+   
+* v1.10 (25 August 2022)
+   * A barebones but fully functional interactive web server for online generation of txt2img and img2img.
+   
 * v1.09 (24 August 2022)
    * A new -v option allows you to generate multiple variants of an initial image
-     in img2img mode. (kudos to Oceanswave)
-   * Added ability to personalize text to image generation (kudos to nicolai256)
+     in img2img mode. (kudos to [Oceanswave](https://github.com/Oceanswave). [
+     See this discussion in the PR for examples and details on use](https://github.com/lstein/stable-diffusion/pull/71#issuecomment-1226700810))
+   * Added ability to personalize text to image generation (kudos to [Oceanswave](https://github.com/Oceanswave) and [nicolai256](https://github.com/nicolai256))
    * Enabled all of the samplers from k_diffusion
    
 * v1.08 (24 August 2022)
@@ -457,9 +599,11 @@ to send me an email if you use and like the script.
 
 *Contributions by:* 
 [Peter Kowalczyk](https://github.com/slix), [Henry Harrison](https://github.com/hwharrison),
-[xraxra](https://github.com/xraxra), [bmaltais](https://github.com/bmaltais), [Sean McLellan] (https://github.com/Oceanswave],
-[nicolai256](https://github.com/nicolai256], [Benjamin Warner](https://github.com/warner-benjamin),
-and [tildebyte](https://github.com/tildebyte)
+[xraxra](https://github.com/xraxra), [bmaltais](https://github.com/bmaltais), [Sean McLellan](https://github.com/Oceanswave),
+[nicolai256](https://github.com/nicolai256), [Benjamin Warner](https://github.com/warner-benjamin),
+[tildebyte](https://github.com/tildebyte),
+and [Tesseract Cat](https://github.com/TesseractCat)
+
 
 Original portions of the software are Copyright (c) 2020 Lincoln D. Stein (https://github.com/lstein)
 

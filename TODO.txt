@@ -2,6 +2,7 @@ Feature requests:
 
 1. "gobig" mode - split image into strips, scale up, add detail using
    img2img and reassemble with feathering. Issue #66.
+   See https://github.com/jquesnelle/txt2imghd
 
 2. Port basujindal low VRAM optimizations. Issue #62
 
