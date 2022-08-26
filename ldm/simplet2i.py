@@ -311,8 +311,8 @@ class T2I:
                             # --gfpgan wasn't specified, at startup then
                             # the net result is a message gets printed - nothing else happens.
                             if gfpgan_strength is not None and gfpgan_strength > 0.0:
-                                image = self.gfpgan.generate(
-                                    image, gfpgan_strength=gfpgan_strength
+                                image = self._run_gfpgan(
+                                    image, gfpgan_strength
                                 )
                         except Exception as e:
                             print(
