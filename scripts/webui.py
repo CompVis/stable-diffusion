@@ -1,4 +1,33 @@
 import argparse, os, sys, glob
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--outdir", type=str, nargs="?", help="dir to write results to", default=None)
+parser.add_argument("--outdir_txt2img", type=str, nargs="?", help="dir to write txt2img results to (overrides --outdir)", default=None)
+parser.add_argument("--outdir_img2img", type=str, nargs="?", help="dir to write img2img results to (overrides --outdir)", default=None)
+parser.add_argument("--save-metadata", action='store_true', help="Whether to embed the generation parameters in the sample images", default=False)
+parser.add_argument("--skip-grid", action='store_true', help="do not save a grid, only individual samples. Helpful when evaluating lots of samples", default=False)
+parser.add_argument("--skip-save", action='store_true', help="do not save indiviual samples. For speed measurements.", default=False)
+parser.add_argument("--n_rows", type=int, default=-1, help="rows in the grid; use -1 for autodetect and 0 for n_rows to be same as batch_size (default: -1)",)
+parser.add_argument("--config", type=str, default="configs/stable-diffusion/v1-inference.yaml", help="path to config which constructs model",)
+parser.add_argument("--ckpt", type=str, default="models/ldm/stable-diffusion-v1/model.ckpt", help="path to checkpoint of model",)
+parser.add_argument("--precision", type=str, help="evaluate at this precision", choices=["full", "autocast"], default="autocast")
+parser.add_argument("--gfpgan-dir", type=str, help="GFPGAN directory", default=('./src/gfpgan' if os.path.exists('./src/gfpgan') else './GFPGAN')) # i disagree with where you're putting it but since all guidefags are doing it this way, there you go
+parser.add_argument("--realesrgan-dir", type=str, help="RealESRGAN directory", default=('./src/realesrgan' if os.path.exists('./src/realesrgan') else './RealESRGAN'))
+parser.add_argument("--realesrgan-model", type=str, help="Upscaling model for RealESRGAN", default=('RealESRGAN_x4plus'))
+parser.add_argument("--no-verify-input", action='store_true', help="do not verify input to check if it's too long", default=False)
+parser.add_argument("--no-half", action='store_true', help="do not switch the model to 16-bit floats", default=False)
+parser.add_argument("--no-progressbar-hiding", action='store_true', help="do not hide progressbar in gradio UI (we hide it because it slows down ML if you have hardware accleration in browser)", default=False)
+parser.add_argument("--defaults", type=str, help="path to configuration file providing UI defaults, uses same format as cli parameter", default='configs/webui/webui.yaml')
+parser.add_argument("--gpu", type=int, help="choose which GPU to use if you have multiple", default=0)
+parser.add_argument("--extra-models-cpu", action='store_true', help="run extra models (GFGPAN/ESRGAN) on cpu", default=False)
+parser.add_argument("--esrgan-cpu", action='store_true', help="run ESRGAN on cpu", default=False)
+parser.add_argument("--gfpgan-cpu", action='store_true', help="run GFPGAN on cpu", default=False)
+parser.add_argument("--cli", type=str, help="don't launch web server, take Python function kwargs from this file.", default=None)
+opt = parser.parse_args()
+
+# this should force GFPGAN and RealESRGAN onto the selected gpu as well
+os.environ["CUDA_VISIBLE_DEVICES"] = str(opt.gpu)
+
 import gradio as gr
 import k_diffusion as K
 import math
@@ -19,6 +48,7 @@ from einops import rearrange, repeat
 from itertools import islice
 from omegaconf import OmegaConf
 from PIL import Image, ImageFont, ImageDraw, ImageFilter, ImageOps
+from PIL.PngImagePlugin import PngInfo
 from io import BytesIO
 import base64
 import re
@@ -45,26 +75,6 @@ opt_f = 8
 
 LANCZOS = (Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.LANCZOS)
 invalid_filename_chars = '<>:"/\|?*\n'
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--outdir", type=str, nargs="?", help="dir to write results to", default=None)
-parser.add_argument("--outdir_txt2img", type=str, nargs="?", help="dir to write txt2img results to (overrides --outdir)", default=None)
-parser.add_argument("--outdir_img2img", type=str, nargs="?", help="dir to write img2img results to (overrides --outdir)", default=None)
-parser.add_argument("--skip_grid", action='store_true', help="do not save a grid, only individual samples. Helpful when evaluating lots of samples",)
-parser.add_argument("--skip_save", action='store_true', help="do not save indiviual samples. For speed measurements.",)
-parser.add_argument("--n_rows", type=int, default=-1, help="rows in the grid; use -1 for autodetect and 0 for n_rows to be same as batch_size (default: -1)",)
-parser.add_argument("--config", type=str, default="configs/stable-diffusion/v1-inference.yaml", help="path to config which constructs model",)
-parser.add_argument("--ckpt", type=str, default="models/ldm/stable-diffusion-v1/model.ckpt", help="path to checkpoint of model",)
-parser.add_argument("--precision", type=str, help="evaluate at this precision", choices=["full", "autocast"], default="autocast")
-parser.add_argument("--gfpgan-dir", type=str, help="GFPGAN directory", default=('./src/gfpgan' if os.path.exists('./src/gfpgan') else './GFPGAN')) # i disagree with where you're putting it but since all guidefags are doing it this way, there you go
-parser.add_argument("--realesrgan-dir", type=str, help="RealESRGAN directory", default=('./src/realesrgan' if os.path.exists('./src/realesrgan') else './RealESRGAN'))
-parser.add_argument("--realesrgan-model", type=str, help="Upscaling model for RealESRGAN", default=('RealESRGAN_x4plus'))
-parser.add_argument("--no-verify-input", action='store_true', help="do not verify input to check if it's too long")
-parser.add_argument("--no-half", action='store_true', help="do not switch the model to 16-bit floats")
-parser.add_argument("--no-progressbar-hiding", action='store_true', help="do not hide progressbar in gradio UI (we hide it because it slows down ML if you have hardware accleration in browser)")
-parser.add_argument("--defaults", type=str, help="path to configuration file providing UI defaults, uses same format as cli parameter", default='configs/webui/webui.yaml')
-parser.add_argument("--cli", type=str, help="don't launch web server, take Python function kwargs from this file.", default=None)
-opt = parser.parse_args()
 
 GFPGAN_dir = opt.gfpgan_dir
 RealESRGAN_dir = opt.realesrgan_dir
@@ -116,16 +126,20 @@ def crash(e, s):
 class MemUsageMonitor(threading.Thread):
     stop_flag = False
     max_usage = 0
-    total = 0
+    total = -1
 
     def __init__(self, name):
         threading.Thread.__init__(self)
         self.name = name
 
     def run(self):
+        try:
+            pynvml.nvmlInit()
+        except:
+            print(f"[{self.name}] Unable to initialize NVIDIA management. No memory stats. \n")
+            return
         print(f"[{self.name}] Recording max memory usage...\n")
-        pynvml.nvmlInit()
-        handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+        handle = pynvml.nvmlDeviceGetHandleByIndex(opt.gpu)
         self.total = pynvml.nvmlDeviceGetMemoryInfo(handle).total
         while not self.stop_flag:
             m = pynvml.nvmlDeviceGetMemoryInfo(handle)
@@ -173,37 +187,6 @@ class KDiffusionSampler:
 
         return samples_ddim, None
 
-class MemUsageMonitor(threading.Thread):
-    stop_flag = False
-    max_usage = 0
-    total = 0
-
-    def __init__(self, name):
-        threading.Thread.__init__(self)
-        self.name = name
-
-    def run(self):
-        print(f"[{self.name}] Recording max memory usage...\n")
-        pynvml.nvmlInit()
-        handle = pynvml.nvmlDeviceGetHandleByIndex(0)
-        self.total = pynvml.nvmlDeviceGetMemoryInfo(handle).total
-        while not self.stop_flag:
-            m = pynvml.nvmlDeviceGetMemoryInfo(handle)
-            self.max_usage = max(self.max_usage, m.used)
-            # print(self.max_usage)
-            time.sleep(0.1)
-        print(f"[{self.name}] Stopped recording.\n")
-        pynvml.nvmlShutdown()
-
-    def read(self):
-        return self.max_usage, self.total
-
-    def stop(self):
-        self.stop_flag = True
-
-    def read_and_stop(self):
-        self.stop_flag = True
-        return self.max_usage, self.total
 
 def create_random_tensors(shape, seeds):
     xs = []
@@ -230,8 +213,12 @@ def load_GFPGAN():
 
     sys.path.append(os.path.abspath(GFPGAN_dir))
     from gfpgan import GFPGANer
-
-    return GFPGANer(model_path=model_path, upscale=1, arch='clean', channel_multiplier=2, bg_upsampler=None)
+    instance = GFPGANer(model_path=model_path, upscale=1, arch='clean', channel_multiplier=2, bg_upsampler=None)
+    if opt.gfpgan_cpu or opt.extra_models_cpu:
+        instance.device = torch.device('cpu')
+    else:
+        instance.device = torch.device(f'cuda:{opt.gpu}') # another way to set gpu device
+    return instance
 
 def load_RealESRGAN(model_name: str):
     from basicsr.archs.rrdbnet_arch import RRDBNet
@@ -247,8 +234,17 @@ def load_RealESRGAN(model_name: str):
     sys.path.append(os.path.abspath(RealESRGAN_dir))
     from realesrgan import RealESRGANer
 
-    instance = RealESRGANer(scale=2, model_path=model_path, model=RealESRGAN_models[model_name], pre_pad=0, half=True)
-    instance.model.name = model_name
+    if opt.esrgan_cpu or opt.extra_models_cpu:
+        instance = RealESRGANer(scale=2, model_path=model_path, model=RealESRGAN_models[model_name], pre_pad=0, half=False)
+        instance.model.name = model_name
+        instance.device = torch.device('cpu')
+        instance.device = torch.device('cpu')
+        instance.model.to('cpu')
+    else:
+        instance = RealESRGANer(scale=2, model_path=model_path, model=RealESRGAN_models[model_name], pre_pad=0, half=not opt.no_half)
+        instance.model.name = model_name
+        instance.device = torch.device(f'cuda:{opt.gpu}') # another way to set gpu device
+    
     return instance
 
 GFPGAN = None
@@ -277,7 +273,7 @@ try_loading_RealESRGAN('RealESRGAN_x4plus')
 config = OmegaConf.load("configs/stable-diffusion/v1-inference.yaml")
 model = load_model_from_config(config, "models/ldm/stable-diffusion-v1/model.ckpt")
 
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+device = torch.device(f"cuda") if torch.cuda.is_available() else torch.device("cpu")
 model = (model if opt.no_half else model.half()).to(device)
 
 def load_embeddings(fp):
@@ -550,10 +546,12 @@ def process_images(
                 x_sample = x_sample.astype(np.uint8)
 
                 if use_GFPGAN and GFPGAN is not None:
+                    torch_gc()
                     cropped_faces, restored_faces, restored_img = GFPGAN.enhance(x_sample[:,:,::-1], has_aligned=False, only_center_face=False, paste_back=True)
                     x_sample = restored_img[:,:,::-1]
 
                 if use_RealESRGAN and RealESRGAN is not None:
+                    torch_gc()
                     if RealESRGAN.model.name != realesrgan_model_name:
                         try_loading_RealESRGAN(realesrgan_model_name)
 
@@ -586,17 +584,29 @@ def process_images(
                     sanitized_prompt = sanitized_prompt[:128] #200 is too long
                     sample_path_i = os.path.join(sample_path, sanitized_prompt)
                     os.makedirs(sample_path_i, exist_ok=True)
-                    base_count = len(glob.glob(f"{sample_path_i}/*.png"))
+                    base_count = len(os.listdir(sample_path_i))
                     filename = f"{base_count:05}-{seeds[i]}"
                 else:
                     sample_path_i = sample_path
-                    base_count = len(glob.glob(f"{sample_path_i}/*.png"))
+                    base_count = len(os.listdir(sample_path_i))
                     sanitized_prompt = sanitized_prompt
                     filename = f"{base_count:05}-{seeds[i]}_{sanitized_prompt}"[:128] #same as before
                 if not skip_save:
                     filename_i = os.path.join(sample_path_i, filename)
                     if not jpg_sample:
-                        image.save(f"{filename_i}.png")
+                        if opt.save_metadata:
+                            metadata = PngInfo()
+                            metadata.add_text("SD:prompt", prompts[i])
+                            metadata.add_text("SD:seed", str(seeds[i]))
+                            metadata.add_text("SD:width", str(width))
+                            metadata.add_text("SD:height", str(height))
+                            metadata.add_text("SD:steps", str(steps))
+                            metadata.add_text("SD:cfg_scale", str(cfg_scale))
+                            metadata.add_text("SD:normalize_prompt_weights", str(normalize_prompt_weights))
+                            metadata.add_text("SD:GFPGAN", str(use_GFPGAN and GFPGAN is not None))
+                            image.save(f"{filename_i}.png", pnginfo=metadata)
+                        else:
+                            image.save(f"{filename_i}.png")
                     else:
                         image.save(f"{filename_i}.jpg", 'jpeg', quality=100, optimize=True)
                     if write_info_files:
@@ -1077,8 +1087,8 @@ if opt.defaults is not None and os.path.isfile(opt.defaults):
         with open(opt.defaults, "r", encoding="utf8") as f:
             user_defaults = yaml.safe_load(f)
     except (OSError, yaml.YAMLError) as e:
-        print(f"Error loading defaults file {opt.defaults}:", e)
-        print("Falling back to program defaults.")
+        print(f"Error loading defaults file {opt.defaults}:", e, file=sys.stderr)
+        print("Falling back to program defaults.", file=sys.stderr)
         user_defaults = {}
 else:
     user_defaults = {}
@@ -1202,13 +1212,13 @@ with gr.Blocks(css=css, analytics_enabled=False, title="Stable Diffusion WebUI")
                     txt2img_sampling = gr.Radio(label='Sampling method (k_lms is default k-diffusion sampler)', choices=["DDIM", "PLMS", 'k_dpm_2_a', 'k_dpm_2', 'k_euler_a', 'k_euler', 'k_heun', 'k_lms'], value=txt2img_defaults['sampler_name'])
                     txt2img_toggles = gr.CheckboxGroup(label='', choices=txt2img_toggles, value=txt2img_toggle_defaults, type="index")
                     txt2img_realesrgan_model_name = gr.Dropdown(label='RealESRGAN model', choices=['RealESRGAN_x4plus', 'RealESRGAN_x4plus_anime_6B'], value='RealESRGAN_x4plus', visible=RealESRGAN is not None) # TODO: Feels like I shouldnt slot it in here.
-                    txt2img_ddim_eta = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label="DDIM ETA", value=0.0, visible=False)
-                    txt2img_batch_count = gr.Slider(minimum=1, maximum=250, step=1, label='Batch count (how many batches of images to generate)', value=1)
-                    txt2img_batch_size = gr.Slider(minimum=1, maximum=8, step=1, label='Batch size (how many images are in a batch; memory-hungry)', value=1)
-                    txt2img_cfg = gr.Slider(minimum=1.0, maximum=30.0, step=0.5, label='Classifier Free Guidance Scale (how strongly the image should follow the prompt)', value=7.5)
-                    txt2img_seed = gr.Textbox(label="Seed (blank to randomize)", lines=1, value="")
-                    txt2img_height = gr.Slider(minimum=64, maximum=2048, step=64, label="Height", value=512)
-                    txt2img_width = gr.Slider(minimum=64, maximum=2048, step=64, label="Width", value=512)
+                    txt2img_ddim_eta = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label="DDIM ETA", value=txt2img_defaults['ddim_eta'], visible=False)
+                    txt2img_batch_count = gr.Slider(minimum=1, maximum=250, step=1, label='Batch count (how many batches of images to generate)', value=txt2img_defaults['n_iter'])
+                    txt2img_batch_size = gr.Slider(minimum=1, maximum=8, step=1, label='Batch size (how many images are in a batch; memory-hungry)', value=txt2img_defaults['batch_size'])
+                    txt2img_cfg = gr.Slider(minimum=1.0, maximum=30.0, step=0.5, label='Classifier Free Guidance Scale (how strongly the image should follow the prompt)', value=txt2img_defaults['cfg_scale'])
+                    txt2img_seed = gr.Textbox(label="Seed (blank to randomize)", lines=1, value=txt2img_defaults["seed"])
+                    txt2img_height = gr.Slider(minimum=64, maximum=2048, step=64, label="Height", value=txt2img_defaults["height"])
+                    txt2img_width = gr.Slider(minimum=64, maximum=2048, step=64, label="Width", value=txt2img_defaults["width"])
                     txt2img_embeddings = gr.File(label = "Embeddings file for textual inversion", visible=hasattr(model, "embedding_manager"))
                     txt2img_btn = gr.Button("Generate")
                 with gr.Column():
@@ -1248,14 +1258,14 @@ with gr.Blocks(css=css, analytics_enabled=False, title="Stable Diffusion WebUI")
                     img2img_sampling = gr.Radio(label='Sampling method (k_lms is default k-diffusion sampler)', choices=["DDIM", 'k_dpm_2_a', 'k_dpm_2', 'k_euler_a', 'k_euler', 'k_heun', 'k_lms'], value=img2img_defaults['sampler_name'])
                     img2img_toggles = gr.CheckboxGroup(label='', choices=img2img_toggles, value=img2img_toggle_defaults, type="index")
                     img2img_realesrgan_model_name = gr.Dropdown(label='RealESRGAN model', choices=['RealESRGAN_x4plus', 'RealESRGAN_x4plus_anime_6B'], value='RealESRGAN_x4plus', visible=RealESRGAN is not None) # TODO: Feels like I shouldnt slot it in here.
-                    img2img_batch_count = gr.Slider(minimum=1, maximum=250, step=1, label='Batch count (how many batches of images to generate)', value=1)
-                    img2img_batch_size = gr.Slider(minimum=1, maximum=8, step=1, label='Batch size (how many images are in a batch; memory-hungry)', value=1)
-                    img2img_cfg = gr.Slider(minimum=1.0, maximum=30.0, step=0.5, label='Classifier Free Guidance Scale (how strongly the image should follow the prompt)', value=5.0)
-                    img2img_denoising = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising Strength', value=0.75)
-                    img2img_seed = gr.Textbox(label="Seed (blank to randomize)", lines=1, value="")
-                    img2img_height = gr.Slider(minimum=64, maximum=2048, step=64, label="Height", value=512)
-                    img2img_width = gr.Slider(minimum=64, maximum=2048, step=64, label="Width", value=512)
-                    img2img_resize = gr.Radio(label="Resize mode", choices=["Just resize", "Crop and resize", "Resize and fill"], type="index", value="Just resize")
+                    img2img_batch_count = gr.Slider(minimum=1, maximum=250, step=1, label='Batch count (how many batches of images to generate)', value=img2img_defaults['n_iter'])
+                    img2img_batch_size = gr.Slider(minimum=1, maximum=8, step=1, label='Batch size (how many images are in a batch; memory-hungry)', value=img2img_defaults['batch_size'])
+                    img2img_cfg = gr.Slider(minimum=1.0, maximum=30.0, step=0.5, label='Classifier Free Guidance Scale (how strongly the image should follow the prompt)', value=img2img_defaults['cfg_scale'])
+                    img2img_denoising = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising Strength', value=img2img_defaults['denoising_strength'])
+                    img2img_seed = gr.Textbox(label="Seed (blank to randomize)", lines=1, value=img2img_defaults["seed"])
+                    img2img_height = gr.Slider(minimum=64, maximum=2048, step=64, label="Height", value=img2img_defaults["height"])
+                    img2img_width = gr.Slider(minimum=64, maximum=2048, step=64, label="Width", value=img2img_defaults["width"])
+                    img2img_resize = gr.Radio(label="Resize mode", choices=["Just resize", "Crop and resize", "Resize and fill"], type="index", value=img2img_resize_modes[img2img_defaults['resize_mode']])
                     img2img_embeddings = gr.File(label = "Embeddings file for textual inversion", visible=hasattr(model, "embedding_manager"))
                     img2img_btn_mask = gr.Button("Generate", visible=False)
                     img2img_btn_editor = gr.Button("Generate")
