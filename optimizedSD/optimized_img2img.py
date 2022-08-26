@@ -51,7 +51,6 @@ def load_img(path, h0, w0):
 
 config = "optimizedSD/v1-inference.yaml"
 ckpt = "models/ldm/stable-diffusion-v1/model.ckpt"
-device = "cuda"
 
 parser = argparse.ArgumentParser()
 
@@ -166,6 +165,12 @@ parser.add_argument(
     help="the seed (for reproducible sampling)",
 )
 parser.add_argument(
+    "--device",
+    type=str,
+    default="cuda",
+    help="CPU or GPU (cuda/cuda:0/cuda:1/...)",
+)
+parser.add_argument(
     "--small_batch",
     action='store_true',
     help="Reduce inference time when generate a smaller batch of images",
@@ -190,7 +195,6 @@ grid_count = len(os.listdir(outpath)) - 1
 
 if opt.seed == None:
     opt.seed = randint(0, 1000000)
-print("init_seed = ", opt.seed)
 seed_everything(opt.seed)
 
 sd = load_model_from_config(f"{ckpt}")
@@ -218,13 +222,15 @@ if opt.small_batch:
     config.modelUNet.params.small_batch = True
 else:
     config.modelUNet.params.small_batch = False
+config.modelCondStage.params.cond_stage_config.params.device = opt.device
 
 assert os.path.isfile(opt.init_img)
-init_image = load_img(opt.init_img, opt.H, opt.W).to(device)
+init_image = load_img(opt.init_img, opt.H, opt.W).to(opt.device)
 
 model = instantiate_from_config(config.modelUNet)
 _, _ = model.load_state_dict(sd, strict=False)
 model.eval()
+model.cdevice = opt.device
     
 modelCS = instantiate_from_config(config.modelCondStage)
 _, _ = modelCS.load_state_dict(sd, strict=False)
@@ -234,7 +240,7 @@ modelFS = instantiate_from_config(config.modelFirstStage)
 _, _ = modelFS.load_state_dict(sd, strict=False)
 modelFS.eval()
 del sd
-if opt.precision == "autocast":
+if opt.device != 'cpu' and opt.precision == "autocast":
     model.half()
     modelCS.half()
     modelFS.half()
@@ -254,15 +260,16 @@ else:
         data = batch_size * list(data)
         data = list(chunk(data, batch_size))
 
-modelFS.to(device)
+modelFS.to(opt.device)
 
 init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
 init_latent = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image))  # move to latent space
 
-mem = torch.cuda.memory_allocated()/1e6
-modelFS.to("cpu")
-while(torch.cuda.memory_allocated()/1e6 >= mem):
-    time.sleep(1)
+if(opt.device != 'cpu'):
+    mem = torch.cuda.memory_allocated()/1e6
+    modelFS.to("cpu")
+    while(torch.cuda.memory_allocated()/1e6 >= mem):
+        time.sleep(1)
 
 
 assert 0. <= opt.strength <= 1., 'can only work with strength in [0.0, 1.0]'
@@ -270,14 +277,18 @@ t_enc = int(opt.strength * opt.ddim_steps)
 print(f"target t_enc is {t_enc} steps")
 
 
-precision_scope = autocast if opt.precision=="autocast" else nullcontext
+if opt.precision=="autocast" and opt.device != "cpu":
+    precision_scope = autocast
+else:
+    precision_scope = nullcontext
+
 with torch.no_grad():
 
     all_samples = list()
     for n in trange(opt.n_iter, desc="Sampling"):
         for prompts in tqdm(data, desc="data"):
              with precision_scope("cuda"):
-                modelCS.to(device)
+                modelCS.to(opt.device)
                 uc = None
                 if opt.scale != 1.0:
                     uc = modelCS.get_learned_conditioning(batch_size * [""])
@@ -297,20 +308,20 @@ with torch.no_grad():
                 else:
                     c = modelCS.get_learned_conditioning(prompts)
 
-                mem = torch.cuda.memory_allocated()/1e6
-                modelCS.to("cpu")
-                while(torch.cuda.memory_allocated()/1e6 >= mem):
-                    time.sleep(1)
+                if(opt.device != 'cpu'):
+                    mem = torch.cuda.memory_allocated()/1e6
+                    modelCS.to("cpu")
+                    while(torch.cuda.memory_allocated()/1e6 >= mem):
+                        time.sleep(1)
 
                 # encode (scaled latent)
-                z_enc = model.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device), opt.seed,opt.ddim_eta, opt.ddim_steps)
+                z_enc = model.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(opt.device), opt.seed,opt.ddim_eta, opt.ddim_steps)
                 # decode it
-                # print("zenc = ", z_enc.shape)
                 samples_ddim = model.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
                                             unconditional_conditioning=uc,)
 
 
-                modelFS.to(device)
+                modelFS.to(opt.device)
                 print("saving images")
                 for i in range(batch_size):
                     
@@ -323,10 +334,11 @@ with torch.no_grad():
                     base_count += 1
 
 
-                mem = torch.cuda.memory_allocated()/1e6
-                modelFS.to("cpu")
-                while(torch.cuda.memory_allocated()/1e6 >= mem):
-                    time.sleep(1)
+                if(opt.device != 'cpu'):
+                    mem = torch.cuda.memory_allocated()/1e6
+                    modelFS.to("cpu")
+                    while(torch.cuda.memory_allocated()/1e6 >= mem):
+                        time.sleep(1)
 
                 del samples_ddim
                 print("memory_final = ", torch.cuda.memory_allocated()/1e6)

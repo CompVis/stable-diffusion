@@ -20,9 +20,8 @@ from einops import rearrange, repeat
 from contextlib import nullcontext
 from ldm.util import instantiate_from_config
 from transformers import logging
-from split_subprompts import split_weighted_subprompts
 logging.set_verbosity_error()
-
+from split_subprompts import split_weighted_subprompts
 import mimetypes
 mimetypes.init()
 mimetypes.add_type('application/javascript', '.js')
@@ -94,13 +93,14 @@ _, _ = modelFS.load_state_dict(sd, strict=False)
 modelFS.eval()
 del sd
 
-def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width, scale,ddim_eta, seed, small_batch = "False", full_precision = "False",outdir = "outputs/img2img-samples"):
-   
-    device = "cuda"
+def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width, scale,ddim_eta, device,seed, small_batch, full_precision,outdir):
+
     model.small_batch = small_batch
-    
+    model.cdevice = device
+    modelCS.cond_stage_model.device = device
     init_image = load_img(image, Height, Width).to(device)
-    if not full_precision:
+
+    if device != 'cpu' and full_precision == False:
         model.half()
         modelCS.half()
         modelFS.half()
@@ -116,7 +116,6 @@ def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width
     if seed == '':
         seed = randint(0, 1000000)
     seed = int(seed)
-    print("init_seed = ", seed)
     seed_everything(seed)
 
     # n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
@@ -128,17 +127,21 @@ def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width
     init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
     init_latent = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image))  # move to latent space
 
-    mem = torch.cuda.memory_allocated()/1e6
-    modelFS.to("cpu")
-    while(torch.cuda.memory_allocated()/1e6 >= mem):
-        time.sleep(1)
+    if(device != 'cpu'):
+        mem = torch.cuda.memory_allocated()/1e6
+        modelFS.to("cpu")
+        while(torch.cuda.memory_allocated()/1e6 >= mem):
+            time.sleep(1)
 
 
     assert 0. <= strength <= 1., 'can only work with strength in [0.0, 1.0]'
     t_enc = int(strength *ddim_steps)
     print(f"target t_enc is {t_enc} steps")
 
-    precision_scope = autocast if not full_precision else nullcontext
+    if full_precision== False and device != "cpu":
+        precision_scope = autocast
+    else:
+        precision_scope = nullcontext
 
     all_samples = []
     with torch.no_grad():
@@ -167,10 +170,11 @@ def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width
                         c = modelCS.get_learned_conditioning(prompts)
                     
                     c = modelCS.get_learned_conditioning(prompts)
-                    mem = torch.cuda.memory_allocated()/1e6
-                    modelCS.to("cpu")
-                    while(torch.cuda.memory_allocated()/1e6 >= mem):
-                        time.sleep(1)
+                    if(device != 'cpu'):
+                        mem = torch.cuda.memory_allocated()/1e6
+                        modelCS.to("cpu")
+                        while(torch.cuda.memory_allocated()/1e6 >= mem):
+                            time.sleep(1)
 
                     # encode (scaled latent)
                     z_enc = model.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device), seed,ddim_eta,ddim_steps)
@@ -192,10 +196,12 @@ def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width
                         base_count += 1
 
 
-                    mem = torch.cuda.memory_allocated()/1e6
-                    modelFS.to("cpu")
-                    while(torch.cuda.memory_allocated()/1e6 >= mem):
-                        time.sleep(1)
+                    if(device != 'cpu'):
+                        mem = torch.cuda.memory_allocated()/1e6
+                        modelFS.to("cpu")
+                        while(torch.cuda.memory_allocated()/1e6 >= mem):
+                            time.sleep(1)
+
                     del samples_ddim
                     del x_sample
                     del x_samples_ddim
@@ -214,7 +220,7 @@ def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width
 demo = gr.Interface(
     fn=generate,
     inputs=[gr.Image(tool="editor", type="pil"),"text",gr.Slider(0, 1,value=0.75),gr.Slider(1, 1000,value=50),gr.Slider(1, 100, step=1), gr.Slider(1, 100,step=1),
-    gr.Slider(64,4096,value = 512,step=64), gr.Slider(64,4096,value = 512,step=64), gr.Slider(0,50,value=7.5,step=0.1),gr.Slider(0,1,step=0.01),"text","checkbox", "checkbox",gr.Text(value = "outputs/img2img-samples")],
+    gr.Slider(64,4096,value = 512,step=64), gr.Slider(64,4096,value = 512,step=64), gr.Slider(0,50,value=7.5,step=0.1),gr.Slider(0,1,step=0.01),gr.Text(value = "cuda"),"text","checkbox", "checkbox",gr.Text(value = "outputs/img2img-samples")],
     outputs=["image", "text"],
 )
 demo.launch()

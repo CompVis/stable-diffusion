@@ -77,15 +77,16 @@ _, _ = modelFS.load_state_dict(sd, strict=False)
 modelFS.eval()
 del sd
 
-def generate(prompt,ddim_steps,n_iter, batch_size, Height, Width, scale, ddim_eta, seed, small_batch, full_precision,outdir):
+def generate(prompt,ddim_steps,n_iter, batch_size, Height, Width, scale, ddim_eta, device,seed, small_batch, full_precision,outdir):
    
-    device = "cuda"
     C = 4
     f = 8
     start_code = None
-
     model.small_batch = small_batch
-    if not full_precision:
+    model.cdevice = device
+    modelCS.cond_stage_model.device = device
+
+    if device != 'cpu' and full_precision == False:
         model.half()
         modelCS.half()
 
@@ -99,14 +100,16 @@ def generate(prompt,ddim_steps,n_iter, batch_size, Height, Width, scale, ddim_et
     if seed == '':
         seed = randint(0, 1000000)
     seed = int(seed)
-    print("init_seed = ", seed)
     seed_everything(seed)
 
     # n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
     assert prompt is not None
     data = [batch_size * [prompt]]
 
-    precision_scope = autocast if not full_precision else nullcontext
+    if full_precision== False and device != "cpu":
+        precision_scope = autocast
+    else:
+        precision_scope = nullcontext
 
     all_samples = []
     with torch.no_grad():
@@ -136,10 +139,12 @@ def generate(prompt,ddim_steps,n_iter, batch_size, Height, Width, scale, ddim_et
                         c = modelCS.get_learned_conditioning(prompts)
 
                     shape = [C, Height // f, Width // f]
-                    mem = torch.cuda.memory_allocated()/1e6
-                    modelCS.to("cpu")
-                    while(torch.cuda.memory_allocated()/1e6 >= mem):
-                        time.sleep(1)
+
+                    if device != 'cpu':
+                        mem = torch.cuda.memory_allocated()/1e6
+                        modelCS.to("cpu")
+                        while(torch.cuda.memory_allocated()/1e6 >= mem):
+                            time.sleep(1)
 
 
                     samples_ddim = model.sample(S=ddim_steps,
@@ -166,11 +171,12 @@ def generate(prompt,ddim_steps,n_iter, batch_size, Height, Width, scale, ddim_et
                         seed+=1
                         base_count += 1
 
-
-                    mem = torch.cuda.memory_allocated()/1e6
-                    modelFS.to("cpu")
-                    while(torch.cuda.memory_allocated()/1e6 >= mem):
-                        time.sleep(1)
+                    if device != 'cpu':
+                        mem = torch.cuda.memory_allocated()/1e6
+                        modelFS.to("cpu")
+                        while(torch.cuda.memory_allocated()/1e6 >= mem):
+                            time.sleep(1)
+                            
                     del samples_ddim
                     del x_sample
                     del x_samples_ddim
@@ -189,7 +195,7 @@ def generate(prompt,ddim_steps,n_iter, batch_size, Height, Width, scale, ddim_et
 demo = gr.Interface(
     fn=generate,
     inputs=["text",gr.Slider(1, 1000,value=50),gr.Slider(1, 100, step=1), gr.Slider(1, 100,step=1),
-    gr.Slider(64,4096,value = 512,step=64), gr.Slider(64,4096,value = 512,step=64), gr.Slider(0,50,value=7.5,step=0.1),gr.Slider(0,1,step=0.01),"text","checkbox", "checkbox",gr.Text(value = "outputs/txt2img-samples")],
+    gr.Slider(64,4096,value = 512,step=64), gr.Slider(64,4096,value = 512,step=64), gr.Slider(0,50,value=7.5,step=0.1),gr.Slider(0,1,step=0.01),gr.Text(value = "cuda"),"text","checkbox", "checkbox",gr.Text(value = "outputs/txt2img-samples")],
     outputs=["image", "text"],
 )
 demo.launch()

@@ -34,7 +34,6 @@ def load_model_from_config(ckpt, verbose=False):
 
 config = "optimizedSD/v1-inference.yaml"
 ckpt = "models/ldm/stable-diffusion-v1/model.ckpt"
-device = "cuda"
 
 parser = argparse.ArgumentParser()
 
@@ -129,6 +128,12 @@ parser.add_argument(
     help="unconditional guidance scale: eps = eps(x, empty) + scale * (eps(x, cond) - eps(x, empty))",
 )
 parser.add_argument(
+    "--device",
+    type=str,
+    default="cuda",
+    help="specify GPU (cuda/cuda:0/cuda:1/...)",
+)
+parser.add_argument(
     "--from-file",
     type=str,
     help="if specified, load prompts from this file",
@@ -164,9 +169,7 @@ grid_count = len(os.listdir(outpath)) - 1
 
 if opt.seed == None:
     opt.seed = randint(0, 1000000)
-print("init_seed = ", opt.seed)
 seed_everything(opt.seed)
-
 
 sd = load_model_from_config(f"{ckpt}")
 li = []
@@ -194,7 +197,7 @@ if opt.small_batch:
 else:
     config.modelUNet.params.small_batch = False
 
-
+config.modelCondStage.params.cond_stage_config.params.device = opt.device
 
 model = instantiate_from_config(config.modelUNet)
 _, _ = model.load_state_dict(sd, strict=False)
@@ -209,13 +212,14 @@ _, _ = modelFS.load_state_dict(sd, strict=False)
 modelFS.eval()
 del sd
 
-if opt.precision == "autocast":
+model.cdevice = opt.device
+if opt.device != "cpu" and opt.precision == "autocast":
     model.half()
     modelCS.half()
 
 start_code = None
 if opt.fixed_code:
-    start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
+    start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=opt.device)
 
 
 batch_size = opt.n_samples
@@ -233,14 +237,18 @@ else:
         data = list(chunk(data, batch_size))
 
 
-precision_scope = autocast if opt.precision=="autocast" else nullcontext
+if opt.precision=="autocast" and opt.device != "cpu":
+    precision_scope = autocast
+else:
+    precision_scope = nullcontext
+
 with torch.no_grad():
 
     all_samples = list()
     for n in trange(opt.n_iter, desc="Sampling"):
         for prompts in tqdm(data, desc="data"):
              with precision_scope("cuda"):
-                modelCS.to(device)
+                modelCS.to(opt.device)
                 uc = None
                 if opt.scale != 1.0:
                     uc = modelCS.get_learned_conditioning(batch_size * [""])
@@ -263,10 +271,12 @@ with torch.no_grad():
 
 
                 shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
-                mem = torch.cuda.memory_allocated()/1e6
-                modelCS.to("cpu")
-                while(torch.cuda.memory_allocated()/1e6 >= mem):
-                    time.sleep(1)
+
+                if(opt.device != 'cpu'):
+                    mem = torch.cuda.memory_allocated()/1e6
+                    modelCS.to("cpu")
+                    while(torch.cuda.memory_allocated()/1e6 >= mem):
+                        time.sleep(1)
 
 
                 samples_ddim = model.sample(S=opt.ddim_steps,
@@ -280,7 +290,7 @@ with torch.no_grad():
                                 eta=opt.ddim_eta,
                                 x_T=start_code)
 
-                modelFS.to(device)
+                modelFS.to(opt.device)
 
                 print(samples_ddim.shape)
                 print("saving images")
@@ -294,11 +304,11 @@ with torch.no_grad():
                     opt.seed+=1
                     base_count += 1
 
-
-                mem = torch.cuda.memory_allocated()/1e6
-                modelFS.to("cpu")
-                while(torch.cuda.memory_allocated()/1e6 >= mem):
-                    time.sleep(1)
+                if(opt.device != 'cpu'):
+                    mem = torch.cuda.memory_allocated()/1e6
+                    modelFS.to("cpu")
+                    while(torch.cuda.memory_allocated()/1e6 >= mem):
+                        time.sleep(1)
                 del samples_ddim
                 print("memory_final = ", torch.cuda.memory_allocated()/1e6)
 
