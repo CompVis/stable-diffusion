@@ -121,7 +121,7 @@ def do_run(device, model, opt):
 
     if opt.init_image is not None:
         assert os.path.isfile(opt.init_image)
-        init_image = load_img(opt.init_image).to(device).half()
+        init_image = load_img(opt.init_image).to(device).half() # potentially needs to not be .half on mps and cpu modes
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
         sampler.make_schedule(ddim_num_steps=opt.ddim_steps, ddim_eta=opt.ddim_eta, verbose=False)
