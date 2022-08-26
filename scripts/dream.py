@@ -496,7 +496,7 @@ def create_cmd_parser():
     parser.add_argument(
         '-G',
         '--gfpgan_strength',
-        default=0.5,
+        default=None,
         type=float,
         help='The strength at which to apply the GFPGAN model to the result, in order to improve faces.',
     )
