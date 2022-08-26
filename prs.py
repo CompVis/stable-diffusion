@@ -96,13 +96,8 @@ class CFGDenoiser(nn.Module):
         return uncond + (cond - uncond) * cond_scale
 
 def do_run(device, model, opt):
-    print('Starting render!')
+    print(f'Starting render!')
     seed_everything(opt.seed)
-
-    if opt.plms:
-        sampler = PLMSSampler(model)
-    else:
-        sampler = DDIMSampler(model)
 
     os.makedirs(opt.outdir, exist_ok=True)
     outpath = opt.outdir
@@ -119,9 +114,11 @@ def do_run(device, model, opt):
     base_count = thats_numberwang(sample_path, opt.batch_name)
     grid_count = thats_numberwang(outpath, opt.batch_name)
 
+    sampler = DDIMSampler(model, device)
+
     if opt.init_image is not None:
         assert os.path.isfile(opt.init_image)
-        init_image = load_img(opt.init_image).to(device).half()
+        init_image = load_img(opt.init_image).to(device).half() # potentially needs to not be .half on mps and cpu modes
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
         sampler.make_schedule(ddim_num_steps=opt.ddim_steps, ddim_eta=opt.ddim_eta, verbose=False)
@@ -138,10 +135,14 @@ def do_run(device, model, opt):
     start_code = None
     if opt.fixed_code:
         start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
-
+    
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
+    # apple silicon support
+    if device.type == 'mps':
+        precision_scope = nullcontext
+
     with torch.no_grad():
-        with precision_scope("cuda" if "cuda" in str(device) else "cpu"):
+        with precision_scope(device.type):
             with model.ema_scope():
                 tic = time.time()
                 all_samples = list()
@@ -165,11 +166,33 @@ def do_run(device, model, opt):
 
                         if init_image is None:
                             shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
-                            sigmas = model_wrap.get_sigmas(opt.ddim_steps)
-                            x = torch.randn([opt.n_samples, *shape], device=device) * sigmas[0]
-                            model_wrap_cfg = CFGDenoiser(model_wrap)
-                            extra_args = {'cond': c, 'uncond': uc, 'cond_scale': opt.scale}
-                            samples_ddim = K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args)
+                            if opt.method != "ddim":
+                                sigmas = model_wrap.get_sigmas(opt.ddim_steps)
+                                x = torch.randn([opt.n_samples, *shape], device=device) * sigmas[0]
+                                model_wrap_cfg = CFGDenoiser(model_wrap)
+                                extra_args = {'cond': c, 'uncond': uc, 'cond_scale': opt.scale}
+                                if opt.method == "k_euler":
+                                    samples_ddim = K.sampling.sample_euler(model_wrap_cfg, x, sigmas, extra_args=extra_args)
+                                elif opt.method == "k_euler_ancestral":
+                                    samples_ddim = K.sampling.sample_euler_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args)
+                                elif opt.method == "k_heun":
+                                    samples_ddim = K.sampling.sample_heun(model_wrap_cfg, x, sigmas, extra_args=extra_args)
+                                elif opt.method == "k_dpm_2":
+                                    samples_ddim = K.sampling.sample_dpm_2(model_wrap_cfg, x, sigmas, extra_args=extra_args)
+                                elif opt.method == "k_dpm_2_ancestral":
+                                    samples_ddim = K.sampling.sample_dpm_2_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args)
+                                else: # k_lms
+                                    samples_ddim = K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args)
+                            else:
+                                samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
+                                                                conditioning=c,
+                                                                batch_size=opt.n_samples,
+                                                                shape=shape,
+                                                                verbose=False,
+                                                                unconditional_guidance_scale=opt.scale,
+                                                                unconditional_conditioning=uc,
+                                                                eta=opt.ddim_eta,
+                                                                x_T=start_code)
 
                         else:
                             # encode (scaled latent)
@@ -360,6 +383,13 @@ def parse_args():
         help='How many images to generate'
     )
     my_parser.add_argument(
+        '--seed',
+        type=int,
+        action='store',
+        required=False,
+        help='Specify the numeric seed to be used'
+    )
+    my_parser.add_argument(
         '-f',
         '--from_file',
         action='store',
@@ -475,7 +505,6 @@ class Settings:
     batch_name = "default"
     n_batches = 1
     steps = 50
-    plms = False
     eta = 0.0
     n_iter = 1
     width = 512
@@ -486,6 +515,7 @@ class Settings:
     dyn = None
     from_file = None
     seed = "random"
+    frozen_seed = False
     init_image = None
     init_strength = 0.5
     gobig_maximize = True
@@ -495,6 +525,7 @@ class Settings:
     checkpoint = "./models/sd-v1-4.ckpt"
     use_jpg = False
     hide_metadata = False
+    method = "k_lms"
     
     def apply_settings_file(self, filename, settings_file):
         print(f'Applying settings file: {filename}')
@@ -506,8 +537,6 @@ class Settings:
             self.n_batches = (settings_file["n_batches"])
         if is_json_key_present(settings_file, 'steps'):
             self.steps = (settings_file["steps"])
-        if is_json_key_present(settings_file, 'plms'):
-            self.plms = (settings_file["plms"])
         if is_json_key_present(settings_file, 'eta'):
             self.eta = (settings_file["eta"])
         if is_json_key_present(settings_file, 'n_iter'):
@@ -530,6 +559,8 @@ class Settings:
             self.seed = (settings_file["seed"])
             if self.seed == "random":
                 self.seed = random.randint(1, 10000000)
+        if is_json_key_present(settings_file, 'frozen_seed'):
+            self.frozen_seed = (settings_file["frozen_seed"])
         if is_json_key_present(settings_file, 'init_strength'):
             self.init_strength = (settings_file["init_strength"])
         if is_json_key_present(settings_file, 'init_image'):
@@ -548,6 +579,9 @@ class Settings:
             self.use_jpg = (settings_file["use_jpg"])
         if is_json_key_present(settings_file, 'hide_metadata'):
             self.hide_metadata = (settings_file["hide_metadata"])
+        if is_json_key_present(settings_file, 'method'):
+            self.method = (settings_file["method"])
+        
 
 def esrgan_resize(input, id):
     input.save(f'_esrgan_orig{id}.png')
@@ -563,14 +597,14 @@ def esrgan_resize(input, id):
         print(e)
         quit()
 
-def do_gobig(gobig_init, gobig_scale, device, model, opt):
+def do_gobig(gobig_init, device, model, opt):
     overlap = opt.gobig_overlap
     outpath = opt.outdir
     # get our render size for each slice, and our target size
     input_image = Image.open(gobig_init).convert('RGBA')
     opt.W, opt.H = input_image.size
-    target_W = opt.W * gobig_scale
-    target_H = opt.H * gobig_scale
+    target_W = opt.W * opt.gobig_scale
+    target_H = opt.H * opt.gobig_scale
     if opt.gobig_realesrgan:
         input_image = esrgan_resize(input_image, opt.device_id)
     target_image = input_image.resize((target_W, target_H), get_resampling_mode())
@@ -653,10 +687,22 @@ def main():
     if cl_args.from_file:
         settings.from_file = cl_args.from_file
 
+    if cl_args.seed:
+        settings.seed = cl_args.seed
+
     outdir = (f'./out/{settings.batch_name}')
     filetype = ".jpg" if settings.use_jpg else ".png"
     quality = 97 if settings.use_jpg else 100
 
+    valid_methods = ['k_lms', 'k_dpm_2_ancestral', 'k_dpm_2', 'k_heun', 'k_euler_ancestral', 'k_euler', 'ddim']
+    if any(settings.method in s for s in valid_methods):
+        print(f'Using {settings.method} sampling method.')
+    else:
+        print(f'Method {settings.method} is not available. The valid choices are:')
+        print(valid_methods)
+        print()
+        print(f'Falling back k_lms')
+        settings.method = 'k_lms'
 
     # setup the model
     ckpt = settings.checkpoint # "./models/sd-v1-3-full-ema.ckpt"
@@ -670,13 +716,15 @@ def main():
     if torch.cuda.is_available() and "cuda" in cl_args.device:
         device = torch.device(f'{cl_args.device}')
         device_id = ("_" + cl_args.device.rsplit(':',1)[1]) if "0" not in cl_args.device else ""
-    elif "mps" in cl_args.device:
+    elif ("mps" in cl_args.device) or (torch.backends.mps.is_available()):
         device = torch.device("mps")
+        settings.method = "ddim" # k_diffusion currently not working on anything other than cuda
     else:
         # fallback to CPU if we don't recognize the device name given
         device = torch.device("cpu")
         cores = os.cpu_count()
         torch.set_num_threads(cores)
+        settings.method = "ddim" # k_diffusion currently not working on anything other than cuda
 
     print('Pytorch is using device:', device)
 
@@ -685,7 +733,7 @@ def main():
     model.eval()
 
     # load the model to the device
-    if "cpu" not in str(device):
+    if "cuda" in str(device):
         model = model.half() # half-precision mode for gpus, saves vram, good good
     model = model.to(device)
 
@@ -731,7 +779,6 @@ def main():
                     "skip_grid" : False,
                     "skip_save" : False,
                     "ddim_steps" : settings.steps,
-                    "plms" : settings.plms,
                     "ddim_eta" : settings.eta,
                     "n_iter" : settings.n_iter,
                     "W" : settings.width,
@@ -748,6 +795,7 @@ def main():
                     "precision": "autocast",
                     "init_image": settings.init_image,
                     "strength": 1.0 - settings.init_strength,
+                    "gobig_scale": cl_args.gobig_scale,
                     "gobig_maximize": settings.gobig_maximize,
                     "gobig_overlap": settings.gobig_overlap,
                     "gobig_realesrgan": settings.gobig_realesrgan,
@@ -755,7 +803,8 @@ def main():
                     "filetype": filetype,
                     "hide_metadata": settings.hide_metadata,
                     "quality": quality,
-                    "device_id": device_id
+                    "device_id": device_id,
+                    "method": settings.method
                 }
                 opt = SimpleNamespace(**opt)
                 # render the image(s)!
@@ -765,10 +814,12 @@ def main():
                 else:
                     gobig_init = cl_args.gobig_init
                 if cl_args.gobig:
-                    do_gobig(gobig_init, cl_args.gobig_scale, device, model, opt)
+                    do_gobig(gobig_init, device, model, opt)
                 if settings.cool_down > 0 and i < (settings.n_batches - 1):
                     print(f'Pausing {settings.cool_down} seconds to give your poor GPU a rest...')
                     time.sleep(settings.cool_down)
+            if not settings.frozen_seed:
+                settings.seed = settings.seed + 1
         if cl_args.interactive == False:
             #only doing one render, so we stop after this
             there_is_work_to_do = False
