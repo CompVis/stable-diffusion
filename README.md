@@ -163,8 +163,6 @@ Then pass this file's name to dream.py when you invoke it:
 (ldm) ~/stable-diffusion$ python3 scripts/dream.py --from_file="path/to/prompts.txt"
 ~~~~
 
->>>>>>> big-refactoring
-
 ## Weighted Prompts
 
 You may weight different sections of the prompt to tell the sampler to attach different levels of
@@ -247,6 +245,12 @@ repository and associated paper for details and limitations.
 
 ## Changes
 
+ * v1.11 (pending)
+   * Created a feature branch named **yunsaki-morphing-dream** which adds experimental support for
+     iteratively modifying the prompt and its parameters. Please see[ Pull Request #86](https://github.com/lstein/stable-diffusion/pull/86)
+     for a synopsis of how this works. Note that when this feature is eventually added to the main branch, it will may be modified
+     significantly.
+   
 * v1.10 (25 August 2022)
    * A barebones but fully functional interactive web server for online generation of txt2img and img2img.
    

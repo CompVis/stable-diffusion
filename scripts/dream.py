@@ -6,9 +6,9 @@ import shlex
 import os
 import sys
 import copy
+import ldm.dream.readline
 
-from ldm.dream_util import Completer,PngWriter,PromptFormatter
-
+from   ldm.dream.pngwriter import PngWriter,PromptFormatter
 debugging = False
 
 def main():
