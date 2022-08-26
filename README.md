@@ -65,7 +65,7 @@ txt2img to generate an image based only on a prompt
 
 - You can also use gradio interface for img2img & txt2img instead of the CLI. Just activate the conda env and install the latest version of gradio using `pip install gradio` .
 
-- Run img2img using `python optimizedSD/img2img_gradio` and txt2img using `python optimizedSD/img2img_gradio`.
+- Run img2img using `python optimizedSD/img2img_gradio.py` and txt2img using `python optimizedSD/img2img_gradio.py`.
 
 ### Weighted Prompts
 

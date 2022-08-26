@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from torchvision.utils import make_grid
 from einops import rearrange
-import os
+import os, re
 from PIL import Image
 import torch
 import numpy as np
@@ -22,6 +22,9 @@ from ldm.util import instantiate_from_config
 from split_subprompts import split_weighted_subprompts
 from transformers import logging
 logging.set_verbosity_error()
+import mimetypes
+mimetypes.init()
+mimetypes.add_type('application/javascript', '.js')
 
 
 def chunk(it, size):
@@ -89,7 +92,7 @@ def generate(prompt,ddim_steps,n_iter, batch_size, Height, Width, scale, ddim_et
     tic = time.time()
     os.makedirs(outdir, exist_ok=True)
     outpath = outdir
-    sample_path = os.path.join(outpath, "_".join(prompt.split()))[:150]
+    sample_path = os.path.join(outpath, '_'.join(re.split(':| ',prompt)))[:150]
     os.makedirs(sample_path, exist_ok=True)
     base_count = len(os.listdir(sample_path))
     

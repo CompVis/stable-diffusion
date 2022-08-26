@@ -1,7 +1,6 @@
-import argparse, os, sys, glob, random
+import argparse, os, re
 import torch
 import numpy as np
-import copy
 from random import randint
 from omegaconf import OmegaConf
 from PIL import Image
@@ -158,7 +157,7 @@ tic = time.time()
 os.makedirs(opt.outdir, exist_ok=True)
 outpath = opt.outdir
 
-sample_path = os.path.join(outpath, "_".join(opt.prompt.split()))[:150]
+sample_path = os.path.join(outpath, '_'.join(re.split(':| ',opt.prompt)))[:150]
 os.makedirs(sample_path, exist_ok=True)
 base_count = len(os.listdir(sample_path))
 grid_count = len(os.listdir(outpath)) - 1
