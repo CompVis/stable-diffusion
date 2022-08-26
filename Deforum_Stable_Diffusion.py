@@ -419,7 +419,7 @@ print(f"ckpt: {ckpt}")
 # !! }}
 #@markdown **Load Stable Diffusion**
 
-def load_model_from_config(config, ckpt, verbose=False, device='cuda'):
+def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_precision=True):
     map_location = "cuda" #@param ["cpu", "cuda"]
     print(f"Loading model from {ckpt}")
     pl_sd = torch.load(ckpt, map_location=map_location)
@@ -436,16 +436,20 @@ def load_model_from_config(config, ckpt, verbose=False, device='cuda'):
         print(u)
 
     #model.cuda()
-    model = model.half().to(device)
+    if half_precision:
+        model = model.half().to(device)
+    else:
+        model = model.to(device)
     model.eval()
     return model
 
 load_on_run_all = True #@param {type: 'boolean'}
+half_precision = True #@param {type: 'boolean'}
 
 if load_on_run_all:
 
   local_config = OmegaConf.load(f"{config}")
-  model = load_model_from_config(local_config, f"{ckpt}")
+  model = load_model_from_config(local_config, f"{ckpt}",half_precision=half_precision)
   device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
   model = model.to(device)
 
