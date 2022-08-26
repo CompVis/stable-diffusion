@@ -105,10 +105,17 @@ So for instance, to apply the maximum strength:
 dream> a man wearing a pineapple hat -G 1
 ~~~~
 
+This also works with img2img:
+~~~
+dream> a man wearing a pineapple hat -I path/to/your/file.png -G 1
+~~~
+
 That's it!
 
 There's also a bunch of options to control GFPGAN settings when starting the script for different configs that you can
 read about in the help text. This will let you control where GFPGAN is installed, if upsampling is enapled, the upsampler to use and the model path.
+
+Note that loading GFPGAN consumes additional GPU memory, additionaly, a couple of seconds will be tacked on when generating your images.
 
 ## Barebones Web Server
 

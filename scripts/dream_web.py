@@ -85,6 +85,12 @@ class DreamServer(BaseHTTPRequestHandler):
         print(f"Prompt generated with output: {outputs}")
 
         post_data['initimg'] = '' # Don't send init image back
+
+        # Append post_data to log
+        with open("./outputs/img-samples/dream_web_log.txt", "a") as log:
+            for output in outputs:
+                log.write(f"{output[0]}: {json.dumps(post_data)}\n")
+
         outputs = [x + [post_data] for x in outputs] # Append config to each output
         result = {'outputs': outputs}
         self.wfile.write(bytes(json.dumps(result), "utf-8"))
