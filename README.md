@@ -11,6 +11,8 @@ You will need administrator privileges for installing Miniconda and the setup sc
 
 After installation has completed, you can open webui.cmd (if your environment is named ldo) or webuildm.cmd (if your environment is named ldm)
 
+:warning: optimized img2img is not working right now, optimized version is txt2img only :warning: 
+
 🔥 NEW! webui.cmd updates with any changes in environment.yaml file so the environment will always be up to date as long as you get the new environment.yaml file 🔥
 :fire: no need to remove environment, delete src folder and create again, MUCH simpler! 🔥
 
