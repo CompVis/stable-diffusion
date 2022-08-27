@@ -22,7 +22,6 @@ WORKDIR /src
 # setup env
 RUN conda env create -f /src/environment.yaml && \
     echo "source activate ldm" > /root/.bashrc && \
-    conda clean --all && \
     echo -n $(date "+%s") > /tmp/.env_created
 
 EXPOSE 7860
