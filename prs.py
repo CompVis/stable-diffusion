@@ -69,18 +69,29 @@ def load_img(path):
     return 2.*image - 1.
 
 def thats_numberwang(dir, wildcard):
+    # get the highest numbered file in the out directory, and add 1. So simple.
     files = os.listdir(dir)
     filenums = []
+    filenum = 0
     for file in files:
         if wildcard in file:
             start = file.index('-')
-            end = file.index('.', start+1)
-            filenum = int(file[(start + 1):end])
+            end = file.index('.')
+            try:
+                filenum = file[start + 1:end]
+                filenum = int(filenum)
+            except:
+                print(f'Improperly named file "{file}" in output directory')
+                print(f'Tried to turn "{filenum}" into numberwang, but "{filenum}" is not numberwang!')
+                print(f'Please make sure output filenames use the name-1234.png format')
+                print(f'No extra bits or extra "-" characters, otherwise we cannot achieve numberwang!')
+                quit()
             filenums.append(filenum)
     if not filenums:
         numberwang = 0
     else:
         numberwang = max(filenums) + 1
+    print(numberwang)
     return numberwang
 
 class CFGDenoiser(nn.Module):
@@ -221,8 +232,8 @@ def do_run(device, model, opt):
                     grid = rearrange(grid, 'n b c h w -> (n b) c h w')
                     grid = make_grid(grid, nrow=n_rows)
 
+                    metadata = PngInfo()
                     if opt.hide_metadata == False:
-                        metadata = PngInfo()
                         metadata.add_text("prompt", str(prompts))
                         metadata.add_text("seed", str(opt.seed))
                         metadata.add_text("steps", str(opt.ddim_steps))
