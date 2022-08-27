@@ -686,20 +686,39 @@ def render_image_batch(args):
             json.dump(dict(args.__dict__), f, ensure_ascii=False, indent=4)
 
     index = 0
+    
+    # function for init image batching
+    init_array = []
+    if args.use_init:
+        if args.init_image == "":
+            raise FileNotFoundError("No path was given for init_image")
+        if not os.path.isfile(args.init_image):
+            if args.init_image[-1] != "/": # avoids path error by adding / to end if not there
+                args.init_image += "/" 
+            for image in sorted(os.listdir(args.init_image)): # iterates dir and appends images to init_array
+                if image.split(".")[-1] in ("png", "jpg", "jpeg"):
+                    init_array.append(args.init_image + image)
+        else:
+            init_array.append(args.init_image)
+    else:
+        init_array = [""] 
+
     for batch_index in range(args.n_batch):
         print(f"Batch {batch_index+1} of {args.n_batch}")
         
-        for prompt in prompts:
-            args.prompt = prompt
-            results = generate(args)
-            for image in results:
-                if args.save_samples:
-                    filename = f"{args.timestring}_{index:05}_{args.seed}.png"
-                    image.save(os.path.join(args.outdir, filename))
-                if args.display_samples:
-                    display.display(image)
-                index += 1
-            args.seed = next_seed(args)
+        for image in init_array: # iterates the init images
+            args.init_image = image
+            for prompt in prompts:
+                args.prompt = prompt
+                results = generate(args)
+                for image in results:
+                    if args.save_samples:
+                        filename = f"{args.timestring}_{index:05}_{args.seed}.png"
+                        image.save(os.path.join(args.outdir, filename))
+                    if args.display_samples:
+                        display.display(image)
+                    index += 1
+                args.seed = next_seed(args)
 
 
 def render_animation(args, anim_args):
