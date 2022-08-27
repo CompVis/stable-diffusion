@@ -692,7 +692,9 @@ def render_image_batch(args):
     if args.use_init:
         if args.init_image == "":
             raise FileNotFoundError("No path was given for init_image")
-        if not os.path.isfile(args.init_image):
+        if args.init_image.startswith('http://') or args.init_image.startswith('https://'):
+            init_array.append(args.init_image)
+        elif not os.path.isfile(args.init_image):
             if args.init_image[-1] != "/": # avoids path error by adding / to end if not there
                 args.init_image += "/" 
             for image in sorted(os.listdir(args.init_image)): # iterates dir and appends images to init_array
