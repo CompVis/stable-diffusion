@@ -3,6 +3,7 @@ import base64
 import mimetypes
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from ldm.dream.pngwriter import PngWriter
 
 class DreamServer(BaseHTTPRequestHandler):
     model = None
@@ -50,17 +51,42 @@ class DreamServer(BaseHTTPRequestHandler):
 
         print(f"Request to generate with prompt: {prompt}")
 
-        outputs = []
+        def image_done(image, seed):
+            config = post_data.copy() # Shallow copy
+            config['initimg'] = ''
+
+            # Write PNGs
+            pngwriter = PngWriter(
+                "./outputs/img-samples/", config['prompt'], 1
+            )
+            pngwriter.write_image(image, seed)
+
+            # Append post_data to log
+            with open("./outputs/img-samples/dream_web_log.txt", "a") as log:
+                for file_path, _ in pngwriter.files_written:
+                    log.write(f"{file_path}: {json.dumps(config)}\n")
+
+            self.wfile.write(bytes(json.dumps(
+                {'event':'result', 'files':pngwriter.files_written, 'config':config}
+            ) + '\n',"utf-8"))
+
+        def image_progress(image, step):
+            self.wfile.write(bytes(json.dumps(
+                {'event':'step', 'step':step}
+            ) + '\n',"utf-8"))
+
         if initimg is None:
             # Run txt2img
-            outputs = self.model.txt2img(prompt,
-                                    iterations=iterations,
-                                    cfg_scale = cfgscale,
-                                    width = width,
-                                    height = height,
-                                    seed = seed,
-                                    steps = steps,
-                                    gfpgan_strength = gfpgan_strength)
+            self.model.prompt2image(prompt,
+                               iterations=iterations,
+                               cfg_scale = cfgscale,
+                               width = width,
+                               height = height,
+                               seed = seed,
+                               steps = steps,
+
+                               step_callback=image_progress,
+                               image_callback=image_done)
         else:
             # Decode initimg as base64 to temp file
             with open("./img2img-tmp.png", "wb") as f:
@@ -68,28 +94,19 @@ class DreamServer(BaseHTTPRequestHandler):
                 f.write(base64.b64decode(initimg))
 
             # Run img2img
-            outputs = self.model.img2img(prompt,
-                                         init_img = "./img2img-tmp.png",
-                                         iterations = iterations,
-                                         cfg_scale = cfgscale,
-                                         seed = seed,
-                                         gfpgan_strength=gfpgan_strength,
-                                         steps = steps)
+            self.model.prompt2image(prompt,
+                                init_img = "./img2img-tmp.png",
+                                iterations = iterations,
+                                cfg_scale = cfgscale,
+                                seed = seed,
+                                steps = steps,
+                                step_callback=image_progress,
+                                image_callback=image_done)
+
             # Remove the temp file
             os.remove("./img2img-tmp.png")
 
-        print(f"Prompt generated with output: {outputs}")
-
-        post_data['initimg'] = '' # Don't send init image back
-
-        # Append post_data to log
-        with open("./outputs/img-samples/dream_web_log.txt", "a") as log:
-            for output in outputs:
-                log.write(f"{output[0]}: {json.dumps(post_data)}\n")
-
-        outputs = [x + [post_data] for x in outputs] # Append config to each output
-        result = {'outputs': outputs}
-        self.wfile.write(bytes(json.dumps(result), "utf-8"))
+        print(f"Prompt generated!")
 
 
 class ThreadingDreamServer(ThreadingHTTPServer):

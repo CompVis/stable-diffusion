@@ -61,6 +61,9 @@ class KSampler(object):
         # this has to come in the same format as the conditioning, # e.g. as encoded tokens, ...
         **kwargs,
     ):
+        def route_callback(k_callback_values):
+            if img_callback is not None:
+                img_callback(k_callback_values['x'], k_callback_values['i'])
 
         sigmas = self.model.get_sigmas(S)
         if x_T:
@@ -78,7 +81,8 @@ class KSampler(object):
         }
         return (
             K.sampling.__dict__[f'sample_{self.schedule}'](
-                model_wrap_cfg, x, sigmas, extra_args=extra_args
+                model_wrap_cfg, x, sigmas, extra_args=extra_args,
+                callback=route_callback
             ),
             None,
         )

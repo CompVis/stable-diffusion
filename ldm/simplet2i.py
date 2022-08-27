@@ -202,6 +202,7 @@ class T2I:
         ddim_eta=None,
         skip_normalize=False,
         image_callback=None,
+        step_callback=None,
         # these are specific to txt2img
         width=None,
         height=None,
@@ -231,9 +232,14 @@ class T2I:
            gfpgan_strength                 // strength for GFPGAN. 0.0 preserves image exactly, 1.0 replaces it completely
            ddim_eta                        // image randomness (eta=0.0 means the same seed always produces the same image)
            variants                        // if >0, the 1st generated image will be passed back to img2img to generate the requested number of variants
+           step_callback                   // a function or method that will be called each step
            image_callback                  // a function or method that will be called each time an image is generated
 
-        To use the callback, define a function of method that receives two arguments, an Image object
+        To use the step callback, define a function that receives two arguments:
+        - Image GPU data
+        - The step number
+
+        To use the image callback, define a function of method that receives two arguments, an Image object
         and the seed. You can then do whatever you like with the image, including converting it to
         different formats and manipulating it. For example:
 
@@ -293,6 +299,7 @@ class T2I:
                     skip_normalize=skip_normalize,
                     init_img=init_img,
                     strength=strength,
+                    callback=step_callback,
                 )
             else:
                 images_iterator = self._txt2img(
@@ -305,6 +312,7 @@ class T2I:
                     skip_normalize=skip_normalize,
                     width=width,
                     height=height,
+                    callback=step_callback,
                 )
 
             with scope(self.device.type), self.model.ema_scope():
@@ -389,6 +397,7 @@ class T2I:
         skip_normalize,
         width,
         height,
+        callback,
     ):
         """
         An infinite iterator of images from the prompt.
@@ -412,6 +421,7 @@ class T2I:
                 unconditional_guidance_scale=cfg_scale,
                 unconditional_conditioning=uc,
                 eta=ddim_eta,
+                img_callback=callback
             )
             yield self._samples_to_images(samples)
 
@@ -427,6 +437,7 @@ class T2I:
         skip_normalize,
         init_img,
         strength,
+        callback, # Currently not implemented for img2img
     ):
         """
         An infinite iterator of images from the prompt and the initial image
