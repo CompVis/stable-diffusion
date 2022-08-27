@@ -215,16 +215,20 @@ class DDIMSampler(object):
             sqrt_alphas_cumprod = torch.sqrt(self.ddim_alphas)
             sqrt_one_minus_alphas_cumprod = self.ddim_sqrt_one_minus_alphas
 
+        # This is where we add noise to the latents
+
         # Replace the rightmost 25% (black empty area) with... something
         #width = x0.shape[-1]
         #right_thresh = width * 3 // 4
         #x0[:, :, :, right_thresh:] = torch.flip(x0[:,:,:, width - 2*right_thresh:right_thresh], dims=[-1])
-
         if noise is None:
             noise = torch.randn_like(x0)
-        # This is where we add noise to the latents
+
         noisy_latents = (extract_into_tensor(sqrt_alphas_cumprod, t, x0.shape) * x0 +
                 extract_into_tensor(sqrt_one_minus_alphas_cumprod, t, x0.shape) * noise)
+
+        # Scroll to the right
+        #noisy_latents = torch.roll(noisy_latents, -1, dims=-1)
 
         # Replace the rightmost 25% (black empty area) with mirror content
         #noisy_latents[:, :, :, 36:48] = torch.flip(noisy_latents[:, :, :, 24:36], dims=[-1])
@@ -235,7 +239,7 @@ class DDIMSampler(object):
 
     @torch.no_grad()
     def decode(self, x_latent, cond, t_start, unconditional_guidance_scale=1.0, unconditional_conditioning=None,
-               use_original_steps=False):
+               use_original_steps=False, init_latent=None):
 
         timesteps = np.arange(self.ddpm_num_timesteps) if use_original_steps else self.ddim_timesteps
         timesteps = timesteps[:t_start]
@@ -254,8 +258,19 @@ class DDIMSampler(object):
             x_dec, _ = self.p_sample_ddim(x_dec, cond, ts, index=index, use_original_steps=use_original_steps,
                                           unconditional_guidance_scale=unconditional_guidance_scale,
                                           unconditional_conditioning=unconditional_conditioning)
-            # Freeze the leftmost 50%
-            #x_dec[:, :, :, :width//2] = left
-            import imutil
-            #imutil.show(self.model.first_stage_model.decode(x_dec))
+
+            # Gently nudge the left side back toward its original values
+            #import imutil
+            #height = width
+            #chan = 4
+            #b = 1
+            #alpha_map = ((torch.arange(0, width) / width) / 100).reshape(1,1,1,width).repeat(b, chan, height,1).cuda()
+            #alpha_map[:,:,:,:1] = 1.0
+            #alpha_map[:,:,:,1:2] = 0.5
+            #alpha_map[:,:,:,2:3] = 0.1
+            #alpha_map[:,:,:,3:4] = 0.05
+            #alpha_map[:,:,:,4:5] = 0.01
+            #alpha_map[:,:,:,5:] = 0
+            #x_dec = (alpha_map**.5) * init_latent + ((1 - alpha_map)**.5) * x_dec
+
         return x_dec
