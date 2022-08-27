@@ -125,7 +125,7 @@ optional arguments:
                         if specified, load prompts from this file
   --config CONFIG       path to config which constructs model
   --ckpt CKPT           path to checkpoint of model
-  --seed SEED           the seed (for reproducible sampling)
+  --seed SEED           the seed (for reproducible sampling) if seed argument is omitted, use a random seed
   --precision {full,autocast}
                         evaluate at this precision
 
