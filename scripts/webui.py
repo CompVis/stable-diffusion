@@ -345,6 +345,19 @@ def load_embeddings(fp):
     if fp is not None and hasattr(model, "embedding_manager"):
         model.embedding_manager.load(fp.name)
 
+
+def get_font(fontsize):
+    fonts = ["arial.ttf", "DejaVuSans.ttf"]
+    for font_name in fonts:
+        try:
+            return ImageFont.truetype(font_name, fontsize)
+        except OSError:
+           pass
+
+    # ImageFont.load_default() is practically unusable as it only supports
+    # latin1, so raise an exception instead if no usable font was found
+    raise Exception(f"No usable font found (tried {', '.join(fonts)})")
+
 def image_grid(imgs, batch_size, force_n_rows=None, captions=None):
     if force_n_rows is not None:
         rows = force_n_rows
@@ -361,7 +374,7 @@ def image_grid(imgs, batch_size, force_n_rows=None, captions=None):
     w, h = imgs[0].size
     grid = Image.new('RGB', size=(cols * w, rows * h), color='black')
 
-    fnt = ImageFont.truetype("arial.ttf", 30)
+    fnt = get_font(30)
 
     for i, img in enumerate(imgs):
         grid.paste(img, box=(i % cols * w, i // cols * h))
@@ -406,17 +419,7 @@ def draw_prompt_matrix(im, width, height, all_prompts):
 
     fontsize = (width + height) // 25
     line_spacing = fontsize // 2
-    fonts = ["data/DejaVuSans.ttf", "arial.ttf", "DejaVuSans.ttf"]
-    for font_name in fonts:
-        try:
-            fnt = ImageFont.truetype(font_name, fontsize)
-            break
-        except OSError:
-           pass
-    else:
-        # ImageFont.load_default() is practically unusable as it only supports
-        # latin1, so raise an exception instead
-        raise Exception(f"No usable font found (tried {', '.join(fonts)})")
+    fnt = get_font(fontsize)
     color_active = (0, 0, 0)
     color_inactive = (153, 153, 153)
 
@@ -764,13 +767,13 @@ def process_images(
                     sanitized_prompt = sanitized_prompt[:128] #200 is too long
                     sample_path_i = os.path.join(sample_path, sanitized_prompt)
                     os.makedirs(sample_path_i, exist_ok=True)
-                    base_count = len([x for x in os.listdir(sample_path_i) if x.endswith(('.png', '.jpg'))]) - 1 # start at 0
-                    filename = f"{base_count:05}-{seeds[i]}"
+                    base_count = get_next_sequence_number(sample_path_i)
+                    filename = f"{base_count:05}-{steps}_{sampler_name}_{seeds[i]}"
                 else:
                     sample_path_i = sample_path
-                    base_count = len([x for x in os.listdir(sample_path_i) if x.endswith(('.png', '.jpg'))]) - 1 # start at 0
+                    base_count = get_next_sequence_number(sample_path_i)
                     sanitized_prompt = sanitized_prompt
-                    filename = f"{base_count:05}-{seeds[i]}_{sanitized_prompt}"[:128] #same as before
+                    filename = f"{base_count:05}-{steps}_{sampler_name}_{seeds[i]}_{sanitized_prompt}"[:128] #same as before
 
                 x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                 x_sample = x_sample.astype(np.uint8)
@@ -834,7 +837,7 @@ skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoisin
 
         if (prompt_matrix or not skip_grid) and not do_not_save_grid:
             if prompt_matrix:
-                grid = image_grid(output_images, batch_size, force_n_rows=1 << ((len(prompt_matrix_parts)-1)//2), captions=prompt_matrix_parts)
+                grid = image_grid(output_images, batch_size, force_n_rows=1 << ((len(prompt_matrix_parts)-1)//2), captions=prompt_matrix_parts if prompt.startswith("@") else None)
             else:
                 grid = image_grid(output_images, batch_size)
 
@@ -1094,7 +1097,7 @@ def img2img(prompt: str, image_editor_mode: str, init_info, mask_mode: str, mask
             xi = x0 + noise
             sigma_sched = sigmas[ddim_steps - t_enc - 1:]
             model_wrap_cfg = CFGDenoiser(sampler.model_wrap)
-            samples_ddim = K.sampling.sample_lms(model_wrap_cfg, xi, sigma_sched, extra_args={'cond': conditioning, 'uncond': unconditional_conditioning, 'cond_scale': cfg_scale}, disable=False)
+            samples_ddim, _ = sampler.sample(S=ddim_steps, conditioning=conditioning, batch_size=int(x.shape[0]), shape=x[0].shape, verbose=False, unconditional_guidance_scale=cfg_scale, unconditional_conditioning=unconditional_conditioning, eta=0.0, x_T=x)
         else:
             x0, = init_data
             sampler.make_schedule(ddim_num_steps=ddim_steps, ddim_eta=0.0, verbose=False)
