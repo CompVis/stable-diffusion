@@ -20,7 +20,7 @@ Legacy support: Only if your environment is named ldm "Launch Waifu Diffusion" t
 Edit `scripts\relauncher.py`
 `python scripts/webui.py` becomes `python scripts/webui.py --no-half --precision=full`
 
-[Other cli arguments?](
+[Other cli arguments?](https://github.com/hlky/stable-diffusion#--help)
 
 
 --------------
