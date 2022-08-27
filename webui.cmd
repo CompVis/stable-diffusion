@@ -1,8 +1,20 @@
 @echo off
-call C:\ProgramData\miniconda3\Scripts\activate.bat
+set CONDA_ALL=%ProgramData%\miniconda3\Scripts
+set CONDA_USER=%USERPROFILE%\miniconda3\Scripts
+
+IF EXIST %CONDA_ALL% (
+  SET CONDA_PATH=%CONDA_ALL%
+) else IF EXIST %CONDA_USER% (
+   SET CONDA_PATH=%CONDA_USER% 
+) else (
+  echo "miniconda3 not found. Install from here https://docs.conda.io/en/latest/miniconda.html"
+  exit /b 1 
+)
+
+call "%CONDA_PATH%\activate.bat"
 call conda env create -f environment.yaml
 call conda env update --file environment.yaml --prune
-call C:\ProgramData\miniconda3\Scripts\activate.bat ldo
+call "%CONDA_PATH%\activate.bat" ldo
 python "%CD%"\scripts\relauncher.py
 
 :PROMPT
