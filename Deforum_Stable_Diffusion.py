@@ -346,7 +346,7 @@ def sample_to_cv2(sample: torch.Tensor) -> np.ndarray:
 print("\nSelect Model:\n")
 
 model_config = "v1-inference.yaml" #@param ["custom","v1-inference.yaml"]
-model_checkpoint =  "sd-v1-4.ckpt" #@param ["custom","sd-v1-4.ckpt","sd-v1-3-full-ema.ckpt","sd-v1-3.ckpt","sd-v1-2-full-ema.ckpt","sd-v1-2.ckpt","sd-v1-1-full-ema.ckpt","sd-v1-1.ckpt"]
+model_checkpoint =  "sd-v1-4.ckpt" #@param ["custom","sd-v1-4-full-ema.ckpt","sd-v1-4.ckpt","sd-v1-3-full-ema.ckpt","sd-v1-3.ckpt","sd-v1-2-full-ema.ckpt","sd-v1-2.ckpt","sd-v1-1-full-ema.ckpt","sd-v1-1.ckpt"]
 custom_config_path = "" #@param {type:"string"}
 custom_checkpoint_path = "" #@param {type:"string"}
 
