@@ -1,4 +1,4 @@
-import argparse, os, sys, glob
+import argparse, os, sys, glob, re
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--outdir", type=str, nargs="?", help="dir to write results to", default=None)
@@ -7,18 +7,22 @@ parser.add_argument("--outdir_img2img", type=str, nargs="?", help="dir to write 
 parser.add_argument("--save-metadata", action='store_true', help="Whether to embed the generation parameters in the sample images", default=False)
 parser.add_argument("--skip-grid", action='store_true', help="do not save a grid, only individual samples. Helpful when evaluating lots of samples", default=False)
 parser.add_argument("--skip-save", action='store_true', help="do not save indiviual samples. For speed measurements.", default=False)
+parser.add_argument("--grid-format", type=str, help="png for lossless png files; jpg:quality for lossy jpeg; webp:quality for lossy webp, or webp:-compression for lossless webp", default="jpg:95")
 parser.add_argument("--n_rows", type=int, default=-1, help="rows in the grid; use -1 for autodetect and 0 for n_rows to be same as batch_size (default: -1)",)
 parser.add_argument("--config", type=str, default="configs/stable-diffusion/v1-inference.yaml", help="path to config which constructs model",)
 parser.add_argument("--ckpt", type=str, default="models/ldm/stable-diffusion-v1/model.ckpt", help="path to checkpoint of model",)
 parser.add_argument("--precision", type=str, help="evaluate at this precision", choices=["full", "autocast"], default="autocast")
+parser.add_argument("--optimized", action='store_true', help="load the model onto the device piecemeal instead of all at once to reduce VRAM usage at the cost of performance")
 parser.add_argument("--gfpgan-dir", type=str, help="GFPGAN directory", default=('./src/gfpgan' if os.path.exists('./src/gfpgan') else './GFPGAN')) # i disagree with where you're putting it but since all guidefags are doing it this way, there you go
 parser.add_argument("--realesrgan-dir", type=str, help="RealESRGAN directory", default=('./src/realesrgan' if os.path.exists('./src/realesrgan') else './RealESRGAN'))
 parser.add_argument("--realesrgan-model", type=str, help="Upscaling model for RealESRGAN", default=('RealESRGAN_x4plus'))
 parser.add_argument("--no-verify-input", action='store_true', help="do not verify input to check if it's too long", default=False)
 parser.add_argument("--no-half", action='store_true', help="do not switch the model to 16-bit floats", default=False)
 parser.add_argument("--no-progressbar-hiding", action='store_true', help="do not hide progressbar in gradio UI (we hide it because it slows down ML if you have hardware accleration in browser)", default=False)
+parser.add_argument("--share", action='store_true', help="Should share your server on gradio.app, this allows you to use the UI from your mobile app", default=False)
+parser.add_argument("--share-password", type=str, help="Sharing is open by default, use this to set a password. Username: webui", default=None)
 parser.add_argument("--defaults", type=str, help="path to configuration file providing UI defaults, uses same format as cli parameter", default='configs/webui/webui.yaml')
-parser.add_argument("--gpu", type=int, help="choose which GPU to use if you have multiple", default=0)
+parser.add_argument("--gpu", type=int, help="choose which GPU to use if you have multiple", default=int(os.environ.get('CUDA_VISIBLE_DEVICES', 0)))
 parser.add_argument("--extra-models-cpu", action='store_true', help="run extra models (GFGPAN/ESRGAN) on cpu", default=False)
 parser.add_argument("--esrgan-cpu", action='store_true', help="run ESRGAN on cpu", default=False)
 parser.add_argument("--gfpgan-cpu", action='store_true', help="run GFPGAN on cpu", default=False)
@@ -42,6 +46,7 @@ import torch.nn as nn
 import yaml
 import glob
 from typing import List, Union
+from pathlib import Path
 
 from contextlib import contextmanager, nullcontext
 from einops import rearrange, repeat
@@ -79,12 +84,27 @@ invalid_filename_chars = '<>:"/\|?*\n'
 GFPGAN_dir = opt.gfpgan_dir
 RealESRGAN_dir = opt.realesrgan_dir
 
-css_hide_progressbar = """
-.wrap .m-12 svg { display:none!important; }
-.wrap .m-12::before { content:"Loading..." }
-.progress-bar { display:none!important; }
-.meta-text { display:none!important; }
-"""
+
+
+# should probably be moved to a settings menu in the UI at some point
+grid_format = [s.lower() for s in opt.grid_format.split(':')]
+grid_lossless = False
+grid_quality = 100
+if grid_format[0] == 'png':
+    grid_ext = 'png'
+    grid_format = 'png'
+elif grid_format[0] in ['jpg', 'jpeg']:
+    grid_quality = int(grid_format[1]) if len(grid_format) > 1 else 100
+    grid_ext = 'jpg'
+    grid_format = 'jpeg'
+elif grid_format[0] == 'webp':
+    grid_quality = int(grid_format[1]) if len(grid_format) > 1 else 100
+    grid_ext = 'webp'
+    grid_format = 'webp'
+    if grid_quality < 0: # e.g. webp:-100 for lossless mode
+        grid_lossless = True
+        grid_quality = abs(grid_quality)
+
 
 def chunk(it, size):
     it = iter(it)
@@ -109,6 +129,14 @@ def load_model_from_config(config, ckpt, verbose=False):
     model.cuda()
     model.eval()
     return model
+
+def load_sd_from_config(ckpt, verbose=False):
+    print(f"Loading model from {ckpt}")
+    pl_sd = torch.load(ckpt, map_location="cpu")
+    if "global_step" in pl_sd:
+        print(f"Global Step: {pl_sd['global_step']}")
+    sd = pl_sd["state_dict"]
+    return sd
 
 def crash(e, s):
     global model
@@ -270,17 +298,54 @@ def try_loading_RealESRGAN(model_name: str):
             print(traceback.format_exc(), file=sys.stderr)
 try_loading_RealESRGAN('RealESRGAN_x4plus')
 
-config = OmegaConf.load("configs/stable-diffusion/v1-inference.yaml")
-model = load_model_from_config(config, "models/ldm/stable-diffusion-v1/model.ckpt")
+if opt.optimized:
+    sd = load_sd_from_config("models/ldm/stable-diffusion-v1/model.ckpt")
+    li, lo = [], []
+    for key, v_ in sd.items():
+        sp = key.split('.')
+        if(sp[0]) == 'model':
+            if('input_blocks' in sp):
+                li.append(key)
+            elif('middle_block' in sp):
+                li.append(key)
+            elif('time_embed' in sp):
+                li.append(key)
+            else:
+                lo.append(key)
+    for key in li:
+        sd['model1.' + key[6:]] = sd.pop(key)
+    for key in lo:
+        sd['model2.' + key[6:]] = sd.pop(key)
 
-device = torch.device(f"cuda") if torch.cuda.is_available() else torch.device("cpu")
-model = (model if opt.no_half else model.half()).to(device)
+    config = OmegaConf.load("optimizedSD/v1-inference.yaml")
+    config.modelUNet.params.small_batch = False
+
+    model = instantiate_from_config(config.modelUNet)
+    _, _ = model.load_state_dict(sd, strict=False)
+    model.eval()
+
+    modelCS = instantiate_from_config(config.modelCondStage)
+    _, _ = modelCS.load_state_dict(sd, strict=False)
+    modelCS.eval()
+        
+    modelFS = instantiate_from_config(config.modelFirstStage)
+    _, _ = modelFS.load_state_dict(sd, strict=False)
+    modelFS.eval()
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    model = model if opt.no_half else model.half()
+    modelCS = modelCS if opt.no_half else modelCS.half()
+else:
+    config = OmegaConf.load("configs/stable-diffusion/v1-inference.yaml")
+    model = load_model_from_config(config, "models/ldm/stable-diffusion-v1/model.ckpt")
+
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    model = (model if opt.no_half else model.half()).to(device)
 
 def load_embeddings(fp):
     if fp is not None and hasattr(model, "embedding_manager"):
         model.embedding_manager.load(fp.name)
 
-def image_grid(imgs, batch_size, round_down=False, force_n_rows=None):
+def image_grid(imgs, batch_size, force_n_rows=None, captions=None):
     if force_n_rows is not None:
         rows = force_n_rows
     elif opt.n_rows > 0:
@@ -289,15 +354,21 @@ def image_grid(imgs, batch_size, round_down=False, force_n_rows=None):
         rows = batch_size
     else:
         rows = math.sqrt(len(imgs))
-        rows = int(rows) if round_down else round(rows)
+        rows = round(rows)
 
     cols = math.ceil(len(imgs) / rows)
 
     w, h = imgs[0].size
     grid = Image.new('RGB', size=(cols * w, rows * h), color='black')
 
+    fnt = ImageFont.truetype("arial.ttf", 30)
+
     for i, img in enumerate(imgs):
         grid.paste(img, box=(i % cols * w, i // cols * h))
+        if captions:
+            d = ImageDraw.Draw( grid )
+            size = d.textbbox( (0,0), captions[i], font=fnt, stroke_width=2, align="center" )
+            d.multiline_text((i % cols * w + w/2, i // cols * h + h - size[3]), captions[i], font=fnt, fill=(255,0,255), stroke_width=2, stroke_fill=(0,0,0), anchor="mm", align="center")
 
     return grid
 
@@ -425,10 +496,10 @@ def resize_image(resize_mode, im, width, height):
 def check_prompt_length(prompt, comments):
     """this function tests if prompt is too long, and if so, adds a message to comments"""
 
-    tokenizer = model.cond_stage_model.tokenizer
-    max_length = model.cond_stage_model.max_length
+    tokenizer = (model if not opt.optimized else modelCS).cond_stage_model.tokenizer
+    max_length = (model if not opt.optimized else modelCS).cond_stage_model.max_length
 
-    info = model.cond_stage_model.tokenizer([prompt], truncation=True, max_length=max_length, return_overflowing_tokens=True, padding="max_length", return_tensors="pt")
+    info = (model if not opt.optimized else modelCS).cond_stage_model.tokenizer([prompt], truncation=True, max_length=max_length, return_overflowing_tokens=True, padding="max_length", return_tensors="pt")
     ovf = info['overflowing_tokens'][0]
     overflowing_count = ovf.shape[0]
     if overflowing_count == 0:
@@ -439,6 +510,137 @@ def check_prompt_length(prompt, comments):
     overflowing_text = tokenizer.convert_tokens_to_string(''.join(overflowing_words))
 
     comments.append(f"Warning: too many input tokens; some ({len(overflowing_words)}) have been truncated:\n{overflowing_text}\n")
+
+def save_sample(image, sample_path_i, filename, jpg_sample, prompts, seeds, width, height, steps, cfg_scale, 
+normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img, uses_loopback, uses_random_seed_loopback, skip_save,
+skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode):
+    filename_i = os.path.join(sample_path_i, filename)
+    if not jpg_sample:
+        if opt.save_metadata:
+            metadata = PngInfo()
+            metadata.add_text("SD:prompt", prompts[i])
+            metadata.add_text("SD:seed", str(seeds[i]))
+            metadata.add_text("SD:width", str(width))
+            metadata.add_text("SD:height", str(height))
+            metadata.add_text("SD:steps", str(steps))
+            metadata.add_text("SD:cfg_scale", str(cfg_scale))
+            metadata.add_text("SD:normalize_prompt_weights", str(normalize_prompt_weights))
+            metadata.add_text("SD:GFPGAN", str(use_GFPGAN and GFPGAN is not None))
+            image.save(f"{filename_i}.png", pnginfo=metadata)
+        else:
+            image.save(f"{filename_i}.png")
+    else:
+        image.save(f"{filename_i}.jpg", 'jpeg', quality=100, optimize=True)
+    if write_info_files:
+        # toggles differ for txt2img vs. img2img:
+        offset = 0 if init_img is None else 2
+        toggles = []
+        if prompt_matrix:
+            toggles.append(0)
+        if normalize_prompt_weights:
+            toggles.append(1)
+        if init_img is not None:
+            if uses_loopback:
+                toggles.append(2)
+            if uses_random_seed_loopback:
+                toggles.append(3)
+        if not skip_save:
+            toggles.append(2 + offset)
+        if not skip_grid:
+            toggles.append(3 + offset)
+        if sort_samples:
+            toggles.append(4 + offset)
+        if write_info_files:
+            toggles.append(5 + offset)
+        if use_GFPGAN:
+            toggles.append(6 + offset)
+        info_dict = dict(
+            target="txt2img" if init_img is None else "img2img",
+            prompt=prompts[i], ddim_steps=steps, toggles=toggles, sampler_name=sampler_name,
+            ddim_eta=ddim_eta, n_iter=n_iter, batch_size=batch_size, cfg_scale=cfg_scale,
+            seed=seeds[i], width=width, height=height
+        )
+        if init_img is not None:
+            # Not yet any use for these, but they bloat up the files:
+            #info_dict["init_img"] = init_img
+            #info_dict["init_mask"] = init_mask
+            info_dict["denoising_strength"] = denoising_strength
+            info_dict["resize_mode"] = resize_mode
+        with open(f"{filename_i}.yaml", "w", encoding="utf8") as f:
+            yaml.dump(info_dict, f, allow_unicode=True)
+
+
+def get_next_sequence_number(path, prefix=''):
+    """
+    Determines and returns the next sequence number to use when saving an
+    image in the specified directory.
+
+    If a prefix is given, only consider files whose names start with that
+    prefix, and strip the prefix from filenames before extracting their
+    sequence number.
+
+    The sequence starts at 0.
+    """
+    result = -1
+    for p in Path(path).iterdir():
+        if p.name.endswith(('.png', '.jpg')) and p.name.startswith(prefix):
+            tmp = p.name[len(prefix):]
+            try:
+                result = max(int(tmp.split('-')[0]), result)
+            except ValueError:
+                pass
+    return result + 1
+
+def oxlamon_matrix(prompt, seed, batch_size):
+    pattern = re.compile(r'(,\s){2,}')
+
+    class PromptItem:
+        def __init__(self, text, parts, item):
+            self.text = text
+            self.parts = parts
+            if item:
+                self.parts.append( item )
+
+    def clean(txt):
+        return re.sub(pattern, ', ', txt)
+
+    def repliter( txt ):
+        for data in re.finditer( ".*?\\((.*?)\\).*", txt ):
+            if data:
+                r = data.span(1)
+                for item in data.group(1).split("|"):
+                    yield (clean(txt[:r[0]-1] + item.strip() + txt[r[1]+1:]), item.strip())
+            break
+
+    def iterlist( items ):
+        outitems = []
+        for item in items:
+            for newitem, newpart in repliter(item.text):
+                outitems.append( PromptItem(newitem, item.parts.copy(), newpart) )
+
+        return outitems
+
+    def getmatrix( prompt ):
+        dataitems = [ PromptItem( prompt[1:].strip(), [], None ) ]
+        while True:
+            newdataitems = iterlist( dataitems )
+            if len( newdataitems ) == 0:
+                return dataitems
+            dataitems = newdataitems
+
+    def classToArrays( items ):
+        texts = []
+        parts = []
+
+        for item in items:
+            texts.append( item.text )
+            parts.append( "\n".join(item.parts) )        
+        return texts, parts
+
+    all_prompts, prompt_matrix_parts = classToArrays(getmatrix( prompt ))
+    n_iter = math.ceil(len(all_prompts) / batch_size)
+    all_seeds = len(all_prompts) * [seed]
+    return all_seeds, n_iter, prompt_matrix_parts, all_prompts
 
 
 def process_images(
@@ -463,26 +665,28 @@ def process_images(
 
     sample_path = os.path.join(outpath, "samples")
     os.makedirs(sample_path, exist_ok=True)
-    grid_count = len([_ for x in os.listdir() if x.endswith(('.png', '.jpg'))]) - 1 # start at 0
 
     comments = []
 
     prompt_matrix_parts = []
     if prompt_matrix:
-        all_prompts = []
-        prompt_matrix_parts = prompt.split("|")
-        combination_count = 2 ** (len(prompt_matrix_parts) - 1)
-        for combination_num in range(combination_count):
-            current = prompt_matrix_parts[0]
+        if prompt.startswith("@"):
+            all_seeds, n_iter, prompt_matrix_parts, all_prompts = oxlamon_matrix(prompt, seed, batch_size)
+        else:
+            all_prompts = []
+            prompt_matrix_parts = prompt.split("|")
+            combination_count = 2 ** (len(prompt_matrix_parts) - 1)
+            for combination_num in range(combination_count):
+                current = prompt_matrix_parts[0]
 
-            for n, text in enumerate(prompt_matrix_parts[1:]):
-                if combination_num & (2 ** n) > 0:
-                    current += ("" if text.strip().startswith(",") else ", ") + text
+                for n, text in enumerate(prompt_matrix_parts[1:]):
+                    if combination_num & (2 ** n) > 0:
+                        current += ("" if text.strip().startswith(",") else ", ") + text
 
-            all_prompts.append(current)
+                all_prompts.append(current)
 
-        n_iter = math.ceil(len(all_prompts) / batch_size)
-        all_seeds = len(all_prompts) * [seed]
+            n_iter = math.ceil(len(all_prompts) / batch_size)
+            all_seeds = len(all_prompts) * [seed]
 
         print(f"Prompt matrix will create {len(all_prompts)} images using a total of {n_iter} batches.")
     else:
@@ -501,15 +705,18 @@ def process_images(
     precision_scope = autocast if opt.precision == "autocast" else nullcontext
     output_images = []
     stats = []
-    with torch.no_grad(), precision_scope("cuda"), model.ema_scope():
+    with torch.no_grad(), precision_scope("cuda"), (model.ema_scope() if not opt.optimized else nullcontext()):
         init_data = func_init()
         tic = time.time()
 
         for n in range(n_iter):
+            print(f"Iteration: {n+1}/{n_iter}")
             prompts = all_prompts[n * batch_size:(n + 1) * batch_size]
             seeds = all_seeds[n * batch_size:(n + 1) * batch_size]
 
-            uc = model.get_learned_conditioning(len(prompts) * [""])
+            if opt.optimized:
+                modelCS.to(device)
+            uc = (model if not opt.optimized else modelCS).get_learned_conditioning(len(prompts) * [""])
             if isinstance(prompts, tuple):
                 prompts = list(prompts)
 
@@ -528,35 +735,75 @@ def process_images(
                         weight = weight / totalPromptWeight
                     #print(f"{subprompts[i]} {weight*100.0}%")
                     # note if alpha negative, it functions same as torch.sub
-                    c = torch.add(c,model.get_learned_conditioning(subprompts[i]), alpha=weight)
+                    c = torch.add(c, (model if not opt.optimized else modelCS).get_learned_conditioning(subprompts[i]), alpha=weight)
             else: # just behave like usual
-                c = model.get_learned_conditioning(prompts)
+                c = (model if not opt.optimized else modelCS).get_learned_conditioning(prompts)
 
             shape = [opt_C, height // opt_f, width // opt_f]
+
+            if opt.optimized:
+                mem = torch.cuda.memory_allocated()/1e6
+                modelCS.to("cpu")
+                while(torch.cuda.memory_allocated()/1e6 >= mem):
+                    time.sleep(1)
 
             # we manually generate all input noises because each one should have a specific seed
             x = create_random_tensors([opt_C, height // opt_f, width // opt_f], seeds=seeds)
             samples_ddim = func_sample(init_data=init_data, x=x, conditioning=c, unconditional_conditioning=uc, sampler_name=sampler_name)
 
+            if opt.optimized:
+                modelFS.to(device)
 
-            x_samples_ddim = model.decode_first_stage(samples_ddim)
+            
+
+            x_samples_ddim = (model if not opt.optimized else modelFS).decode_first_stage(samples_ddim)
             x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
             for i, x_sample in enumerate(x_samples_ddim):
+                sanitized_prompt = prompts[i].replace(' ', '_').translate({ord(x): '' for x in invalid_filename_chars})
+                if sort_samples:
+                    sanitized_prompt = sanitized_prompt[:128] #200 is too long
+                    sample_path_i = os.path.join(sample_path, sanitized_prompt)
+                    os.makedirs(sample_path_i, exist_ok=True)
+                    base_count = len([x for x in os.listdir(sample_path_i) if x.endswith(('.png', '.jpg'))]) - 1 # start at 0
+                    filename = f"{base_count:05}-{seeds[i]}"
+                else:
+                    sample_path_i = sample_path
+                    base_count = len([x for x in os.listdir(sample_path_i) if x.endswith(('.png', '.jpg'))]) - 1 # start at 0
+                    sanitized_prompt = sanitized_prompt
+                    filename = f"{base_count:05}-{seeds[i]}_{sanitized_prompt}"[:128] #same as before
+
                 x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                 x_sample = x_sample.astype(np.uint8)
 
                 if use_GFPGAN and GFPGAN is not None:
                     torch_gc()
+                    original_sample = x_sample
+                    original_filename = filename
                     cropped_faces, restored_faces, restored_img = GFPGAN.enhance(x_sample[:,:,::-1], has_aligned=False, only_center_face=False, paste_back=True)
                     x_sample = restored_img[:,:,::-1]
+                    image = Image.fromarray(x_sample)
+                    filename = filename + '-gfpgan'
+                    save_sample(image, sample_path_i, filename, jpg_sample, prompts, seeds, width, height, steps, cfg_scale, 
+normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img, uses_loopback, uses_random_seed_loopback, skip_save,
+skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode)
+                    filename = original_filename
+                    x_sample = original_sample
 
                 if use_RealESRGAN and RealESRGAN is not None:
                     torch_gc()
+                    original_sample = x_sample
+                    original_filename = filename
                     if RealESRGAN.model.name != realesrgan_model_name:
                         try_loading_RealESRGAN(realesrgan_model_name)
-
                     output, img_mode = RealESRGAN.enhance(x_sample[:,:,::-1])
                     x_sample = output[:,:,::-1]
+                    image = Image.fromarray(x_sample)
+                    filename = filename + '-esrgan'
+                    save_sample(image, sample_path_i, filename, jpg_sample, prompts, seeds, width, height, steps, cfg_scale, 
+normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img, uses_loopback, uses_random_seed_loopback, skip_save,
+skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode)
+                    filename = original_filename
+                    x_sample = original_sample
 
                 image = Image.fromarray(x_sample)
                 if init_mask:
@@ -578,95 +825,41 @@ def process_images(
                         init_mask = init_mask.convert('L')
 
                     image = Image.composite(init_img, image, init_mask)
-
-                sanitized_prompt = prompts[i].replace(' ', '_').translate({ord(x): '' for x in invalid_filename_chars})
-                if sort_samples:
-                    sanitized_prompt = sanitized_prompt[:128] #200 is too long
-                    sample_path_i = os.path.join(sample_path, sanitized_prompt)
-                    os.makedirs(sample_path_i, exist_ok=True)
-                    base_count = len([_ for x in os.listdir() if x.endswith(('.png', '.jpg'))]) - 1 # start at 0
-                    filename = f"{base_count:05}-{seeds[i]}"
-                else:
-                    sample_path_i = sample_path
-                    base_count = len([_ for x in os.listdir() if x.endswith(('.png', '.jpg'))]) - 1 # start at 0
-                    sanitized_prompt = sanitized_prompt
-                    filename = f"{base_count:05}-{seeds[i]}_{sanitized_prompt}"[:128] #same as before
                 if not skip_save:
-                    filename_i = os.path.join(sample_path_i, filename)
-                    if not jpg_sample:
-                        if opt.save_metadata:
-                            metadata = PngInfo()
-                            metadata.add_text("SD:prompt", prompts[i])
-                            metadata.add_text("SD:seed", str(seeds[i]))
-                            metadata.add_text("SD:width", str(width))
-                            metadata.add_text("SD:height", str(height))
-                            metadata.add_text("SD:steps", str(steps))
-                            metadata.add_text("SD:cfg_scale", str(cfg_scale))
-                            metadata.add_text("SD:normalize_prompt_weights", str(normalize_prompt_weights))
-                            metadata.add_text("SD:GFPGAN", str(use_GFPGAN and GFPGAN is not None))
-                            image.save(f"{filename_i}.png", pnginfo=metadata)
-                        else:
-                            image.save(f"{filename_i}.png")
-                    else:
-                        image.save(f"{filename_i}.jpg", 'jpeg', quality=100, optimize=True)
-                    if write_info_files:
-                        # toggles differ for txt2img vs. img2img:
-                        offset = 0 if init_img is None else 2
-                        toggles = []
-                        if prompt_matrix:
-                            toggles.append(0)
-                        if normalize_prompt_weights:
-                            toggles.append(1)
-                        if init_img is not None:
-                            if uses_loopback:
-                                toggles.append(2)
-                            if uses_random_seed_loopback:
-                                toggles.append(3)
-                        if not skip_save:
-                            toggles.append(2 + offset)
-                        if not skip_grid:
-                            toggles.append(3 + offset)
-                        if sort_samples:
-                            toggles.append(4 + offset)
-                        if write_info_files:
-                            toggles.append(5 + offset)
-                        if use_GFPGAN:
-                            toggles.append(6 + offset)
-                        info_dict = dict(
-                            target="txt2img" if init_img is None else "img2img",
-                            prompt=prompts[i], ddim_steps=steps, toggles=toggles, sampler_name=sampler_name,
-                            ddim_eta=ddim_eta, n_iter=n_iter, batch_size=batch_size, cfg_scale=cfg_scale,
-                            seed=seed, width=width, height=height
-                        )
-                        if init_img is not None:
-                            # Not yet any use for these, but they bloat up the files:
-                            #info_dict["init_img"] = init_img
-                            #info_dict["init_mask"] = init_mask
-                            info_dict["denoising_strength"] = denoising_strength
-                            info_dict["resize_mode"] = resize_mode
-                        with open(f"{filename_i}.yaml", "w", encoding="utf8") as f:
-                            yaml.dump(info_dict, f)
+                    save_sample(image, sample_path_i, filename, jpg_sample, prompts, seeds, width, height, steps, cfg_scale, 
+normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img, uses_loopback, uses_random_seed_loopback, skip_save,
+skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode)
 
                 output_images.append(image)
-                base_count += 1
 
         if (prompt_matrix or not skip_grid) and not do_not_save_grid:
-            grid = image_grid(output_images, batch_size, round_down=prompt_matrix)
-
             if prompt_matrix:
+                grid = image_grid(output_images, batch_size, force_n_rows=1 << ((len(prompt_matrix_parts)-1)//2), captions=prompt_matrix_parts)
+            else:
+                grid = image_grid(output_images, batch_size)
+
+            if prompt_matrix and not prompt.startswith("@"):
                 try:
                     grid = draw_prompt_matrix(grid, width, height, prompt_matrix_parts)
-                except Exception:
+                except:
                     import traceback
                     print("Error creating prompt_matrix text:", file=sys.stderr)
                     print(traceback.format_exc(), file=sys.stderr)
 
-                output_images.insert(0, grid)
+            output_images.insert(0, grid)
+            #else:
+            #    grid = image_grid(output_images, batch_size)
 
+            grid_count = get_next_sequence_number(outpath, 'grid-')
+            grid_file = f"grid-{grid_count:05}-{seed}_{prompts[i].replace(' ', '_').translate({ord(x): '' for x in invalid_filename_chars})[:128]}.{grid_ext}"
+            grid.save(os.path.join(outpath, grid_file), grid_format, quality=grid_quality, lossless=grid_lossless, optimize=True)
 
-            grid_file = f"grid-{grid_count:05}-{seed}_{prompts[i].replace(' ', '_').translate({ord(x): '' for x in invalid_filename_chars})[:128]}.jpg"
-            grid.save(os.path.join(outpath, grid_file), 'jpeg', quality=100, optimize=True)
-            grid_count += 1
+        if opt.optimized:
+            mem = torch.cuda.memory_allocated()/1e6
+            modelFS.to("cpu")
+            while(torch.cuda.memory_allocated()/1e6 >= mem):
+                time.sleep(1)
+
         toc = time.time()
 
     mem_max_used, mem_total = mem_mon.read_and_stop()
@@ -704,7 +897,7 @@ def txt2img(prompt: str, ddim_steps: int, sampler_name: str, toggles: List[int],
     write_info_files = 5 in toggles
     jpg_sample = 6 in toggles
     use_GFPGAN = 7 in toggles
-    use_RealESRGAN = 8 in toggles
+    use_RealESRGAN = 7 in toggles if GFPGAN is None else 8 in toggles # possible index shift
 
     if sampler_name == 'PLMS':
         sampler = PLMSSampler(model)
@@ -832,7 +1025,7 @@ def img2img(prompt: str, image_editor_mode: str, init_info, mask_mode: str, mask
     write_info_files = 7 in toggles
     jpg_sample = 8 in toggles
     use_GFPGAN = 9 in toggles
-    use_RealESRGAN = 10 in toggles
+    use_RealESRGAN = 9 in toggles if GFPGAN is None else 10 in toggles # possible index shift
 
     if sampler_name == 'DDIM':
         sampler = DDIMSampler(model)
@@ -875,10 +1068,19 @@ def img2img(prompt: str, image_editor_mode: str, init_info, mask_mode: str, mask
         image = image[None].transpose(0, 3, 1, 2)
         image = torch.from_numpy(image)
 
+        if opt.optimized:
+            modelFS.to(device)
+
         init_image = 2. * image - 1.
         init_image = init_image.to(device)
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
-        init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
+        init_latent = (model if not opt.optimized else modelFS).get_first_stage_encoding((model if not opt.optimized else modelFS).encode_first_stage(init_image))  # move to latent space
+        
+        if opt.optimized:
+            mem = torch.cuda.memory_allocated()/1e6
+            modelFS.to("cpu")
+            while(torch.cuda.memory_allocated()/1e6 >= mem):
+                time.sleep(1)
 
         return init_latent,
 
@@ -958,10 +1160,10 @@ def img2img(prompt: str, image_editor_mode: str, init_info, mask_mode: str, mask
                 history.append(init_img)
 
             if not skip_grid:
-                grid_count = len([_ for x in os.listdir() if x.endswith(('.png', '.jpg'))]) - 1 # start at 0
+                grid_count = get_next_sequence_number(outpath, 'grid-')
                 grid = image_grid(history, batch_size, force_n_rows=1)
-                grid_file = f"grid-{grid_count:05}-{seed}_{prompt.replace(' ', '_').translate({ord(x): '' for x in invalid_filename_chars})[:128]}.jpg"
-                grid.save(os.path.join(outpath, grid_file), 'jpeg', quality=100, optimize=True)
+                grid_file = f"grid-{grid_count:05}-{seed}_{prompt.replace(' ', '_').translate({ord(x): '' for x in invalid_filename_chars})[:128]}.{grid_ext}"
+                grid.save(os.path.join(outpath, grid_file), grid_format, quality=grid_quality, lossless=grid_lossless, optimize=True)
 
 
             output_images = history
@@ -1081,8 +1283,6 @@ def run_RealESRGAN(image, model_name: str):
 
     return res
 
-css = "" if opt.no_progressbar_hiding else css_hide_progressbar
-css = css + '[data-testid="image"] {min-height: 512px !important}'
 
 if opt.defaults is not None and os.path.isfile(opt.defaults):
     try:
@@ -1123,6 +1323,7 @@ txt2img_defaults = {
     'height': 512,
     'width': 512,
     'fp': None,
+    'submit_on_enter': 'Yes'
 }
 
 if 'txt2img' in user_defaults:
@@ -1199,7 +1400,8 @@ def copy_img_to_input(selected=1, imgs = []):
         idx = int(0 if selected - 1 < 0 else selected - 1)
         image_data = re.sub('^data:image/.+;base64,', '', imgs[idx])
         processed_image = Image.open(BytesIO(base64.b64decode(image_data)))
-        return [processed_image, processed_image]
+        update = gr.update(selected='img2img_tab')
+        return [processed_image, processed_image, update]
     except IndexError:
         return [None, None]
 
@@ -1225,45 +1427,97 @@ def show_help():
 def hide_help():
     return [gr.update(visible=True), gr.update(visible=False), gr.update(value="")]
 
+
+css_hide_progressbar = """
+.wrap .m-12 svg { display:none!important; }
+.wrap .m-12::before { content:"Loading..." }
+.progress-bar { display:none!important; }
+.meta-text { display:none!important; }
+"""
+
+styling = """
+[data-testid="image"] {min-height: 512px !important}
+* #body>.col:nth-child(2){width:250%;max-width:89vw}
+#generate{width: 100%; }
+#prompt_row input{
+ font-size:20px
+}
+"""
+
+css = styling if opt.no_progressbar_hiding else styling + css_hide_progressbar
+
 with gr.Blocks(css=css, analytics_enabled=False, title="Stable Diffusion WebUI") as demo:
-    with gr.Tabs():
-        with gr.TabItem("Stable Diffusion Text-to-Image Unified"):
-            with gr.Row().style(equal_height=False):
+    with gr.Tabs(elem_id='tabss') as tabs:
+        with gr.TabItem("Stable Diffusion Text-to-Image Unified", id='txt2img_tab'):
+            with gr.Row(elem_id="prompt_row"):
+                txt2img_prompt = gr.Textbox(label="Prompt", 
+                elem_id='prompt_input',
+                placeholder="A corgi wearing a top hat as an oil painting.", 
+                lines=1,
+                max_lines=1 if txt2img_defaults['submit_on_enter'] == 'Yes' else 25, 
+                value=txt2img_defaults['prompt'], 
+                show_label=False).style()
+                
+            with gr.Row(elem_id='body').style(equal_height=False):
                 with gr.Column():
-                    gr.Markdown("Generate images from text with Stable Diffusion")
-                    txt2img_prompt = gr.Textbox(label="Prompt", placeholder="A corgi wearing a top hat as an oil painting.", lines=1, value=txt2img_defaults['prompt'])
-                    txt2img_steps = gr.Slider(minimum=1, maximum=250, step=1, label="Sampling Steps", value=txt2img_defaults['ddim_steps'])
-                    txt2img_sampling = gr.Radio(label='Sampling method (k_lms is default k-diffusion sampler)', choices=["DDIM", "PLMS", 'k_dpm_2_a', 'k_dpm_2', 'k_euler_a', 'k_euler', 'k_heun', 'k_lms'], value=txt2img_defaults['sampler_name'])
-                    txt2img_toggles = gr.CheckboxGroup(label='', choices=txt2img_toggles, value=txt2img_toggle_defaults, type="index")
-                    txt2img_realesrgan_model_name = gr.Dropdown(label='RealESRGAN model', choices=['RealESRGAN_x4plus', 'RealESRGAN_x4plus_anime_6B'], value='RealESRGAN_x4plus', visible=RealESRGAN is not None) # TODO: Feels like I shouldnt slot it in here.
-                    txt2img_ddim_eta = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label="DDIM ETA", value=txt2img_defaults['ddim_eta'], visible=False)
-                    txt2img_batch_count = gr.Slider(minimum=1, maximum=250, step=1, label='Batch count (how many batches of images to generate)', value=txt2img_defaults['n_iter'])
-                    txt2img_batch_size = gr.Slider(minimum=1, maximum=8, step=1, label='Batch size (how many images are in a batch; memory-hungry)', value=txt2img_defaults['batch_size'])
-                    txt2img_cfg = gr.Slider(minimum=1.0, maximum=30.0, step=0.5, label='Classifier Free Guidance Scale (how strongly the image should follow the prompt)', value=txt2img_defaults['cfg_scale'])
-                    txt2img_seed = gr.Textbox(label="Seed (blank to randomize)", lines=1, value=txt2img_defaults["seed"])
                     txt2img_height = gr.Slider(minimum=64, maximum=2048, step=64, label="Height", value=txt2img_defaults["height"])
                     txt2img_width = gr.Slider(minimum=64, maximum=2048, step=64, label="Width", value=txt2img_defaults["width"])
-                    txt2img_embeddings = gr.File(label = "Embeddings file for textual inversion", visible=hasattr(model, "embedding_manager"))
-                    txt2img_btn = gr.Button("Generate")
+                    txt2img_cfg = gr.Slider(minimum=1.0, maximum=30.0, step=0.5, label='Classifier Free Guidance Scale (how strongly the image should follow the prompt)', value=txt2img_defaults['cfg_scale'])
+                    txt2img_seed = gr.Textbox(label="Seed (blank to randomize)", lines=1, max_lines=1, value=txt2img_defaults["seed"])                    
+                    txt2img_batch_count = gr.Slider(minimum=1, maximum=250, step=1, label='Batch count (how many batches of images to generate)', value=txt2img_defaults['n_iter'])
+                    txt2img_batch_size = gr.Slider(minimum=1, maximum=8, step=1, label='Batch size (how many images are in a batch; memory-hungry)', value=txt2img_defaults['batch_size'])
                 with gr.Column():
-                    output_txt2img_gallery = gr.Gallery(label="Images")
-                    output_txt2img_select_image = gr.Number(label='Select image number from results for copying', value=1, precision=None)
-                    output_txt2img_copy_to_input_btn = gr.Button("Copy selected image to img2img input")
-                    output_txt2img_seed = gr.Number(label='Seed')
-                    output_txt2img_params = gr.Textbox(label="Copy-paste generation parameters")
+                    output_txt2img_gallery = gr.Gallery(label="Images", elem_id="gallery_output").style(grid=[4,4])
+                    with gr.Row():
+                        with gr.Group():
+                            output_txt2img_seed = gr.Number(label='Seed', interactive=False)
+                            output_txt2img_copy_seed = gr.Button("Copy", full_width=True).click(inputs=output_txt2img_seed, outputs=[], _js='(x) => navigator.clipboard.writeText(x)', fn=None, show_progress=False)
+                        with gr.Group():
+                            output_txt2img_select_image = gr.Number(label='Image # and click Copy to copy to img2img', value=1, precision=None)
+                            output_txt2img_copy_to_input_btn = gr.Button("Push to img2img", full_width=True)
+                    with gr.Group():
+                        output_txt2img_params = gr.Textbox(label="Copy-paste generation parameters", interactive=False)
+                        output_txt2img_copy_params = gr.Button("Copy", full_width=True).click(inputs=output_txt2img_params, outputs=[], _js='(x) => navigator.clipboard.writeText(x)', fn=None, show_progress=False)
                     output_txt2img_stats = gr.HTML(label='Stats')
+                with gr.Column():
+                    txt2img_btn = gr.Button("Generate", full_width=True, elem_id="generate", variant="primary")
+                    txt2img_steps = gr.Slider(minimum=1, maximum=250, step=1, label="Sampling Steps", value=txt2img_defaults['ddim_steps'])
+                    txt2img_sampling = gr.Dropdown(label='Sampling method (k_lms is default k-diffusion sampler)', choices=["DDIM", "PLMS", 'k_dpm_2_a', 'k_dpm_2', 'k_euler_a', 'k_euler', 'k_heun', 'k_lms'], value=txt2img_defaults['sampler_name'])
+                    with gr.Tabs():
+                        with gr.TabItem('Simple'):
+                            txt2img_submit_on_enter = gr.Radio(['Yes', 'No'], label="Submit on enter? (no means multiline)", value=txt2img_defaults['submit_on_enter'], interactive=True)
+                            txt2img_submit_on_enter.change(lambda x: gr.update(max_lines=1 if x == 'Single' else 25) , txt2img_submit_on_enter, txt2img_prompt)
+                        with gr.TabItem('Advanced'):
+                            txt2img_toggles = gr.CheckboxGroup(label='', choices=txt2img_toggles, value=txt2img_toggle_defaults, type="index")
+                            txt2img_realesrgan_model_name = gr.Dropdown(label='RealESRGAN model', choices=['RealESRGAN_x4plus', 'RealESRGAN_x4plus_anime_6B'], value='RealESRGAN_x4plus', visible=RealESRGAN is not None) # TODO: Feels like I shouldnt slot it in here.
+                            txt2img_ddim_eta = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label="DDIM ETA", value=txt2img_defaults['ddim_eta'], visible=False)
+                    txt2img_embeddings = gr.File(label = "Embeddings file for textual inversion", visible=hasattr(model, "embedding_manager"))
 
             txt2img_btn.click(
                 txt2img,
                 [txt2img_prompt, txt2img_steps, txt2img_sampling, txt2img_toggles, txt2img_realesrgan_model_name, txt2img_ddim_eta, txt2img_batch_count, txt2img_batch_size, txt2img_cfg, txt2img_seed, txt2img_height, txt2img_width, txt2img_embeddings],
                 [output_txt2img_gallery, output_txt2img_seed, output_txt2img_params, output_txt2img_stats]
             )
+            txt2img_prompt.submit(
+                txt2img,
+                [txt2img_prompt, txt2img_steps, txt2img_sampling, txt2img_toggles, txt2img_realesrgan_model_name, txt2img_ddim_eta, txt2img_batch_count, txt2img_batch_size, txt2img_cfg, txt2img_seed, txt2img_height, txt2img_width, txt2img_embeddings],
+                [output_txt2img_gallery, output_txt2img_seed, output_txt2img_params, output_txt2img_stats]
+            )
 
-        with gr.TabItem("Stable Diffusion Image-to-Image Unified"):
+        with gr.TabItem("Stable Diffusion Image-to-Image Unified", id="img2img_tab"):
+            with gr.Row(elem_id="prompt_row"):
+                img2img_prompt = gr.Textbox(label="Prompt", 
+                elem_id='img2img_prompt_input',
+                placeholder="A fantasy landscape, trending on artstation.", 
+                lines=1,
+                max_lines=1 if txt2img_defaults['submit_on_enter'] == 'Yes' else 25, 
+                value=img2img_defaults['prompt'], 
+                show_label=False).style()
+                img2img_btn_mask = gr.Button("Generate",variant="primary", visible=False, elem_id="img2img_mask_btn").style(full_width=True)
+                img2img_btn_editor = gr.Button("Generate",variant="primary", elem_id="img2img_editot_btn").style(full_width=True)
             with gr.Row().style(equal_height=False):
                 with gr.Column():
-                    gr.Markdown("Generate images from images with Stable Diffusion")
-                    img2img_prompt = gr.Textbox(label="Prompt", placeholder="A fantasy landscape, trending on artstation.", lines=1, value=img2img_defaults['prompt'])
+                    
                     img2img_image_editor_mode = gr.Radio(choices=["Mask", "Crop"], label="Image Editor Mode", value="Crop")
                     img2img_show_help_btn = gr.Button("Show Hints")
                     img2img_hide_help_btn = gr.Button("Hide Hints", visible=False)
@@ -1288,8 +1542,7 @@ with gr.Blocks(css=css, analytics_enabled=False, title="Stable Diffusion WebUI")
                     img2img_width = gr.Slider(minimum=64, maximum=2048, step=64, label="Width", value=img2img_defaults["width"])
                     img2img_resize = gr.Radio(label="Resize mode", choices=["Just resize", "Crop and resize", "Resize and fill"], type="index", value=img2img_resize_modes[img2img_defaults['resize_mode']])
                     img2img_embeddings = gr.File(label = "Embeddings file for textual inversion", visible=hasattr(model, "embedding_manager"))
-                    img2img_btn_mask = gr.Button("Generate", visible=False).style(full_width=True)
-                    img2img_btn_editor = gr.Button("Generate").style(full_width=True)
+                    
                 with gr.Column():
                     output_img2img_gallery = gr.Gallery(label="Images")
                     output_img2img_select_image = gr.Number(label='Select image number from results for copying', value=1, precision=None)
@@ -1332,7 +1585,7 @@ with gr.Blocks(css=css, analytics_enabled=False, title="Stable Diffusion WebUI")
             output_txt2img_copy_to_input_btn.click(
                 copy_img_to_input,
                 [output_txt2img_select_image, output_txt2img_gallery],
-                [img2img_image_editor, img2img_image_mask]
+                [img2img_image_editor, img2img_image_mask, tabs]
             )
 
             img2img_btn_mask.click(
@@ -1386,7 +1639,7 @@ with gr.Blocks(css=css, analytics_enabled=False, title="Stable Diffusion WebUI")
                     with gr.Column():
                         gfpgan_source = gr.Image(label="Source", source="upload", interactive=True, type="pil")
                         gfpgan_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.001, label="Effect strength", value=gfpgan_defaults['strength'])
-                        gfpgan_btn = gr.Button("Generate")
+                        gfpgan_btn = gr.Button("Generate", variant="primary")
                     with gr.Column():
                         gfpgan_output = gr.Image(label="Output")
                 gfpgan_btn.click(
@@ -1410,7 +1663,6 @@ with gr.Blocks(css=css, analytics_enabled=False, title="Stable Diffusion WebUI")
                     [realesrgan_output]
                 )
 
-demo.queue(concurrency_count=1)
 
 class ServerLauncher(threading.Thread):
     def __init__(self, demo):
@@ -1421,12 +1673,21 @@ class ServerLauncher(threading.Thread):
     def run(self):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        self.demo.launch(show_error=True, server_name='0.0.0.0')
+        gradio_params = {
+            'show_error': True, 
+            'server_name': '0.0.0.0', 
+            'share': opt.share
+        }
+        if not opt.share:
+            demo.queue(concurrency_count=1)
+        if opt.share and opt.share_password:
+            gradio_params['auth'] = ('webui', opt.share_password)    
+        self.demo.launch(**gradio_params)
 
     def stop(self):
         self.demo.close() # this tends to hang
 
-if opt.cli is None:
+def launch_server():
     server_thread = ServerLauncher(demo)
     server_thread.start()
 
@@ -1435,19 +1696,30 @@ if opt.cli is None:
             time.sleep(60)
     except (KeyboardInterrupt, OSError) as e:
         crash(e, 'Shutting down...')
-else:
-    with open(opt.cli, "r", encoding="utf8") as f:
+
+def run_headless():
+    with open(opt.cli, 'r', encoding='utf8') as f:
         kwargs = yaml.safe_load(f)
-    target = kwargs.pop("target")
-    if target == "txt2img":
+    target = kwargs.pop('target')
+    if target == 'txt2img':
         target_func = txt2img
-    elif target == "img2img":
+    elif target == 'img2img':
         target_func = img2img
         raise NotImplementedError()
     else:
-        raise ValueError(f"Unknown target: {target}")
-    kwargs["fp"] = None
-    output_images, seed, info, stats = target_func(**kwargs)
-    print(f"Seed: {seed}")
-    print(info)
-    print(stats)
+        raise ValueError(f'Unknown target: {target}')
+    prompts = kwargs.pop("prompt")
+    prompts = prompts if type(prompts) is list else [prompts]
+    for i, prompt_i in enumerate(prompts):
+        print(f"===== Prompt {i+1}/{len(prompts)}: {prompt_i} =====")
+        output_images, seed, info, stats = target_func(prompt=prompt_i, **kwargs)
+        print(f'Seed: {seed}')
+        print(info)
+        print(stats)
+        print()
+
+if __name__ == '__main__':
+    if opt.cli is None:
+        launch_server()
+    else:
+        run_headless()
