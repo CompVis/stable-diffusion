@@ -13,8 +13,6 @@ To achieve this, the stable diffusion model is fragmented into four parts which 
 
 All the modified files are in the [optimizedSD](optimizedSD) folder, so if you have already cloned the original repository you can just download and copy this folder into the original instead of cloning the entire repo. You can also clone this repo and follow the same installation steps as the original (mainly creating the conda environment and placing the weights at the specified location).
 
-The only drawback is higher inference time which is still orders of magnitude faster than inference on CPU.
-
 <h1 align="center">Usage</h1>
 
 ## img2img
@@ -35,47 +33,53 @@ The only drawback is higher inference time which is still orders of magnitude fa
 
 `python optimizedSD/optimized_txt2img.py --prompt "Cyberpunk style image of a Telsa car reflection in rain" --H 512 --W 512 --seed 27 --n_iter 2 --n_samples 10 --ddim_steps 50`
 
+<h1 align="center">Using the Gradio GUI</h1>
 
+- You can also use the built-in gradio interface for `img2img` & `txt2img` instead of the command line interface. Activate the conda environment and install the latest version of gradio using `pip install gradio`,
 
+- Run img2img using `python3 optimizedSD/img2img_gradio.py` and txt2img using `python3 optimizedSD/txt2img_gradio.py`.
+
+- img2img_gradio.py has a feature to crop input images. Look for the pen symbol in the image box after selecting the image.
 
 <h1 align="center">Arguments</h1>
-## `--turbo` 
 
-**Increases inference speed at the cost of extra VRAM usage.**
-
-- If generating small batch of images (~ 1 to 4), use this argument to generate an image or images in under 25 seconds (based on an RTX 2060, excluding the time to load the model) using around 1GB of extra VRAM (3.3 GB -> 4.3 GB usage on average)
-
-## `--seed` 
+## `--seed`
 
 **Seed for image generation**, can be used to reproduce previously generated images. Defaults to a random seed if unspecified.
 
 - The code will give the seed number along with each generated image. To generate the same image again, just specify the seed using `--seed` argument. Images are saved with its seed number as its name by default.
 
-- For example if the seed number for an image is `1234` and it's the 55th image in the folder, the image name will be named `seed_1234_00055.png`. 
+- For example if the seed number for an image is `1234` and it's the 55th image in the folder, the image name will be named `seed_1234_00055.png`.
 
-## `--n_samples` 
+## `--n_samples`
 
 **Batch size/amount of images to generate at once.**
 
-- To get the lowest inference time per image, use the maximum batch size `--n_samples` that can fit on the GPU. Inference time per image will reduce on increasing the batch size, but the required VRAM will also increase.
+- To get the lowest inference time per image, use the maximum batch size `--n_samples` that can fit on the GPU. Inference time per image will reduce on increasing the batch size, but the required VRAM will increase.
 
 - If you get a CUDA out of memory error, try reducing the batch size `--n_samples`. If it doesn't work, the other option is to reduce the image width `--W` or height `--H` or both.
 
 ## `--n_iter`
 
-**Run *x* amount of times**
+**Run _x_ amount of times**
 
--  Functions similarly to `--n_samples`, the only difference is that the model is loaded only once per n_iter iterations, (unlike `n_samples`) meaning reducing it doesn't have an effect on VRAM required or inference time.
+- Equivalent to running the script n_iter number of times. Only difference is that the model is loaded only once per n_iter iterations. Unlike `n_samples`, reducing it doesn't have an effect on VRAM required or inference time.
 
-## `--H` & `--W` 
+## `--H` & `--W`
 
 **Height & width of the generated image.**
 
 - Both height and width should be a multiple of 64.
 
-## `--precision autocast` or `--precision full` 
+## `--turbo`
 
-**Whether or not to use `full` or `mixed` precision** 
+**Increases inference speed at the cost of extra VRAM usage.**
+
+- Using this argument increases the inference speed by using around 1GB of extra GPU VRAM. It is especially effective when generating a small batch of images (~ 1 to 4) images. It takes under 25 seconds for txt2img and 15 seconds for img2img (on an RTX 2060, excluding the time to load the model). Use it on larger batch sizes if GPU VRAM available.
+
+## `--precision autocast` or `--precision full`
+
+**Whether to use `full` or `mixed` precision**
 
 - Mixed Precision is enabled by default. If you don't have a GPU with tensor cores (any GTX 10 series card), you may not be able use mixed precision. Use the `--precision full` argument to disable it.
 
@@ -83,25 +87,16 @@ The only drawback is higher inference time which is still orders of magnitude fa
 
 **Batch size for the unet model**
 
--  Takes up a lot of extra RAM for **very little improvement** in inference time. `unet_bs` > 1 is not recommended!
+- Takes up a lot of extra RAM for **very little improvement** in inference time. `unet_bs` > 1 is not recommended!
 
 - Should generally be a multiple of 2x(n_samples)
-
-<h1 align="center">Using the Gradio GUI</h1>
-
-- You can also use the built-in gradio interface for `img2img` & `txt2img` instead of the command line interface.  Activate the conda environment and install the latest version of gradio using `pip install gradio`,
-
-- Run img2img using `python3 optimizedSD/img2img_gradio.py` and txt2img using `python3 optimizedSD/img2img_gradio.py`.
-
-- img2img_gradio.py has the feature to crop images. Look for the pen symbol in the image box after selecting the image.
 
 <h1 align="center">Weighted Prompts</h1>
 
 - Prompts can also be weighted to put relative emphasis on certain words.
   eg. `--prompt tabby cat:0.25 white duck:0.75 hybrid`.
 
-- The number followed by the colon represents the weight given to the words before the colon.The weights can be both fractions or integers.
-
+- The number followed by the colon represents the weight given to the words before the colon. The weights can be both fractions or integers.
 
 ## Changelog
 
