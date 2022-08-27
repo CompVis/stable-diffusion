@@ -20,11 +20,14 @@ from einops import rearrange, repeat
 from contextlib import nullcontext
 from ldm.util import instantiate_from_config
 from transformers import logging
+
 logging.set_verbosity_error()
 from split_subprompts import split_weighted_subprompts
 import mimetypes
+
 mimetypes.init()
-mimetypes.add_type('application/javascript', '.js')
+mimetypes.add_type("application/javascript", ".js")
+
 
 def chunk(it, size):
     it = iter(it)
@@ -39,22 +42,23 @@ def load_model_from_config(ckpt, verbose=False):
     sd = pl_sd["state_dict"]
     return sd
 
+
 def load_img(image, h0, w0):
-   
+
     image = image.convert("RGB")
     w, h = image.size
-    print(f"loaded input image of size ({w}, {h})")   
-    if(h0 is not None and w0 is not None):
+    print(f"loaded input image of size ({w}, {h})")
+    if h0 is not None and w0 is not None:
         h, w = h0, w0
-    
+
     w, h = map(lambda x: x - x % 64, (w, h))  # resize to integer multiple of 32
 
     print(f"New image size ({w}, {h})")
-    image = image.resize((w, h), resample = Image.LANCZOS)
+    image = image.resize((w, h), resample=Image.LANCZOS)
     image = np.array(image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
     image = torch.from_numpy(image)
-    return 2.*image - 1.
+    return 2.0 * image - 1.0
 
 
 config = "optimizedSD/v1-inference.yaml"
@@ -62,46 +66,64 @@ ckpt = "models/ldm/stable-diffusion-v1/model.ckpt"
 sd = load_model_from_config(f"{ckpt}")
 li, lo = [], []
 for key, v_ in sd.items():
-    sp = key.split('.')
-    if(sp[0]) == 'model':
-        if('input_blocks' in sp):
+    sp = key.split(".")
+    if (sp[0]) == "model":
+        if "input_blocks" in sp:
             li.append(key)
-        elif('middle_block' in sp):
+        elif "middle_block" in sp:
             li.append(key)
-        elif('time_embed' in sp):
+        elif "time_embed" in sp:
             li.append(key)
         else:
             lo.append(key)
 for key in li:
-    sd['model1.' + key[6:]] = sd.pop(key)
+    sd["model1." + key[6:]] = sd.pop(key)
 for key in lo:
-    sd['model2.' + key[6:]] = sd.pop(key)
+    sd["model2." + key[6:]] = sd.pop(key)
 
 config = OmegaConf.load(f"{config}")
 
 model = instantiate_from_config(config.modelUNet)
 _, _ = model.load_state_dict(sd, strict=False)
 model.eval()
-    
+
 modelCS = instantiate_from_config(config.modelCondStage)
 _, _ = modelCS.load_state_dict(sd, strict=False)
 modelCS.eval()
-    
+
 modelFS = instantiate_from_config(config.modelFirstStage)
 _, _ = modelFS.load_state_dict(sd, strict=False)
 modelFS.eval()
 del sd
 
-def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width, scale,ddim_eta, unet_bs,device,seed,outdir, turbo, full_precision):
 
-    seeds = ''
+def generate(
+    image,
+    prompt,
+    strength,
+    ddim_steps,
+    n_iter,
+    batch_size,
+    Height,
+    Width,
+    scale,
+    ddim_eta,
+    unet_bs,
+    device,
+    seed,
+    outdir,
+    turbo,
+    full_precision,
+):
+
+    seeds = ""
     init_image = load_img(image, Height, Width).to(device)
     model.unet_bs = unet_bs
     model.turbo = turbo
     model.cdevice = device
     modelCS.cond_stage_model.device = device
 
-    if device != 'cpu' and full_precision == False:
+    if device != "cpu" and full_precision == False:
         model.half()
         modelCS.half()
         modelFS.half()
@@ -110,11 +132,11 @@ def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width
     tic = time.time()
     os.makedirs(outdir, exist_ok=True)
     outpath = outdir
-    sample_path = os.path.join(outpath, '_'.join(re.split(':| ',prompt)))[:150]
+    sample_path = os.path.join(outpath, "_".join(re.split(":| ", prompt)))[:150]
     os.makedirs(sample_path, exist_ok=True)
     base_count = len(os.listdir(sample_path))
-    
-    if seed == '':
+
+    if seed == "":
         seed = randint(0, 1000000)
     seed = int(seed)
     seed_everything(seed)
@@ -125,21 +147,20 @@ def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width
 
     modelFS.to(device)
 
-    init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
+    init_image = repeat(init_image, "1 ... -> b ...", b=batch_size)
     init_latent = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image))  # move to latent space
 
-    if(device != 'cpu'):
-        mem = torch.cuda.memory_allocated()/1e6
+    if device != "cpu":
+        mem = torch.cuda.memory_allocated() / 1e6
         modelFS.to("cpu")
-        while(torch.cuda.memory_allocated()/1e6 >= mem):
+        while torch.cuda.memory_allocated() / 1e6 >= mem:
             time.sleep(1)
 
-
-    assert 0. <= strength <= 1., 'can only work with strength in [0.0, 1.0]'
-    t_enc = int(strength *ddim_steps)
+    assert 0.0 <= strength <= 1.0, "can only work with strength in [0.0, 1.0]"
+    t_enc = int(strength * ddim_steps)
     print(f"target t_enc is {t_enc} steps")
 
-    if full_precision== False and device != "cpu":
+    if full_precision == False and device != "cpu":
         precision_scope = autocast
     else:
         precision_scope = nullcontext
@@ -157,7 +178,7 @@ def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width
                     if isinstance(prompts, tuple):
                         prompts = list(prompts)
 
-                    subprompts,weights = split_weighted_subprompts(prompts[0])
+                    subprompts, weights = split_weighted_subprompts(prompts[0])
                     if len(subprompts) > 1:
                         c = torch.zeros_like(uc)
                         totalWeight = sum(weights)
@@ -166,67 +187,94 @@ def generate(image, prompt,strength,ddim_steps,n_iter, batch_size, Height, Width
                             weight = weights[i]
                             # if not skip_normalize:
                             weight = weight / totalWeight
-                            c = torch.add(c,modelCS.get_learned_conditioning(subprompts[i]), alpha=weight)
+                            c = torch.add(c, modelCS.get_learned_conditioning(subprompts[i]), alpha=weight)
                     else:
                         c = modelCS.get_learned_conditioning(prompts)
-                    
+
                     c = modelCS.get_learned_conditioning(prompts)
-                    if(device != 'cpu'):
-                        mem = torch.cuda.memory_allocated()/1e6
+                    if device != "cpu":
+                        mem = torch.cuda.memory_allocated() / 1e6
                         modelCS.to("cpu")
-                        while(torch.cuda.memory_allocated()/1e6 >= mem):
+                        while torch.cuda.memory_allocated() / 1e6 >= mem:
                             time.sleep(1)
 
                     # encode (scaled latent)
-                    z_enc = model.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device), seed,ddim_eta,ddim_steps)
+                    z_enc = model.stochastic_encode(
+                        init_latent, torch.tensor([t_enc] * batch_size).to(device), seed, ddim_eta, ddim_steps
+                    )
                     # decode it
-                    samples_ddim = model.decode(z_enc, c, t_enc, unconditional_guidance_scale=scale,
-                                                    unconditional_conditioning=uc,)
+                    samples_ddim = model.decode(
+                        z_enc,
+                        c,
+                        t_enc,
+                        unconditional_guidance_scale=scale,
+                        unconditional_conditioning=uc,
+                    )
 
                     modelFS.to(device)
                     print("saving images")
                     for i in range(batch_size):
-                        
+
                         x_samples_ddim = modelFS.decode_first_stage(samples_ddim[i].unsqueeze(0))
                         x_sample = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
                         all_samples.append(x_sample.to("cpu"))
-                        x_sample = 255. * rearrange(x_sample[0].cpu().numpy(), 'c h w -> h w c')
+                        x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
                         Image.fromarray(x_sample.astype(np.uint8)).save(
-                            os.path.join(sample_path, "seed_" + str(seed) + "_" + f"{base_count:05}.png"))
-                        seeds+= str(seed) + ','
-                        seed+=1
+                            os.path.join(sample_path, "seed_" + str(seed) + "_" + f"{base_count:05}.png")
+                        )
+                        seeds += str(seed) + ","
+                        seed += 1
                         base_count += 1
 
-
-                    if(device != 'cpu'):
-                        mem = torch.cuda.memory_allocated()/1e6
+                    if device != "cpu":
+                        mem = torch.cuda.memory_allocated() / 1e6
                         modelFS.to("cpu")
-                        while(torch.cuda.memory_allocated()/1e6 >= mem):
+                        while torch.cuda.memory_allocated() / 1e6 >= mem:
                             time.sleep(1)
 
                     del samples_ddim
                     del x_sample
                     del x_samples_ddim
-                    print("memory_final = ", torch.cuda.memory_allocated()/1e6)
+                    print("memory_final = ", torch.cuda.memory_allocated() / 1e6)
 
     toc = time.time()
 
-    time_taken = (toc-tic)/60.0
+    time_taken = (toc - tic) / 60.0
     grid = torch.cat(all_samples, 0)
     grid = make_grid(grid, nrow=n_iter)
-    grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-    
-    txt = "Your samples are ready in " + str(round(time_taken, 3)) + " minutes and waiting for you here \n" + sample_path + "\nSeeds used = " + seeds[:-1]
+    grid = 255.0 * rearrange(grid, "c h w -> h w c").cpu().numpy()
+
+    txt = (
+        "Samples finished in "
+        + str(round(time_taken, 3))
+        + " minutes and exported to \n"
+        + sample_path
+        + "\nSeeds used = "
+        + seeds[:-1]
+    )
     return Image.fromarray(grid.astype(np.uint8)), txt
+
 
 demo = gr.Interface(
     fn=generate,
-    inputs=[gr.Image(tool="editor", type="pil"),"text",gr.Slider(0, 1,value=0.75),
-            gr.Slider(1, 1000,value=50),gr.Slider(1, 100, step=1), gr.Slider(1, 100,step=1),
-            gr.Slider(64,4096,value = 512,step=64), gr.Slider(64,4096,value = 512,step=64), 
-            gr.Slider(0,50,value=7.5,step=0.1),gr.Slider(0,1,step=0.01),
-            gr.Slider(1,2,value = 1,step=1),gr.Text(value = "cuda"), "text",
-            gr.Text(value = "outputs/img2img-samples"),"checkbox", "checkbox",],
+    inputs=[
+        gr.Image(tool="editor", type="pil"),
+        "text",
+        gr.Slider(0, 1, value=0.75),
+        gr.Slider(1, 1000, value=50),
+        gr.Slider(1, 100, step=1),
+        gr.Slider(1, 100, step=1),
+        gr.Slider(64, 4096, value=512, step=64),
+        gr.Slider(64, 4096, value=512, step=64),
+        gr.Slider(0, 50, value=7.5, step=0.1),
+        gr.Slider(0, 1, step=0.01),
+        gr.Slider(1, 2, value=1, step=1),
+        gr.Text(value="cuda"),
+        "text",
+        gr.Text(value="outputs/img2img-samples"),
+        "checkbox",
+        "checkbox",
+    ],
     outputs=["image", "text"],
 )
 demo.launch()
