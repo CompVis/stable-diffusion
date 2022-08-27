@@ -1,6 +1,6 @@
 # Apple Silicon Mac Users
 
-Several people have gotten Stable Diffusion to work on Apple Silicon Macs using Anaconda. I've gathered up most of their instructions and put them in this fork (and readme). I haven't tested anything besides Anaconda, and I've read about issues with things like miniforge, so it's best if you have an issue that isn't dealt with in this fork head on over to the [Apple Silicon](https://github.com/CompVis/stable-diffusion/issues/25) issue on GitHub (that page is so long that GitHub hides most of it by default, so you need to find the hidden part and expand it to view the whole thing). This fork would not have been possible without the work done by the people on that issue.
+Several people have gotten Stable Diffusion to work on Apple Silicon Macs using Anaconda. I've gathered up most of their instructions and put them in this fork (and readme). I haven't tested anything besides Anaconda, and I've read about issues with things like miniforge, so if you have an issue that isn't dealt with in this fork then head on over to the [Apple Silicon](https://github.com/CompVis/stable-diffusion/issues/25) issue on GitHub (that page is so long that GitHub hides most of it by default, so you need to find the hidden part and expand it to view the whole thing). This fork would not have been possible without the work done by the people on that issue.
 
 You have to have macOS 12.3 Monterey or later. Anything earlier than that won't work.
 
@@ -26,7 +26,7 @@ After you follow all the instructions and run txt2img.py you might get several e
 
 ### Doesn't work anymore?
 
-We are using PyTorch nightly, which includes support for MPS. I don't know exactly how Anaconda does updates, but on morning everything quit working and I couldn't think of anything I did that would've changed anything. I eventually got it working again. I don't know what changed overnight. PyTorch-nightly changes overnight but I'm pretty sure I didn't manually update it. Either way, things are probably going to be bumpy on Apple Silicon until PyTorch releases a firm version that we can lock to.
+We are using PyTorch nightly, which includes support for MPS. I don't know exactly how Anaconda does updates, but I woke up one morning and Stable Diffusion crashed and I couldn't think of anything I did that would've changed anything the night before, when it worked. A day and a half later I finally got it working again. I don't know what changed overnight. PyTorch-nightly changes overnight but I'm pretty sure I didn't manually update it. Either way, things are probably going to be bumpy on Apple Silicon until PyTorch releases a firm version that we can lock to.
 
 To manually update to the latest version of PyTorch nightly (which could fix issues), run this command.
 
@@ -36,9 +36,11 @@ To manually update to the latest version of PyTorch nightly (which could fix iss
 
 Did you remember to `conda activate ldm`? If your terminal prompt begins with "(ldm)" then you activated it. If it begins with "(base)" or something else you haven't.
 
-If you have activated the ldm virtual environment, the problem could be that I have something installed that you don't and you'll just need to manually install it.
+If you have activated the ldm virtual environment, the problem could be that I have something installed that you don't and you'll just need to manually install it. 
 
 	pip install *name*
+
+You might also need to install Rust (I mention this again below).
 
 ### "The operator [name] is not current implemented for the MPS device." (sic)
 
@@ -61,7 +63,9 @@ I have not seen this error because I had Rust installed on my computer before I 
 
 ### How come `--seed` doesn't work?
 
-"Completely reproducible results are not guaranteed across PyTorch releases, individual commits, or different platforms. Furthermore, results may not be reproducible between CPU and GPU executions, even when using identical seeds." -- [PyTorch docs](https://pytorch.org/docs/stable/notes/randomness.html)
+> Completely reproducible results are not guaranteed across PyTorch releases, individual commits, or different platforms. Furthermore, results may not be reproducible between CPU and GPU executions, even when using identical seeds.
+
+[PyTorch docs](https://pytorch.org/docs/stable/notes/randomness.html)
 
 There is an [open issue](https://github.com/pytorch/pytorch/issues/78035) (as of August 2022) in pytorch regarding gradient inconsistency. I am guessing that's what is causing this.
 
@@ -115,11 +119,13 @@ Update to the latest version of magnusviri/stable-diffusion. We were patching py
 
 ### Still slow?
 
-I changed the defaults of n_samples and n_iter to 1 so that it uses less RAM and makes less images so it will be faster the first time you use it. I don't actually know what n_samples does internally, but I know it consumes a lot more RAM. The n_iter flag just loops around the image creation code, so it shouldn't consume more RAM (it should be if you're going to do multiple images because the libraries and model will already be loaded).
+I changed the defaults of n_samples and n_iter to 1 so that it uses less RAM and makes less images so it will be faster the first time you use it. I don't actually know what n_samples does internally, but I know it consumes a lot more RAM. The n_iter flag just loops around the image creation code, so it shouldn't consume more RAM (it should be faster if you're going to do multiple images because the libraries and model will already be loaded--use a prompt file to get this speed boost).
 
-This is the default in this fork/branch:
+These flags are the default sample and iter settings in this fork/branch:
 
-	python scripts/txt2img.py --prompt "ocean" --plms --n_samples=1 --n_rows=1 --n_iter=1
+	python scripts/txt2img.py --prompt "ocean" --n_samples=1 --n_iter=1
+
+Happy fuzzy internet image copying!
 
 # Stable Diffusion
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
