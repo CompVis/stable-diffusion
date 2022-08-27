@@ -23,7 +23,7 @@ conda activate ldm
 
 # Check if environment.yaml file was updated and update env if so
 ENV_CREATED_FILE="/tmp/.env_created"
-ENV_MODIFED_FILE="/src/.env_updated"
+ENV_MODIFED_FILE="/sd/.env_updated"
 ENV_MODIFIED=$(date -r /sd/environment.yaml "+%s")
 ENV_CREATED_CACHED=0
 ENV_MODIFIED_CACHED=0
