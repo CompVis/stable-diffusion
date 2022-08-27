@@ -1,4 +1,4 @@
-numpy=1.19.2
+numpy==1.19.2
 albumentations==0.4.3
 opencv-python==4.1.2.30
 pudb==2019.2
