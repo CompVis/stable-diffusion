@@ -20,11 +20,11 @@ COPY ./environment.yaml ./setup.py /src/
 WORKDIR /src
 
 # setup env
-RUN conda env create -f /src/environment.yaml && \
+RUN conda env create -f /sd/environment.yaml && \
     echo "source activate ldm" > /root/.bashrc && \
     echo -n $(date "+%s") > /tmp/.env_created
 
 EXPOSE 7860
 
-COPY ./entrypoint.sh /src/
-ENTRYPOINT /src/entrypoint.sh
+COPY ./entrypoint.sh /sd/
+ENTRYPOINT /sd/entrypoint.sh
