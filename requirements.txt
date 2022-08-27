@@ -16,4 +16,4 @@ kornia==0.6
 gradio
 git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
 git+https://github.com/openai/CLIP.git@main#egg=clip
-git+https://github.com/crowsonkb/k-diffusion
+git+https://github.com/hlky/k-diffusion-sd#egg=k_diffusion
