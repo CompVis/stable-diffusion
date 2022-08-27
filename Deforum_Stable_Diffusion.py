@@ -478,7 +478,7 @@ if load_on_run_all:
 def DeforumAnimArgs():
 
     #@markdown ####**Animation:**
-    animation_mode = 'Interpolation' #@param ['None', '2D', 'Video Input', 'Interpolation'] {type:'string'}
+    animation_mode = 'None' #@param ['None', '2D', 'Video Input', 'Interpolation'] {type:'string'}
     max_frames = 1000#@param {type:"number"}
     border = 'wrap' #@param ['wrap', 'replicate'] {type:'string'}
 
