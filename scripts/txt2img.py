@@ -226,6 +226,12 @@ def main():
         choices=["full", "autocast"],
         default="autocast"
     )
+    parser.add_argument(
+        "--fp16",
+        action='store_true',
+        help="sample in fp16 mode to save memory, with a small loss of quality (only works when run on a GPU)",
+        default=False
+    )
     opt = parser.parse_args()
 
     if opt.laion400m:
@@ -238,6 +244,9 @@ def main():
 
     config = OmegaConf.load(f"{opt.config}")
     model = load_model_from_config(config, f"{opt.ckpt}")
+
+    if opt.fp16:
+        model = model.half()
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
