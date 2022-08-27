@@ -7,8 +7,8 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - .:/src
-      - ./outputs:/src/outputs
+      - .:/sd
+      - ./outputs:/sd/outputs
       - conda_env:/opt/conda
       - root_profile:/root
     ports:
