@@ -444,7 +444,7 @@ def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_prec
     return model
 
 load_on_run_all = True #@param {type: 'boolean'}
-half_precision = True #@param {type: 'boolean'}
+half_precision = True # needs to be fixed
 
 if load_on_run_all:
 
