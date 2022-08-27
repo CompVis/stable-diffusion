@@ -1,14 +1,21 @@
 @echo off
-set CONDA_ALL=%ProgramData%\miniconda3\Scripts
-set CONDA_USER=%USERPROFILE%\miniconda3\Scripts
 
-IF EXIST %CONDA_ALL% (
-  SET CONDA_PATH=%CONDA_ALL%
-) else IF EXIST %CONDA_USER% (
-   SET CONDA_PATH=%CONDA_USER% 
-) else (
-  echo "miniconda3 not found. Install from here https://docs.conda.io/en/latest/miniconda.html"
+set paths=%ProgramData%\miniconda3\Scripts
+set paths=%paths%;%USERPROFILE%\miniconda3\Scripts
+set paths=%paths%;%ProgramData%\anaconda3\Scripts
+set paths=%paths%;%USERPROFILE%\anaconda3\Scripts
+
+for %%a in (%paths%) do ( 
+ if EXIST "%%a\activate.bat" (
+    SET CONDA_PATH=%%a
+ )
+)
+
+IF "%CONDA_PATH%"=="" (
+  echo anaconda3/miniconda3 not found. Install from here https://docs.conda.io/en/latest/miniconda.html
   exit /b 1 
+) else (
+  echo anaconda3/miniconda3 detected in %CONDA_PATH%
 )
 
 call "%CONDA_PATH%\activate.bat"
@@ -24,3 +31,4 @@ IF EXIST "models\ldm\stable-diffusion-v1\model.ckpt" (
 ) ELSE (
   ECHO Your model file does not exist! Place it in 'models\ldm\stable-diffusion-v1' with the name 'model.ckpt'.
 )
+
