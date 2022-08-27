@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-c"]
 
 RUN apt update && \
-    apt install -y libglib2.0-0 wget git && \
+    apt install -y libglib2.0-0 wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -22,7 +22,8 @@ WORKDIR /src
 # setup env
 RUN conda env create -f /src/environment.yaml && \
     echo "source activate ldm" > /root/.bashrc && \
-    conda clean --all
+    conda clean --all && \
+    echo -n $(date "+%s") > /tmp/.env_created
 
 EXPOSE 7860
 

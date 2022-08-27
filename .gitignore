@@ -1,5 +1,8 @@
 __pycache__
 *.egg-info
 outputs/
+.env_updated
+condaenv.*.requirements.txt
 models/ldm/stable-diffusion-v1/model.ckpt
-src/gfpgan/experiments/pretrained_models/GFPGANv1.3.pth
+src/gfpgan/experiments/pretrained_models/*.pth
+src/realesrgran/experiments/pretrained_models/*.pth

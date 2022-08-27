@@ -10,6 +10,7 @@ services:
       - .:/src
       - ./outputs:/src/outputs
       - conda_env:/opt/conda
+      - root_profile:/root
     ports:
       - '7860:7860'
     deploy:
@@ -20,3 +21,4 @@ services:
 
 volumes:
   conda_env:
+  root_profile:
