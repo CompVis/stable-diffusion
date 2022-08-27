@@ -15,6 +15,7 @@ from contextlib import contextmanager, nullcontext
 from ldm.util import instantiate_from_config
 from split_subprompts import split_weighted_subprompts
 from transformers import logging
+
 logging.set_verbosity_error()
 
 
@@ -38,27 +39,17 @@ ckpt = "models/ldm/stable-diffusion-v1/model.ckpt"
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
-    "--prompt",
-    type=str,
-    nargs="?",
-    default="a painting of a virus monster playing guitar",
-    help="the prompt to render"
+    "--prompt", type=str, nargs="?", default="a painting of a virus monster playing guitar", help="the prompt to render"
 )
-parser.add_argument(
-    "--outdir",
-    type=str,
-    nargs="?",
-    help="dir to write results to",
-    default="outputs/txt2img-samples"
-)
+parser.add_argument("--outdir", type=str, nargs="?", help="dir to write results to", default="outputs/txt2img-samples")
 parser.add_argument(
     "--skip_grid",
-    action='store_true',
+    action="store_true",
     help="do not save a grid, only individual samples. Helpful when evaluating lots of samples",
 )
 parser.add_argument(
     "--skip_save",
-    action='store_true',
+    action="store_true",
     help="do not save individual samples. For speed measurements.",
 )
 parser.add_argument(
@@ -70,7 +61,7 @@ parser.add_argument(
 
 parser.add_argument(
     "--fixed_code",
-    action='store_true',
+    action="store_true",
     help="if enabled, uses the same starting code across samples ",
 )
 parser.add_argument(
@@ -152,15 +143,11 @@ parser.add_argument(
 )
 parser.add_argument(
     "--turbo",
-    action='store_true',
+    action="store_true",
     help="Reduces inference time on the expense of 1GB VRAM",
 )
 parser.add_argument(
-    "--precision",
-    type=str,
-    help="evaluate at this precision",
-    choices=["full", "autocast"],
-    default="autocast"
+    "--precision", type=str, help="evaluate at this precision", choices=["full", "autocast"], default="autocast"
 )
 opt = parser.parse_args()
 
@@ -168,7 +155,7 @@ tic = time.time()
 os.makedirs(opt.outdir, exist_ok=True)
 outpath = opt.outdir
 
-sample_path = os.path.join(outpath, '_'.join(re.split(':| ',opt.prompt)))[:150]
+sample_path = os.path.join(outpath, "_".join(re.split(":| ", opt.prompt)))[:150]
 os.makedirs(sample_path, exist_ok=True)
 base_count = len(os.listdir(sample_path))
 grid_count = len(os.listdir(outpath)) - 1
@@ -180,20 +167,20 @@ seed_everything(opt.seed)
 sd = load_model_from_config(f"{ckpt}")
 li, lo = [], []
 for key, value in sd.items():
-    sp = key.split('.')
-    if(sp[0]) == 'model':
-        if('input_blocks' in sp):
+    sp = key.split(".")
+    if (sp[0]) == "model":
+        if "input_blocks" in sp:
             li.append(key)
-        elif('middle_block' in sp):
+        elif "middle_block" in sp:
             li.append(key)
-        elif('time_embed' in sp):
+        elif "time_embed" in sp:
             li.append(key)
         else:
             lo.append(key)
 for key in li:
-    sd['model1.' + key[6:]] = sd.pop(key)
+    sd["model1." + key[6:]] = sd.pop(key)
 for key in lo:
-    sd['model2.' + key[6:]] = sd.pop(key)
+    sd["model2." + key[6:]] = sd.pop(key)
 
 config = OmegaConf.load(f"{config}")
 
@@ -203,12 +190,12 @@ model.eval()
 model.unet_bs = opt.unet_bs
 model.cdevice = opt.device
 model.turbo = opt.turbo
-    
+
 modelCS = instantiate_from_config(config.modelCondStage)
 _, _ = modelCS.load_state_dict(sd, strict=False)
 modelCS.eval()
 modelCS.cond_stage_model.device = opt.device
-    
+
 modelFS = instantiate_from_config(config.modelFirstStage)
 _, _ = modelFS.load_state_dict(sd, strict=False)
 modelFS.eval()
@@ -238,27 +225,26 @@ else:
         data = list(chunk(data, batch_size))
 
 
-if opt.precision=="autocast" and opt.device != "cpu":
+if opt.precision == "autocast" and opt.device != "cpu":
     precision_scope = autocast
 else:
     precision_scope = nullcontext
 
-seeds = ''
+seeds = ""
 with torch.no_grad():
 
     all_samples = list()
     for n in trange(opt.n_iter, desc="Sampling"):
         for prompts in tqdm(data, desc="data"):
-             with precision_scope("cuda"):
+            with precision_scope("cuda"):
                 modelCS.to(opt.device)
                 uc = None
                 if opt.scale != 1.0:
                     uc = modelCS.get_learned_conditioning(batch_size * [""])
                 if isinstance(prompts, tuple):
                     prompts = list(prompts)
-                
 
-                subprompts,weights = split_weighted_subprompts(prompts[0])
+                subprompts, weights = split_weighted_subprompts(prompts[0])
                 if len(subprompts) > 1:
                     c = torch.zeros_like(uc)
                     totalWeight = sum(weights)
@@ -267,56 +253,64 @@ with torch.no_grad():
                         weight = weights[i]
                         # if not skip_normalize:
                         weight = weight / totalWeight
-                        c = torch.add(c,modelCS.get_learned_conditioning(subprompts[i]), alpha=weight)
+                        c = torch.add(c, modelCS.get_learned_conditioning(subprompts[i]), alpha=weight)
                 else:
                     c = modelCS.get_learned_conditioning(prompts)
 
-
                 shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
 
-                if(opt.device != 'cpu'):
-                    mem = torch.cuda.memory_allocated()/1e6
+                if opt.device != "cpu":
+                    mem = torch.cuda.memory_allocated() / 1e6
                     modelCS.to("cpu")
-                    while(torch.cuda.memory_allocated()/1e6 >= mem):
+                    while torch.cuda.memory_allocated() / 1e6 >= mem:
                         time.sleep(1)
 
-
-                samples_ddim = model.sample(S=opt.ddim_steps,
-                                conditioning=c,
-                                batch_size=opt.n_samples,
-                                seed = opt.seed,
-                                shape=shape,
-                                verbose=False,
-                                unconditional_guidance_scale=opt.scale,
-                                unconditional_conditioning=uc,
-                                eta=opt.ddim_eta,
-                                x_T=start_code)
+                samples_ddim = model.sample(
+                    S=opt.ddim_steps,
+                    conditioning=c,
+                    batch_size=opt.n_samples,
+                    seed=opt.seed,
+                    shape=shape,
+                    verbose=False,
+                    unconditional_guidance_scale=opt.scale,
+                    unconditional_conditioning=uc,
+                    eta=opt.ddim_eta,
+                    x_T=start_code,
+                )
 
                 modelFS.to(opt.device)
 
                 print(samples_ddim.shape)
                 print("saving images")
                 for i in range(batch_size):
-                    
+
                     x_samples_ddim = modelFS.decode_first_stage(samples_ddim[i].unsqueeze(0))
                     x_sample = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
-                    x_sample = 255. * rearrange(x_sample[0].cpu().numpy(), 'c h w -> h w c')
+                    x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
                     Image.fromarray(x_sample.astype(np.uint8)).save(
-                        os.path.join(sample_path, "seed_" + str(opt.seed) + "_" + f"{base_count:05}.png"))
-                    seeds+= str(opt.seed) + ','
-                    opt.seed+=1
+                        os.path.join(sample_path, "seed_" + str(opt.seed) + "_" + f"{base_count:05}.png")
+                    )
+                    seeds += str(opt.seed) + ","
+                    opt.seed += 1
                     base_count += 1
 
-                if(opt.device != 'cpu'):
-                    mem = torch.cuda.memory_allocated()/1e6
+                if opt.device != "cpu":
+                    mem = torch.cuda.memory_allocated() / 1e6
                     modelFS.to("cpu")
-                    while(torch.cuda.memory_allocated()/1e6 >= mem):
+                    while torch.cuda.memory_allocated() / 1e6 >= mem:
                         time.sleep(1)
                 del samples_ddim
-                print("memory_final = ", torch.cuda.memory_allocated()/1e6)
+                print("memory_final = ", torch.cuda.memory_allocated() / 1e6)
 
 toc = time.time()
 
-time_taken = (toc-tic)/60.0
+time_taken = (toc - tic) / 60.0
 
-print(("Your samples are ready in {0:.2f} minutes and waiting for you here " + sample_path + "\n Seeds used = " + seeds[:-1]).format(time_taken))
+print(
+    (
+        "Samples finished in {0:.2f} minutes and exported to "
+        + sample_path
+        + "\n Seeds used = "
+        + seeds[:-1]
+    ).format(time_taken)
+)
