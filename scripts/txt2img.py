@@ -177,8 +177,7 @@ def main():
     parser.add_argument(
         "--fp16",
         action='store_true',
-        help="before running inference, convert the model to fp16 "
-             "(this saves runtime memory, though at a potential loss of some quality)",
+        help="sample in fp16 mode to save memory, with a small loss of quality (only works when run on a GPU)",
         default=False
     )
     opt = parser.parse_args()

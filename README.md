@@ -98,7 +98,7 @@ and renders images of size 512x512 (which it was trained on) in 50 steps. All su
 
 ```commandline
 usage: txt2img.py [-h] [--prompt [PROMPT]] [--outdir [OUTDIR]] [--skip_grid] [--skip_save] [--ddim_steps DDIM_STEPS] [--plms] [--laion400m] [--fixed_code] [--ddim_eta DDIM_ETA] [--n_iter N_ITER] [--H H] [--W W] [--C C] [--f F] [--n_samples N_SAMPLES] [--n_rows N_ROWS]
-                  [--scale SCALE] [--from-file FROM_FILE] [--config CONFIG] [--ckpt CKPT] [--seed SEED] [--precision {full,autocast}]
+                  [--scale SCALE] [--from-file FROM_FILE] [--config CONFIG] [--ckpt CKPT] [--seed SEED] [--precision {full,autocast}] [--fp16]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -128,6 +128,7 @@ optional arguments:
   --seed SEED           the seed (for reproducible sampling)
   --precision {full,autocast}
                         evaluate at this precision
+  --fp16                sample in fp16 mode to save memory, with a small loss of quality (only works when run on a GPU)
 
 ```
 Note: The inference config for all v1 versions is designed to be used with EMA-only checkpoints. 
