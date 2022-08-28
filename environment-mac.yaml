@@ -1,8 +1,8 @@
 name: ldm
 channels:
+  - pytorch-nightly
   - apple
   - conda-forge
-  - pytorch-nightly
   - defaults
 dependencies:
   - python=3.10.4
