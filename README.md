@@ -23,7 +23,7 @@ All the modified files are in the [optimizedSD](optimizedSD) folder, so if you h
 
 - For example, the following command will generate 20 512x512 images:
 
-`python optimizedSD/optimized_img2img.py --prompt "Austrian alps" --init-img ~/sketch-mountains-input.jpg --strength 0.8 --n_iter 2 --n_samples 5 --H 576 --W 768`
+`python optimizedSD/optimized_img2img.py --prompt "Austrian alps" --init-img ~/sketch-mountains-input.jpg --strength 0.8 --n_iter 2 --n_samples 10 --H 512 --W 512`
 
 ## txt2img
 
