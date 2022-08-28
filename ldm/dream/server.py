@@ -63,13 +63,14 @@ class DreamServer(BaseHTTPRequestHandler):
                 initimg = initimg.split(",")[1] # Ignore mime type
                 f.write(base64.b64decode(initimg))
 
-                # Run img2img
-                outputs = self.model.img2img(prompt,
-                                        init_img = "./img2img-tmp.png",
-                                        iterations = iterations,
-                                        cfg_scale = cfgscale,
-                                        seed = seed,
-                                        steps = steps)
+            # Run img2img
+            outputs = self.model.img2img(prompt,
+                                         init_img = "./img2img-tmp.png",
+                                         iterations = iterations,
+                                         cfg_scale = cfgscale,
+                                         seed = seed,
+                                         gfpgan_strength=gfpgan_strength,
+                                         steps = steps)
             # Remove the temp file
             os.remove("./img2img-tmp.png")
 

@@ -95,9 +95,6 @@ def main():
         log.close()
 
 def main_loop(t2i, outdir, parser, log_path, infile):
-    print(
-        "\n* Initialization done! Awaiting your command (-h for help, 'q' to quit, 'cd' to change output dir, 'pwd' to print output dir)..."
-    )
     """prompt/read/execute loop"""
     done = False
     last_seeds = []

@@ -208,7 +208,7 @@ class T2I:
         # these are specific to img2img
         init_img=None,
         strength=None,
-        gfpgan_strength=None,
+        gfpgan_strength=0,
         save_original=False,
         upscale=None,
         variants=None,
@@ -592,6 +592,7 @@ class T2I:
         return model
 
     def _load_img(self, path):
+        print(f'image path = {path}, cwd = {os.getcwd()}')
         with Image.open(path) as img:
             image = img.convert('RGB')
 
