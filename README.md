@@ -1,9 +1,20 @@
+# [Installation](https://github.com/hlky/stable-diffusion/wiki/Installation)
 
+## [Development, testing, bleeding edge, maybe have bugs](https://github.com/hlky/stable-diffusion-webui)
 
+### Have an **issue**? 
+* If the issue involves the **webUI** and you have the **stable version** from **_this repo_** create the issue on **_this repo_**
+* If the issue involves the **webUI** and you have the **development version** from **_[hlky/stable-diffusion-webui](https://github.com/hlky/stable-diffusion-webui)_** create the issue on **_[hlky/stable-diffusion-webui](https://github.com/hlky/stable-diffusion-webui)_**
+* If the issue involves _a bug_ in **textual-inversion** create the issue on **_[hlky/stable-diffusion-webui](https://github.com/hlky/stable-diffusion-webui)_**
+* If you want to know how to **activate** or **use** textual-inversion see **_[hlky/sd-enable-textual-inversion](https://github.com/hlky/sd-enable-textual-inversion). Activation not working? create the issue on **_[hlky/stable-diffusion-webui](https://github.com/hlky/stable-diffusion-webui)_**
+* If the issue involves anything else create the issue on **_this repo_**
+
+## ** Important **
 :warning: optimized img2img is not working right now, optimized version is txt2img only :warning: 
-
 🔥 NEW! webui.cmd updates with any changes in environment.yaml file so the environment will always be up to date as long as you get the new environment.yaml file 🔥
 :fire: no need to remove environment, delete src folder and create again, MUCH simpler! 🔥
+
+
 
 --------------
 
@@ -15,7 +26,7 @@ Edit `scripts\relauncher.py`
 
 --------------
 
-## [Development, testing, bleeding edge, maybe have bugs](https://github.com/hlky/stable-diffusion-webui)
+
 
 --------------
 
