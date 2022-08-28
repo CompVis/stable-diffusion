@@ -301,8 +301,7 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
                             mask=mask, 
                             init_latent=init_latent,
                             sigmas=sigmas,
-                            sampler=sampler,
-                            masked_noise_modifier=args.masked_noise_modifier)    
+                            sampler=sampler)    
 
     results = []
     precision_scope = autocast if args.precision == "autocast" else nullcontext
@@ -667,7 +666,6 @@ def DeforumArgs():
     init_image = "https://cdn.pixabay.com/photo/2022/07/30/13/10/green-longhorn-beetle-7353749_1280.jpg" #@param {type:"string"}
     use_mask = True #@param {type:"boolean"}
     mask_file = "" #@param {type:"string"}
-    masked_noise_modifier = 1.0 #@param {type:"number"}
 
     #@markdown **Sampling Settings**
     seed = -1 #@param
