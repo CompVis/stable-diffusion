@@ -845,7 +845,7 @@ def render_input_video(args, anim_args):
             f.unlink()
     except:
         pass
-    vf = r'select=not(mod(n\,'+anim_args.extract_nth_frame+'))'
+    vf = r'select=not(mod(n\,'+str(anim_args.extract_nth_frame)+'))'
     subprocess.run([
         'ffmpeg', '-i', f'{anim_args.video_init_path}', 
         '-vf', f'{vf}', '-vsync', 'vfr', '-q:v', '2', 
