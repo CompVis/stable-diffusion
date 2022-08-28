@@ -1,22 +1,9 @@
-# Easy Installer for Windows
-You will need administrator privileges for installing Miniconda and the setup script.
 
-1. Download and extract this repo.
-2. Download the model checkpoint. (e.g. from huggingface)
-3. Place the model into 'models\ldm\stable-diffusion-v1' and rename it to 'model.ckpt'.
-4. Download and install Miniconda 3 #**for all users.**
-```
-5. Run webui.cmd (if your environment is named ldo) or webuildm.cmd (if your environment is named ldm)
-```
-
-After installation has completed, you can open webui.cmd (if your environment is named ldo) or webuildm.cmd (if your environment is named ldm)
 
 :warning: optimized img2img is not working right now, optimized version is txt2img only :warning: 
 
 🔥 NEW! webui.cmd updates with any changes in environment.yaml file so the environment will always be up to date as long as you get the new environment.yaml file 🔥
 :fire: no need to remove environment, delete src folder and create again, MUCH simpler! 🔥
-
-Legacy support: Only if your environment is named ldm "Launch Waifu Diffusion" to run the program anytime.
 
 --------------
 
