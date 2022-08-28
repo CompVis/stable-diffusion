@@ -4,8 +4,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 SHELL ["/bin/bash", "-c"]
 
-RUN apt update && \
-    apt install -y libglib2.0-0 wget && \
+RUN apt-get update && \
+    apt-get install -y libglib2.0-0 wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -15,14 +15,6 @@ RUN wget -O ~/miniconda.sh -q --show-progress --progress=bar:force https://repo.
     /bin/bash ~/miniconda.sh -b -p $CONDA_DIR && \
     rm ~/miniconda.sh
 ENV PATH=$CONDA_DIR/bin:$PATH
-
-COPY ./environment.yaml ./setup.py /src/
-WORKDIR /src
-
-# setup env
-RUN conda env create -f /sd/environment.yaml && \
-    echo "source activate ldm" > /root/.bashrc && \
-    echo -n $(date "+%s") > /tmp/.env_created
 
 EXPOSE 7860
 

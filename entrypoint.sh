@@ -15,26 +15,38 @@ MODEL_FILES=(
     'RealESRGAN_x4plus_anime_6B.pth /sd/src/realesrgan/experiments/pretrained_models https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth f872d837d3c90ed2e05227bed711af5671a6fd1c9f7d7e91c911a61f155e99da'
 )
 
-# Activate conda env for this script
+# Conda environment installs/updates
 # @see https://github.com/ContinuumIO/docker-images/issues/89#issuecomment-467287039
-cd /sd
-. /opt/conda/etc/profile.d/conda.sh
-conda activate ldm
-
-# Check if environment.yaml file was updated and update env if so
-ENV_CREATED_FILE="/tmp/.env_created"
+ENV_NAME="ldm"
+ENV_FILE="/sd/environment.yaml"
+ENV_UPDATED=0
+ENV_MODIFIED=$(date -r $ENV_FILE "+%s")
 ENV_MODIFED_FILE="/sd/.env_updated"
-ENV_MODIFIED=$(date -r /sd/environment.yaml "+%s")
-ENV_CREATED_CACHED=0
-ENV_MODIFIED_CACHED=0
-if [[ -f $ENV_CREATED_FILE ]]; then ENV_CREATED_CACHED=$(<${ENV_CREATED_FILE}); fi
-if [[ -f $ENV_MODIFED_FILE ]]; then ENV_MODIFIED_CACHED=$(<${ENV_MODIFED_FILE}); fi
+if [[ -f $ENV_MODIFED_FILE ]]; then ENV_MODIFIED_CACHED=$(<${ENV_MODIFED_FILE}); else ENV_MODIFIED_CACHED=0; fi
 
-if (( $ENV_MODIFIED > $ENV_CREATED_CACHED && $ENV_MODIFIED > $ENV_MODIFIED_CACHED )); then
-    conda env update --file environment.yaml --prune
+# Create/update conda env if needed
+if ! conda env list | grep ".*${ENV_NAME}.*" >/dev/null 2>&1; then
+    echo "Could not find conda env: ${ENV_NAME} ... creating ..."
+    conda env create -f $ENV_FILE
+    echo "source activate ${ENV_NAME}" > /root/.bashrc
+    ENV_UPDATED=1
+elif (( $ENV_MODIFIED > $ENV_MODIFIED_CACHED )); then
+    echo "Updating conda env: ${ENV_NAME} ..."
+    conda env update --file $ENV_FILE --prune
+    ENV_UPDATED=1
+fi
+
+# Clear artifacts from conda after create/update
+# @see https://docs.conda.io/projects/conda/en/latest/commands/clean.html
+if (( $ENV_UPDATED > 0 )); then
     conda clean --all
     echo -n $ENV_MODIFIED > $ENV_MODIFED_FILE
 fi
+
+# activate conda env
+. /opt/conda/etc/profile.d/conda.sh
+conda activate $ENV_NAME
+conda info | grep active
 
 # Function to checks for valid hash for model files and download/replaces if invalid or does not exist
 validateDownloadModel() {
@@ -63,4 +75,5 @@ for models in "${MODEL_FILES[@]}"; do
 done
 
 # Launch web gui
+cd /sd
 python -u scripts/relauncher.py
