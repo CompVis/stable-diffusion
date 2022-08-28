@@ -83,6 +83,12 @@ All the modified files are in the [optimizedSD](optimizedSD) folder, so if you h
 
 - Mixed Precision is enabled by default. If you don't have a GPU with tensor cores (any GTX 10 series card), you may not be able use mixed precision. Use the `--precision full` argument to disable it.
 
+## `--format png` or `--format jpg`
+
+**Output image format**
+
+- The default output format is `png`. While `png` is lossless, it takes up a lot of space (unless large portions of the image happen to be a single colour). Use lossy `jpg` to get smaller image file sizes.
+
 ## `--unet_bs`
 
 **Batch size for the unet model**
