@@ -88,10 +88,11 @@ class PngWriter:
         height = image_list[0].height
 
         grid_img = Image.new('RGB', (width * cols, height * rows))
+        i = 0
         for r in range(0, rows):
             for c in range(0, cols):
-                i = r * rows + c
                 grid_img.paste(image_list[i], (c * width, r * height))
+                i = i + 1
 
         return grid_img
 
