@@ -37,7 +37,7 @@ class PngWriter:
         if not upscaled:
             self.files_written.append([self.filepath, seed])
 
-    def unique_filename(self, seed, upscaled, previouspath=None):
+    def unique_filename(self, seed, upscaled=False, previouspath=None):
         revision = 1
 
         if previouspath is None:
@@ -60,7 +60,7 @@ class PngWriter:
             basename = os.path.basename(previouspath)
             x = re.match('^(\d+)\..*\.png', basename)
             if not x:
-                return self.unique_filename(seed, previouspath)
+                return self.unique_filename(seed, upscaled, previouspath)
 
             basecount = int(x.groups()[0])
             series = 0
