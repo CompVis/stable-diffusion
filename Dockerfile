@@ -1,6 +1,7 @@
 FROM nvidia/cuda:11.3.1-runtime-ubuntu20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
+WORKDIR /sd
 
 SHELL ["/bin/bash", "-c"]
 
