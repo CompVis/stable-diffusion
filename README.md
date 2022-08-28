@@ -23,8 +23,7 @@
 
 ### Questions about **_[Upscalers](https://github.com/hlky/stable-diffusion-webui/wiki/Upscalers)_**?
 ### Questions about **_[Optimized mode](https://github.com/hlky/stable-diffusion-webui/wiki/Optimized-mode)_**?
-
-[Other cli arguments?](https://github.com/hlky/stable-diffusion#--help)
+### Questions about **_[Command line options](https://github.com/hlky/stable-diffusion-webui/wiki/Command-line-options)_**?
 
 --------------
 
