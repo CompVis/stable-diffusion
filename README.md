@@ -59,7 +59,7 @@ Features:
 # Stable Diffusion web UI
 A browser interface based on Gradio library for Stable Diffusion.
 
-Original script with Gradio UI was written by a kind anonymopus user. This is a modification.
+Original script with Gradio UI was written by a kind anonymous user. This is a modification.
 
 ![](https://github.com/hlky/stable-diffusion-webui/blob/master/images/txt2img.jpg)
 ![](https://github.com/hlky/stable-diffusion-webui/blob/master/images/img2img.jpg)
