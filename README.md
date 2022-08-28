@@ -82,7 +82,8 @@ variants.
 
 ## GFPGAN and Real-ESRGAN Support
 
-The script also provides the ability to do face restoration and upscaling with the help of GFPGAN and Real-ESRGAN respectively.
+The script also provides the ability to do face restoration and
+upscaling with the help of GFPGAN and Real-ESRGAN respectively.
 
 To use the ability, clone the **[GFPGAN
 repository](https://github.com/TencentARC/GFPGAN)** and follow their
@@ -90,7 +91,9 @@ installation instructions. By default, we expect GFPGAN to be
 installed in a 'GFPGAN' sibling directory. Be sure that the `"ldm"`
 conda environment is active as you install GFPGAN.
 
-You can use the `--gfpgan_dir` argument with `dream.py` to set a custom path to your GFPGAN directory. _There are other GFPGAN related boot arguments if you wish to customize further._
+You can use the `--gfpgan_dir` argument with `dream.py` to set a
+custom path to your GFPGAN directory. _There are other GFPGAN related
+boot arguments if you wish to customize further._
 
 You can install **Real-ESRGAN** by typing the following command.
 
@@ -100,8 +103,12 @@ pip install realesrgan
 
 **Preloading Models**
 
-Users whose GPU machines are isolated from the Internet (e.g. on a University cluster) should be aware that the first time you run
-dream.py with GFPGAN and Real-ESRGAN turned on, it will try to download model files from the Internet. To rectify this, you may run `python3 scripts/preload_models.py` after you have installed GFPGAN and all its dependencies.
+Users whose GPU machines are isolated from the Internet (e.g. on a
+University cluster) should be aware that the first time you run
+dream.py with GFPGAN and Real-ESRGAN turned on, it will try to
+download model files from the Internet. To rectify this, you may run
+`python3 scripts/preload_models.py` after you have installed GFPGAN
+and all its dependencies.
 
 **Usage**
 
@@ -111,35 +118,43 @@ You will now have access to two new prompt arguments.
 
 `-U : <upscaling_factor> <upscaling_strength>`
 
-The upscaling prompt argument takes two values. The first value is a scaling factor and should be set to either `2` or `4` only. This will either scale the image 2x or 4x respectively using different models.
+The upscaling prompt argument takes two values. The first value is a
+scaling factor and should be set to either `2` or `4` only. This will
+either scale the image 2x or 4x respectively using different models.
 
-You can set the scaling stength between `0` and `1.0` to control intensity of the of the scaling. This is handy because AI upscalers generally tend to smooth out texture details. If you wish to retain some of those for natural looking results, we recommend using values between `0.5 to 0.8`.
+You can set the scaling stength between `0` and `1.0` to control
+intensity of the of the scaling. This is handy because AI upscalers
+generally tend to smooth out texture details. If you wish to retain
+some of those for natural looking results, we recommend using values
+between `0.5 to 0.8`.
+
+If you do not explicitly specify an upscaling_strength, it will
+default to 0.75.
 
 **Face Restoration**
 
 `-G : <gfpgan_strength>`
 
-This prompt argument controls the strength of the face restoration that is being applied. Similar to upscaling, values between `0.5 to 0.8` are recommended.
+This prompt argument controls the strength of the face restoration
+that is being applied. Similar to upscaling, values between `0.5 to
+0.8` are recommended.
 
-You can use either one or both without any conflicts. In cases where you use both, the image will be first upscaled and then the face restoration process will be executed to ensure you get the highest quality facial features.
+You can use either one or both without any conflicts. In cases where
+you use both, the image will be first upscaled and then the face
+restoration process will be executed to ensure you get the highest
+quality facial features.
 
-`-save_orig`
+`--save_orig`
 
-When you use either `-U` or `-G`, the final result you get is upscaled or face modified. If you want to save the original Stable Diffusion generation, you can use the `-save_orig` prompt argument to save the original unaffected version too.
+When you use either `-U` or `-G`, the final result you get is upscaled
+or face modified. If you want to save the original Stable Diffusion
+generation, you can use the `-save_orig` prompt argument to save the
+original unaffected version too.
 
 **Example Usage**
 
 ```
 dream > superman dancing with a panda bear -U 2 0.6 -G 0.4
-```
-
-```
-(ldm) ~/stable-diffusion$ python3 ./scripts/dream.py --gfpgan
-* Initializing, be patient...
-(...more initialization messages...)
-* --gfpgan was specified, loading gfpgan...
-(...even more initialization messages...)
-* Initialization done! Awaiting your command...
 ```
 
 This also works with img2img:
@@ -150,11 +165,21 @@ dream> a man wearing a pineapple hat -I path/to/your/file.png -U 2 0.5 -G 0.6
 
 **Note**
 
-GFPGAN and Real-ESRGAN are both memory intensive. In order to avoid crashes and memory overloads during the Stable Diffusion process, these effects are applied after Stable Diffusion has completed its work.
+GFPGAN and Real-ESRGAN are both memory intensive. In order to avoid
+crashes and memory overloads during the Stable Diffusion process,
+these effects are applied after Stable Diffusion has completed its
+work.
 
-In single image generations, you will see the output right away but when you are using multiple iterations, the images will first be generated and then upscaled and face restored after that process is complete. While the image generation is taking place, you will still be able to preview the base images.
+In single image generations, you will see the output right away but
+when you are using multiple iterations, the images will first be
+generated and then upscaled and face restored after that process is
+complete. While the image generation is taking place, you will still
+be able to preview the base images.
 
-If you wish to stop during the image generation but want to upscale or face restore a particular generated image, pass it again with the same prompt and generated seed along with the `-U` and `-G` prompt arguments to perform those actions.
+If you wish to stop during the image generation but want to upscale or
+face restore a particular generated image, pass it again with the same
+prompt and generated seed along with the `-U` and `-G` prompt
+arguments to perform those actions.
 
 ## Barebones Web Server
 
@@ -315,6 +340,10 @@ repository and associated paper for details and limitations.
     (kudos to [Yunsaki](https://github.com/yunsaki)
   - The web server is now integrated with the dream.py script. Invoke by adding --web to
      the dream.py command arguments.
+  - Face restoration and upscaling via GFPGAN and Real-ESGAN are now automatically
+    enabled if the GFPGAN directory is located as a sibling to Stable Diffusion.
+    VRAM requirements are modestly reduced. Thanks to both [Blessedcoolant](https://github.com/blessedcoolant) and
+    [Oceanswave](https://github.com/oceanswave) for their work on this.
 
 - v1.11 (26 August 2022)
   - NEW FEATURE: Support upscaling and face enhancement using the GFPGAN module. (kudos to [Oceanswave](https://github.com/Oceanswave)

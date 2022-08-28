@@ -320,7 +320,8 @@ class T2I:
                                 from ldm.gfpgan.gfpgan_tools import (
                                     real_esrgan_upscale,
                                 )
-
+                                if len(upscale) < 2:
+                                    upscale.append(0.75)
                                 image = real_esrgan_upscale(
                                     image,
                                     upscale[1],

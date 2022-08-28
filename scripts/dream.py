@@ -324,25 +324,25 @@ def create_argv_parser():
         '--gfpgan_bg_upsampler',
         type=str,
         default='realesrgan',
-        help='Background upsampler. Default: None. Options: realesrgan, none. Only used if --gfpgan is specified',
+        help='Background upsampler. Default: None. Options: realesrgan, none.',
     )
     parser.add_argument(
         '--gfpgan_bg_tile',
         type=int,
         default=400,
-        help='Tile size for background sampler, 0 for no tile during testing. Default: 400. Only used if --gfpgan is specified',
+        help='Tile size for background sampler, 0 for no tile during testing. Default: 400.',
     )
     parser.add_argument(
         '--gfpgan_model_path',
         type=str,
         default='experiments/pretrained_models/GFPGANv1.3.pth',
-        help='indicates the path to the GFPGAN model, relative to --gfpgan_dir. Only used if --gfpgan is specified',
+        help='indicates the path to the GFPGAN model, relative to --gfpgan_dir.',
     )
     parser.add_argument(
         '--gfpgan_dir',
         type=str,
         default='../GFPGAN',
-        help='indicates the directory containing the GFPGAN code. Only used if --gfpgan is specified',
+        help='indicates the directory containing the GFPGAN code.',
     )
     parser.add_argument(
         '--web',
@@ -431,10 +431,10 @@ def create_cmd_parser():
     parser.add_argument(
         '-U',
         '--upscale',
-        nargs=2,
+        nargs='+',
         default=None,
         type=float,
-        help='Scale factor for Real-ESRGAN. Either use 2 or 4.',
+        help='Scale factor (2, 4) for upscaling followed by upscaling strength (0-1.0). If strength not specified, defaults to 0.75'
     )
     parser.add_argument(
         '-save_orig',
