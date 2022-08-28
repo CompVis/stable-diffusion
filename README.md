@@ -9,6 +9,9 @@
 * If you want to know how to **activate** or **use** textual-inversion see **_[hlky/sd-enable-textual-inversion](https://github.com/hlky/sd-enable-textual-inversion)_**. Activation not working? create the issue on **_[hlky/stable-diffusion-webui](https://github.com/hlky/stable-diffusion-webui)_**
 * If the issue involves anything else create the issue on **_this repo_**
 
+## More documentation about features, troubleshooting, common issues very soon
+### Want to help with documentation? Documented something? Use [Discussions](https://github.com/hlky/stable-diffusion/discussions)
+
 ## **Important**
 
 :warning: optimized img2img is not working right now, optimized version is txt2img only :warning: 
