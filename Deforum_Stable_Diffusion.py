@@ -58,7 +58,11 @@ print(f"output_path: {output_path}")
 # %%
 # !! {"metadata":{
 # !!   "id": "VRNl2mfepEIe",
-# !!   "cellView": "form"
+# !!   "cellView": "form",
+# !!   "colab": {
+# !!     "base_uri": "https://localhost:8080/"
+# !!   },
+# !!   "outputId": "3f3e6cfb-b9bb-44b5-8f7a-b04721f603dd"
 # !! }}
 #@markdown **Setup Environment**
 
@@ -466,7 +470,7 @@ if load_on_run_all:
 def DeforumAnimArgs():
 
     #@markdown ####**Animation:**
-    animation_mode = 'None' #@param ['None', '2D', 'Video Input', 'Interpolation'] {type:'string'}
+    animation_mode = 'Interpolation' #@param ['None', '2D', 'Video Input', 'Interpolation'] {type:'string'}
     max_frames = 1000#@param {type:"number"}
     border = 'wrap' #@param ['wrap', 'replicate'] {type:'string'}
 
@@ -488,6 +492,7 @@ def DeforumAnimArgs():
     extract_nth_frame = 1#@param {type:"number"}
 
     #@markdown ####**Interpolation:**
+    interpolate_key_frames = False #@param {type:"boolean"}
     interpolate_x_frames = 4 #@param {type:"number"}
 
     return locals()
@@ -561,16 +566,16 @@ if anim_args.key_frames:
 # !!   "id": "2ujwkGZTcGev"
 # !! }}
 prompts = [
-    "a beautiful forest by Asher Brown Durand, trending on Artstation", #the first prompt I want
+    "an abtract cave painting of artificial intelligence and the universe's destiny in 2096, gorgeous, extremely detailed", #the first prompt I want
     "a beautiful portrait of a woman by Artgerm, trending on Artstation", #the second prompt I want
     #"the third prompt I don't want it I commented it with an",
 ]
 
 animation_prompts = {
     0: "a beautiful apple, trending on Artstation",
-    10: "a beautiful banana, trending on Artstation",
-    100: "a beautiful coconut, trending on Artstation",
-    101: "a beautiful durian, trending on Artstation",
+    100: "a beautiful banana, trending on Artstation",
+    106: "a beautiful coconut, trending on Artstation",
+    118: "a beautiful durian, trending on Artstation",
 }
 
 # %%
@@ -862,6 +867,12 @@ def render_interpolation(args, anim_args):
         s = {**dict(args.__dict__), **dict(anim_args.__dict__)}
         json.dump(s, f, ensure_ascii=False, indent=4)
     
+    # # expand prompts out to per-frame
+    # prompt_series = pd.Series([np.nan for a in range(animation_prompts.items()[0])])
+    # for i, prompt in animation_prompts.items():
+    #     prompt_series[i] = prompt
+    # prompt_series = prompt_series.ffill().bfill()
+
     # Interpolation Settings
     args.n_samples = 1
     args.seed_behavior = 'fixed' # force fix seed at the moment bc only 1 seed is available
@@ -887,25 +898,52 @@ def render_interpolation(args, anim_args):
 
     frame_idx = 0
 
-    for i in range(len(prompts_c_s)-1):
-      for j in range(anim_args.interpolate_x_frames+1):
-        # interpolate the text embedding
-        prompt1_c = prompts_c_s[i]
-        prompt2_c = prompts_c_s[i+1]  
-        args.init_c = prompt1_c.add(prompt2_c.sub(prompt1_c).mul(j * 1/(anim_args.interpolate_x_frames+1)))
+    if anim_args.interpolate_key_frames:
+      for i in range(len(prompts_c_s)-1):
+        dist_frames = list(animation_prompts.items())[i+1][0] - list(animation_prompts.items())[i][0]
+        if dist_frames <= 0:
+          print("key frames duplicated or reversed. interpolation skipped.")
+          return
+        else:
+          for j in range(dist_frames):
+            # interpolate the text embedding
+            prompt1_c = prompts_c_s[i]
+            prompt2_c = prompts_c_s[i+1]  
+            args.init_c = prompt1_c.add(prompt2_c.sub(prompt1_c).mul(j * 1/dist_frames))
 
-        # sample the diffusion model
-        results = generate(args)
-        image = results[0]
+            # sample the diffusion model
+            results = generate(args)
+            image = results[0]
 
-        filename = f"{args.timestring}_{frame_idx:05}.png"
-        image.save(os.path.join(args.outdir, filename))
-        frame_idx += 1
+            filename = f"{args.timestring}_{frame_idx:05}.png"
+            image.save(os.path.join(args.outdir, filename))
+            frame_idx += 1
 
-        display.clear_output(wait=True)
-        display.display(image)
+            display.clear_output(wait=True)
+            display.display(image)
 
-        args.seed = next_seed(args)
+            args.seed = next_seed(args)
+
+    else:
+      for i in range(len(prompts_c_s)-1):
+        for j in range(anim_args.interpolate_x_frames+1):
+          # interpolate the text embedding
+          prompt1_c = prompts_c_s[i]
+          prompt2_c = prompts_c_s[i+1]  
+          args.init_c = prompt1_c.add(prompt2_c.sub(prompt1_c).mul(j * 1/(anim_args.interpolate_x_frames+1)))
+
+          # sample the diffusion model
+          results = generate(args)
+          image = results[0]
+
+          filename = f"{args.timestring}_{frame_idx:05}.png"
+          image.save(os.path.join(args.outdir, filename))
+          frame_idx += 1
+
+          display.clear_output(wait=True)
+          display.display(image)
+
+          args.seed = next_seed(args)
 
     # generate the last prompt
     args.init_c = prompts_c_s[-1]
@@ -989,9 +1027,8 @@ else:
 # !!   "accelerator": "GPU",
 # !!   "colab": {
 # !!     "collapsed_sections": [],
-# !!     "name": "Deforum_Stable_Diffusion_+_Interpolation.ipynb",
-# !!     "provenance": [],
-# !!     "private_outputs": true
+# !!     "name": "Deforum_Stable_Diffusion_dev.ipynb",
+# !!     "provenance": []
 # !!   },
 # !!   "gpuClass": "standard",
 # !!   "kernelspec": {
