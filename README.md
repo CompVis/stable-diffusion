@@ -14,8 +14,6 @@
 
 ## **Important**
 
-:warning: optimized img2img is not working right now, optimized version is txt2img only :warning: 
-
 🔥 NEW! webui.cmd updates with any changes in environment.yaml file so the environment will always be up to date as long as you get the new environment.yaml file 🔥
 
 :fire: no need to remove environment, delete src folder and create again, MUCH simpler! 🔥
