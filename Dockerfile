@@ -17,6 +17,9 @@ RUN wget -O ~/miniconda.sh -q --show-progress --progress=bar:force https://repo.
     rm ~/miniconda.sh
 ENV PATH=$CONDA_DIR/bin:$PATH
 
+# Install font for prompt matrix
+COPY /data/DejaVuSans.ttf /usr/share/fonts/truetype/
+
 EXPOSE 7860
 
 COPY ./entrypoint.sh /sd/
