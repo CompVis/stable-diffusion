@@ -75,5 +75,15 @@ for models in "${MODEL_FILES[@]}"; do
 done
 
 # Launch web gui
+n=0
 cd /sd
-python -u scripts/relauncher.py
+while true; do
+    echo "entrypoint.sh: Launching...'"
+    if (( $n > 0 )); then
+        echo "Relaunch count: ${n}"
+    fi
+    python -u scripts/webui.py
+    echo "entrypoint.sh: Process is ending. Relaunching in 0.5s..."
+    ((n++))
+    sleep 0.5
+done
