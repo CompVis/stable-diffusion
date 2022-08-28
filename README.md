@@ -152,6 +152,14 @@ Note that loading GFPGAN consumes additional GPU memory, and will add
 a few seconds to image generation. However, if can afford a 3090s with
 24Gi, the results are well worth it.
 
+## Google Colab
+   
+Stable Diffusion AI Notebook: <a href="https://colab.research.google.com/github/lstein/stable-diffusion/blob/main/Stable_Diffusion_AI_Notebook.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> <br>
+Open and follow instructions to use an isolated environment running Dream.<br>
+
+Output example:
+![Colab Notebook](static/colab_notebook.png)
+
 ## Barebones Web Server
 
 As of version 1.10, this distribution comes with a bare bones web
