@@ -3,6 +3,9 @@
 # Before running stable-diffusion on an internet-isolated machine,
 # run this script from one with internet connectivity. The
 # two machines must share a common .cache directory.
+from transformers import CLIPTokenizer, CLIPTextModel
+import clip
+from transformers import BertTokenizerFast
 import sys
 import transformers
 import os
@@ -12,7 +15,6 @@ transformers.logging.set_verbosity_error()
 
 # this will preload the Bert tokenizer fles
 print('preloading bert tokenizer...')
-from transformers import BertTokenizerFast
 
 tokenizer = BertTokenizerFast.from_pretrained('bert-base-uncased')
 print('...success')
@@ -28,8 +30,6 @@ version = 'openai/clip-vit-large-patch14'
 
 print('preloading CLIP model (Ignore the deprecation warnings)...')
 sys.stdout.flush()
-import clip
-from transformers import CLIPTokenizer, CLIPTextModel
 
 tokenizer = CLIPTokenizer.from_pretrained(version)
 transformer = CLIPTextModel.from_pretrained(version)
@@ -63,6 +63,20 @@ if gfpgan:
                 scale=2,
             ),
         )
+
+        RealESRGANer(
+            scale=4,
+            model_path='https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth',
+            model=RRDBNet(
+                num_in_ch=3,
+                num_out_ch=3,
+                num_feat=64,
+                num_block=23,
+                num_grow_ch=32,
+                scale=4,
+            ),
+        )
+
         FaceRestoreHelper(1, det_model='retinaface_resnet50')
         print('...success')
     except Exception:
