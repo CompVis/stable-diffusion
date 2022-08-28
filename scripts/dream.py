@@ -52,7 +52,8 @@ def main():
         weights=weights,
         full_precision=opt.full_precision,
         config=config,
-        latent_diffusion_weights=opt.laion400m,  # this is solely for recreating the prompt
+        # this is solely for recreating the prompt
+        latent_diffusion_weights=opt.laion400m,
         embedding_path=opt.embedding_path,
         device=opt.device,
     )
@@ -507,6 +508,23 @@ def create_cmd_parser():
         '--skip_normalize',
         action='store_true',
         help='skip subprompt weight normalization',
+    )
+    parser.add_argument(
+        '-m',
+        '--user_sampler',
+        default=None,
+        type=str,
+        choices=[
+            'ddim',
+            'k_dpm_2_a',
+            'k_dpm_2',
+            'k_euler_a',
+            'k_euler',
+            'k_heun',
+            'k_lms',
+            'plms',
+        ],
+        help='Change to another supported sampler using this command',
     )
     return parser
 
