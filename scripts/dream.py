@@ -64,13 +64,19 @@ def main():
     # gets rid of annoying messages about random seed
     logging.getLogger('pytorch_lightning').setLevel(logging.ERROR)
 
+    # load the infile as a list of lines
     infile = None
-    try:
-        if opt.infile is not None:
-            infile = open(opt.infile, 'r')
-    except FileNotFoundError as e:
-        print(e)
-        exit(-1)
+    if opt.infile:
+        try:
+            if os.path.isfile(opt.infile):
+                infile = open(opt.infile,'r')
+            elif opt.infile=='-':  # stdin
+                infile = sys.stdin
+            else:
+                raise FileNotFoundError(f'{opt.infile} not found.')
+        except (FileNotFoundError,IOError) as e:
+            print(f'{e}. Aborting.')
+            sys.exit(-1)
 
     # preload the model
     t2i.load_model()
@@ -110,34 +116,31 @@ def main():
                 print('Error loading GFPGAN:', file=sys.stderr)
                 print(traceback.format_exc(), file=sys.stderr)
 
-    print(
-        "\n* Initialization done! Awaiting your command (-h for help, 'q' to quit, 'cd' to change output dir, 'pwd' to print output dir)..."
-    )
+    if not infile:
+        print(
+            "\n* Initialization done! Awaiting your command (-h for help, 'q' to quit, 'cd' to change output dir, 'pwd' to print output dir)..."
+        )
 
     log_path = os.path.join(opt.outdir, 'dream_log.txt')
-    with open(log_path, 'a') as log:
-        cmd_parser = create_cmd_parser()
-        main_loop(t2i, opt.outdir, cmd_parser, log, infile)
-        log.close()
-    if infile:
-        infile.close()
+    cmd_parser = create_cmd_parser()
+    main_loop(t2i, opt.outdir, cmd_parser, log_path, infile)
 
 
-def main_loop(t2i, outdir, parser, log, infile):
+def main_loop(t2i, outdir, parser, log_path, infile):
     """prompt/read/execute loop"""
     done = False
     last_seeds = []
 
     while not done:
         try:
-            command = infile.readline() if infile else input('dream> ')
+            command = get_next_command(infile)
         except EOFError:
             done = True
             break
 
-        if infile and len(command) == 0:
-            done = True
-            break
+        # skip empty lines
+        if not command.strip():
+            continue
 
         if command.startswith(('#', '//')):
             continue
@@ -150,9 +153,6 @@ def main_loop(t2i, outdir, parser, log, infile):
             elements = shlex.split(command)
         except ValueError as e:
             print(str(e))
-            continue
-
-        if len(elements) == 0:
             continue
 
         if elements[0] == 'q':
@@ -239,11 +239,22 @@ def main_loop(t2i, outdir, parser, log, infile):
             continue
 
         print('Outputs:')
-        write_log_message(t2i, normalized_prompt, results, log)
+        write_log_message(t2i, normalized_prompt, results, log_path)
 
     print('goodbye!')
 
-
+def get_next_command(infile=None) -> 'command string':
+    if infile is None:
+        command = input("dream> ")
+    else:
+        command = infile.readline()
+        if not command:
+            raise EOFError
+        else:
+            command = command.strip()
+        print(f'#{command}')
+    return command
+    
 def load_gfpgan_bg_upsampler(bg_upsampler, bg_tile=400):
     import torch
 
@@ -309,19 +320,14 @@ def load_gfpgan_bg_upsampler(bg_upsampler, bg_tile=400):
 #     return variants
 
 
-def write_log_message(t2i, prompt, results, logfile):
+### the t2i variable doesn't seem to be necessary here. maybe remove it?
+def write_log_message(t2i, prompt, results, log_path):
     """logs the name of the output image, its prompt and seed to the terminal, log file, and a Dream text chunk in the PNG metadata"""
-    last_seed = None
-    img_num = 1
-    seenit = {}
+    log_lines = [f"{r[0]}: {prompt} -S{r[1]}\n" for r in results]
+    print(*log_lines, sep="")
 
-    for r in results:
-        seed = r[1]
-        log_message = f'{r[0]}: {prompt} -S{seed}'
-
-        print(log_message)
-        logfile.write(log_message + '\n')
-        logfile.flush()
+    with open(log_path, "a") as file:
+        file.writelines(log_lines)
 
 
 def create_argv_parser():

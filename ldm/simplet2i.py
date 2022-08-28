@@ -548,13 +548,15 @@ class T2I:
             )
         else:
             print(
-                'Using half precision math. Call with --full_precision to use slower but more accurate full precision.'
+                'Using half precision math. Call with --full_precision to use more accurate but VRAM-intensive full precision.'
             )
             model.half()
         return model
 
     def _load_img(self, path):
-        image = Image.open(path).convert('RGB')
+        with Image.open(path) as img:
+            image = img.convert("RGB")
+
         w, h = image.size
         print(f'loaded input image of size ({w}, {h}) from {path}')
         w, h = map(

@@ -185,7 +185,13 @@ innovative packaging for a squid's dinner           -S137038382
 Then pass this file's name to dream.py when you invoke it:
 
 ~~~~
-(ldm) ~/stable-diffusion$ python3 scripts/dream.py --from_file="path/to/prompts.txt"
+(ldm) ~/stable-diffusion$ python3 scripts/dream.py --from_file "path/to/prompts.txt"
+~~~~
+
+You may read a series of prompts from standard input by providing a filename of "-":
+
+~~~~
+(ldm) ~/stable-diffusion$ echo "a beautiful day" | python3 scripts/dream.py --from_file -
 ~~~~
 
 ## Shortcut for reusing seeds from the previous command
@@ -298,6 +304,10 @@ repository and associated paper for details and limitations.
 
 ## Changes
 
+ * v1.12 (28 August 2022)
+   * Improved file handling, including ability to read prompts from standard input.
+     (kudos to [Yunsaki](https://github.com/yunsaki)
+ 
  * v1.11 (26 August 2022)
    * NEW FEATURE: Support upscaling and face enhancement using the GFPGAN module. (kudos to [Oceanswave](https://github.com/Oceanswave)
    * You now can specify a seed of -1 to use the previous image's seed, -2 to use the seed for the image generated before that, etc.
@@ -601,7 +611,7 @@ to send me an email if you use and like the script.
 [Peter Kowalczyk](https://github.com/slix), [Henry Harrison](https://github.com/hwharrison),
 [xraxra](https://github.com/xraxra), [bmaltais](https://github.com/bmaltais), [Sean McLellan](https://github.com/Oceanswave),
 [nicolai256](https://github.com/nicolai256), [Benjamin Warner](https://github.com/warner-benjamin),
-[tildebyte](https://github.com/tildebyte),
+[tildebyte](https://github.com/tildebyte),[yunsaki](https://github.com/yunsaki)
 and [Tesseract Cat](https://github.com/TesseractCat)
 
 
