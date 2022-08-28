@@ -36,7 +36,7 @@ mount_google_drive = True #@param {type:"boolean"}
 force_remount = False
 
 if mount_google_drive:
-    from google.colab import drive
+    from google.colab import drive # type: ignore
     try:
         drive_path = "/content/drive"
         drive.mount(drive_path,force_remount=force_remount)
@@ -121,7 +121,7 @@ sys.path.append('./src/clip')
 sys.path.append('./stable-diffusion/')
 sys.path.append('./k-diffusion')
 
-from helpers import save_samples
+from helpers import save_samples, sampler_fn
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
@@ -266,27 +266,15 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
                           c = args.init_c
 
                         if args.sampler in ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral"]:
-                            shape = [args.C, args.H // args.f, args.W // args.f]
-                            sigmas = model_wrap.get_sigmas(args.steps)
-                            if args.use_init:
-                                sigmas = sigmas[len(sigmas)-t_enc-1:]
-                                x = init_latent + torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
-                            else:
-                                x = torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
-                            model_wrap_cfg = CFGDenoiser(model_wrap)
-                            extra_args = {'cond': c, 'uncond': uc, 'cond_scale': args.scale}
-                            if args.sampler=="klms":
-                                samples = sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=False, callback=callback)
-                            elif args.sampler=="dpm2":
-                                samples = sampling.sample_dpm_2(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=False, callback=callback)
-                            elif args.sampler=="dpm2_ancestral":
-                                samples = sampling.sample_dpm_2_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=False, callback=callback)
-                            elif args.sampler=="heun":
-                                samples = sampling.sample_heun(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=False, callback=callback)
-                            elif args.sampler=="euler":
-                                samples = sampling.sample_euler(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=False, callback=callback)
-                            elif args.sampler=="euler_ancestral":
-                                samples = sampling.sample_euler_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=False, callback=callback)
+                            samples = sampler_fn(
+                                c=c, 
+                                uc=uc, 
+                                args=args, 
+                                model_wrap=model_wrap, 
+                                init_latent=init_latent, 
+                                t_enc=t_enc, 
+                                device=device, 
+                                cb=callback)
                         else:
 
                             if init_latent != None:
