@@ -10,6 +10,7 @@ import warnings
 import ldm.dream.readline
 from ldm.dream.pngwriter import PngWriter, PromptFormatter
 
+
 def main():
     """Initialize command-line parsers and the diffusion model"""
     arg_parser = create_argv_parser()
@@ -66,52 +67,17 @@ def main():
     if opt.infile:
         try:
             if os.path.isfile(opt.infile):
-                infile = open(opt.infile,'r')
-            elif opt.infile=='-':  # stdin
+                infile = open(opt.infile, 'r')
+            elif opt.infile == '-':  # stdin
                 infile = sys.stdin
             else:
                 raise FileNotFoundError(f'{opt.infile} not found.')
-        except (FileNotFoundError,IOError) as e:
+        except (FileNotFoundError, IOError) as e:
             print(f'{e}. Aborting.')
             sys.exit(-1)
 
     # preload the model
     t2i.load_model()
-
-    # load GFPGAN if requested
-    if opt.use_gfpgan:
-        print('\n* --gfpgan was specified, loading gfpgan...')
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=DeprecationWarning)
-
-            try:
-                model_path = os.path.join(
-                    opt.gfpgan_dir, opt.gfpgan_model_path
-                )
-                if not os.path.isfile(model_path):
-                    raise Exception(
-                        'GFPGAN model not found at path ' + model_path
-                    )
-
-                sys.path.append(os.path.abspath(opt.gfpgan_dir))
-                from gfpgan import GFPGANer
-
-                bg_upsampler = load_gfpgan_bg_upsampler(
-                    opt.gfpgan_bg_upsampler, opt.gfpgan_bg_tile
-                )
-
-                t2i.gfpgan = GFPGANer(
-                    model_path=model_path,
-                    upscale=opt.gfpgan_upscale,
-                    arch='clean',
-                    channel_multiplier=2,
-                    bg_upsampler=bg_upsampler,
-                )
-            except Exception:
-                import traceback
-
-                print('Error loading GFPGAN:', file=sys.stderr)
-                print(traceback.format_exc(), file=sys.stderr)
 
     if not infile:
         print(
@@ -240,9 +206,10 @@ def main_loop(t2i, outdir, parser, log_path, infile):
 
     print('goodbye!')
 
+
 def get_next_command(infile=None) -> 'command string':
     if infile is None:
-        command = input("dream> ")
+        command = input('dream> ')
     else:
         command = infile.readline()
         if not command:
@@ -251,44 +218,6 @@ def get_next_command(infile=None) -> 'command string':
             command = command.strip()
         print(f'#{command}')
     return command
-    
-def load_gfpgan_bg_upsampler(bg_upsampler, bg_tile=400):
-    import torch
-
-    if bg_upsampler == 'realesrgan':
-        if not torch.cuda.is_available():  # CPU
-            import warnings
-
-            warnings.warn(
-                'The unoptimized RealESRGAN is slow on CPU. We do not use it. '
-                'If you really want to use it, please modify the corresponding codes.'
-            )
-            bg_upsampler = None
-        else:
-            from basicsr.archs.rrdbnet_arch import RRDBNet
-            from realesrgan import RealESRGANer
-
-            model = RRDBNet(
-                num_in_ch=3,
-                num_out_ch=3,
-                num_feat=64,
-                num_block=23,
-                num_grow_ch=32,
-                scale=2,
-            )
-            bg_upsampler = RealESRGANer(
-                scale=2,
-                model_path='https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth',
-                model=model,
-                tile=bg_tile,
-                tile_pad=10,
-                pre_pad=0,
-                half=True,
-            )  # need to set False in CPU mode
-    else:
-        bg_upsampler = None
-
-    return bg_upsampler
 
 
 # variant generation is going to be superseded by a generalized
@@ -320,10 +249,10 @@ def load_gfpgan_bg_upsampler(bg_upsampler, bg_tile=400):
 ### the t2i variable doesn't seem to be necessary here. maybe remove it?
 def write_log_message(t2i, prompt, results, log_path):
     """logs the name of the output image, its prompt and seed to the terminal, log file, and a Dream text chunk in the PNG metadata"""
-    log_lines = [f"{r[0]}: {prompt} -S{r[1]}\n" for r in results]
-    print(*log_lines, sep="")
+    log_lines = [f'{r[0]}: {prompt} -S{r[1]}\n' for r in results]
+    print(*log_lines, sep='')
 
-    with open(log_path, "a") as file:
+    with open(log_path, 'a') as file:
         file.writelines(log_lines)
 
 
@@ -396,18 +325,6 @@ def create_argv_parser():
         help='device to run stable diffusion on. defaults to cuda `torch.cuda.current_device()` if avalible',
     )
     # GFPGAN related args
-    parser.add_argument(
-        '--gfpgan',
-        dest='use_gfpgan',
-        action='store_true',
-        help='load gfpgan for use in the dreambot. Note: Enabling GFPGAN will require more GPU memory',
-    )
-    parser.add_argument(
-        '--gfpgan_upscale',
-        type=int,
-        default=2,
-        help='The final upsampling scale of the image. Default: 2. Only used if --gfpgan is specified',
-    )
     parser.add_argument(
         '--gfpgan_bg_upsampler',
         type=str,
@@ -499,9 +416,23 @@ def create_cmd_parser():
     parser.add_argument(
         '-G',
         '--gfpgan_strength',
-        default=None,
+        default=0,
         type=float,
         help='The strength at which to apply the GFPGAN model to the result, in order to improve faces.',
+    )
+    parser.add_argument(
+        '-U',
+        '--upscale',
+        nargs=2,
+        default=None,
+        type=float,
+        help='Scale factor for Real-ESRGAN. Either use 2 or 4.',
+    )
+    parser.add_argument(
+        '-save_orig',
+        '--save_original',
+        action='store_true',
+        help='Save original. Use it when upscaling to save both versions.',
     )
     # variants is going to be superseded by a generalized "prompt-morph" function
     #    parser.add_argument('-v','--variants',type=int,help="in img2img mode, the first generated image will get passed back to img2img to generate the requested number of variants")
