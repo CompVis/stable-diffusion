@@ -477,11 +477,12 @@ def DeforumAnimArgs():
     zoom = "0: (1.04)"#@param {type:"string"}
     translation_x = "0: (0)"#@param {type:"string"}
     translation_y = "0: (0)"#@param {type:"string"}
+    noise_schedule = "0: (0.02)"#@param {type:"string"}
+    strength_schedule = "0: (0.65)"#@param {type:"string"}
+    scale_schedule = "0: (1.0)"#@param {type:"string"}
 
     #@markdown ####**Coherence:**
     color_coherence = 'MatchFrame0' #@param ['None', 'MatchFrame0'] {type:'string'}
-    previous_frame_noise = 0.02#@param {type:"number"}
-    previous_frame_strength = 0.65 #@param {type:"number"}
 
     #@markdown ####**Video Input:**
     video_init_path ='/content/video_in.mp4'#@param {type:"string"}
@@ -546,6 +547,9 @@ if anim_args.key_frames:
     zoom_series = get_inbetweens(parse_key_frames(anim_args.zoom))
     translation_x_series = get_inbetweens(parse_key_frames(anim_args.translation_x))
     translation_y_series = get_inbetweens(parse_key_frames(anim_args.translation_y))
+    noise_schedule_series = get_inbetweens(parse_key_frames(anim_args.noise_schedule))
+    strength_schedule_series = get_inbetweens(parse_key_frames(anim_args.strength_schedule))
+    scale_schedule_series = get_inbetweens(parse_key_frames(anim_args.scale_schedule))
 
 # %%
 # !! {"metadata":{
@@ -765,11 +769,17 @@ def render_animation(args, anim_args):
                 zoom = zoom_series[frame_idx]
                 translation_x = translation_x_series[frame_idx]
                 translation_y = translation_y_series[frame_idx]
+                noise = noise_schedule_series[frame_idx]
+                strength = strength_schedule_series[frame_idx]
+                scale = scale_schedule_series[frame_idx]
                 print(
                     f'angle: {angle}',
                     f'zoom: {zoom}',
                     f'translation_x: {translation_x}',
                     f'translation_y: {translation_y}',
+                    f'noise: {noise}',
+                    f'strength: {strength}',
+                    f'scale: {scale}',
                 )
             xform = make_xform_2d(args.W, args.H, translation_x, translation_y, angle, zoom)
 
@@ -789,13 +799,15 @@ def render_animation(args, anim_args):
                 else:
                     prev_img = maintain_colors(prev_img, color_match_sample, (frame_idx%2) == 0)
 
+            # apply scaling
+            scaled_sample = prev_img * scale
             # apply frame noising
-            noised_sample = add_noise(sample_from_cv2(prev_img), anim_args.previous_frame_noise)
+            noised_sample = add_noise(sample_from_cv2(scaled_sample), noise)
 
             # use transformed previous frame as init for current
             args.use_init = True
             args.init_sample = noised_sample.half().to(device)
-            args.strength = max(0.0, min(1.0, anim_args.previous_frame_strength))
+            args.strength = max(0.0, min(1.0, strength))
 
         # grab prompt for current frame
         args.prompt = prompt_series[frame_idx]
