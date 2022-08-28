@@ -344,6 +344,7 @@ repository and associated paper for details and limitations.
     enabled if the GFPGAN directory is located as a sibling to Stable Diffusion.
     VRAM requirements are modestly reduced. Thanks to both [Blessedcoolant](https://github.com/blessedcoolant) and
     [Oceanswave](https://github.com/oceanswave) for their work on this.
+  - You can now swap samplers on the dream> command line. [Blessedcoolant](https://github.com/blessedcoolant)
 
 - v1.11 (26 August 2022)
   - NEW FEATURE: Support upscaling and face enhancement using the GFPGAN module. (kudos to [Oceanswave](https://github.com/Oceanswave)

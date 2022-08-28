@@ -51,7 +51,8 @@ def main():
         weights=weights,
         full_precision=opt.full_precision,
         config=config,
-        latent_diffusion_weights=opt.laion400m,  # this is solely for recreating the prompt
+        # this is solely for recreating the prompt
+        latent_diffusion_weights=opt.laion400m,
         embedding_path=opt.embedding_path,
         device=opt.device,
     )
@@ -281,8 +282,9 @@ def create_argv_parser():
         help='use slower full precision math for calculations',
     )
     parser.add_argument(
-        '--sampler',
+        '-A',
         '-m',
+        '--sampler',
         dest='sampler_name',
         choices=[
             'ddim',
@@ -295,7 +297,7 @@ def create_argv_parser():
             'plms',
         ],
         default='k_lms',
-        help='which sampler to use (k_lms) - can only be set on command line',
+        help='which sampler to use (k_lms)',
     )
     parser.add_argument(
         '--outdir',
@@ -446,6 +448,25 @@ def create_cmd_parser():
         '--skip_normalize',
         action='store_true',
         help='skip subprompt weight normalization',
+    )
+    parser.add_argument(
+        '-A',
+        '-m',
+        '--sampler',
+        dest='sampler_name',
+        default=None,
+        type=str,
+        choices=[
+            'ddim',
+            'k_dpm_2_a',
+            'k_dpm_2',
+            'k_euler_a',
+            'k_euler',
+            'k_heun',
+            'k_lms',
+            'plms',
+        ],
+        help='Change to another supported sampler using this command',
     )
     return parser
 
