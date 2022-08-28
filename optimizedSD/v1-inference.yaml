@@ -111,4 +111,4 @@ modelCondStage:
     cond_stage_config:
       target: ldm.modules.encoders.modules.FrozenCLIPEmbedder
       params:
-        device: cuda
+        device: cpu
