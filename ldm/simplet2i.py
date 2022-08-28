@@ -158,6 +158,7 @@ class T2I:
         self.latent_diffusion_weights = latent_diffusion_weights
         self.device = device
         self.gfpgan = gfpgan
+        self.session_peakmem = torch.cuda.max_memory_allocated()
         if seed is None:
             self.seed = self._new_seed()
         else:
@@ -262,14 +263,15 @@ class T2I:
         h = int(height / 64) * 64
         if h != height or w != width:
             print(
-                f'Height and width must be multiples of 64. Resizing to {h}x{w}'
+                f'Height and width must be multiples of 64. Resizing to {h}x{w}.'
             )
             height = h
-            width = w
+            width  = w
 
         scope = autocast if self.precision == 'autocast' else nullcontext
 
         tic = time.time()
+        torch.cuda.torch.cuda.reset_peak_memory_stats()
         results = list()
 
         try:
@@ -333,7 +335,11 @@ class T2I:
             print('Are you sure your system has an adequate NVIDIA GPU?')
 
         toc = time.time()
-        print(f'{len(results)} images generated in', '%4.2fs' % (toc - tic))
+        self.session_peakmem = max(self.session_peakmem,torch.cuda.max_memory_allocated() )
+        print('Usage stats:')
+        print(f'   {len(results)} image(s) generated in', '%4.2fs' % (toc - tic))
+        print(f'   Max VRAM used for this generation:', '%4.2fG' % (torch.cuda.max_memory_allocated()/1E9))
+        print(f'   Max VRAM used since script start: ', '%4.2fG' % (self.session_peakmem/1E9))
         return results
 
     @torch.no_grad()

@@ -10,9 +10,6 @@ import warnings
 import ldm.dream.readline
 from ldm.dream.pngwriter import PngWriter, PromptFormatter
 
-debugging = False
-
-
 def main():
     """Initialize command-line parsers and the diffusion model"""
     arg_parser = create_argv_parser()
@@ -209,10 +206,10 @@ def main_loop(t2i, outdir, parser, log, infile):
         normalized_prompt = PromptFormatter(t2i, opt).normalize_prompt()
         individual_images = not opt.grid
 
+        # Here is where the images are actually generated!
         try:
             file_writer = PngWriter(outdir, normalized_prompt, opt.batch_size)
             callback = file_writer.write_image if individual_images else None
-
             image_list = t2i.prompt2image(image_callback=callback, **vars(opt))
             results = (
                 file_writer.files_written if individual_images else image_list
