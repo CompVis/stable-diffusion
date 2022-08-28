@@ -14,6 +14,8 @@ from math import sqrt, floor, ceil
 from PIL import Image, PngImagePlugin
 
 # -------------------image generation utils-----
+
+
 class PngWriter:
     def __init__(self, outdir, prompt=None, batch_size=1):
         self.outdir = outdir
@@ -23,18 +25,19 @@ class PngWriter:
         self.files_written = []
         os.makedirs(outdir, exist_ok=True)
 
-    def write_image(self, image, seed):
+    def write_image(self, image, seed, upscaled=False):
         self.filepath = self.unique_filename(
-            seed, self.filepath
+            seed, upscaled, self.filepath
         )   # will increment name in some sensible way
         try:
             prompt = f'{self.prompt} -S{seed}'
             self.save_image_and_prompt_to_png(image, prompt, self.filepath)
         except IOError as e:
             print(e)
-        self.files_written.append([self.filepath, seed])
+        if not upscaled:
+            self.files_written.append([self.filepath, seed])
 
-    def unique_filename(self, seed, previouspath=None):
+    def unique_filename(self, seed, upscaled, previouspath=None):
         revision = 1
 
         if previouspath is None:
@@ -68,6 +71,8 @@ class PngWriter:
                 if self.batch_size > 1 or os.path.exists(
                     os.path.join(self.outdir, filename)
                 ):
+                    if upscaled:
+                        break
                     filename = f'{basecount:06}.{seed}.{series:02}.png'
                 finished = not os.path.exists(
                     os.path.join(self.outdir, filename)
