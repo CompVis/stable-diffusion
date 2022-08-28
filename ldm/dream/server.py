@@ -14,8 +14,14 @@ class DreamServer(BaseHTTPRequestHandler):
             self.end_headers()
             with open("./static/dream_web/index.html", "rb") as content:
                 self.wfile.write(content.read())
-        elif os.path.exists("." + self.path):
-            mime_type = mimetypes.guess_type(self.path)[0]
+        else:
+            path = "." + self.path
+            cwd = os.getcwd()
+            is_in_cwd = os.path.commonprefix((os.path.realpath(path), cwd)) == cwd
+            if not (is_in_cwd and os.path.exists(path)):
+                self.send_response(404)
+                return
+            mime_type = mimetypes.guess_type(path)[0]
             if mime_type is not None:
                 self.send_response(200)
                 self.send_header("Content-type", mime_type)
@@ -24,8 +30,6 @@ class DreamServer(BaseHTTPRequestHandler):
                     self.wfile.write(content.read())
             else:
                 self.send_response(404)
-        else:
-            self.send_response(404)
 
     def do_POST(self):
         self.send_response(200)
