@@ -18,13 +18,17 @@ After installation has completed, you can open webui.cmd (if your environment is
 
 Legacy support: Only if your environment is named ldm "Launch Waifu Diffusion" to run the program anytime.
 
+--------------
+
 # Want to run full precision?
 Edit `scripts\relauncher.py`
 `python scripts/webui.py` becomes `python scripts/webui.py --no-half --precision=full`
 
 [Other cli arguments?](https://github.com/hlky/stable-diffusion#--help)
 
-[Development, testing, bleeding edge, maybe have bugs](https://github.com/hlky/stable-diffusion-webui)
+--------------
+
+## [Development, testing, bleeding edge, maybe have bugs](https://github.com/hlky/stable-diffusion-webui)
 
 --------------
 
