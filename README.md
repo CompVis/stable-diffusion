@@ -21,9 +21,8 @@
 
 --------------
 
-# Want to run full precision?
-Edit `scripts\relauncher.py`
-`python scripts/webui.py` becomes `python scripts/webui.py --no-half --precision=full`
+### Questions about **_[Upscalers](https://github.com/hlky/stable-diffusion-webui/wiki/Upscalers)_**?
+### Questions about **_[Optimized mode](https://github.com/hlky/stable-diffusion-webui/wiki/Optimized-mode)_**?
 
 [Other cli arguments?](https://github.com/hlky/stable-diffusion#--help)
 
