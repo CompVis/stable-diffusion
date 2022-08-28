@@ -155,17 +155,15 @@ a few seconds to image generation. However, if can afford a 3090s with
 ## Barebones Web Server
 
 As of version 1.10, this distribution comes with a bare bones web
-server (see screenshot). To use it, run the command:
-
-~~~~
-(ldm) ~/stable-diffusion$ python3 scripts/dream_web.py
-~~~~
+server (see screenshot). To use it, run the *dream.py* script by
+adding the **--web** option.
 
 You can then connect to the server by pointing your web browser at
 http://localhost:9090, or to the network name or IP address of the server.
 
 Kudos to [Tesseract Cat](https://github.com/TesseractCat) for
-contributing this code.
+contributing this code, and to [dagf2101](https://github.com/dagf2101)
+for refining it.
 
 ![Dream Web Server](static/dream_web_server.png)
 
@@ -307,6 +305,8 @@ repository and associated paper for details and limitations.
  * v1.12 (28 August 2022)
    * Improved file handling, including ability to read prompts from standard input.
      (kudos to [Yunsaki](https://github.com/yunsaki)
+   * The web server is now integrated with the dream.py script. Invoke by adding --web to
+     the dream.py command arguments.
  
  * v1.11 (26 August 2022)
    * NEW FEATURE: Support upscaling and face enhancement using the GFPGAN module. (kudos to [Oceanswave](https://github.com/Oceanswave)
