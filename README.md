@@ -106,6 +106,7 @@ All the modified files are in the [optimizedSD](optimizedSD) folder, so if you h
 
 ## Changelog
 
+- v0.7: Added support for logging, jpg file format
 - v0.6: Added support for using weighted prompts. (based on @lstein's [repo](https://github.com/lstein/stable-diffusion))
 - v0.5: Added support for using gradio interface.
 - v0.4: Added support for specifying image seed.

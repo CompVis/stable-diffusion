@@ -1,3 +1,7 @@
+import os
+import pandas as pd
+
+
 def split_weighted_subprompts(text):
     """
     grabs all text up to the first occurrence of ':' 
@@ -42,3 +46,28 @@ def split_weighted_subprompts(text):
                 weights.append(1.0)
             remaining = 0
     return prompts, weights
+
+def logger(params, log_csv):
+    os.makedirs('logs', exist_ok=True)
+    cols = [arg for arg, _ in params.items()]
+    if not os.path.exists(log_csv):
+        df = pd.DataFrame(columns=cols) 
+        df.to_csv(log_csv, index=False)
+
+    df = pd.read_csv(log_csv)
+    for arg in cols:
+        if arg not in df.columns:
+            df[arg] = ""
+    df.to_csv(log_csv, index = False)
+
+    li = {}
+    cols = [col for col in df.columns]
+    data = {arg:value for arg, value in params.items()}
+    for col in cols:
+        if col in data:
+            li[col] = data[col]
+        else:
+            li[col] = ''
+
+    df = pd.DataFrame(li,index = [0])
+    df.to_csv(log_csv,index=False, mode='a', header=False)

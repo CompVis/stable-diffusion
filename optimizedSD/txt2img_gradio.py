@@ -6,6 +6,7 @@ from einops import rearrange
 import os, re
 from PIL import Image
 import torch
+import pandas as pd
 import numpy as np
 from random import randint
 from omegaconf import OmegaConf
@@ -19,12 +20,10 @@ from pytorch_lightning import seed_everything
 from torch import autocast
 from contextlib import nullcontext
 from ldm.util import instantiate_from_config
-from split_subprompts import split_weighted_subprompts
+from optimUtils import split_weighted_subprompts, logger
 from transformers import logging
-
 logging.set_verbosity_error()
 import mimetypes
-
 mimetypes.init()
 mimetypes.add_type("application/javascript", ".js")
 
@@ -41,7 +40,6 @@ def load_model_from_config(ckpt, verbose=False):
         print(f"Global Step: {pl_sd['global_step']}")
     sd = pl_sd["state_dict"]
     return sd
-
 
 config = "optimizedSD/v1-inference.yaml"
 ckpt = "models/ldm/stable-diffusion-v1/model.ckpt"
@@ -92,11 +90,11 @@ def generate(
     device,
     seed,
     outdir,
+    img_format,
     turbo,
     full_precision,
 ):
 
-    seeds = ""
     C = 4
     f = 8
     start_code = None
@@ -105,8 +103,17 @@ def generate(
     model.cdevice = device
     modelCS.cond_stage_model.device = device
 
+    if seed == "":
+        seed = randint(0, 1000000)
+    seed = int(seed)
+    seed_everything(seed)
+
+    # Logging
+    logger(locals(), "logs/txt2img_gradio_logs.csv")
+
     if device != "cpu" and full_precision == False:
         model.half()
+        modelFS.half()
         modelCS.half()
 
     tic = time.time()
@@ -115,12 +122,7 @@ def generate(
     sample_path = os.path.join(outpath, "_".join(re.split(":| ", prompt)))[:150]
     os.makedirs(sample_path, exist_ok=True)
     base_count = len(os.listdir(sample_path))
-
-    if seed == "":
-        seed = randint(0, 1000000)
-    seed = int(seed)
-    seed_everything(seed)
-
+    
     # n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
     assert prompt is not None
     data = [batch_size * [prompt]]
@@ -131,6 +133,7 @@ def generate(
         precision_scope = nullcontext
 
     all_samples = []
+    seeds = ""
     with torch.no_grad():
 
         all_samples = list()
@@ -187,7 +190,7 @@ def generate(
                         all_samples.append(x_sample.to("cpu"))
                         x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
                         Image.fromarray(x_sample.astype(np.uint8)).save(
-                            os.path.join(sample_path, "seed_" + str(seed) + "_" + f"{base_count:05}.png")
+                            os.path.join(sample_path, "seed_" + str(seed) + "_" + f"{base_count:05}.{img_format}")
                         )
                         seeds += str(seed) + ","
                         seed += 1
@@ -237,6 +240,7 @@ demo = gr.Interface(
         gr.Text(value="cuda"),
         "text",
         gr.Text(value="outputs/txt2img-samples"),
+        gr.Radio(["png", "jpg"], value='png'),
         "checkbox",
         "checkbox",
     ],

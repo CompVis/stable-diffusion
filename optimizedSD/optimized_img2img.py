@@ -14,9 +14,9 @@ from torch import autocast
 from contextlib import contextmanager, nullcontext
 from einops import rearrange, repeat
 from ldm.util import instantiate_from_config
-from split_subprompts import split_weighted_subprompts
+from optimUtils import split_weighted_subprompts, logger
 from transformers import logging
-
+import pandas as pd
 logging.set_verbosity_error()
 
 
@@ -172,19 +172,17 @@ opt = parser.parse_args()
 tic = time.time()
 os.makedirs(opt.outdir, exist_ok=True)
 outpath = opt.outdir
-
-sample_path = os.path.join(outpath, "_".join(re.split(":| ", opt.prompt)))[:150]
-os.makedirs(sample_path, exist_ok=True)
-base_count = len(os.listdir(sample_path))
 grid_count = len(os.listdir(outpath)) - 1
 
 if opt.seed == None:
     opt.seed = randint(0, 1000000)
 seed_everything(opt.seed)
 
+# Logging
+logger(vars(opt), log_csv = "logs/img2img_logs.csv")
+
 sd = load_model_from_config(f"{ckpt}")
-li = []
-lo = []
+li, lo = [], []
 for key, value in sd.items():
     sp = key.split(".")
     if (sp[0]) == "model":
@@ -240,7 +238,7 @@ else:
     with open(opt.from_file, "r") as f:
         data = f.read().splitlines()
         data = batch_size * list(data)
-        data = list(chunk(data, batch_size))
+        data = list(chunk(sorted(data), batch_size))
 
 modelFS.to(opt.device)
 
@@ -270,6 +268,11 @@ with torch.no_grad():
     all_samples = list()
     for n in trange(opt.n_iter, desc="Sampling"):
         for prompts in tqdm(data, desc="data"):
+
+            sample_path = os.path.join(outpath, "_".join(re.split(":| ", prompts[0])))[:150]
+            os.makedirs(sample_path, exist_ok=True)
+            base_count = len(os.listdir(sample_path))
+
             with precision_scope("cuda"):
                 modelCS.to(opt.device)
                 uc = None
