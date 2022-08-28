@@ -24,6 +24,7 @@ Edit `scripts\relauncher.py`
 
 [Other cli arguments?](https://github.com/hlky/stable-diffusion#--help)
 
+[Development, testing, bleeding edge, maybe have bugs](https://github.com/hlky/stable-diffusion-webui)
 
 --------------
 
