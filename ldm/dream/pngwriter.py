@@ -60,7 +60,7 @@ class PngWriter:
             basename = os.path.basename(previouspath)
             x = re.match('^(\d+)\..*\.png', basename)
             if not x:
-                return self.unique_filename(seed, previouspath)
+                return self.unique_filename(seed, upscaled, previouspath)
 
             basecount = int(x.groups()[0])
             series = 0
