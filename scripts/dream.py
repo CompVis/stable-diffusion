@@ -115,7 +115,7 @@ def main():
 
     if not infile:
         print(
-            "\n* Initialization done! Awaiting your command (-h for help, 'q' to quit, 'cd' to change output dir, 'pwd' to print output dir)..."
+            "\n* Initialization done! Awaiting your command (-h for help, 'q' to quit)"
         )
 
     log_path = os.path.join(opt.outdir, 'dream_log.txt')
@@ -156,18 +156,6 @@ def main_loop(t2i, outdir, parser, log_path, infile):
             done = True
             break
 
-        if elements[0] == 'cd' and len(elements) > 1:
-            if os.path.exists(elements[1]):
-                print(f'setting image output directory to {elements[1]}')
-                outdir = elements[1]
-            else:
-                print(f'directory {elements[1]} does not exist')
-            continue
-
-        if elements[0] == 'pwd':
-            print(f'current output directory is {outdir}')
-            continue
-
         if elements[0].startswith(
             '!dream'
         ):   # in case a stored prompt still contains the !dream command
@@ -205,12 +193,18 @@ def main_loop(t2i, outdir, parser, log_path, infile):
 
         normalized_prompt = PromptFormatter(t2i, opt).normalize_prompt()
         individual_images = not opt.grid
+        if opt.outdir:
+            if not os.path.exists(opt.outdir):
+                os.makedirs(opt.outdir)
+            current_outdir = opt.outdir
+        else:
+            current_outdir = outdir
 
         # Here is where the images are actually generated!
         try:
-            file_writer = PngWriter(outdir, normalized_prompt, opt.batch_size)
-            callback = file_writer.write_image if individual_images else None
-            image_list = t2i.prompt2image(image_callback=callback, **vars(opt))
+            file_writer = PngWriter(current_outdir, normalized_prompt, opt.batch_size)
+            callback    = file_writer.write_image if individual_images else None
+            image_list  = t2i.prompt2image(image_callback=callback, **vars(opt))
             results = (
                 file_writer.files_written if individual_images else image_list
             )
@@ -476,6 +470,13 @@ def create_cmd_parser():
     )
     parser.add_argument(
         '-g', '--grid', action='store_true', help='generate a grid'
+    )
+    parser.add_argument(
+        '--outdir',
+        '-o',
+        type=str,
+        default=None,
+        help='directory in which to place generated images and a log of prompts and seeds (outputs/img-samples',
     )
     parser.add_argument(
         '-i',

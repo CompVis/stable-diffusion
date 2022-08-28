@@ -358,7 +358,7 @@ repository and associated paper for details and limitations.
 
     * It should no longer be possible for one image to overwrite another
     * You can use the "cd" and "pwd" commands at the dream> prompt to set and retrieve
-      the path of the output directory.
+      the path of the output directory. (NOTE: Removed in v1.12)
      
 * v1.04 (22 August 2022 - after the drop)
    * Updated README to reflect installation of the released weights.
