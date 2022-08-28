@@ -9,7 +9,7 @@ import copy
 import warnings
 import ldm.dream.readline
 from ldm.dream.pngwriter import PngWriter, PromptFormatter
-from ldm.dream.server import DreamServer, ThreadingDreamServer
+from dream_server import DreamServer, ThreadingDreamServer
 
 def main():
     """Initialize command-line parsers and the diffusion model"""
