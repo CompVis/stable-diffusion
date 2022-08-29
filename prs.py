@@ -3,7 +3,6 @@ import random
 import torch
 from torch import nn
 import numpy as np
-import cv2
 from omegaconf import OmegaConf
 import PIL
 from PIL import Image, ImageOps, ImageStat, ImageEnhance, ImageDraw
