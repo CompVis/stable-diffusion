@@ -69,7 +69,7 @@ def main():
     if opt.infile:
         try:
             if os.path.isfile(opt.infile):
-                infile = open(opt.infile, 'r')
+                infile = open(opt.infile, 'r', encoding='utf-8')
             elif opt.infile == '-':  # stdin
                 infile = sys.stdin
             else:
@@ -217,7 +217,7 @@ def get_next_command(infile=None) -> str: #command string
             command = command.strip()
         print(f'#{command}')
     return command
-    
+
 def dream_server_loop(t2i):
     print('\n* --web was specified, starting web server...')
     # Change working directory to the stable-diffusion directory
@@ -244,7 +244,7 @@ def write_log_message(prompt, results, log_path):
     log_lines = [f'{r[0]}: {prompt} -S{r[1]}\n' for r in results]
     print(*log_lines, sep='')
 
-    with open(log_path, 'a') as file:
+    with open(log_path, 'a', encoding='utf-8') as file:
         file.writelines(log_lines)
 
 
