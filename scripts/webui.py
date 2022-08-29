@@ -804,7 +804,7 @@ def process_images(
                     save_sample(image, sample_path_i, gfpgan_filename, jpg_sample, prompts, seeds, width, height, steps, cfg_scale, 
 normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img, uses_loopback, uses_random_seed_loopback, skip_save,
 skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode)
-                    x_sample = original_sample
+                    x_sample = gfpgan_sample
 
                 if use_RealESRGAN and RealESRGAN is not None and not use_GFPGAN:
                     torch_gc()
@@ -817,7 +817,7 @@ skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoisin
                     save_sample(image, sample_path_i, esrgan_filename, jpg_sample, prompts, seeds, width, height, steps, cfg_scale, 
 normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img, uses_loopback, uses_random_seed_loopback, skip_save,
 skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode)
-                    x_sample = original_sample
+                    x_sample = esrgan_sample
 
                 if use_RealESRGAN and RealESRGAN is not None and use_GFPGAN and GFPGAN is not None:
                     torch_gc()
@@ -826,13 +826,13 @@ skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoisin
                     if RealESRGAN.model.name != realesrgan_model_name:
                         try_loading_RealESRGAN(realesrgan_model_name)
                     output, img_mode = RealESRGAN.enhance(gfpgan_sample[:,:,::-1])
-                    esrgan_filename = original_filename + '-gfpgan-esrgan4x'
-                    esrgan_sample = output[:,:,::-1]
-                    image = Image.fromarray(esrgan_sample)
-                    save_sample(image, sample_path_i, esrgan_filename, jpg_sample, prompts, seeds, width, height, steps, cfg_scale, 
+                    gfpgan_esrgan_filename = original_filename + '-gfpgan-esrgan4x'
+                    gfpgan_esrgan_sample = output[:,:,::-1]
+                    image = Image.fromarray(gfpgan_esrgan_sample)
+                    save_sample(image, sample_path_i, gfpgan_esrgan_filename, jpg_sample, prompts, seeds, width, height, steps, cfg_scale, 
 normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img, uses_loopback, uses_random_seed_loopback, skip_save,
 skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode)
-                    x_sample = original_sample
+                    x_sample = gfpgan_esrgan_sample
 
                 image = Image.fromarray(x_sample)
                 if init_mask:
