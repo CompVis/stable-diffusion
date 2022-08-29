@@ -204,7 +204,7 @@ prompt and generated seed along with the `-U` and `-G` prompt
 arguments to perform those actions.
 
 ## Google Colab
-   
+
 Stable Diffusion AI Notebook: <a href="https://colab.research.google.com/github/lstein/stable-diffusion/blob/main/Stable_Diffusion_AI_Notebook.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> <br>
 Open and follow instructions to use an isolated environment running Dream.<br>
 
@@ -218,7 +218,7 @@ server (see screenshot). To use it, run the *dream.py* script by
 adding the **--web** option.
 
 ```
-(ldm) ~/stable-diffusion$ python3 scripts/dream_web.py --web
+(ldm) ~/stable-diffusion$ python3 scripts/dream.py --web
 ```
 
 You can then connect to the server by pointing your web browser at
