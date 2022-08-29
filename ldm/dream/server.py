@@ -17,7 +17,7 @@ class DreamServer(BaseHTTPRequestHandler):
                 self.wfile.write(content.read())
         else:
             path = "." + self.path
-            cwd = os.getcwd()
+            cwd = os.path.realpath(os.getcwd())
             is_in_cwd = os.path.commonprefix((os.path.realpath(path), cwd)) == cwd
             if not (is_in_cwd and os.path.exists(path)):
                 self.send_response(404)
