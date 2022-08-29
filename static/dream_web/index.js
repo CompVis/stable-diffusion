@@ -43,6 +43,7 @@ function saveFields(form) {
         }
     }
 }
+
 function loadFields(form) {
     for (const [k, v] of new FormData(form)) {
         const item = localStorage.getItem(k);
@@ -50,6 +51,11 @@ function loadFields(form) {
             form.querySelector(`*[name=${k}]`).value = item;
         }
     }
+}
+
+function clearFields(form) {
+    localStorage.clear()
+    location.reload()
 }
 
 async function generateSubmit(form) {
@@ -96,6 +102,9 @@ window.onload = () => {
     document.querySelector("#reset").addEventListener('click', (e) => {
         document.querySelector("#seed").value = -1;
         saveFields(e.target.form);
+    });
+    document.querySelector("#reset-all").addEventListener('click', (e) => {
+        clearFields(e.target.form);
     });
     loadFields(document.querySelector("#generate-form"));
 };

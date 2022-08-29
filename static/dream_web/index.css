@@ -32,6 +32,9 @@ fieldset {
     padding: 5px 10px 5px 10px;
     border: 1px solid black;
 }
+#reset-all {
+    background-color: pink;
+}
 #results {
     text-align: center;
     max-width: 1000px;

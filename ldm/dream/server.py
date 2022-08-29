@@ -46,6 +46,9 @@ class DreamServer(BaseHTTPRequestHandler):
         height = int(post_data['height'])
         cfgscale = float(post_data['cfgscale'])
         gfpgan_strength = float(post_data['gfpgan_strength'])
+        upscale_level    = post_data['upscale_level']
+        upscale_strength = post_data['upscale_strength']
+        upscale = [int(upscale_level),float(upscale_strength)] if upscale_level != '' else None
         seed = None if int(post_data['seed']) == -1 else int(post_data['seed'])
 
         print(f"Request to generate with prompt: {prompt}")
@@ -60,7 +63,9 @@ class DreamServer(BaseHTTPRequestHandler):
                                     height = height,
                                     seed = seed,
                                     steps = steps,
-                                    gfpgan_strength = gfpgan_strength)
+                                    gfpgan_strength = gfpgan_strength,
+                                    upscale         = upscale
+            )
         else:
             # Decode initimg as base64 to temp file
             with open("./img2img-tmp.png", "wb") as f:
@@ -74,7 +79,9 @@ class DreamServer(BaseHTTPRequestHandler):
                                          cfg_scale = cfgscale,
                                          seed = seed,
                                          gfpgan_strength=gfpgan_strength,
-                                         steps = steps)
+                                         upscale         = upscale,
+                                         steps = steps
+            )
             # Remove the temp file
             os.remove("./img2img-tmp.png")
 
