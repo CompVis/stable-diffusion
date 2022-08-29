@@ -47,8 +47,10 @@ function loadFields(form) {
 }
 
 function clearFields(form) {
-    localStorage.clear()
-    location.reload()
+    localStorage.clear();
+    let prompt = form.prompt.value;
+    form.reset();
+    form.prompt.value = prompt;
 }
 
 async function generateSubmit(form) {
@@ -116,7 +118,7 @@ window.onload = () => {
     document.querySelector("#generate-form").addEventListener('change', (e) => {
         saveFields(e.target.form);
     });
-    document.querySelector("#reset").addEventListener('click', (e) => {
+    document.querySelector("#reset-seed").addEventListener('click', (e) => {
         document.querySelector("#seed").value = -1;
         saveFields(e.target.form);
     });
