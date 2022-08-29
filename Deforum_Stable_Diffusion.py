@@ -233,9 +233,6 @@ def make_callback(sampler_name, dynamic_threshold=None, static_threshold=None, m
               
     if init_latent is not None:
         noise = torch.randn_like(init_latent, device=device) * masked_noise_modifier
-    if len(sigmas) > 0:
-        if sigmas[-1] == 0: # samplers don't run when sigmas==0, remove last zero
-            sigmas = sigmas[:-1]
     if sigmas is not None and len(sigmas) > 0:
         mask_schedule = torch.flip(sigmas/sigmas[0],[0])
     elif len(sigmas) == 0:
@@ -663,7 +660,7 @@ def DeforumArgs():
     strength = 0.0 #@param {type:"number"}
     init_image = "https://cdn.pixabay.com/photo/2022/07/30/13/10/green-longhorn-beetle-7353749_1280.jpg" #@param {type:"string"}
     use_mask = False #@param {type:"boolean"}
-    mask_file = "" #@param {type:"string"}
+    mask_file = "https://www.filterforge.com/wiki/images/archive/b/b7/20080927223728%21Polygonal_gradient_thumb.jpg" #@param {type:"string"}
     invert_mask = False #@param {type:"boolean"}
 
     #@markdown **Sampling Settings**
