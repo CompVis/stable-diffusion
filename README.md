@@ -1,19 +1,23 @@
-# Stable Diffusion Dream Script
+<h1 align='center'><b>Stable Diffusion Dream Script</b></h1>
+
+<p align='center'>
+<img src="static/logo_temp.png"/>
+</p>
 
 This is a fork of CompVis/stable-diffusion, the wonderful open source
 text-to-image generator. This fork supports:
 
 1. An interactive command-line interface that accepts the same prompt
-and switches as the Discord bot.
+   and switches as the Discord bot.
 
 2. Support for img2img in which you provide a seed image to build on
-top of.
+   top of.
 
 3. A basic Web interface that allows you to run a local web server for
-generating images in your browser.
+   generating images in your browser.
 
 4. Upscaling and face fixing using the optional ESRGAN and GFPGAN
-packages.
+   packages.
 
 5. Weighted subprompts for prompt tuning.
 
@@ -158,8 +162,7 @@ default to 0.75.
 `-G : <gfpgan_strength>`
 
 This prompt argument controls the strength of the face restoration
-that is being applied. Similar to upscaling, values between `0.5 to
-0.8` are recommended.
+that is being applied. Similar to upscaling, values between `0.5 to 0.8` are recommended.
 
 You can use either one or both without any conflicts. In cases where
 you use both, the image will be first upscaled and then the face
@@ -214,7 +217,7 @@ Output example:
 ## Barebones Web Server
 
 As of version 1.10, this distribution comes with a bare bones web
-server (see screenshot). To use it, run the *dream.py* script by
+server (see screenshot). To use it, run the _dream.py_ script by
 adding the **--web** option.
 
 ```
@@ -365,6 +368,7 @@ repository and associated paper for details and limitations.
 ## Changes
 
 - v1.13 (in process)
+
   - Supports a Google Colab notebook for a standalone server running on Google hardware [Arturo Mendivil](https://github.com/artmen1516)
   - WebUI supports GFPGAN/ESRGAN facial reconstruction and upscaling [Kevin Gibbons](https://github.com/bakkot)
   - WebUI supports incremental display of in-progress images during generation [Kevin Gibbons](https://github.com/bakkot)
@@ -378,7 +382,7 @@ repository and associated paper for details and limitations.
   - Improved file handling, including ability to read prompts from standard input.
     (kudos to [Yunsaki](https://github.com/yunsaki)
   - The web server is now integrated with the dream.py script. Invoke by adding --web to
-     the dream.py command arguments.
+    the dream.py command arguments.
   - Face restoration and upscaling via GFPGAN and Real-ESGAN are now automatically
     enabled if the GFPGAN directory is located as a sibling to Stable Diffusion.
     VRAM requirements are modestly reduced. Thanks to both [Blessedcoolant](https://github.com/blessedcoolant) and
