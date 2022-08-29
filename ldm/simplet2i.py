@@ -350,6 +350,8 @@ class T2I:
                                 image_callback(image, seed)
                             else:
                                 image_callback(image, seed, upscaled=True)
+                        else: # no callback passed, so we simply replace old image with rescaled one
+                            result[0] = image
 
         except KeyboardInterrupt:
             print('*interrupted*')
