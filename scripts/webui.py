@@ -25,16 +25,24 @@ parser.add_argument("--no-progressbar-hiding", action='store_true', help="do not
 parser.add_argument("--share", action='store_true', help="Should share your server on gradio.app, this allows you to use the UI from your mobile app", default=False)
 parser.add_argument("--share-password", type=str, help="Sharing is open by default, use this to set a password. Username: webui", default=None)
 parser.add_argument("--defaults", type=str, help="path to configuration file providing UI defaults, uses same format as cli parameter", default='configs/webui/webui.yaml')
-parser.add_argument("--gpu", type=int, help="choose which GPU to use if you have multiple", default=int(os.environ.get('CUDA_VISIBLE_DEVICES', 0)))
+parser.add_argument("--gpu", type=int, help="choose which GPU to use if you have multiple", default=0)
 parser.add_argument("--extra-models-cpu", action='store_true', help="run extra models (GFGPAN/ESRGAN) on cpu", default=False)
+parser.add_argument("--extra-models-gpu", action='store_true', help="run extra models (GFGPAN/ESRGAN) on cpu", default=False)
 parser.add_argument("--esrgan-cpu", action='store_true', help="run ESRGAN on cpu", default=False)
 parser.add_argument("--gfpgan-cpu", action='store_true', help="run GFPGAN on cpu", default=False)
+parser.add_argument("--esrgan-gpu", type=int, help="run ESRGAN on specific gpu (overrides --gpu)", default=0)
+parser.add_argument("--gfpgan-gpu", type=int, help="run GFPGAN on specific gpu (overrides --gpu) ", default=0)
 parser.add_argument("--cli", type=str, help="don't launch web server, take Python function kwargs from this file.", default=None)
 opt = parser.parse_args()
 
-# this should force GFPGAN and RealESRGAN onto the selected gpu as well
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"] = str(opt.gpu)
+#Should not be needed anymore
+#os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
+# all selected gpus, can probably be done nicer
+#if opt.extra_models_gpu:
+#    gpus = set([opt.gpu, opt.esrgan_gpu, opt.gfpgan_gpu])
+#    os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(str(g) for g in set(gpus))
+#else: 
+#    os.environ["CUDA_VISIBLE_DEVICES"] = str(opt.gpu)
 
 import gradio as gr
 import k_diffusion as K
@@ -247,11 +255,13 @@ def load_GFPGAN():
 
     sys.path.append(os.path.abspath(GFPGAN_dir))
     from gfpgan import GFPGANer
-    instance = GFPGANer(model_path=model_path, upscale=1, arch='clean', channel_multiplier=2, bg_upsampler=None)
+    
     if opt.gfpgan_cpu or opt.extra_models_cpu:
-        instance.device = torch.device('cpu')
+        instance = GFPGANer(model_path=model_path, upscale=1, arch='clean', channel_multiplier=2, bg_upsampler=None, device=torch.device('cpu'))
+    elif opt.extra_models_gpu:
+        instance = GFPGANer(model_path=model_path, upscale=1, arch='clean', channel_multiplier=2, bg_upsampler=None, device=torch.device(f'cuda:{opt.gfpgan_gpu}'))
     else:
-        instance.device = torch.device('cuda') # another way to set gpu device
+        instance = GFPGANer(model_path=model_path, upscale=1, arch='clean', channel_multiplier=2, bg_upsampler=None, device=torch.device(f'cuda:{opt.gpu}'))
     return instance
 
 def load_RealESRGAN(model_name: str):
@@ -269,16 +279,14 @@ def load_RealESRGAN(model_name: str):
     from realesrgan import RealESRGANer
 
     if opt.esrgan_cpu or opt.extra_models_cpu:
-        instance = RealESRGANer(scale=2, model_path=model_path, model=RealESRGAN_models[model_name], pre_pad=0, half=False)
-        instance.model.name = model_name
-        instance.device = torch.device('cpu')
+        instance = RealESRGANer(scale=2, model_path=model_path, model=RealESRGAN_models[model_name], pre_pad=0, half=False) # cpu does not support half
         instance.device = torch.device('cpu')
         instance.model.to('cpu')
+    elif opt.extra_models_gpu:
+        instance = RealESRGANer(scale=2, model_path=model_path, model=RealESRGAN_models[model_name], pre_pad=0, half=not opt.no_half, device=torch.device(f'cuda:{opt.esrgan_gpu}'))
     else:
-        instance = RealESRGANer(scale=2, model_path=model_path, model=RealESRGAN_models[model_name], pre_pad=0, half=not opt.no_half)
-        instance.model.name = model_name
-        instance.device = torch.device('cuda') # another way to set gpu device
-
+        instance = RealESRGANer(scale=2, model_path=model_path, model=RealESRGAN_models[model_name], pre_pad=0, half=not opt.no_half, device=torch.device(f'cuda:{opt.gpu}'))
+    instance.model.name = model_name
     return instance
 
 GFPGAN = None
@@ -324,7 +332,7 @@ if opt.optimized:
         sd['model2.' + key[6:]] = sd.pop(key)
 
     config = OmegaConf.load("optimizedSD/v1-inference.yaml")
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    device = torch.device(f"cuda:{opt.gpu}") if torch.cuda.is_available() else torch.device("cpu")
 
     model = instantiate_from_config(config.modelUNet)
     _, _ = model.load_state_dict(sd, strict=False)
@@ -351,7 +359,7 @@ else:
     config = OmegaConf.load(opt.config)
     model = load_model_from_config(config, opt.ckpt)
 
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    device = torch.device(f"cuda:{opt.gpu}") if torch.cuda.is_available() else torch.device("cpu")
     model = (model if opt.no_half else model.half()).to(device)
 
 def load_embeddings(fp):
