@@ -53,8 +53,17 @@
           <input value="-1" type="number" id="seed" name="seed">
           <button type="button" id="reset">&olarr;</button>
           <br>
-          <label title="Strength of the gfpgan algorithm ex: '1', --gfpgan startup flag is required." for="gfpgan_strength">GPFGAN Strength:</label>
-          <input value="0.75" min="0" max="1" type="number" id="gfpgan_strength" name="gfpgan_strength" step="0.01">
+	  <p><em>The options below require the GFPGAN and ESRGAN packages to be installed</em></p>
+          <label title="Strength of the gfpgan (face fixing) algorithm." for="gfpgan_strength">GPFGAN Strength:</label>
+          <input value="0.8" min="0" max="1" type="number" id="gfpgan_strength" name="gfpgan_strength" step="0.1">
+          <label title="Upscaling to perform using ESRGAN." for="upscaling">Upscaling Level</label>
+          <select id="upscaling" name="upscaling" value="">
+            <option value=""></option>
+	    <option value="2">2x</option>
+	    <option value="4">4x</option>
+	  </select>
+          <label title="Strength of the esrgan (upscaling) algorithm." for="esrgan_strength">ESRGAN Strength:</label>
+          <input value="0.75" min="0" max="1" type="number" id="esrgan_strength" name="esrgan_strength" step="0.1">
         </fieldset>
       </form>
       <div id="about">For news and support for this web service, visit our <a href="http://github.com/lstein/stable-diffusion">GitHub site</a></div>
