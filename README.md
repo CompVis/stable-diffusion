@@ -1,7 +1,29 @@
 # Stable Diffusion Dream Script
 
 This is a fork of CompVis/stable-diffusion, the wonderful open source
-text-to-image generator. The original has been improved in several ways:
+text-to-image generator. This fork supports:
+
+1. An interactive command-line interface that accepts the same prompt
+and switches as the Discord bot.
+
+2. Support for img2img in which you provide a seed image to build on
+top of.
+
+3. A basic Web interface that allows you to run a local web server for
+generating images in your browser.
+
+4. Upscaling and face fixing using the optional ESRGAN and GFPGAN
+packages.
+
+5. Weighted subprompts for prompt tuning.
+
+6. Textual inversion for customization of the prompt language and images.
+
+7. ...and more!
+
+This fork is rapidly evolving, so use the Issues panel to report bugs
+and make feature requests, and check back periodically for
+improvements and bug fixes.
 
 ## Interactive command-line interface similar to the Discord bot
 
@@ -333,6 +355,15 @@ https://github.com/rinongal/textual_inversion Please see the
 repository and associated paper for details and limitations.
 
 ## Changes
+
+- v1.13 (in process)
+  - Supports a Google Colab notebook for a standalone server running on Google hardware [Arturo Mendivil](https://github.com/artmen1516)
+  - WebUI supports GFPGAN/ESRGAN facial reconstruction and upscaling [Kevin Gibbons](https://github.com/bakkot)
+  - WebUI supports incremental display of in-progress images during generation [Kevin Gibbons](https://github.com/bakkot)
+  - Output directory can be specified on the dream> command line.
+  - The grid was displaying duplicated images when not enough images to fill the final row [Muhammad Usama](https://github.com/SMUsamaShah)
+  - Can specify --grid on dream.py command line as the default.
+  - Miscellaneous internal bug and stability fixes.
 
 - v1.12 (28 August 2022)
 
