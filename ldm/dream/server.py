@@ -90,7 +90,7 @@ class DreamServer(BaseHTTPRequestHandler):
         post_data['initimg'] = '' # Don't send init image back
 
         # Append post_data to log
-        with open("./outputs/img-samples/dream_web_log.txt", "a") as log:
+        with open("./outputs/img-samples/dream_web_log.txt", "a", encoding="utf-8") as log:
             for output in outputs:
                 log.write(f"{output[0]}: {json.dumps(post_data)}\n")
 
