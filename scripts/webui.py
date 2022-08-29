@@ -852,6 +852,11 @@ normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img,
 skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode)
 
                 output_images.append(image)
+                if opt.optimized:
+                    mem = torch.cuda.memory_allocated()/1e6
+                    modelFS.to("cpu")
+                    while(torch.cuda.memory_allocated()/1e6 >= mem):
+                        time.sleep(1)
 
         if (prompt_matrix or not skip_grid) and not do_not_save_grid:
             if prompt_matrix:
@@ -874,12 +879,6 @@ skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoisin
             grid_count = get_next_sequence_number(outpath, 'grid-')
             grid_file = f"grid-{grid_count:05}-{seed}_{prompts[i].replace(' ', '_').translate({ord(x): '' for x in invalid_filename_chars})[:128]}.{grid_ext}"
             grid.save(os.path.join(outpath, grid_file), grid_format, quality=grid_quality, lossless=grid_lossless, optimize=True)
-
-        if opt.optimized:
-            mem = torch.cuda.memory_allocated()/1e6
-            modelFS.to("cpu")
-            while(torch.cuda.memory_allocated()/1e6 >= mem):
-                time.sleep(1)
 
         toc = time.time()
 
