@@ -28,5 +28,6 @@
     "cool_down": 0.0, // number of seconds to pause between images, to keep GPU cool
     "checkpoint": "./models/sd-v1-4.ckpt",
     "use_jpg": false, // set this to save your output in JPG format to save space
-    "hide_metadata": false // set to true if you don"t want your prompt and seed in the PNG output metadata
+    "hide_metadata": false, // set to true if you don"t want your prompt and seed in the PNG output metadata
+    "save_settings": false // set to true if you want a settings file like this saved with every image
 }

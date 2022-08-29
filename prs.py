@@ -26,6 +26,14 @@ from ldm.models.diffusion.plms import PLMSSampler
 from types import SimpleNamespace
 import json5 as json
 
+try:
+    # this silences the annoying "Some weights of the model checkpoint were not used when initializing..." message at start.
+
+    from transformers import logging
+    logging.set_verbosity_error()
+except:
+    pass
+
 def chunk(it, size):
     it = iter(it)
     return iter(lambda: tuple(islice(it, size)), ())
@@ -172,6 +180,10 @@ def do_run(device, model, opt):
                         prompts = newprompts
 
                         print(f'\nPrompt for this image:\n   {prompts}\n')
+
+                        # save a settings file for this image
+                        if opt.save_settings:
+                            save_settings(opt, prompts[0], grid_count)
 
                         c = model.get_learned_conditioning(prompts)
 
@@ -537,6 +549,7 @@ class Settings:
     use_jpg = False
     hide_metadata = False
     method = "k_lms"
+    save_settings = False
     
     def apply_settings_file(self, filename, settings_file):
         print(f'Applying settings file: {filename}')
@@ -592,7 +605,34 @@ class Settings:
             self.hide_metadata = (settings_file["hide_metadata"])
         if is_json_key_present(settings_file, 'method'):
             self.method = (settings_file["method"])
-        
+        if is_json_key_present(settings_file, 'save_settings'):
+            self.save_settings = (settings_file["save_settings"])
+
+def save_settings(options, prompt, filenum):
+    setting_list = {
+        'prompt' : prompt,
+        'batch_name' : options.batch_name,
+        'steps' : options.ddim_steps,
+        'eta' : options.ddim_eta,
+        'n_iter' : options.n_iter,
+        'width' : options.W,
+        'height' : options.H,
+        'n_samples' : options.n_samples,
+        'n_rows' : options.n_rows,
+        'scale' : options.scale,
+        'dyn' : options.dyn,
+        'seed' : options.seed,
+        'init_image' : options.init_image,
+        'init_strength' : 1.0 - options.strength,
+        'gobig_maximize' : options.gobig_maximize,
+        'gobig_overlap' : options.gobig_overlap,
+        'gobig_realesrgan' : options.gobig_realesrgan,
+        'use_jpg' : "true" if options.filetype == ".jpg" else "false",
+        'hide_metadata' : options.hide_metadata,
+        'method' : options.method
+    }
+    with open(f"{options.outdir}/{options.batch_name}-{filenum:04}.json",  "w+", encoding="utf-8") as f:
+        json.dump(setting_list, f, ensure_ascii=False, indent=4)
 
 def esrgan_resize(input, id):
     input.save(f'_esrgan_orig{id}.png')
@@ -751,7 +791,7 @@ def main():
 
     prompts = []
     if settings.from_file is not None:
-        with open(settings.from_file, "r") as f:
+        with open(settings.from_file, "r", encoding="utf-8") as f:
             prompts = f.read().splitlines()
     else:
         prompts.append(settings.prompt)
@@ -780,11 +820,12 @@ def main():
                 else:
                     time.sleep(0.5)
 
-        for prompt in prompts:
+        for p in range(len(prompts)):
+            print(f'p is {p}')
             for i in range(settings.n_batches):
                 # pack up our settings into a simple namespace for the renderer
                 opt = {
-                    "prompt" : prompt,
+                    "prompt" : prompts[p],
                     "batch_name" : settings.batch_name,
                     "outdir" : outdir,
                     "skip_grid" : False,
@@ -800,7 +841,6 @@ def main():
                     "n_rows" : settings.n_rows,
                     "scale" : settings.scale,
                     "dyn" : settings.dyn,
-                    "from_file": settings.from_file,
                     "seed" : settings.seed + i,
                     "fixed_code": False,
                     "precision": "autocast",
@@ -815,9 +855,11 @@ def main():
                     "hide_metadata": settings.hide_metadata,
                     "quality": quality,
                     "device_id": device_id,
-                    "method": settings.method
+                    "method": settings.method,
+                    "save_settings": settings.save_settings,
                 }
                 opt = SimpleNamespace(**opt)
+
                 # render the image(s)!
                 if cl_args.gobig_init == None:
                     # either just a regular render, or a regular render that will next go_big
@@ -826,7 +868,7 @@ def main():
                     gobig_init = cl_args.gobig_init
                 if cl_args.gobig:
                     do_gobig(gobig_init, device, model, opt)
-                if settings.cool_down > 0 and i < (settings.n_batches - 1):
+                if settings.cool_down > 0 and ((i < (settings.n_batches - 1)) or p < len(prompts)):
                     print(f'Pausing {settings.cool_down} seconds to give your poor GPU a rest...')
                     time.sleep(settings.cool_down)
             if not settings.frozen_seed:
