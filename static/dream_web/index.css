@@ -18,6 +18,11 @@ fieldset {
 #fieldset-search {
     display: flex;
 }
+#scaling-inprocess-message{
+    font-weight: bold;
+    font-style: italic;
+    display: none;
+}
 #prompt {
     flex-grow: 1;
 
@@ -31,6 +36,9 @@ fieldset {
     border-radius: 0px 20px 20px 0px;
     padding: 5px 10px 5px 10px;
     border: 1px solid black;
+}
+#reset-all {
+    background-color: pink;
 }
 #results {
     text-align: center;

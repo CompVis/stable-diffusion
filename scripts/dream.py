@@ -9,8 +9,7 @@ import copy
 import warnings
 import ldm.dream.readline
 from ldm.dream.pngwriter import PngWriter, PromptFormatter
-
-debugging = False
+from ldm.dream.server import DreamServer, ThreadingDreamServer
 
 
 def main():
@@ -52,7 +51,9 @@ def main():
         weights=weights,
         full_precision=opt.full_precision,
         config=config,
-        latent_diffusion_weights=opt.laion400m,  # this is solely for recreating the prompt
+        grid  = opt.grid,
+        # this is solely for recreating the prompt
+        latent_diffusion_weights=opt.laion400m,
         embedding_path=opt.embedding_path,
         device=opt.device,
     )
@@ -64,80 +65,50 @@ def main():
     # gets rid of annoying messages about random seed
     logging.getLogger('pytorch_lightning').setLevel(logging.ERROR)
 
+    # load the infile as a list of lines
     infile = None
-    try:
-        if opt.infile is not None:
-            infile = open(opt.infile, 'r')
-    except FileNotFoundError as e:
-        print(e)
-        exit(-1)
+    if opt.infile:
+        try:
+            if os.path.isfile(opt.infile):
+                infile = open(opt.infile, 'r', encoding='utf-8')
+            elif opt.infile == '-':  # stdin
+                infile = sys.stdin
+            else:
+                raise FileNotFoundError(f'{opt.infile} not found.')
+        except (FileNotFoundError, IOError) as e:
+            print(f'{e}. Aborting.')
+            sys.exit(-1)
 
     # preload the model
     t2i.load_model()
 
-    # load GFPGAN if requested
-    if opt.use_gfpgan:
-        print('\n* --gfpgan was specified, loading gfpgan...')
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=DeprecationWarning)
+    if not infile:
+        print(
+            "\n* Initialization done! Awaiting your command (-h for help, 'q' to quit)"
+        )
 
-            try:
-                model_path = os.path.join(
-                    opt.gfpgan_dir, opt.gfpgan_model_path
-                )
-                if not os.path.isfile(model_path):
-                    raise Exception(
-                        'GFPGAN model not found at path ' + model_path
-                    )
-
-                sys.path.append(os.path.abspath(opt.gfpgan_dir))
-                from gfpgan import GFPGANer
-
-                bg_upsampler = load_gfpgan_bg_upsampler(
-                    opt.gfpgan_bg_upsampler, opt.gfpgan_bg_tile
-                )
-
-                t2i.gfpgan = GFPGANer(
-                    model_path=model_path,
-                    upscale=opt.gfpgan_upscale,
-                    arch='clean',
-                    channel_multiplier=2,
-                    bg_upsampler=bg_upsampler,
-                )
-            except Exception:
-                import traceback
-
-                print('Error loading GFPGAN:', file=sys.stderr)
-                print(traceback.format_exc(), file=sys.stderr)
-
-    print(
-        "\n* Initialization done! Awaiting your command (-h for help, 'q' to quit, 'cd' to change output dir, 'pwd' to print output dir)..."
-    )
-
-    log_path = os.path.join(opt.outdir, 'dream_log.txt')
-    with open(log_path, 'a') as log:
-        cmd_parser = create_cmd_parser()
-        main_loop(t2i, opt.outdir, cmd_parser, log, infile)
-        log.close()
-    if infile:
-        infile.close()
+    cmd_parser = create_cmd_parser()
+    if opt.web:
+        dream_server_loop(t2i)
+    else:
+        main_loop(t2i, opt.outdir, cmd_parser, infile)
 
 
-def main_loop(t2i, outdir, parser, log, infile):
+def main_loop(t2i, outdir, parser, infile):
     """prompt/read/execute loop"""
     done = False
     last_seeds = []
 
     while not done:
         try:
-            command = infile.readline() if infile else input('dream> ')
+            command = get_next_command(infile)
         except EOFError:
             done = True
             break
 
-        if infile and len(command) == 0:
-            done = True
-            break
+        # skip empty lines
+        if not command.strip():
+            continue
 
         if command.startswith(('#', '//')):
             continue
@@ -152,24 +123,9 @@ def main_loop(t2i, outdir, parser, log, infile):
             print(str(e))
             continue
 
-        if len(elements) == 0:
-            continue
-
         if elements[0] == 'q':
             done = True
             break
-
-        if elements[0] == 'cd' and len(elements) > 1:
-            if os.path.exists(elements[1]):
-                print(f'setting image output directory to {elements[1]}')
-                outdir = elements[1]
-            else:
-                print(f'directory {elements[1]} does not exist')
-            continue
-
-        if elements[0] == 'pwd':
-            print(f'current output directory is {outdir}')
-            continue
 
         if elements[0].startswith(
             '!dream'
@@ -207,18 +163,26 @@ def main_loop(t2i, outdir, parser, log, infile):
                 opt.seed = None
 
         normalized_prompt = PromptFormatter(t2i, opt).normalize_prompt()
-        individual_images = not opt.grid
+        do_grid           = opt.grid or t2i.grid
+        individual_images = not do_grid
 
+        if opt.outdir:
+            if not os.path.exists(opt.outdir):
+                os.makedirs(opt.outdir)
+            current_outdir = opt.outdir
+        else:
+            current_outdir = outdir
+
+        # Here is where the images are actually generated!
         try:
-            file_writer = PngWriter(outdir, normalized_prompt, opt.batch_size)
-            callback = file_writer.write_image if individual_images else None
-
-            image_list = t2i.prompt2image(image_callback=callback, **vars(opt))
+            file_writer = PngWriter(current_outdir, normalized_prompt, opt.batch_size)
+            callback    = file_writer.write_image if individual_images else None
+            image_list  = t2i.prompt2image(image_callback=callback, **vars(opt))
             results = (
                 file_writer.files_written if individual_images else image_list
             )
 
-            if opt.grid and len(results) > 0:
+            if do_grid and len(results) > 0:
                 grid_img = file_writer.make_grid([r[0] for r in results])
                 filename = file_writer.unique_filename(results[0][1])
                 seeds = [a[1] for a in results]
@@ -239,94 +203,74 @@ def main_loop(t2i, outdir, parser, log, infile):
             continue
 
         print('Outputs:')
-        write_log_message(t2i, normalized_prompt, results, log)
+        log_path = os.path.join(current_outdir, 'dream_log.txt')
+        write_log_message(normalized_prompt, results, log_path)
 
     print('goodbye!')
 
 
-def load_gfpgan_bg_upsampler(bg_upsampler, bg_tile=400):
-    import torch
-
-    if bg_upsampler == 'realesrgan':
-        if not torch.cuda.is_available():  # CPU
-            import warnings
-
-            warnings.warn(
-                'The unoptimized RealESRGAN is slow on CPU. We do not use it. '
-                'If you really want to use it, please modify the corresponding codes.'
-            )
-            bg_upsampler = None
-        else:
-            from basicsr.archs.rrdbnet_arch import RRDBNet
-            from realesrgan import RealESRGANer
-
-            model = RRDBNet(
-                num_in_ch=3,
-                num_out_ch=3,
-                num_feat=64,
-                num_block=23,
-                num_grow_ch=32,
-                scale=2,
-            )
-            bg_upsampler = RealESRGANer(
-                scale=2,
-                model_path='https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth',
-                model=model,
-                tile=bg_tile,
-                tile_pad=10,
-                pre_pad=0,
-                half=True,
-            )  # need to set False in CPU mode
+def get_next_command(infile=None) -> str: #command string
+    if infile is None:
+        command = input('dream> ')
     else:
-        bg_upsampler = None
+        command = infile.readline()
+        if not command:
+            raise EOFError
+        else:
+            command = command.strip()
+        print(f'#{command}')
+    return command
 
-    return bg_upsampler
+def dream_server_loop(t2i):
+    print('\n* --web was specified, starting web server...')
+    # Change working directory to the stable-diffusion directory
+    os.chdir(
+        os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    )
 
+    # Start server
+    DreamServer.model = t2i
+    dream_server = ThreadingDreamServer(("0.0.0.0", 9090))
+    print("\nStarted Stable Diffusion dream server!")
+    print("Point your browser at http://localhost:9090 or use the host's DNS name or IP address.")
 
-# variant generation is going to be superseded by a generalized
-# "prompt-morph" functionality
-# def generate_variants(t2i,outdir,opt,previous_gens):
-#     variants = []
-#     print(f"Generating {opt.variants} variant(s)...")
-#     newopt = copy.deepcopy(opt)
-#     newopt.iterations = 1
-#     newopt.variants   = None
-#     for r in previous_gens:
-#         newopt.init_img = r[0]
-#         prompt            = PromptFormatter(t2i,newopt).normalize_prompt()
-#         print(f"] generating variant for {newopt.init_img}")
-#         for j in range(0,opt.variants):
-#             try:
-#                 file_writer        = PngWriter(outdir,prompt,newopt.batch_size)
-#                 callback           = file_writer.write_image
-#                 t2i.prompt2image(image_callback=callback,**vars(newopt))
-#                 results           = file_writer.files_written
-#                 variants.append([prompt,results])
-#             except AssertionError as e:
-#                 print(e)
-#                 continue
-#     print(f'{opt.variants} variants generated')
-#     return variants
+    try:
+        dream_server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+
+    dream_server.server_close()
 
 
-def write_log_message(t2i, prompt, results, logfile):
-    """logs the name of the output image, its prompt and seed to the terminal, log file, and a Dream text chunk in the PNG metadata"""
-    last_seed = None
-    img_num = 1
-    seenit = {}
+def write_log_message(prompt, results, log_path):
+    """logs the name of the output image, prompt, and prompt args to the terminal and log file"""
+    log_lines = [f'{r[0]}: {prompt} -S{r[1]}\n' for r in results]
+    print(*log_lines, sep='')
 
-    for r in results:
-        seed = r[1]
-        log_message = f'{r[0]}: {prompt} -S{seed}'
+    with open(log_path, 'a', encoding='utf-8') as file:
+        file.writelines(log_lines)
 
-        print(log_message)
-        logfile.write(log_message + '\n')
-        logfile.flush()
 
+SAMPLER_CHOICES=[
+    'ddim',
+    'k_dpm_2_a',
+    'k_dpm_2',
+    'k_euler_a',
+    'k_euler',
+    'k_heun',
+    'k_lms',
+    'plms',
+]
 
 def create_argv_parser():
     parser = argparse.ArgumentParser(
-        description="Parse script's command line args"
+        description="""Generate images using Stable Diffusion.
+        Use --web to launch the web interface. 
+        Use --from_file to load prompts from a file path or standard input ("-").
+        Otherwise you will be dropped into an interactive command prompt (type -h for help.)
+        Other command-line arguments are defaults that can usually be overridden
+        prompt the command prompt.
+"""
     )
     parser.add_argument(
         '--laion400m',
@@ -334,51 +278,50 @@ def create_argv_parser():
         '-l',
         dest='laion400m',
         action='store_true',
-        help='fallback to the latent diffusion (laion400m) weights and config',
+        help='Fallback to the latent diffusion (laion400m) weights and config',
     )
     parser.add_argument(
         '--from_file',
         dest='infile',
         type=str,
-        help='if specified, load prompts from this file',
+        help='If specified, load prompts from this file',
     )
     parser.add_argument(
         '-n',
         '--iterations',
         type=int,
         default=1,
-        help='number of images to generate',
+        help='Number of images to generate',
     )
     parser.add_argument(
         '-F',
         '--full_precision',
         dest='full_precision',
         action='store_true',
-        help='use slower full precision math for calculations',
+        help='Use slower full precision math for calculations',
     )
     parser.add_argument(
-        '--sampler',
+        '-g',
+        '--grid',
+        action='store_true',
+        help='Generate a grid instead of individual images',
+    )
+    parser.add_argument(
+        '-A',
         '-m',
+        '--sampler',
         dest='sampler_name',
-        choices=[
-            'ddim',
-            'k_dpm_2_a',
-            'k_dpm_2',
-            'k_euler_a',
-            'k_euler',
-            'k_heun',
-            'k_lms',
-            'plms',
-        ],
+        choices=SAMPLER_CHOICES,
+        metavar='SAMPLER_NAME',
         default='k_lms',
-        help='which sampler to use (k_lms) - can only be set on command line',
+        help=f'Set the initial sampler. Default: k_lms. Supported samplers: {", ".join(SAMPLER_CHOICES)}',
     )
     parser.add_argument(
         '--outdir',
         '-o',
         type=str,
         default='outputs/img-samples',
-        help='directory in which to place generated images and a log of prompts and seeds (outputs/img-samples',
+        help='Directory to save generated images and a log of prompts and seeds. Default: outputs/img-samples',
     )
     parser.add_argument(
         '--embedding_path',
@@ -390,44 +333,39 @@ def create_argv_parser():
         '-d',
         type=str,
         default='cuda',
-        help='device to run stable diffusion on. defaults to cuda `torch.cuda.current_device()` if avalible',
+        help='Device to run Stable Diffusion on. Defaults to cuda `torch.cuda.current_device()` if avalible',
     )
     # GFPGAN related args
-    parser.add_argument(
-        '--gfpgan',
-        dest='use_gfpgan',
-        action='store_true',
-        help='load gfpgan for use in the dreambot. Note: Enabling GFPGAN will require more GPU memory',
-    )
-    parser.add_argument(
-        '--gfpgan_upscale',
-        type=int,
-        default=2,
-        help='The final upsampling scale of the image. Default: 2. Only used if --gfpgan is specified',
-    )
     parser.add_argument(
         '--gfpgan_bg_upsampler',
         type=str,
         default='realesrgan',
         help='Background upsampler. Default: realesrgan. Options: realesrgan, none. Only used if --gfpgan is specified',
+
     )
     parser.add_argument(
         '--gfpgan_bg_tile',
         type=int,
         default=400,
-        help='Tile size for background sampler, 0 for no tile during testing. Default: 400. Only used if --gfpgan is specified',
+        help='Tile size for background sampler, 0 for no tile during testing. Default: 400.',
     )
     parser.add_argument(
         '--gfpgan_model_path',
         type=str,
         default='experiments/pretrained_models/GFPGANv1.3.pth',
-        help='indicates the path to the GFPGAN model, relative to --gfpgan_dir. Only used if --gfpgan is specified',
+        help='Indicates the path to the GFPGAN model, relative to --gfpgan_dir.',
     )
     parser.add_argument(
         '--gfpgan_dir',
         type=str,
         default='../GFPGAN',
-        help='indicates the directory containing the GFPGAN code. Only used if --gfpgan is specified',
+        help='Indicates the directory containing the GFPGAN code.',
+    )
+    parser.add_argument(
+        '--web',
+        dest='web',
+        action='store_true',
+        help='Start in web server mode.',
     )
     return parser
 
@@ -437,68 +375,89 @@ def create_cmd_parser():
         description='Example: dream> a fantastic alien landscape -W1024 -H960 -s100 -n12'
     )
     parser.add_argument('prompt')
-    parser.add_argument('-s', '--steps', type=int, help='number of steps')
+    parser.add_argument('-s', '--steps', type=int, help='Number of steps')
     parser.add_argument(
         '-S',
         '--seed',
         type=int,
-        help='image seed; a +ve integer, or use -1 for the previous seed, -2 for the one before that, etc',
+        help='Image seed; a +ve integer, or use -1 for the previous seed, -2 for the one before that, etc',
     )
     parser.add_argument(
         '-n',
         '--iterations',
         type=int,
         default=1,
-        help='number of samplings to perform (slower, but will provide seeds for individual images)',
+        help='Number of samplings to perform (slower, but will provide seeds for individual images)',
     )
     parser.add_argument(
         '-b',
         '--batch_size',
         type=int,
         default=1,
-        help='number of images to produce per sampling (will not provide seeds for individual images!)',
+        help='Number of images to produce per sampling (will not provide seeds for individual images!)',
     )
     parser.add_argument(
-        '-W', '--width', type=int, help='image width, multiple of 64'
+        '-W', '--width', type=int, help='Image width, multiple of 64'
     )
     parser.add_argument(
-        '-H', '--height', type=int, help='image height, multiple of 64'
+        '-H', '--height', type=int, help='Image height, multiple of 64'
     )
     parser.add_argument(
         '-C',
         '--cfg_scale',
         default=7.5,
         type=float,
-        help='prompt configuration scale',
+        help='Prompt configuration scale',
     )
     parser.add_argument(
         '-g', '--grid', action='store_true', help='generate a grid'
     )
     parser.add_argument(
+        '--outdir',
+        '-o',
+        type=str,
+        default=None,
+        help='Directory to save generated images and a log of prompts and seeds',
+    )
+    parser.add_argument(
         '-i',
         '--individual',
         action='store_true',
-        help='generate individual files (default)',
+        help='Generate individual files (default)',
     )
     parser.add_argument(
         '-I',
         '--init_img',
         type=str,
-        help='path to input image for img2img mode (supersedes width and height)',
+        help='Path to input image for img2img mode (supersedes width and height)',
     )
     parser.add_argument(
         '-f',
         '--strength',
         default=0.75,
         type=float,
-        help='strength for noising/unnoising. 0.0 preserves image exactly, 1.0 replaces it completely',
+        help='Strength for noising/unnoising. 0.0 preserves image exactly, 1.0 replaces it completely',
     )
     parser.add_argument(
         '-G',
         '--gfpgan_strength',
-        default=None,
+        default=0,
         type=float,
         help='The strength at which to apply the GFPGAN model to the result, in order to improve faces.',
+    )
+    parser.add_argument(
+        '-U',
+        '--upscale',
+        nargs='+',
+        default=None,
+        type=float,
+        help='Scale factor (2, 4) for upscaling followed by upscaling strength (0-1.0). If strength not specified, defaults to 0.75'
+    )
+    parser.add_argument(
+        '-save_orig',
+        '--save_original',
+        action='store_true',
+        help='Save original. Use it when upscaling to save both versions.',
     )
     # variants is going to be superseded by a generalized "prompt-morph" function
     #    parser.add_argument('-v','--variants',type=int,help="in img2img mode, the first generated image will get passed back to img2img to generate the requested number of variants")
@@ -506,7 +465,18 @@ def create_cmd_parser():
         '-x',
         '--skip_normalize',
         action='store_true',
-        help='skip subprompt weight normalization',
+        help='Skip subprompt weight normalization',
+    )
+    parser.add_argument(
+        '-A',
+        '-m',
+        '--sampler',
+        dest='sampler_name',
+        default=None,
+        type=str,
+        choices=SAMPLER_CHOICES,
+        metavar='SAMPLER_NAME',
+        help=f'Switch to a different sampler. Supported samplers: {", ".join(SAMPLER_CHOICES)}',
     )
     return parser
 
