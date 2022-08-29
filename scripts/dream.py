@@ -163,7 +163,9 @@ def main_loop(t2i, outdir, parser, infile):
                 opt.seed = None
 
         normalized_prompt = PromptFormatter(t2i, opt).normalize_prompt()
-        individual_images = not opt.grid
+        do_grid           = opt.grid or t2i.grid
+        individual_images = not do_grid
+
         if opt.outdir:
             if not os.path.exists(opt.outdir):
                 os.makedirs(opt.outdir)
@@ -180,8 +182,7 @@ def main_loop(t2i, outdir, parser, infile):
                 file_writer.files_written if individual_images else image_list
             )
 
-            grid = opt.grid or t2i.grid
-            if grid and len(results) > 0:
+            if do_grid and len(results) > 0:
                 grid_img = file_writer.make_grid([r[0] for r in results])
                 filename = file_writer.unique_filename(results[0][1])
                 seeds = [a[1] for a in results]
