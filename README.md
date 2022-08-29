@@ -181,6 +181,14 @@ face restore a particular generated image, pass it again with the same
 prompt and generated seed along with the `-U` and `-G` prompt
 arguments to perform those actions.
 
+## Google Colab
+   
+Stable Diffusion AI Notebook: <a href="https://colab.research.google.com/github/lstein/stable-diffusion/blob/main/Stable_Diffusion_AI_Notebook.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> <br>
+Open and follow instructions to use an isolated environment running Dream.<br>
+
+Output example:
+![Colab Notebook](static/colab_notebook.png)
+
 ## Barebones Web Server
 
 As of version 1.10, this distribution comes with a bare bones web
