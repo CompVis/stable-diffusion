@@ -212,7 +212,7 @@ class T2I:
         save_original=False,
         upscale=None,
         variants=None,
-        user_sampler=None,
+        sampler_name=None,
         **args,
     ):   # eat up additional cruft
         """
@@ -272,8 +272,8 @@ class T2I:
 
         scope = autocast if self.precision == 'autocast' else nullcontext
 
-        if user_sampler and (user_sampler != self.sampler_name):
-            self.sampler_name = user_sampler
+        if sampler_name and (sampler_name != self.sampler_name):
+            self.sampler_name = sampler_name
             self._set_sampler()
 
         tic = time.time()
