@@ -470,7 +470,7 @@ if load_on_run_all:
 def DeforumAnimArgs():
 
     #@markdown ####**Animation:**
-    animation_mode = 'Interpolation' #@param ['None', '2D', 'Video Input', 'Interpolation'] {type:'string'}
+    animation_mode = 'None' #@param ['None', '2D', 'Video Input', 'Interpolation'] {type:'string'}
     max_frames = 1000#@param {type:"number"}
     border = 'wrap' #@param ['wrap', 'replicate'] {type:'string'}
 
@@ -566,18 +566,17 @@ if anim_args.key_frames:
 # !!   "id": "2ujwkGZTcGev"
 # !! }}
 prompts = [
-    "an abtract cave painting of artificial intelligence and the universe's destiny in 2096, gorgeous, extremely detailed", #the first prompt I want
+    "a beautiful forest by Asher Brown Durand, trending on Artstation", #the first prompt I want
     "a beautiful portrait of a woman by Artgerm, trending on Artstation", #the second prompt I want
     #"the third prompt I don't want it I commented it with an",
 ]
 
 animation_prompts = {
     0: "a beautiful apple, trending on Artstation",
-    100: "a beautiful banana, trending on Artstation",
-    106: "a beautiful coconut, trending on Artstation",
-    118: "a beautiful durian, trending on Artstation",
+    20: "a beautiful banana, trending on Artstation",
+    30: "a beautiful coconut, trending on Artstation",
+    40: "a beautiful durian, trending on Artstation",
 }
-
 # %%
 # !! {"metadata":{
 # !!   "id": "s8RAo2zI-vQm"
@@ -867,12 +866,6 @@ def render_interpolation(args, anim_args):
         s = {**dict(args.__dict__), **dict(anim_args.__dict__)}
         json.dump(s, f, ensure_ascii=False, indent=4)
     
-    # # expand prompts out to per-frame
-    # prompt_series = pd.Series([np.nan for a in range(animation_prompts.items()[0])])
-    # for i, prompt in animation_prompts.items():
-    #     prompt_series[i] = prompt
-    # prompt_series = prompt_series.ffill().bfill()
-
     # Interpolation Settings
     args.n_samples = 1
     args.seed_behavior = 'fixed' # force fix seed at the moment bc only 1 seed is available
@@ -1027,8 +1020,9 @@ else:
 # !!   "accelerator": "GPU",
 # !!   "colab": {
 # !!     "collapsed_sections": [],
-# !!     "name": "Deforum_Stable_Diffusion_dev.ipynb",
-# !!     "provenance": []
+# !!     "name": "Deforum_Stable_Diffusion.ipynb",
+# !!     "provenance": [],
+# !!     "private_outputs": true
 # !!   },
 # !!   "gpuClass": "standard",
 # !!   "kernelspec": {
