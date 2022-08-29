@@ -31,14 +31,17 @@ def sampler_fn(
 ) -> torch.Tensor:
     shape = [args.C, args.H // args.f, args.W // args.f]
     sigmas: torch.Tensor = model_wrap.get_sigmas(args.steps)
+    sigmas = sigmas[len(sigmas) - t_enc - 1 :]
     if args.use_init:
-        sigmas = sigmas[len(sigmas) - t_enc - 1 :]
-        x = (
-            init_latent
-            + torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
-        )
+        if len(sigmas) > 0:
+            x = (
+                init_latent
+                + torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
+            )
+        else:
+            x = init_latent
     else:
-        x = torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
+        x = torch.randn([args.n_samples, *shape], device=device)
     sampler_args = {
         "model": CFGDenoiser(model_wrap),
         "x": x,

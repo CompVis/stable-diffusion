@@ -70,7 +70,7 @@ if setup_environment:
     print("...setting up environment")
     all_process = [['pip', 'install', 'torch==1.11.0+cu113', 'torchvision==0.12.0+cu113', 'torchaudio==0.11.0', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'],
                    ['pip', 'install', 'omegaconf==2.1.1', 'einops==0.3.0', 'pytorch-lightning==1.4.2', 'torchmetrics==0.6.0', 'torchtext==0.2.3', 'transformers==4.19.2', 'kornia==0.6'],
-                   ['git', 'clone', 'https://github.com/deforum/stable-diffusion'],
+                   ['git', 'clone', '-b', 'inpainting_1.0', 'https://github.com/deforum/stable-diffusion'],
                    ['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'],
                    ['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'],
                    ['pip', 'install', 'accelerate', 'ftfy', 'jsonmerge', 'resize-right', 'torchdiffeq'],
@@ -167,6 +167,22 @@ def load_img(path, shape):
     image = torch.from_numpy(image)
     return 2.*image - 1.
 
+def load_mask(path, shape):
+    # path (str): Path to the mask image
+    # shape (list-like len(4)): shape of the image to match, usually latent_image.shape
+    mask_w_h = (shape[-1], shape[-2])
+    if path.startswith('http://') or path.startswith('https://'):
+        mask_image = Image.open(requests.get(path, stream=True).raw).convert('RGBA')
+    else:
+        mask_image = Image.open(path).convert('RGBA')
+    mask = mask_image.resize(mask_w_h, resample=Image.LANCZOS)
+    mask = mask.convert("L")
+    mask = np.array(mask).astype(np.float32) / 255.0
+    mask = np.tile(mask,(4,1,1))
+    mask = np.expand_dims(mask,axis=0)
+    mask = torch.from_numpy(mask)
+    return mask
+
 def maintain_colors(prev_img, color_match_sample, hsv=False):
     if hsv:
         prev_img_hsv = cv2.cvtColor(prev_img, cv2.COLOR_RGB2HSV)
@@ -176,9 +192,10 @@ def maintain_colors(prev_img, color_match_sample, hsv=False):
     else:
         return match_histograms(prev_img, color_match_sample, multichannel=True)
 
-def make_callback(sampler, dynamic_threshold=None, static_threshold=None):  
+
+def make_callback(sampler_name, dynamic_threshold=None, static_threshold=None, mask=None, init_latent=None, sigmas=None, sampler=None, masked_noise_modifier=1.0):  
     # Creates the callback function to be passed into the samplers
-    # The callback function is applied to the image after each step
+    # The callback function is applied to the image at each step
     def dynamic_thresholding_(img, threshold):
         # Dynamic thresholding from Imagen paper (May 2022)
         s = np.percentile(np.abs(img.cpu()), threshold, axis=tuple(range(1,img.ndim)))
@@ -188,26 +205,51 @@ def make_callback(sampler, dynamic_threshold=None, static_threshold=None):
 
     # Callback for samplers in the k-diffusion repo, called thus:
     #   callback({'x': x, 'i': i, 'sigma': sigmas[i], 'sigma_hat': sigmas[i], 'denoised': denoised})
-    def k_callback(args_dict):
+    def k_callback_(args_dict):
         if static_threshold is not None:
             torch.clamp_(args_dict['x'], -1*static_threshold, static_threshold)
         if dynamic_threshold is not None:
             dynamic_thresholding_(args_dict['x'], dynamic_threshold)
+        if mask is not None:
+            init_noise = init_latent + noise * args_dict['sigma']
+            is_masked = torch.logical_and(mask >= mask_schedule[args_dict['i']], mask != 0 )
+            new_img = init_noise * torch.where(is_masked,1,0) + args_dict['x'] * torch.where(is_masked,0,1)
+            args_dict['x'].copy_(new_img)
 
     # Function that is called on the image (img) and step (i) at each step
-    def img_callback(img, i):
+    def img_callback_(img, i):
         # Thresholding functions
         if dynamic_threshold is not None:
             dynamic_thresholding_(img, dynamic_threshold)
         if static_threshold is not None:
             torch.clamp_(img, -1*static_threshold, static_threshold)
-
-    if sampler in ["plms","ddim"]: 
+        if mask is not None:
+            i_inv = len(sigmas) - i - 1
+            init_noise = sampler.stochastic_encode(init_latent, torch.tensor([i_inv]*batch_size).to(device), noise=noise)
+            is_masked = torch.logical_and(mask >= mask_schedule[i], mask != 0 )
+            new_img = init_noise * torch.where(is_masked,1,0) + img * torch.where(is_masked,0,1)
+            img.copy_(new_img)
+            
+              
+    if init_latent is not None:
+        noise = torch.randn_like(init_latent, device=device) * masked_noise_modifier
+    if len(sigmas) > 0:
+        if sigmas[-1] == 0: # samplers don't run when sigmas==0, remove last zero
+            sigmas = sigmas[:-1]
+    if sigmas is not None and len(sigmas) > 0:
+        mask_schedule = torch.flip(sigmas/sigmas[0],[0])
+    elif len(sigmas) == 0:
+        mask = None # no mask needed if no steps (usually happens because strength==1.0)
+    if sampler_name in ["plms","ddim"]: 
         # Callback function formated for compvis latent diffusion samplers
-        callback = img_callback
+        if mask is not None:
+            assert sampler is not None, "Callback function for stable-diffusion samplers requires sampler variable"
+            batch_size = init_latent.shape[0]
+
+        callback = img_callback_
     else: 
         # Default callback function uses k-diffusion sampler variables
-        callback = k_callback
+        callback = k_callback_
 
     return callback
 
@@ -236,17 +278,35 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space        
 
-    sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.ddim_eta, verbose=False)
+    if not args.use_init and args.strength > 0:
+        print("\nNo init image, but strength > 0. This may give you some strange results.\n")
 
+    mask = None
+    if args.use_mask:
+        assert args.mask_file is not None, "use_mask==True: An mask image is required for a mask"
+        assert args.use_init, "use_mask==True: use_init is required for a mask"
+        assert init_latent is not None, "use_mask==True: An latent init image is required for a mask"
+        mask = load_mask(args.mask_file, init_latent.shape)
+        if args.invert_mask:
+            mask = ( (mask - 0.5) * -1) + 0.5
+        mask = mask.to(device)
+        mask = repeat(mask, '1 ... -> b ...', b=batch_size)
+        
     t_enc = int((1.0-args.strength) * args.steps)
 
-    start_code = None
-    if args.fixed_code and init_latent == None:
-        start_code = torch.randn([args.n_samples, args.C, args.H // args.f, args.W // args.f], device=device)
+    sigmas = model_wrap.get_sigmas(args.steps)
+    if args.sampler in ['plms','ddim']:
+        sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.ddim_eta, verbose=False)
+    sigmas = sigmas[len(sigmas)-t_enc:]
 
-    callback = make_callback(sampler=args.sampler,
+
+    callback = make_callback(sampler_name=args.sampler,
                             dynamic_threshold=args.dynamic_threshold, 
-                            static_threshold=args.static_threshold)
+                            static_threshold=args.static_threshold,
+                            mask=mask, 
+                            init_latent=init_latent,
+                            sigmas=sigmas,
+                            sampler=sampler)    
 
     results = []
     precision_scope = autocast if args.precision == "autocast" else nullcontext
@@ -276,24 +336,17 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
                                 device=device, 
                                 cb=callback)
                         else:
-
-                            if init_latent != None:
+                            # args.sampler == 'plms' or args.sampler == 'ddim':
+                            if init_latent is not None and args.strength > 0:
                                 z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
-                                samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=args.scale,
-                                                        unconditional_conditioning=uc,)
                             else:
-                                if args.sampler == 'plms' or args.sampler == 'ddim':
-                                    shape = [args.C, args.H // args.f, args.W // args.f]
-                                    samples, _ = sampler.sample(S=args.steps,
-                                                                    conditioning=c,
-                                                                    batch_size=args.n_samples,
-                                                                    shape=shape,
-                                                                    verbose=False,
-                                                                    unconditional_guidance_scale=args.scale,
-                                                                    unconditional_conditioning=uc,
-                                                                    eta=args.ddim_eta,
-                                                                    x_T=start_code,
-                                                                    img_callback=callback)
+                                z_enc = torch.randn([args.n_samples, args.C, args.H // args.f, args.W // args.f], device=device)
+                            samples = sampler.decode(z_enc, 
+                                                     c, 
+                                                     t_enc, 
+                                                     unconditional_guidance_scale=args.scale,
+                                                     unconditional_conditioning=uc,
+                                                     img_callback=callback)
 
                         if return_latent:
                             results.append(samples.clone())
@@ -607,8 +660,11 @@ def DeforumArgs():
 
     #@markdown **Init Settings**
     use_init = False #@param {type:"boolean"}
-    strength = 0.5 #@param {type:"number"}
+    strength = 0.0 #@param {type:"number"}
     init_image = "https://cdn.pixabay.com/photo/2022/07/30/13/10/green-longhorn-beetle-7353749_1280.jpg" #@param {type:"string"}
+    use_mask = False #@param {type:"boolean"}
+    mask_file = "" #@param {type:"string"}
+    invert_mask = False #@param {type:"boolean"}
 
     #@markdown **Sampling Settings**
     seed = -1 #@param
@@ -628,7 +684,6 @@ def DeforumArgs():
     grid_rows = 2 #@param 
 
     precision = 'autocast' 
-    fixed_code = True
     C = 4
     f = 8
 
@@ -661,7 +716,6 @@ if anim_args.animation_mode == 'Video Input':
     args.use_init = True
 if not args.use_init:
     args.init_image = None
-    args.strength = 0
 if args.sampler == 'plms' and (args.use_init or anim_args.animation_mode != 'None'):
     print(f"Init images aren't supported with PLMS yet, switching to KLMS")
     args.sampler = 'klms'
