@@ -18,6 +18,8 @@
 
 :fire: no need to remove environment, delete src folder and create again, MUCH simpler! 🔥
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/altryne/sd-webui-colab/blob/main/Stable_Diffusion_WebUi_Altryne.ipynb)
+
 
 --------------
 
