@@ -55,7 +55,7 @@ function loadFields(form) {
 
 function clearFields(form) {
     localStorage.clear()
-    form.reset()
+    location.reload()
 }
 
 async function generateSubmit(form) {
