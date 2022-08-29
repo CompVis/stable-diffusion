@@ -83,8 +83,8 @@ def thats_numberwang(dir, wildcard):
     filenum = 0
     for file in files:
         if wildcard in file:
-            start = file.index('-')
-            end = file.index('.')
+            start = file.rfind('-')
+            end = file.rfind('.')
             try:
                 filenum = file[start + 1:end]
                 filenum = int(filenum)
@@ -92,7 +92,6 @@ def thats_numberwang(dir, wildcard):
                 print(f'Improperly named file "{file}" in output directory')
                 print(f'Tried to turn "{filenum}" into numberwang, but "{filenum}" is not numberwang!')
                 print(f'Please make sure output filenames use the name-1234.png format')
-                print(f'No extra bits or extra "-" characters, otherwise we cannot achieve numberwang!')
                 quit()
             filenums.append(filenum)
     if not filenums:
