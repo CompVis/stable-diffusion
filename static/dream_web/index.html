@@ -18,12 +18,22 @@
         </fieldset>
         <fieldset id="fieldset-config">
           <label for="iterations">Images to generate:</label>
-          <input value="1" type="number" id="iterations" name="iterations">
+          <input value="1" type="number" id="iterations" name="iterations" size="4">
           <label for="steps">Steps:</label>
           <input value="50" type="number" id="steps" name="steps">
           <label for="cfgscale">Cfg Scale:</label>
           <input value="7.5" type="number" id="cfgscale" name="cfgscale" step="any">
-          <span>&bull;</span>
+          <label for="sampler">Sampler:</label>
+          <select id="sampler" name="sampler" value="k_lms">
+            <option value="ddim">DDIM</option>
+	    <option value="plms">PLMS</option>
+            <option value="k_lms">KLMS</option>
+            <option value="k_dpm_2">KDPM_2</option>
+	    <option value="k_dpm_2_a">KDPM_2A</option>
+	    <option value="k_euler">KEULER</option>
+	    <option value="k_heun">KHEUN</option>
+	  </select>
+	  <br>
           <label title="Set to multiple of 64" for="width">Width:</label>
           <select id="width" name="width" value="512">
             <option value="64">64</option> <option value="128">128</option>
@@ -52,10 +62,12 @@
           <label title="Set to -1 for random seed" for="seed">Seed:</label>
           <input value="-1" type="number" id="seed" name="seed">
           <button type="button" id="reset">&olarr;</button>
+	  <span>&bull;</span>
+	  <button type="button" id="reset-all">Reset to Defaults</button>
           <br>
 	  <p><em>The options below require the GFPGAN and ESRGAN packages to be installed</em></p>
           <label title="Strength of the gfpgan (face fixing) algorithm." for="gfpgan_strength">GPFGAN Strength:</label>
-          <input value="0.8" min="0" max="1" type="number" id="gfpgan_strength" name="gfpgan_strength" step="0.1">
+          <input value="0.8" min="0" max="1" type="number" id="gfpgan_strength" name="gfpgan_strength" step="0.05">
           <label title="Upscaling to perform using ESRGAN." for="upscaling">Upscaling Level</label>
           <select id="upscaling" name="upscaling" value="">
             <option value=""></option>
@@ -63,7 +75,7 @@
 	    <option value="4">4x</option>
 	  </select>
           <label title="Strength of the esrgan (upscaling) algorithm." for="esrgan_strength">ESRGAN Strength:</label>
-          <input value="0.75" min="0" max="1" type="number" id="esrgan_strength" name="esrgan_strength" step="0.1">
+          <input value="0.75" min="0" max="1" type="number" id="esrgan_strength" name="esrgan_strength" step="0.05">
         </fieldset>
       </form>
       <div id="about">For news and support for this web service, visit our <a href="http://github.com/lstein/stable-diffusion">GitHub site</a></div>
