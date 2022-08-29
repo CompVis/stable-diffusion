@@ -86,16 +86,14 @@ def main():
             "\n* Initialization done! Awaiting your command (-h for help, 'q' to quit)"
         )
 
-    log_path = os.path.join(opt.outdir, 'dream_log.txt')
-    with open(log_path, 'a') as log:
-        cmd_parser = create_cmd_parser()
-        if opt.web:
-            dream_server_loop(t2i)
-        else:
-            main_loop(t2i, opt.outdir, cmd_parser, log_path, infile)
-        log.close()
+    cmd_parser = create_cmd_parser()
+    if opt.web:
+        dream_server_loop(t2i)
+    else:
+        main_loop(t2i, opt.outdir, cmd_parser, infile)
 
-def main_loop(t2i, outdir, parser, log_path, infile):
+
+def main_loop(t2i, outdir, parser, infile):
     """prompt/read/execute loop"""
     done = False
     last_seeds = []
@@ -202,12 +200,13 @@ def main_loop(t2i, outdir, parser, log_path, infile):
             continue
 
         print('Outputs:')
-        write_log_message(t2i, normalized_prompt, results, log_path)
+        log_path = os.path.join(current_outdir, 'dream_log.txt')
+        write_log_message(normalized_prompt, results, log_path)
 
     print('goodbye!')
 
 
-def get_next_command(infile=None) -> 'command string':
+def get_next_command(infile=None) -> str: #command string
     if infile is None:
         command = input('dream> ')
     else:
@@ -239,15 +238,26 @@ def dream_server_loop(t2i):
 
     dream_server.server_close()
 
-### the t2i variable doesn't seem to be necessary here. maybe remove it?
-def write_log_message(t2i, prompt, results, log_path):
-    """logs the name of the output image, its prompt and seed to the terminal, log file, and a Dream text chunk in the PNG metadata"""
+
+def write_log_message(prompt, results, log_path):
+    """logs the name of the output image, prompt, and prompt args to the terminal and log file"""
     log_lines = [f'{r[0]}: {prompt} -S{r[1]}\n' for r in results]
     print(*log_lines, sep='')
 
     with open(log_path, 'a') as file:
         file.writelines(log_lines)
 
+
+SAMPLER_CHOICES=[
+    'ddim',
+    'k_dpm_2_a',
+    'k_dpm_2',
+    'k_euler_a',
+    'k_euler',
+    'k_heun',
+    'k_lms',
+    'plms',
+]
 
 def create_argv_parser():
     parser = argparse.ArgumentParser(
@@ -259,52 +269,44 @@ def create_argv_parser():
         '-l',
         dest='laion400m',
         action='store_true',
-        help='fallback to the latent diffusion (laion400m) weights and config',
+        help='Fallback to the latent diffusion (laion400m) weights and config',
     )
     parser.add_argument(
         '--from_file',
         dest='infile',
         type=str,
-        help='if specified, load prompts from this file',
+        help='If specified, load prompts from this file',
     )
     parser.add_argument(
         '-n',
         '--iterations',
         type=int,
         default=1,
-        help='number of images to generate',
+        help='Number of images to generate',
     )
     parser.add_argument(
         '-F',
         '--full_precision',
         dest='full_precision',
         action='store_true',
-        help='use slower full precision math for calculations',
+        help='Use slower full precision math for calculations',
     )
     parser.add_argument(
         '-A',
         '-m',
         '--sampler',
         dest='sampler_name',
-        choices=[
-            'ddim',
-            'k_dpm_2_a',
-            'k_dpm_2',
-            'k_euler_a',
-            'k_euler',
-            'k_heun',
-            'k_lms',
-            'plms',
-        ],
+        choices=SAMPLER_CHOICES,
+        metavar='SAMPLER_NAME',
         default='k_lms',
-        help='which sampler to use (k_lms)',
+        help=f'Set the initial sampler. Default: k_lms. Supported samplers: {", ".join(SAMPLER_CHOICES)}',
     )
     parser.add_argument(
         '--outdir',
         '-o',
         type=str,
         default='outputs/img-samples',
-        help='directory in which to place generated images and a log of prompts and seeds (outputs/img-samples',
+        help='Directory to save generated images and a log of prompts and seeds. Default: outputs/img-samples',
     )
     parser.add_argument(
         '--embedding_path',
@@ -316,7 +318,7 @@ def create_argv_parser():
         '-d',
         type=str,
         default='cuda',
-        help='device to run stable diffusion on. defaults to cuda `torch.cuda.current_device()` if avalible',
+        help='Device to run Stable Diffusion on. Defaults to cuda `torch.cuda.current_device()` if avalible',
     )
     # GFPGAN related args
     parser.add_argument(
@@ -335,19 +337,19 @@ def create_argv_parser():
         '--gfpgan_model_path',
         type=str,
         default='experiments/pretrained_models/GFPGANv1.3.pth',
-        help='indicates the path to the GFPGAN model, relative to --gfpgan_dir.',
+        help='Indicates the path to the GFPGAN model, relative to --gfpgan_dir.',
     )
     parser.add_argument(
         '--gfpgan_dir',
         type=str,
         default='../GFPGAN',
-        help='indicates the directory containing the GFPGAN code.',
+        help='Indicates the directory containing the GFPGAN code.',
     )
     parser.add_argument(
         '--web',
         dest='web',
         action='store_true',
-        help='start in web server mode.',
+        help='Start in web server mode.',
     )
     return parser
 
@@ -357,39 +359,39 @@ def create_cmd_parser():
         description='Example: dream> a fantastic alien landscape -W1024 -H960 -s100 -n12'
     )
     parser.add_argument('prompt')
-    parser.add_argument('-s', '--steps', type=int, help='number of steps')
+    parser.add_argument('-s', '--steps', type=int, help='Number of steps')
     parser.add_argument(
         '-S',
         '--seed',
         type=int,
-        help='image seed; a +ve integer, or use -1 for the previous seed, -2 for the one before that, etc',
+        help='Image seed; a +ve integer, or use -1 for the previous seed, -2 for the one before that, etc',
     )
     parser.add_argument(
         '-n',
         '--iterations',
         type=int,
         default=1,
-        help='number of samplings to perform (slower, but will provide seeds for individual images)',
+        help='Number of samplings to perform (slower, but will provide seeds for individual images)',
     )
     parser.add_argument(
         '-b',
         '--batch_size',
         type=int,
         default=1,
-        help='number of images to produce per sampling (will not provide seeds for individual images!)',
+        help='Number of images to produce per sampling (will not provide seeds for individual images!)',
     )
     parser.add_argument(
-        '-W', '--width', type=int, help='image width, multiple of 64'
+        '-W', '--width', type=int, help='Image width, multiple of 64'
     )
     parser.add_argument(
-        '-H', '--height', type=int, help='image height, multiple of 64'
+        '-H', '--height', type=int, help='Image height, multiple of 64'
     )
     parser.add_argument(
         '-C',
         '--cfg_scale',
         default=7.5,
         type=float,
-        help='prompt configuration scale',
+        help='Prompt configuration scale',
     )
     parser.add_argument(
         '-g', '--grid', action='store_true', help='generate a grid'
@@ -399,26 +401,26 @@ def create_cmd_parser():
         '-o',
         type=str,
         default=None,
-        help='directory in which to place generated images and a log of prompts and seeds (outputs/img-samples',
+        help='Directory to save generated images and a log of prompts and seeds',
     )
     parser.add_argument(
         '-i',
         '--individual',
         action='store_true',
-        help='generate individual files (default)',
+        help='Generate individual files (default)',
     )
     parser.add_argument(
         '-I',
         '--init_img',
         type=str,
-        help='path to input image for img2img mode (supersedes width and height)',
+        help='Path to input image for img2img mode (supersedes width and height)',
     )
     parser.add_argument(
         '-f',
         '--strength',
         default=0.75,
         type=float,
-        help='strength for noising/unnoising. 0.0 preserves image exactly, 1.0 replaces it completely',
+        help='Strength for noising/unnoising. 0.0 preserves image exactly, 1.0 replaces it completely',
     )
     parser.add_argument(
         '-G',
@@ -447,7 +449,7 @@ def create_cmd_parser():
         '-x',
         '--skip_normalize',
         action='store_true',
-        help='skip subprompt weight normalization',
+        help='Skip subprompt weight normalization',
     )
     parser.add_argument(
         '-A',
@@ -456,17 +458,9 @@ def create_cmd_parser():
         dest='sampler_name',
         default=None,
         type=str,
-        choices=[
-            'ddim',
-            'k_dpm_2_a',
-            'k_dpm_2',
-            'k_euler_a',
-            'k_euler',
-            'k_heun',
-            'k_lms',
-            'plms',
-        ],
-        help='Change to another supported sampler using this command',
+        choices=SAMPLER_CHOICES,
+        metavar='SAMPLER_NAME',
+        help=f'Switch to a different sampler. Supported samplers: {", ".join(SAMPLER_CHOICES)}',
     )
     return parser
 
