@@ -180,11 +180,11 @@ class T2I:
         return pngwriter.files_written
 
     def txt2img(self, prompt, **kwargs):
-        outdir = kwargs.get('outdir', 'outputs/img-samples')
+        outdir = kwargs.pop('outdir', 'outputs/img-samples')
         return self.prompt2png(prompt, outdir, **kwargs)
 
     def img2img(self, prompt, **kwargs):
-        outdir = kwargs.get('outdir', 'outputs/img-samples')
+        outdir = kwargs.pop('outdir', 'outputs/img-samples')
         assert (
             'init_img' in kwargs
         ), 'call to img2img() must include the init_img argument'
