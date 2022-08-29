@@ -58,11 +58,7 @@ print(f"output_path: {output_path}")
 # %%
 # !! {"metadata":{
 # !!   "id": "VRNl2mfepEIe",
-# !!   "cellView": "form",
-# !!   "colab": {
-# !!     "base_uri": "https://localhost:8080/"
-# !!   },
-# !!   "outputId": "3f3e6cfb-b9bb-44b5-8f7a-b04721f603dd"
+# !!   "cellView": "form"
 # !! }}
 #@markdown **Setup Environment**
 
@@ -171,14 +167,20 @@ def load_img(path, shape):
     image = torch.from_numpy(image)
     return 2.*image - 1.
 
-def maintain_colors(prev_img, color_match_sample, hsv=False):
-    if hsv:
+def maintain_colors(prev_img, color_match_sample, mode):
+    color_coherence = 'Match Frame 0 RGB' #@param ['None', 'Match Frame 0 HSV', 'Match Frame 0 LAB', 'Match Frame 0 RGB'] {type:'string'}
+    if color_coherence == 'Match Frame 0 RGB':
+        return match_histograms(prev_img, color_match_sample, multichannel=True)
+    elif color_coherence == 'Match Frame 0 HSV':
         prev_img_hsv = cv2.cvtColor(prev_img, cv2.COLOR_RGB2HSV)
         color_match_hsv = cv2.cvtColor(color_match_sample, cv2.COLOR_RGB2HSV)
         matched_hsv = match_histograms(prev_img_hsv, color_match_hsv, multichannel=True)
         return cv2.cvtColor(matched_hsv, cv2.COLOR_HSV2RGB)
-    else:
-        return match_histograms(prev_img, color_match_sample, multichannel=True)
+    else: # Match Frame 0 LAB
+        prev_img_lab = cv2.cvtColor(prev_img, cv2.COLOR_RGB2LAB)
+        color_match_lab = cv2.cvtColor(color_match_sample, cv2.COLOR_RGB2LAB)
+        matched_lab = match_histograms(prev_img_lab, color_match_lab, multichannel=True)
+        return cv2.cvtColor(matched_lab, cv2.COLOR_LAB2RGB)
 
 def make_callback(sampler, dynamic_threshold=None, static_threshold=None):  
     # Creates the callback function to be passed into the samplers
@@ -486,7 +488,7 @@ def DeforumAnimArgs():
     scale_schedule = "0: (1.0)"#@param {type:"string"}
 
     #@markdown ####**Coherence:**
-    color_coherence = 'MatchFrame0' #@param ['None', 'MatchFrame0'] {type:'string'}
+    color_coherence = 'Match Frame 0 HSV' #@param ['None', 'Match Frame 0 HSV', 'Match Frame 0 LAB', 'Match Frame 0 RGB'] {type:'string'}
 
     #@markdown ####**Video Input:**
     video_init_path ='/content/video_in.mp4'#@param {type:"string"}
@@ -569,6 +571,7 @@ if anim_args.key_frames:
 # !! {"metadata":{
 # !!   "id": "2ujwkGZTcGev"
 # !! }}
+
 prompts = [
     "a beautiful forest by Asher Brown Durand, trending on Artstation", #the first prompt I want
     "a beautiful portrait of a woman by Artgerm, trending on Artstation", #the second prompt I want
@@ -581,6 +584,7 @@ animation_prompts = {
     30: "a beautiful coconut, trending on Artstation",
     40: "a beautiful durian, trending on Artstation",
 }
+
 # %%
 # !! {"metadata":{
 # !!   "id": "s8RAo2zI-vQm"
@@ -797,11 +801,11 @@ def render_animation(args, anim_args):
             )
 
             # apply color matching
-            if anim_args.color_coherence == 'MatchFrame0':
+            if anim_args.color_coherence != 'None':
                 if color_match_sample is None:
                     color_match_sample = prev_img.copy()
                 else:
-                    prev_img = maintain_colors(prev_img, color_match_sample, (frame_idx%2) == 0)
+                    prev_img = maintain_colors(prev_img, color_match_sample, anim_args.color_coherence)
 
             # apply scaling
             scaled_sample = prev_img * scale
