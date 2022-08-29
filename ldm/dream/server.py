@@ -46,6 +46,7 @@ class DreamServer(BaseHTTPRequestHandler):
         width = int(post_data['width'])
         height = int(post_data['height'])
         cfgscale = float(post_data['cfgscale'])
+        sampler_name  = post_data['sampler']
         gfpgan_strength = float(post_data['gfpgan_strength'])
         upscale_level    = post_data['upscale_level']
         upscale_strength = post_data['upscale_strength']
@@ -118,6 +119,7 @@ class DreamServer(BaseHTTPRequestHandler):
                                     steps = steps,
                                     gfpgan_strength = gfpgan_strength,
                                     upscale         = upscale,
+                                    sampler_name    = sampler_name,
                                     step_callback=image_progress,
                                     image_callback=image_done)
         else:
@@ -133,6 +135,7 @@ class DreamServer(BaseHTTPRequestHandler):
                                     cfg_scale = cfgscale,
                                     seed = seed,
                                     steps = steps,
+                                    sampler_name    = sampler_name,
                                     gfpgan_strength=gfpgan_strength,
                                     upscale         = upscale,
                                     step_callback=image_progress,
