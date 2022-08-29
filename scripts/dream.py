@@ -478,6 +478,12 @@ def create_cmd_parser():
         metavar='SAMPLER_NAME',
         help=f'Switch to a different sampler. Supported samplers: {", ".join(SAMPLER_CHOICES)}',
     )
+    parser.add_argument(
+        '-t',
+        '--log_tokenization',
+        action='store_true',
+        help='shows how the prompt is split into tokens'
+    )
     return parser
 
 
