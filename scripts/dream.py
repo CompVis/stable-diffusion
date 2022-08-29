@@ -4,6 +4,7 @@
 import argparse
 import shlex
 import os
+import re
 import sys
 import copy
 import warnings
@@ -90,13 +91,22 @@ def main():
     if opt.web:
         dream_server_loop(t2i)
     else:
-        main_loop(t2i, opt.outdir, cmd_parser, infile)
+        main_loop(t2i, opt.outdir, opt.prompt_as_dir, cmd_parser, infile)
 
 
-def main_loop(t2i, outdir, parser, infile):
+def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
     """prompt/read/execute loop"""
     done = False
     last_seeds = []
+    path_filter = re.compile(r'[<>:"/\\|?*]')
+
+    # os.pathconf is not available on Windows
+    if hasattr(os, 'pathconf'):
+        path_max = os.pathconf(outdir, 'PC_PATH_MAX')
+        name_max = os.pathconf(outdir, 'PC_NAME_MAX')
+    else:
+        path_max = 260
+        name_max = 255
 
     while not done:
         try:
@@ -167,6 +177,23 @@ def main_loop(t2i, outdir, parser, infile):
             if not os.path.exists(opt.outdir):
                 os.makedirs(opt.outdir)
             current_outdir = opt.outdir
+        elif prompt_as_dir:
+            if prompt_as_dir == 'simple':
+                # this line will sanitize the entire prompt as one folder
+                subdir = path_filter.sub('_', opt.prompt)[:name_max].rstrip(' .')
+            else:
+                # this line will allow the prompt to create subdirectories
+                subdir = os.path.join(*[path_filter.sub('_', x)[:name_max].rstrip(' .') for x in opt.prompt.replace('\\', '/').split('/') if x.rstrip(' .') != ''])
+
+            # truncate path to maximum allowed length
+            subdir = subdir[:(path_max - 27 - len(os.path.abspath(outdir)))]
+            current_outdir = os.path.join(outdir, subdir)
+
+            print ('\nWriting files to directory: "' + current_outdir + '"\n')
+
+            # make sure the output directory exists
+            if not os.path.exists(current_outdir):
+                os.makedirs(current_outdir)
         else:
             current_outdir = outdir
 
@@ -319,6 +346,14 @@ def create_argv_parser():
         type=str,
         default='cuda',
         help='Device to run Stable Diffusion on. Defaults to cuda `torch.cuda.current_device()` if avalible',
+    )
+    parser.add_argument(
+        '--prompt_as_dir',
+        '-p',
+        type=str,
+        nargs='?',
+        const='y',
+        help='Output images are placed in subdirectories named using the prompt string. Only used if --prompt_as_dir or -p is specified.\nIf set to \"simple\" then all non-alphanumeric characters in the prompt will be replaced by underscores for the folder name.',
     )
     # GFPGAN related args
     parser.add_argument(
