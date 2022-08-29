@@ -20,6 +20,7 @@ from contextlib import contextmanager, nullcontext
 import transformers
 import time
 import re
+import sys
 
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
@@ -540,6 +541,9 @@ class T2I:
                 # model.to doesn't change the cond_stage_model.device used to move the tokenizer output, so set it here
                 self.model.cond_stage_model.device = self.device
             except AttributeError:
+                import traceback
+                print('Error loading model. Only the CUDA backend is supported',file=sys.stderr)
+                print(traceback.format_exc(),file=sys.stderr)
                 raise SystemExit
 
             self._set_sampler()
