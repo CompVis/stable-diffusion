@@ -1,3 +1,7 @@
+# Update: v0.8
+
+[Added support for inpainting](#inpainting)
+
 <h1 align="center">Optimized Stable Diffusion</h1>
 <p align="center">
     <img src="https://img.shields.io/github/last-commit/basujindal/stable-diffusion?logo=Python&logoColor=green&style=for-the-badge"/>
@@ -33,11 +37,21 @@ All the modified files are in the [optimizedSD](optimizedSD) folder, so if you h
 
 `python optimizedSD/optimized_txt2img.py --prompt "Cyberpunk style image of a Telsa car reflection in rain" --H 512 --W 512 --seed 27 --n_iter 2 --n_samples 10 --ddim_steps 50`
 
+## inpainting
+
+- `inpaint_gradio.py` can fill masked parts of an image based on a given prompt. It can inpaint 512x512 images by using under 4GB of RAM.
+
+- To launch the gradio interface for inpainting, run `python optimizedSD/inpaint_gradio.py`. The mask for the image can be drawn after selecting an image usign the gradio brush tool.
+
+- The results are not yet perfect but can be improved by using a combination of prompt weighting and engineering and testing out multiple values of `--strength` argument.
+
+- _Suggestions to improve the inpainting algorithm are most welcome_.
+
 <h1 align="center">Using the Gradio GUI</h1>
 
-- You can also use the built-in gradio interface for `img2img` & `txt2img` instead of the command line interface. Activate the conda environment and install the latest version of gradio using `pip install gradio`,
+- You can also use the built-in gradio interface for `img2img`, `txt2img` & `inpainting` instead of the command line interface. Activate the conda environment and install the latest version of gradio using `pip install gradio`,
 
-- Run img2img using `python3 optimizedSD/img2img_gradio.py` and txt2img using `python3 optimizedSD/txt2img_gradio.py`.
+- Run img2img using `python optimizedSD/img2img_gradio.py`, txt2img using `python optimizedSD/txt2img_gradio.py` and inpainting using `python optimizedSD/inpaint_gradio.py`.
 
 - img2img_gradio.py has a feature to crop input images. Look for the pen symbol in the image box after selecting the image.
 
@@ -106,6 +120,7 @@ All the modified files are in the [optimizedSD](optimizedSD) folder, so if you h
 
 ## Changelog
 
+- v0.8: Added gradio interface for inpainting.
 - v0.7: Added support for logging, jpg file format
 - v0.6: Added support for using weighted prompts. (based on @lstein's [repo](https://github.com/lstein/stable-diffusion))
 - v0.5: Added support for using gradio interface.

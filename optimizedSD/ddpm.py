@@ -687,14 +687,14 @@ class UNet(DDPM):
                 seed+=1
             noise = torch.cat(tens)
             del tens
-        if mask is not None:
-            noise = noise*mask
+        # if mask is not None:
+        #     noise = noise*mask
         return (extract_into_tensor(sqrt_alphas_cumprod, t, x0.shape) * x0 +
                 extract_into_tensor(sqrt_one_minus_alphas_cumprod.to(self.cdevice), t, x0.shape) * noise)
 
     @torch.no_grad()
     def decode(self, x_latent, cond, t_start, unconditional_guidance_scale=1.0, unconditional_conditioning=None,
-               mask = None,use_original_steps=False):
+               mask = None,init_latent=None,use_original_steps=False):
 
         
         if(self.turbo):
@@ -710,25 +710,26 @@ class UNet(DDPM):
 
         iterator = tqdm(time_range, desc='Decoding image', total=total_steps)
         x_dec = x_latent
-        # x0 = x_latent
+        x0 = init_latent
         for i, step in enumerate(iterator):
             index = total_steps - i - 1
             ts = torch.full((x_latent.shape[0],), step, device=x_latent.device, dtype=torch.long)
             
 
-            # if mask is not None:
-            #     x_dec = x0 * mask + (1. - mask) * x_dec
+            if mask is not None:
+                x_dec = x0 * mask + (1. - mask) * x_dec
 
             x_dec = self.p_sample_ddim(x_dec, cond, ts, index=index, use_original_steps=use_original_steps,
                                           unconditional_guidance_scale=unconditional_guidance_scale,
                                           unconditional_conditioning=unconditional_conditioning)
-        # if mask is not None:
-        #     return x0 * mask + (1. - mask) * x_dec
-        
+ 
         if(self.turbo):
             self.model1.to("cpu")
             self.model2.to("cpu")
 
+        if mask is not None:
+            return x0 * mask + (1. - mask) * x_dec
+        
         return x_dec
 
     @torch.no_grad()
