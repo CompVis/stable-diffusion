@@ -68,15 +68,12 @@ class PngWriter:
             while not finished:
                 series += 1
                 filename = f'{basecount:06}.{seed}.png'
-                if self.batch_size > 1 or os.path.exists(
-                    os.path.join(self.outdir, filename)
-                ):
+                path = os.path.join(self.outdir, filename)
+                if self.batch_size > 1 or os.path.exists(path):
                     if upscaled:
                         break
                     filename = f'{basecount:06}.{seed}.{series:02}.png'
-                finished = not os.path.exists(
-                    os.path.join(self.outdir, filename)
-                )
+                finished = not os.path.exists(path)
             return os.path.join(self.outdir, filename)
 
     def save_image_and_prompt_to_png(self, image, prompt, path):
