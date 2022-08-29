@@ -51,6 +51,7 @@ def main():
         weights=weights,
         full_precision=opt.full_precision,
         config=config,
+        grid  = opt.grid,
         # this is solely for recreating the prompt
         latent_diffusion_weights=opt.laion400m,
         embedding_path=opt.embedding_path,
@@ -179,7 +180,8 @@ def main_loop(t2i, outdir, parser, infile):
                 file_writer.files_written if individual_images else image_list
             )
 
-            if opt.grid and len(results) > 0:
+            grid = opt.grid or t2i.grid
+            if grid and len(results) > 0:
                 grid_img = file_writer.make_grid([r[0] for r in results])
                 filename = file_writer.unique_filename(results[0][1])
                 seeds = [a[1] for a in results]
@@ -261,7 +263,13 @@ SAMPLER_CHOICES=[
 
 def create_argv_parser():
     parser = argparse.ArgumentParser(
-        description="Parse script's command line args"
+        description="""Generate images using Stable Diffusion.
+        Use --web to launch the web interface. 
+        Use --from_file to load prompts from a file path or standard input ("-").
+        Otherwise you will be dropped into an interactive command prompt (type -h for help.)
+        Other command-line arguments are defaults that can usually be overridden
+        prompt the command prompt.
+"""
     )
     parser.add_argument(
         '--laion400m',
@@ -290,6 +298,12 @@ def create_argv_parser():
         dest='full_precision',
         action='store_true',
         help='Use slower full precision math for calculations',
+    )
+    parser.add_argument(
+        '-g',
+        '--grid',
+        action='store_true',
+        help='Generate a grid instead of individual images',
     )
     parser.add_argument(
         '-A',

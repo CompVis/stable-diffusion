@@ -122,6 +122,7 @@ class T2I:
         cfg_scale=7.5,
         weights='models/ldm/stable-diffusion-v1/model.ckpt',
         config='configs/stable-diffusion/v1-inference.yaml',
+        grid=False,
         width=512,
         height=512,
         sampler_name='klms',
@@ -147,6 +148,7 @@ class T2I:
         self.sampler_name = sampler_name
         self.latent_channels = latent_channels
         self.downsampling_factor = downsampling_factor
+        self.grid = grid
         self.ddim_eta = ddim_eta
         self.precision = precision
         self.full_precision = full_precision

@@ -86,7 +86,7 @@ class PngWriter:
         if None in (rows, cols):
             rows = floor(sqrt(image_cnt))  # try to make it square
             cols = ceil(image_cnt / rows)
-        width = image_list[0].width
+        width  = image_list[0].width
         height = image_list[0].height
 
         grid_img = Image.new('RGB', (width * cols, height * rows))
