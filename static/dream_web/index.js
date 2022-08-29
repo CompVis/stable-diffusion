@@ -126,4 +126,8 @@ window.onload = () => {
         clearFields(e.target.form);
     });
     loadFields(document.querySelector("#generate-form"));
+
+    if (!config.gfpgan_model_exists) {
+        document.querySelector("#gfpgan").style.display = 'none';
+    }
 };

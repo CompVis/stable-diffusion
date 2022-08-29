@@ -15,6 +15,16 @@ class DreamServer(BaseHTTPRequestHandler):
             self.end_headers()
             with open("./static/dream_web/index.html", "rb") as content:
                 self.wfile.write(content.read())
+        elif self.path == "/config.js":
+            # unfortunately this import can't be at the top level, since that would cause a circular import
+            from ldm.gfpgan.gfpgan_tools import gfpgan_model_exists
+            self.send_response(200)
+            self.send_header("Content-type", "application/javascript")
+            self.end_headers()
+            config = {
+                'gfpgan_model_exists': gfpgan_model_exists
+            }
+            self.wfile.write(bytes("let config = " + json.dumps(config) + ";\n", "utf-8"))
         else:
             path = "." + self.path
             cwd = os.path.realpath(os.getcwd())
@@ -37,6 +47,9 @@ class DreamServer(BaseHTTPRequestHandler):
         self.send_header("Content-type", "application/json")
         self.end_headers()
 
+        # unfortunately this import can't be at the top level, since that would cause a circular import
+        from ldm.gfpgan.gfpgan_tools import gfpgan_model_exists
+
         content_length = int(self.headers['Content-Length'])
         post_data = json.loads(self.rfile.read(content_length))
         prompt = post_data['prompt']
@@ -47,7 +60,7 @@ class DreamServer(BaseHTTPRequestHandler):
         height = int(post_data['height'])
         cfgscale = float(post_data['cfgscale'])
         sampler_name  = post_data['sampler']
-        gfpgan_strength = float(post_data['gfpgan_strength'])
+        gfpgan_strength = float(post_data['gfpgan_strength']) if gfpgan_model_exists else 0
         upscale_level    = post_data['upscale_level']
         upscale_strength = post_data['upscale_strength']
         upscale = [int(upscale_level),float(upscale_strength)] if upscale_level != '' else None
@@ -70,7 +83,7 @@ class DreamServer(BaseHTTPRequestHandler):
         # the images are first generated, and then again when after upscaling
         # is complete. The upscaling replaces the original file, so the second
         # entry should not be inserted into the image list.
-        def image_done(image, seed, upscaled=False):  
+        def image_done(image, seed, upscaled=False):
             pngwriter.write_image(image, seed, upscaled)
 
             # Append post_data to log, but only once!
