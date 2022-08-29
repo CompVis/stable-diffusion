@@ -18,6 +18,11 @@ fieldset {
 #fieldset-search {
     display: flex;
 }
+#scaling-inprocess-message{
+    font-weight: bold;
+    font-style: italic;
+    display: none;
+}
 #prompt {
     flex-grow: 1;
 
