@@ -183,14 +183,20 @@ def load_mask(path, shape):
     mask = torch.from_numpy(mask)
     return mask
 
-def maintain_colors(prev_img, color_match_sample, hsv=False):
-    if hsv:
+def maintain_colors(prev_img, color_match_sample, mode):
+    color_coherence = 'Match Frame 0 RGB' #@param ['None', 'Match Frame 0 HSV', 'Match Frame 0 LAB', 'Match Frame 0 RGB'] {type:'string'}
+    if color_coherence == 'Match Frame 0 RGB':
+        return match_histograms(prev_img, color_match_sample, multichannel=True)
+    elif color_coherence == 'Match Frame 0 HSV':
         prev_img_hsv = cv2.cvtColor(prev_img, cv2.COLOR_RGB2HSV)
         color_match_hsv = cv2.cvtColor(color_match_sample, cv2.COLOR_RGB2HSV)
         matched_hsv = match_histograms(prev_img_hsv, color_match_hsv, multichannel=True)
         return cv2.cvtColor(matched_hsv, cv2.COLOR_HSV2RGB)
-    else:
-        return match_histograms(prev_img, color_match_sample, multichannel=True)
+    else: # Match Frame 0 LAB
+        prev_img_lab = cv2.cvtColor(prev_img, cv2.COLOR_RGB2LAB)
+        color_match_lab = cv2.cvtColor(color_match_sample, cv2.COLOR_RGB2LAB)
+        matched_lab = match_histograms(prev_img_lab, color_match_lab, multichannel=True)
+        return cv2.cvtColor(matched_lab, cv2.COLOR_LAB2RGB)
 
 
 def make_callback(sampler_name, dynamic_threshold=None, static_threshold=None, mask=None, init_latent=None, sigmas=None, sampler=None, masked_noise_modifier=1.0):  
@@ -532,13 +538,14 @@ def DeforumAnimArgs():
     scale_schedule = "0: (1.0)"#@param {type:"string"}
 
     #@markdown ####**Coherence:**
-    color_coherence = 'MatchFrame0' #@param ['None', 'MatchFrame0'] {type:'string'}
+    color_coherence = 'Match Frame 0 HSV' #@param ['None', 'Match Frame 0 HSV', 'Match Frame 0 LAB', 'Match Frame 0 RGB'] {type:'string'}
 
     #@markdown ####**Video Input:**
     video_init_path ='/content/video_in.mp4'#@param {type:"string"}
     extract_nth_frame = 1#@param {type:"number"}
 
     #@markdown ####**Interpolation:**
+    interpolate_key_frames = False #@param {type:"boolean"}
     interpolate_x_frames = 4 #@param {type:"number"}
 
     return locals()
@@ -614,6 +621,7 @@ if anim_args.key_frames:
 # !! {"metadata":{
 # !!   "id": "2ujwkGZTcGev"
 # !! }}
+
 prompts = [
     "a beautiful forest by Asher Brown Durand, trending on Artstation", #the first prompt I want
     "a beautiful portrait of a woman by Artgerm, trending on Artstation", #the second prompt I want
@@ -622,9 +630,9 @@ prompts = [
 
 animation_prompts = {
     0: "a beautiful apple, trending on Artstation",
-    10: "a beautiful banana, trending on Artstation",
-    100: "a beautiful coconut, trending on Artstation",
-    101: "a beautiful durian, trending on Artstation",
+    20: "a beautiful banana, trending on Artstation",
+    30: "a beautiful coconut, trending on Artstation",
+    40: "a beautiful durian, trending on Artstation",
 }
 
 # %%
@@ -844,11 +852,11 @@ def render_animation(args, anim_args):
             )
 
             # apply color matching
-            if anim_args.color_coherence == 'MatchFrame0':
+            if anim_args.color_coherence != 'None':
                 if color_match_sample is None:
                     color_match_sample = prev_img.copy()
                 else:
-                    prev_img = maintain_colors(prev_img, color_match_sample, (frame_idx%2) == 0)
+                    prev_img = maintain_colors(prev_img, color_match_sample, anim_args.color_coherence)
 
             # apply scaling
             scaled_sample = prev_img * scale
@@ -950,25 +958,52 @@ def render_interpolation(args, anim_args):
 
     frame_idx = 0
 
-    for i in range(len(prompts_c_s)-1):
-      for j in range(anim_args.interpolate_x_frames+1):
-        # interpolate the text embedding
-        prompt1_c = prompts_c_s[i]
-        prompt2_c = prompts_c_s[i+1]  
-        args.init_c = prompt1_c.add(prompt2_c.sub(prompt1_c).mul(j * 1/(anim_args.interpolate_x_frames+1)))
+    if anim_args.interpolate_key_frames:
+      for i in range(len(prompts_c_s)-1):
+        dist_frames = list(animation_prompts.items())[i+1][0] - list(animation_prompts.items())[i][0]
+        if dist_frames <= 0:
+          print("key frames duplicated or reversed. interpolation skipped.")
+          return
+        else:
+          for j in range(dist_frames):
+            # interpolate the text embedding
+            prompt1_c = prompts_c_s[i]
+            prompt2_c = prompts_c_s[i+1]  
+            args.init_c = prompt1_c.add(prompt2_c.sub(prompt1_c).mul(j * 1/dist_frames))
 
-        # sample the diffusion model
-        results = generate(args)
-        image = results[0]
+            # sample the diffusion model
+            results = generate(args)
+            image = results[0]
 
-        filename = f"{args.timestring}_{frame_idx:05}.png"
-        image.save(os.path.join(args.outdir, filename))
-        frame_idx += 1
+            filename = f"{args.timestring}_{frame_idx:05}.png"
+            image.save(os.path.join(args.outdir, filename))
+            frame_idx += 1
 
-        display.clear_output(wait=True)
-        display.display(image)
+            display.clear_output(wait=True)
+            display.display(image)
 
-        args.seed = next_seed(args)
+            args.seed = next_seed(args)
+
+    else:
+      for i in range(len(prompts_c_s)-1):
+        for j in range(anim_args.interpolate_x_frames+1):
+          # interpolate the text embedding
+          prompt1_c = prompts_c_s[i]
+          prompt2_c = prompts_c_s[i+1]  
+          args.init_c = prompt1_c.add(prompt2_c.sub(prompt1_c).mul(j * 1/(anim_args.interpolate_x_frames+1)))
+
+          # sample the diffusion model
+          results = generate(args)
+          image = results[0]
+
+          filename = f"{args.timestring}_{frame_idx:05}.png"
+          image.save(os.path.join(args.outdir, filename))
+          frame_idx += 1
+
+          display.clear_output(wait=True)
+          display.display(image)
+
+          args.seed = next_seed(args)
 
     # generate the last prompt
     args.init_c = prompts_c_s[-1]
@@ -1052,7 +1087,7 @@ else:
 # !!   "accelerator": "GPU",
 # !!   "colab": {
 # !!     "collapsed_sections": [],
-# !!     "name": "Deforum_Stable_Diffusion_+_Interpolation.ipynb",
+# !!     "name": "Deforum_Stable_Diffusion.ipynb",
 # !!     "provenance": [],
 # !!     "private_outputs": true
 # !!   },
