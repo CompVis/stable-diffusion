@@ -1,5 +1,7 @@
 # Apple Silicon Mac Users
 
+NOTE: I have submitted a merge request to move the changes in this repo to the [lstein fork of stable-diffusion](https://github.com/lstein/stable-diffusion/) because he has so many wonderful features in his fork! Another fork that I know that has up-to-date Mac Support and some really cool features is the [Birch-san stable-diffusion fork](https://github.com/Birch-san/stable-diffusion). If my pull request to lstein is accepted, I no longer plan on updating this fork with the latest changes!
+
 Several people have gotten Stable Diffusion to work on Apple Silicon Macs using Anaconda. I've gathered up most of their instructions and put them in this fork (and readme). I haven't tested anything besides Anaconda, and I've read about issues with things like miniforge, so if you have an issue that isn't dealt with in this fork then head on over to the [Apple Silicon](https://github.com/CompVis/stable-diffusion/issues/25) issue on GitHub (that page is so long that GitHub hides most of it by default, so you need to find the hidden part and expand it to view the whole thing). This fork would not have been possible without the work done by the people on that issue.
 
 You have to have macOS 12.3 Monterey or later. Anything earlier than that won't work.
@@ -38,6 +40,7 @@ Did you remember to `conda activate ldm`? If your terminal prompt begins with "(
 
 If you have activated the ldm virtual environment, the problem could be that I have something installed that you don't and you'll just need to manually install it. 
 
+	conda activate ldm
 	pip install *name*
 
 You might also need to install Rust (I mention this again below).
