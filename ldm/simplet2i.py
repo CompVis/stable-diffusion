@@ -175,8 +175,6 @@ class T2I:
             outdir, prompt, kwargs.get('batch_size', self.batch_size)
         )
         for r in results:
-            # gets written into the PNG
-            metadata_str = f'prompt2png("{prompt}" {kwargs} seed={r[1]}'
             pngwriter.write_image(r[0], r[1])
         return pngwriter.files_written
 
