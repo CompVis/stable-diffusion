@@ -78,7 +78,7 @@ done
 n=0
 cd /sd
 while true; do
-    echo "entrypoint.sh: Launching...'"
+    echo "entrypoint.sh: Launching..."
     if (( $n > 0 )); then
         echo "Relaunch count: ${n}"
     fi
