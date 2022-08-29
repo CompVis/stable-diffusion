@@ -39,11 +39,11 @@ All the modified files are in the [optimizedSD](optimizedSD) folder, so if you h
 
 ## inpainting
 
-- `inpaint_gradio.py` can fill masked parts of an image based on a given prompt. It can inpaint 512x512 images by using under 4GB of RAM.
+- `inpaint_gradio.py` can fill masked parts of an image based on a given prompt. It can inpaint 512x512 images while using under 4GB of VRAM.
 
-- To launch the gradio interface for inpainting, run `python optimizedSD/inpaint_gradio.py`. The mask for the image can be drawn after selecting an image usign the gradio brush tool.
+- To launch the gradio interface for inpainting, run `python optimizedSD/inpaint_gradio.py`. The mask for the image can be drawn on the selected image using the brush tool.
 
-- The results are not yet perfect but can be improved by using a combination of prompt weighting and engineering and testing out multiple values of `--strength` argument.
+- The results are not yet perfect but can be improved by using a combination of prompt weighting, prompt engineering and testing out multiple values of the `--strength` argument.
 
 - _Suggestions to improve the inpainting algorithm are most welcome_.
 
