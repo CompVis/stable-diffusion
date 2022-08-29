@@ -136,7 +136,6 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                                                              value="Crop", elem_id='edit_mode_select')
 
                             img2img_painterro_btn = gr.Button("Advanced Editor")
-                            img2img_copy_from_painterro_btn = gr.Button(value="Get Image from Advanced Editor")
                             img2img_show_help_btn = gr.Button("Show Hints")
                             img2img_hide_help_btn = gr.Button("Hide Hints", visible=False)
                         img2img_help = gr.Markdown(visible=False, value="")
@@ -221,7 +220,7 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                     uifn.change_image_editor_mode,
                     [img2img_image_editor_mode, img2img_image_editor, img2img_resize, img2img_width, img2img_height],
                     [img2img_image_editor, img2img_image_mask, img2img_btn_editor, img2img_btn_mask,
-                     img2img_painterro_btn, img2img_copy_from_painterro_btn, img2img_mask, img2img_mask_blur_strength]
+                     img2img_painterro_btn, img2img_mask, img2img_mask_blur_strength]
                 )
 
                 img2img_image_editor.edit(
@@ -285,30 +284,61 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                 img2img_btn_editor.click(*img2img_submit_params())
                 img2img_prompt.submit(*img2img_submit_params())
 
-                img2img_painterro_btn.click(None, [img2img_image_editor], None, _js="""(img) => {
-                try {
-                    Painterro({
-                        hiddenTools: ['arrow'],
-                        saveHandler: function (image, done) {
-                            localStorage.setItem('painterro-image', image.asDataURL());
-                            done(true);
-                        },
-                    }).show(Array.isArray(img) ? img[0] : img);
-                } catch(e) {
-                    const script = document.createElement('script');
-                    script.src = 'https://unpkg.com/painterro@1.2.78/build/painterro.min.js';
-                    document.head.appendChild(script);
-                    const style = document.createElement('style');
-                    style.appendChild(document.createTextNode('.ptro-holder-wrapper { z-index: 9999 !important; }'));
-                    document.head.appendChild(style);
-                }
-                return [];
-            }""")
+                img2img_painterro_btn.click(None, [img2img_image_editor], [img2img_image_editor, img2img_image_mask], _js="""async (img) => {
+                    const originalImage = Array.isArray(img) ? img[0] : img;
+                    const fallbackResult = [originalImage, originalImage];
 
-                img2img_copy_from_painterro_btn.click(None, None, [img2img_image_editor, img2img_image_mask], _js="""() => {
-                const image = localStorage.getItem('painterro-image')
-                return [image, image];
-            }""")
+                    if (typeof window.Painterro === 'undefined') {
+                        if (document.getElementById('__painterro-script')) {
+                            return fallbackResult;
+                        }
+
+                        const style = document.createElement('style');
+                        style.appendChild(document.createTextNode('.ptro-holder-wrapper { z-index: 9999 !important; }'));
+                        document.head.appendChild(style);
+
+                        const loaded = await new Promise((resolve) => {
+                            const script = document.createElement('script');
+                            script.id = '__painterro-script';
+                            script.src = 'https://unpkg.com/painterro@1.2.78/build/painterro.min.js';
+                            script.onload = () => resolve(true);
+                            script.onerror = () => resolve(false);
+                            document.head.appendChild(script);
+                        });
+
+                        if (!loaded) {
+                            alert('Failed to load painterro script');
+                            return fallbackResult;
+                        }
+                    }
+
+                    if (window.__painterroIsOpen) {
+                        return fallbackResult;
+                    }
+                    window.__painterroIsOpen = true;
+
+                    let resolveResult;
+                    const paintClient = Painterro({
+                        hiddenTools: ['arrow'],
+                        onHide: () => {
+                            resolveResult?.(null);
+                        },
+                        saveHandler: (image, done) => {
+                            const data = image.asDataURL();
+                            resolveResult(data);
+                            done(true);
+                            paintClient.hide();
+                        },
+                    });
+                    
+                    const result = await new Promise((resolve) => {
+                        resolveResult = resolve;
+                        paintClient.show(originalImage);
+                    });
+                    window.__painterroIsOpen = false;
+                    delete paintClient;
+                    return result ? [result, result] : fallbackResult;
+                }""")
 
             if GFPGAN is not None:
                 gfpgan_defaults = {
