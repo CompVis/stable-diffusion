@@ -1,0 +1,4 @@
+# Auto normalizes line endings on commit so devs don't need to change local settings.
+# Only affects text files and ignores other file types. 
+# For more info see: https://www.aleksandrhovhannisyan.com/blog/crlf-vs-lf-normalizing-line-endings-in-git/
+* text=auto
