@@ -53,6 +53,7 @@ function clearFields(form) {
     form.prompt.value = prompt;
 }
 
+const BLANK_IMAGE_URL = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>';
 async function generateSubmit(form) {
     const prompt = document.querySelector("#prompt").value;
 
@@ -60,7 +61,14 @@ async function generateSubmit(form) {
     let formData = Object.fromEntries(new FormData(form));
     formData.initimg = formData.initimg.name !== '' ? await toBase64(formData.initimg) : null;
 
-    document.querySelector('progress').setAttribute('max', formData.steps);
+    let progressSectionEle = document.querySelector('#progress-section');
+    progressSectionEle.style.display = 'initial';
+    let progressEle = document.querySelector('#progress-bar');
+    progressEle.setAttribute('max', formData.steps);
+    let progressImageEle = document.querySelector('#progress-image');
+    progressImageEle.src = BLANK_IMAGE_URL;
+
+    progressImageEle.style.display = {}.hasOwnProperty.call(formData, 'progress_images') ? 'initial': 'none';
 
     // Post as JSON, using Fetch streaming to get results
     fetch(form.action, {
@@ -73,7 +81,10 @@ async function generateSubmit(form) {
         while (true) {
             let {value, done} = await reader.read();
             value = new TextDecoder().decode(value);
-            if (done) break;
+            if (done) {
+                progressSectionEle.style.display = 'none';
+                break;
+            }
 
             for (let event of value.split('\n').filter(e => e !== '')) {
                 const data = JSON.parse(event);
@@ -81,14 +92,20 @@ async function generateSubmit(form) {
                 if (data.event == 'result') {
                     noOutputs = false;
                     document.querySelector("#no-results-message")?.remove();
-		    appendOutput(data.files[0],data.files[1],data.config)
-		} else if (data.event == 'upscaling-started') {
-		    document.getElementById("processing_cnt").textContent=data.processed_file_cnt;
-		    document.getElementById("scaling-inprocess-message").style.display = "block";
-		} else if (data.event == 'upscaling-done') {
-		    document.getElementById("scaling-inprocess-message").style.display = "none";
+                    appendOutput(data.files[0],data.files[1],data.config);
+                    progressEle.setAttribute('value', 0);
+                    progressEle.setAttribute('max', formData.steps);
+                    progressImageEle.src = BLANK_IMAGE_URL;
+                } else if (data.event == 'upscaling-started') {
+                    document.getElementById("processing_cnt").textContent=data.processed_file_cnt;
+                    document.getElementById("scaling-inprocess-message").style.display = "block";
+                } else if (data.event == 'upscaling-done') {
+                    document.getElementById("scaling-inprocess-message").style.display = "none";
                 } else if (data.event == 'step') {
-                    document.querySelector('progress').setAttribute('value', data.step.toString());
+                    progressEle.setAttribute('value', data.step);
+                    if (data.url) {
+                        progressImageEle.src = data.url;
+                    }
                 }
             }
         }
