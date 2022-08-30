@@ -30,7 +30,7 @@ dependencies:
     - accelerate==0.12.0
     - pynvml==11.4.1
     - basicsr>=1.3.4.0
-    - facexlib>=0.2.3
+    - -e git+https://github.com/xinntao/facexlib#egg=facexlib
     - -e git+https://github.com/CompVis/taming-transformers#egg=taming-transformers
     - -e git+https://github.com/openai/CLIP#egg=clip
     - -e git+https://github.com/TencentARC/GFPGAN#egg=GFPGAN
