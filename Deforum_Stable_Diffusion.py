@@ -11,6 +11,14 @@ Notebook by [deforum](https://discord.gg/upmXXsrwZc)
 
 # %%
 # !! {"metadata":{
+# !!   "id": "T4knibRpAQ06"
+# !! }}
+"""
+# Setup
+"""
+
+# %%
+# !! {"metadata":{
 # !!   "id": "2g-f7cQmf2Nt",
 # !!   "cellView": "form"
 # !! }}
@@ -24,7 +32,7 @@ print(sub_p_res)
 # !!   "cellView": "form",
 # !!   "id": "TxIOPT0G5Lx1"
 # !! }}
-#@markdown **Model Path Variables**
+#@markdown **Model and Output Paths**
 # ask for the link
 print("Local Path Variables:\n")
 
@@ -330,8 +338,7 @@ def sample_to_cv2(sample: torch.Tensor) -> np.ndarray:
 # !!   "cellView": "form",
 # !!   "id": "CIUJ7lWI4v53"
 # !! }}
-#@markdown **Select Model**
-print("\nSelect Model:\n")
+#@markdown **Select and Load Model**
 
 model_config = "v1-inference.yaml" #@param ["custom","v1-inference.yaml"]
 model_checkpoint =  "sd-v1-4.ckpt" #@param ["custom","sd-v1-4-full-ema.ckpt","sd-v1-4.ckpt","sd-v1-3-full-ema.ckpt","sd-v1-3.ckpt","sd-v1-2-full-ema.ckpt","sd-v1-2.ckpt","sd-v1-1-full-ema.ckpt","sd-v1-1.ckpt"]
@@ -339,6 +346,9 @@ custom_config_path = "" #@param {type:"string"}
 custom_checkpoint_path = "" #@param {type:"string"}
 
 check_sha256 = True #@param {type:"boolean"}
+
+load_on_run_all = True #@param {type: 'boolean'}
+half_precision = True # needs to be fixed
 
 model_map = {
     "sd-v1-4-full-ema.ckpt": {'sha256': '14749efc0ae8ef0329391ad4436feb781b402f4fece4883c7ad8d10556d8a36a'},
@@ -351,34 +361,27 @@ model_map = {
     "sd-v1-1.ckpt": {'sha256': '86cd1d3ccb044d7ba8db743d717c9bac603c4043508ad2571383f954390f3cea'}
 }
 
-def wget(url, outputdir):
-    res = subprocess.run(['wget', url, '-P', f'{outputdir}'], stdout=subprocess.PIPE).stdout.decode('utf-8')
-    print(res)
-
-def download_model(model_checkpoint):
-    download_link = model_map[model_checkpoint]["link"][0]
-    print(f"!wget -O {models_path}/{model_checkpoint} {download_link}")
-    wget(download_link, models_path)
-    return
-
 # config path
-if os.path.exists(models_path+'/'+model_config):
-    print(f"{models_path+'/'+model_config} exists")
+ckpt_config_path = custom_config_path if model_config == "custom" else os.path.join(models_path, model_config)
+if os.path.exists(ckpt_config_path):
+    print(f"{ckpt_config_path} exists")
 else:
-    print("cp ./stable-diffusion/configs/stable-diffusion/v1-inference.yaml $models_path/.")
-    shutil.copy('./stable-diffusion/configs/stable-diffusion/v1-inference.yaml', models_path)
+    ckpt_config_path = "./stable-diffusion/configs/stable-diffusion/v1-inference.yaml"
+print(f"Using config: {ckpt_config_path}")
 
 # checkpoint path or download
-if os.path.exists(models_path+'/'+model_checkpoint):
-    print(f"{models_path+'/'+model_checkpoint} exists")
+ckpt_path = custom_checkpoint_path if model_checkpoint == "custom" else os.path.join(models_path, model_checkpoint)
+ckpt_valid = True
+if os.path.exists(ckpt_path):
+    print(f"{ckpt_path} exists")
 else:
-    print(f"download model checkpoint and place in {models_path+'/'+model_checkpoint}")
-    #download_model(model_checkpoint)
+    print(f"Please download model checkpoint and place in {os.path.join(models_path, model_checkpoint)}")
+    ckpt_valid = False
 
-if check_sha256 and model_checkpoint != "custom":
+if check_sha256 and model_checkpoint != "custom" and ckpt_valid:
     import hashlib
     print("\n...checking sha256")
-    with open(models_path+'/'+model_checkpoint, "rb") as f:
+    with open(ckpt_path, "rb") as f:
         bytes = f.read() 
         hash = hashlib.sha256(bytes).hexdigest()
         del bytes
@@ -386,26 +389,10 @@ if check_sha256 and model_checkpoint != "custom":
         print("hash is correct\n")
     else:
         print("hash in not correct\n")
+        ckpt_valid = False
 
-if model_config == "custom":
-  config = custom_config_path
-else:
-  config = models_path+'/'+model_config
-
-if model_checkpoint == "custom":
-  ckpt = custom_checkpoint_path
-else:
-  ckpt = models_path+'/'+model_checkpoint
-
-print(f"config: {config}")
-print(f"ckpt: {ckpt}")
-
-# %%
-# !! {"metadata":{
-# !!   "cellView": "form",
-# !!   "id": "IJiMgz_96nr3"
-# !! }}
-#@markdown **Load Stable Diffusion**
+if ckpt_valid:
+    print(f"Using ckpt: {ckpt_path}")
 
 def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_precision=True):
     map_location = "cuda" #@param ["cpu", "cuda"]
@@ -423,7 +410,6 @@ def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_prec
         print("unexpected keys:")
         print(u)
 
-    #model.cuda()
     if half_precision:
         model = model.half().to(device)
     else:
@@ -431,15 +417,12 @@ def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_prec
     model.eval()
     return model
 
-load_on_run_all = True #@param {type: 'boolean'}
-half_precision = True # needs to be fixed
+if load_on_run_all and ckpt_valid:
+    local_config = OmegaConf.load(f"{ckpt_config_path}")
+    model = load_model_from_config(local_config, f"{ckpt_path}",half_precision=half_precision)
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    model = model.to(device)
 
-if load_on_run_all:
-
-  local_config = OmegaConf.load(f"{config}")
-  model = load_model_from_config(local_config, f"{ckpt}",half_precision=half_precision)
-  device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-  model = model.to(device)
 
 # %%
 # !! {"metadata":{
