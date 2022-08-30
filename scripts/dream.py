@@ -178,18 +178,15 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
                 os.makedirs(opt.outdir)
             current_outdir = opt.outdir
         elif prompt_as_dir:
-            if prompt_as_dir == 'simple':
-                # this line will sanitize the entire prompt as one folder
-                subdir = path_filter.sub('_', opt.prompt)[:name_max].rstrip(' .')
-            else:
-                # this line will allow the prompt to create subdirectories
-                subdir = os.path.join(*[path_filter.sub('_', x)[:name_max].rstrip(' .') for x in opt.prompt.replace('\\', '/').split('/') if x.rstrip(' .') != ''])
+            # sanitize the prompt to a valid folder name
+            subdir = path_filter.sub('_', opt.prompt)[:name_max].rstrip(' .')
 
             # truncate path to maximum allowed length
+            # 27 is the length of '######.##########.##.png', plus two separators and a NUL
             subdir = subdir[:(path_max - 27 - len(os.path.abspath(outdir)))]
             current_outdir = os.path.join(outdir, subdir)
 
-            print ('\nWriting files to directory: "' + current_outdir + '"\n')
+            print ('Writing files to directory: "' + current_outdir + '"')
 
             # make sure the output directory exists
             if not os.path.exists(current_outdir):
@@ -350,10 +347,8 @@ def create_argv_parser():
     parser.add_argument(
         '--prompt_as_dir',
         '-p',
-        type=str,
-        nargs='?',
-        const='y',
-        help='Output images are placed in subdirectories named using the prompt string. Only used if --prompt_as_dir or -p is specified.\nIf set to \"simple\" then all non-alphanumeric characters in the prompt will be replaced by underscores for the folder name.',
+        action='store_true',
+        help='Place images in subdirectories named after the prompt.',
     )
     # GFPGAN related args
     parser.add_argument(
