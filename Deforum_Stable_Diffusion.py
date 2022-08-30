@@ -491,6 +491,10 @@ def DeforumAnimArgs():
     #@markdown ####**Interpolation:**
     interpolate_key_frames = False #@param {type:"boolean"}
     interpolate_x_frames = 4 #@param {type:"number"}
+    
+    #@markdown ####**Resume Animation:**
+    resume_from_timestring = False #@param {type:"boolean"}
+    resume_timestring = "20220829210106" #@param {type:"string"}
 
     return locals()
 
@@ -738,6 +742,14 @@ def render_image_batch(args):
 def render_animation(args, anim_args):
     # animations use key framed prompts
     args.prompts = animation_prompts
+    
+    # resume animation
+    start_frame = 0
+    if anim_args.resume_from_timestring:
+        for tmp in os.listdir(args.outdir):
+            if tmp.split("_")[0] == anim_args.resume_timestring:
+                start_frame += 1
+        start_frame = start_frame - 1
 
     # create output folder for the batch
     os.makedirs(args.outdir, exist_ok=True)
@@ -761,8 +773,15 @@ def render_animation(args, anim_args):
     args.n_samples = 1
     prev_sample = None
     color_match_sample = None
-    for frame_idx in range(anim_args.max_frames):
+    for frame_idx in range(start_frame,anim_args.max_frames):
         print(f"Rendering animation frame {frame_idx} of {anim_args.max_frames}")
+        
+        # resume animation
+        if anim_args.resume_from_timestring:
+            path = os.path.join(args.outdir,f"{args.timestring}_{frame_idx-1:05}.png")
+            img = cv2.imread(path)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            prev_sample = sample_from_cv2(img)
 
         # apply transforms to previous frame
         if prev_sample is not None:
