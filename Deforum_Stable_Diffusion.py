@@ -482,7 +482,7 @@ def DeforumAnimArgs():
     scale_schedule = "0: (1.0)"#@param {type:"string"}
 
     #@markdown ####**Coherence:**
-    color_coherence = 'Match Frame 0 HSV' #@param ['None', 'Match Frame 0 HSV', 'Match Frame 0 LAB', 'Match Frame 0 RGB'] {type:'string'}
+    color_coherence = 'Match Frame 0 LAB' #@param ['None', 'Match Frame 0 HSV', 'Match Frame 0 LAB', 'Match Frame 0 RGB'] {type:'string'}
 
     #@markdown ####**Video Input:**
     video_init_path ='/content/video_in.mp4'#@param {type:"string"}
