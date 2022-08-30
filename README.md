@@ -189,6 +189,34 @@ Values that approach 1.0 allow for lots of variations but will also produce imag
 
 This procedure can, for example, also be used to upscale samples from the base model.
 
+## Docker
+
+First you will need the `nvidia-docker` to be set up. If you are using Windows Docker Desktop you are in luck, as it is already working by default, otherwise follow [the NVIDIA guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html).
+
+After that, assuming you have downloaded the weights into the "weights" folder (see above, or `curl https://www.googleapis.com/storage/v1/b/aai-blog-files/o/sd-v1-4.ckpt?alt=media > weights/sd-v1-4.ckpt`), you can start it in three different modes:
+
+### 1. simple docker-compose up
+
+change the prompt located in [docker-compose.yaml](docker-compose.yaml), located under "environment" and execute:
+
+```
+docker-compose up
+```
+
+### 2. simple docker run
+
+edit the last part of the command and hit enter
+
+```
+docker run --it guestros/stable-diffusion:latest --gpus all -v ./weights/:/app/weigths/ -v ./outputs/:/app/outputs/ -e 'PROMPT="a dinosaur looking at a meteor"'
+```
+
+### 3. interactive session
+
+An interactive session where you can type in your own commands and arguments
+```
+docker run --it guestros/stable-diffusion:latest --gpus all -v ./weights/:/app/weigths/ -v ./outputs/:/app/outputs/
+```
 
 ## Comments 
 
