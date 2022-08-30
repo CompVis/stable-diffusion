@@ -26,6 +26,6 @@ ENV PROMPT="a drawing of a giraffe riding a motorcycle in space"
 # trigger first download to prevent re-downloading in the future
 # the script will fail as we do not have the weights yet, therefore the exit 0 
 RUN python scripts/txt2img.py; exit 0 
-ENTRYPOINT [ "python", "scripts/txt2img.py", \
+CMD [ "python", "scripts/txt2img.py", \
     "--prompt", "'$PROMPT'", "--plms", "--ckpt", "./weights/sd-v1-4.ckpt", "--skip_grid", \
     "--n_samples", "1", "--n_iter", "1"]
