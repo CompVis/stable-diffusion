@@ -128,7 +128,7 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                     img2img_btn_editor = gr.Button("Generate", variant="primary", elem_id="img2img_edit_btn")
                 with gr.Row().style(equal_height=False):
                     with gr.Column():
-                        gr.Markdown('#### Img2Img input')
+                        gr.Markdown('#### Img2Img Input')
                         img2img_image_editor = gr.Image(value=sample_img2img, source="upload", interactive=True,
                                                         type="pil", tool="select", elem_id="img2img_editor",
                                                         image_mode="RGBA")
@@ -136,15 +136,27 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                                                       type="pil", tool="sketch", visible=False,
                                                       elem_id="img2img_mask")
 
-                        with gr.Row():
-                            img2img_image_editor_mode = gr.Radio(choices=["Mask", "Crop", "Uncrop"], label="Image Editor Mode",
+                        with gr.Tabs():
+                            with gr.TabItem("Editor Options"):                                
+                                with gr.Column():
+                                    img2img_image_editor_mode = gr.Radio(choices=["Mask", "Crop", "Uncrop"], label="Image Editor Mode",
                                                              value="Crop", elem_id='edit_mode_select')
+                                    img2img_mask = gr.Radio(choices=["Keep masked area", "Regenerate only masked area"],
+                                                label="Mask Mode", type="index",
+                                                value=img2img_mask_modes[img2img_defaults['mask_mode']], visible=False)
+                        
+                                    img2img_mask_blur_strength = gr.Slider(minimum=1, maximum=10, step=1,
+                                                               label="How much blurry should the mask be? (to avoid hard edges)",
+                                                               value=3, visible=False)
 
-                            img2img_painterro_btn = gr.Button("Advanced Editor")
-                            img2img_show_help_btn = gr.Button("Show Hints")
-                            img2img_hide_help_btn = gr.Button("Hide Hints", visible=False)
-                        img2img_help = gr.Markdown(visible=False, value="")
-
+                                    img2img_resize = gr.Radio(label="Resize mode",
+                                                choices=["Just resize", "Crop and resize", "Resize and fill"],
+                                                type="index",
+                                                value=img2img_resize_modes[img2img_defaults['resize_mode']])
+                                
+                                img2img_painterro_btn = gr.Button("Advanced Editor")
+                            with gr.TabItem("Hints"):
+                                img2img_help = gr.Markdown(visible=False, value=uifn.help_text)
 
 
                     with gr.Column():
@@ -152,12 +164,12 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                         output_img2img_gallery = gr.Gallery(label="Images", elem_id="img2img_gallery_output").style(grid=[4,4,4])
                         with gr.Tabs():
                             with gr.TabItem("Generated image actions", id="img2img_actions_tab"):
-                                with gr.Group():
-                                    gr.Markdown("Select an image, then press one of the buttons below")
+                                gr.Markdown("Select an image, then press one of the buttons below")
+                                with gr.Row():
                                     output_img2img_copy_to_clipboard_btn = gr.Button("Copy to clipboard")
                                     output_img2img_copy_to_input_btn = gr.Button("Push to img2img input")
                                     output_img2img_copy_to_mask_btn = gr.Button("Push to img2img input mask")
-                                    gr.Markdown("Warning: This will clear your current image and mask settings!")
+                                gr.Markdown("Warning: This will clear your current image and mask settings!")
                             with gr.TabItem("Output info", id="img2img_output_info_tab"):
                                 output_img2img_params = gr.Textbox(label="Generation parameters")
                                 with gr.Row():
@@ -170,54 +182,47 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                                         _js='(x) => navigator.clipboard.writeText(x)', fn=None, show_progress=False)
                                 output_img2img_stats = gr.HTML(label='Stats')
                 gr.Markdown('# img2img settings')
-                with gr.Row():
 
+                with gr.Row():
                     with gr.Column():
-                        img2img_batch_count = gr.Slider(minimum=1, maximum=250, step=1,
-                                                        label='Batch count (how many batches of images to generate)',
-                                                        value=img2img_defaults['n_iter'])
                         img2img_width = gr.Slider(minimum=64, maximum=2048, step=64, label="Width",
                                                   value=img2img_defaults["width"])
                         img2img_height = gr.Slider(minimum=64, maximum=2048, step=64, label="Height",
                                                    value=img2img_defaults["height"])
-                        img2img_seed = gr.Textbox(label="Seed (blank to randomize)", lines=1,
+                        
+                        img2img_cfg = gr.Slider(minimum=-40.0, maximum=30.0, step=0.5,
+                                                label='Classifier Free Guidance Scale (how strongly the image should follow the prompt)',
+                                                value=img2img_defaults['cfg_scale'])
+
+                        img2img_seed = gr.Textbox(label="Seed (blank to randomize)", lines=1, max_lines=1,
                                                   value=img2img_defaults["seed"])
-                        img2img_steps = gr.Slider(minimum=1, maximum=250, step=1, label="Sampling Steps",
-                                                  value=img2img_defaults['ddim_steps'])
+                        img2img_batch_count = gr.Slider(minimum=1, maximum=250, step=1,
+                                                        label='Batch count (how many batches of images to generate)',
+                                                        value=img2img_defaults['n_iter'])
                         img2img_batch_size = gr.Slider(minimum=1, maximum=8, step=1,
                                                        label='Batch size (how many images are in a batch; memory-hungry)',
                                                        value=img2img_defaults['batch_size'])
                     with gr.Column():
-                        img2img_mask = gr.Radio(choices=["Keep masked area", "Regenerate only masked area"],
-                                                label="Mask Mode", type="index",
-                                                value=img2img_mask_modes[img2img_defaults['mask_mode']], visible=False)
-                        img2img_mask_blur_strength = gr.Slider(minimum=1, maximum=10, step=1,
-                                                               label="How much blurry should the mask be? (to avoid hard edges)",
-                                                               value=3, visible=False)
+                        img2img_steps = gr.Slider(minimum=1, maximum=250, step=1, label="Sampling Steps",
+                                                  value=img2img_defaults['ddim_steps'])
 
                         img2img_sampling = gr.Dropdown(label='Sampling method (k_lms is default k-diffusion sampler)',
                                                        choices=["DDIM", 'k_dpm_2_a', 'k_dpm_2', 'k_euler_a', 'k_euler',
                                                                 'k_heun', 'k_lms'],
                                                        value=img2img_defaults['sampler_name'])
+
+                        img2img_denoising = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising Strength',
+                                                      value=img2img_defaults['denoising_strength'])
+
                         img2img_toggles = gr.CheckboxGroup(label='', choices=img2img_toggles,
                                                            value=img2img_toggle_defaults, type="index")
+
                         img2img_realesrgan_model_name = gr.Dropdown(label='RealESRGAN model',
                                                                     choices=['RealESRGAN_x4plus',
                                                                              'RealESRGAN_x4plus_anime_6B'],
                                                                     value='RealESRGAN_x4plus',
                                                                     visible=RealESRGAN is not None)  # TODO: Feels like I shouldnt slot it in here.
 
-
-                        img2img_cfg = gr.Slider(minimum=-40.0, maximum=30.0, step=0.5,
-                                                label='Classifier Free Guidance Scale (how strongly the image should follow the prompt)',
-                                                value=img2img_defaults['cfg_scale'])
-                        img2img_denoising = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising Strength',
-                                                      value=img2img_defaults['denoising_strength'])
-
-                        img2img_resize = gr.Radio(label="Resize mode",
-                                                  choices=["Just resize", "Crop and resize", "Resize and fill"],
-                                                  type="index",
-                                                  value=img2img_resize_modes[img2img_defaults['resize_mode']])
                         img2img_embeddings = gr.File(label="Embeddings file for textual inversion",
                                                      visible=show_embeddings)
 
@@ -232,18 +237,6 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                     uifn.update_image_mask,
                     [img2img_image_editor, img2img_resize, img2img_width, img2img_height],
                     img2img_image_mask
-                )
-
-                img2img_show_help_btn.click(
-                    uifn.show_help,
-                    None,
-                    [img2img_show_help_btn, img2img_hide_help_btn, img2img_help]
-                )
-
-                img2img_hide_help_btn.click(
-                    uifn.hide_help,
-                    None,
-                    [img2img_show_help_btn, img2img_hide_help_btn, img2img_help]
                 )
 
                 output_txt2img_copy_to_input_btn.click(
@@ -287,7 +280,10 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                      img2img_embeddings],
                     [output_img2img_gallery, output_img2img_seed, output_img2img_params, output_img2img_stats])
                 img2img_btn_editor.click(*img2img_submit_params())
-                img2img_prompt.submit(*img2img_submit_params())
+
+                # GENERATE ON ENTER
+                img2img_prompt.submit(None, None, None,
+                                      _js=js_img2img_submit("prompt_row"))
 
                 img2img_painterro_btn.click(None, [img2img_image_editor], [img2img_image_editor, img2img_image_mask], _js=js_painterro_launch('img2img_editor'))
 
