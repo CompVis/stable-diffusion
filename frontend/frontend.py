@@ -49,7 +49,7 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                                     output_txt2img_copy_clipboard = gr.Button("Copy to clipboard").click(fn=None,
                                                                                                          inputs=output_txt2img_gallery,
                                                                                                          outputs=[],
-                                                                                                         _js=js_copy_selected_txt2img)
+                                                                                                         _js=js_copy_to_clipboard('txt2img_gallery_output'))
                                     output_txt2img_copy_to_input_btn = gr.Button("Push to img2img")
                                     if RealESRGAN is not None:
                                         output_txt2img_to_upscale_esrgan = gr.Button("Upscale w/ ESRGAN")
@@ -80,7 +80,7 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                                                                    value=txt2img_defaults['submit_on_enter'],
                                                                    interactive=True)
                                 txt2img_submit_on_enter.change(
-                                    lambda x: gr.update(max_lines=1 if x == 'Single' else 25), txt2img_submit_on_enter,
+                                    lambda x: gr.update(max_lines=1 if x == 'Yes' else 25), txt2img_submit_on_enter,
                                     txt2img_prompt)
                             with gr.TabItem('Advanced'):
                                 txt2img_toggles = gr.CheckboxGroup(label='', choices=txt2img_toggles,
@@ -92,6 +92,8 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                                                                             visible=RealESRGAN is not None)  # TODO: Feels like I shouldnt slot it in here.
                                 txt2img_ddim_eta = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label="DDIM ETA",
                                                              value=txt2img_defaults['ddim_eta'], visible=False)
+                                txt2img_variant_amount = gr.Slider(minimum=0.0, maximum=1.0, label='Variation Amount',value=txt2img_defaults['variant_amount'])
+                                txt2img_variant_seed = gr.Textbox(label="Variant Seed (blank to randomize)", lines=1, max_lines=1,value=txt2img_defaults["variant_seed"])
                         txt2img_embeddings = gr.File(label="Embeddings file for textual inversion",
                                                      visible=show_embeddings)
 
@@ -99,14 +101,14 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                     txt2img,
                     [txt2img_prompt, txt2img_steps, txt2img_sampling, txt2img_toggles, txt2img_realesrgan_model_name,
                      txt2img_ddim_eta, txt2img_batch_count, txt2img_batch_size, txt2img_cfg, txt2img_seed,
-                     txt2img_height, txt2img_width, txt2img_embeddings],
+                     txt2img_height, txt2img_width, txt2img_embeddings, txt2img_variant_amount, txt2img_variant_seed],
                     [output_txt2img_gallery, output_txt2img_seed, output_txt2img_params, output_txt2img_stats]
                 )
                 txt2img_prompt.submit(
                     txt2img,
                     [txt2img_prompt, txt2img_steps, txt2img_sampling, txt2img_toggles, txt2img_realesrgan_model_name,
                      txt2img_ddim_eta, txt2img_batch_count, txt2img_batch_size, txt2img_cfg, txt2img_seed,
-                     txt2img_height, txt2img_width, txt2img_embeddings],
+                     txt2img_height, txt2img_width, txt2img_embeddings, txt2img_variant_amount, txt2img_variant_seed],
                     [output_txt2img_gallery, output_txt2img_seed, output_txt2img_params, output_txt2img_stats]
                 )
 
@@ -126,16 +128,18 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                     with gr.Column():
                         gr.Markdown('#### Img2Img input')
                         img2img_image_editor = gr.Image(value=sample_img2img, source="upload", interactive=True,
-                                                        type="pil", tool="select", elem_id="img2img_editor")
+                                                        type="pil", tool="select", elem_id="img2img_editor",
+                                                        image_mode="RGBA")
                         img2img_image_mask = gr.Image(value=sample_img2img, source="upload", interactive=True,
                                                       type="pil", tool="sketch", visible=False,
                                                       elem_id="img2img_mask")
 
                         with gr.Row():
-                            img2img_image_editor_mode = gr.Radio(choices=["Mask", "Crop"], label="Image Editor Mode",
+                            img2img_image_editor_mode = gr.Radio(choices=["Mask", "Crop", "Uncrop"], label="Image Editor Mode",
                                                              value="Crop", elem_id='edit_mode_select')
 
                             img2img_painterro_btn = gr.Button("Advanced Editor")
+                            img2img_copy_from_painterro_btn = gr.Button(value="Get Image from Advanced Editor")
                             img2img_show_help_btn = gr.Button("Show Hints")
                             img2img_hide_help_btn = gr.Button("Hide Hints", visible=False)
                         img2img_help = gr.Markdown(visible=False, value="")
@@ -220,7 +224,7 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                     uifn.change_image_editor_mode,
                     [img2img_image_editor_mode, img2img_image_editor, img2img_resize, img2img_width, img2img_height],
                     [img2img_image_editor, img2img_image_mask, img2img_btn_editor, img2img_btn_mask,
-                     img2img_painterro_btn, img2img_mask, img2img_mask_blur_strength]
+                     img2img_painterro_btn, img2img_copy_from_painterro_btn, img2img_mask, img2img_mask_blur_strength]
                 )
 
                 img2img_image_editor.edit(
@@ -245,24 +249,24 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                     uifn.copy_img_to_input,
                     [output_txt2img_gallery],
                     [img2img_image_editor, img2img_image_mask, tabs],
-                    _js=js_return_selected_txt2img
+                    _js=js_move_image('txt2img_gallery_output', 'img2img_editor')
                 )
 
                 output_img2img_copy_to_input_btn.click(
                     uifn.copy_img_to_edit,
                     [output_img2img_gallery],
                     [img2img_image_editor, tabs, img2img_image_editor_mode],
-                    _js=js_return_selected_img2img
+                    _js=js_move_image('img2img_gallery_output', 'img2img_editor')
                 )
                 output_img2img_copy_to_mask_btn.click(
                     uifn.copy_img_to_mask,
                     [output_img2img_gallery],
                     [img2img_image_mask, tabs, img2img_image_editor_mode],
-                    _js=js_return_selected_img2img
+                    _js=js_move_image('img2img_gallery_output', 'img2img_editor')
                 )
 
                 output_img2img_copy_to_clipboard_btn.click(fn=None, inputs=output_img2img_gallery, outputs=[],
-                                                           _js=js_copy_selected_img2img)
+                                                           _js=js_copy_to_clipboard('img2img_gallery_output'))
 
                 img2img_btn_mask.click(
                     img2img,
@@ -284,61 +288,9 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                 img2img_btn_editor.click(*img2img_submit_params())
                 img2img_prompt.submit(*img2img_submit_params())
 
-                img2img_painterro_btn.click(None, [img2img_image_editor], [img2img_image_editor, img2img_image_mask], _js="""async (img) => {
-                    const originalImage = Array.isArray(img) ? img[0] : img;
-                    const fallbackResult = [originalImage, originalImage];
+                img2img_painterro_btn.click(None, [img2img_image_editor], None, _js=js_painterro_launch())
 
-                    if (typeof window.Painterro === 'undefined') {
-                        if (document.getElementById('__painterro-script')) {
-                            return fallbackResult;
-                        }
-
-                        const style = document.createElement('style');
-                        style.appendChild(document.createTextNode('.ptro-holder-wrapper { z-index: 9999 !important; }'));
-                        document.head.appendChild(style);
-
-                        const loaded = await new Promise((resolve) => {
-                            const script = document.createElement('script');
-                            script.id = '__painterro-script';
-                            script.src = 'https://unpkg.com/painterro@1.2.78/build/painterro.min.js';
-                            script.onload = () => resolve(true);
-                            script.onerror = () => resolve(false);
-                            document.head.appendChild(script);
-                        });
-
-                        if (!loaded) {
-                            alert('Failed to load painterro script');
-                            return fallbackResult;
-                        }
-                    }
-
-                    if (window.__painterroIsOpen) {
-                        return fallbackResult;
-                    }
-                    window.__painterroIsOpen = true;
-
-                    let resolveResult;
-                    const paintClient = Painterro({
-                        hiddenTools: ['arrow'],
-                        onHide: () => {
-                            resolveResult?.(null);
-                        },
-                        saveHandler: (image, done) => {
-                            const data = image.asDataURL();
-                            resolveResult(data);
-                            done(true);
-                            paintClient.hide();
-                        },
-                    });
-                    
-                    const result = await new Promise((resolve) => {
-                        resolveResult = resolve;
-                        paintClient.show(originalImage);
-                    });
-                    window.__painterroIsOpen = false;
-                    delete paintClient;
-                    return result ? [result, result] : fallbackResult;
-                }""")
+                img2img_copy_from_painterro_btn.click(None, None, [img2img_image_editor, img2img_image_mask], _js=js_painterro_load_image("img2img_editor"))
 
             if GFPGAN is not None:
                 gfpgan_defaults = {
@@ -384,7 +336,7 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                     uifn.copy_img_to_upscale_esrgan,
                     output_txt2img_gallery,
                     [realesrgan_source, tabs],
-                    _js=js_return_selected_txt2img)
+                    _js=js_move_image('txt2img_gallery_output', 'img2img_editor'))
 
         gr.HTML("""
     <div id="90" style="max-width: 100%; font-size: 14px; text-align: center;" class="output-markdown gr-prose border-solid border border-gray-200 rounded gr-panel">
@@ -393,4 +345,10 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
         If you would like to contribute to development or test bleeding edge builds, you can visit the <a href="https://github.com/hlky/stable-diffusion-webui" target="_blank">developement repository</a>.</p>
     </div>
     """)
+        # Hack: Detect the load event on the frontend
+        # Won't be needed in the next version of gradio
+        # See the relevant PR: https://github.com/gradio-app/gradio/pull/2108
+        load_detector = gr.Number(value=0, label="Load Detector", visible=False)
+        load_detector.change(None, None, None, _js=js(opt))
+        demo.load(lambda x: 42, inputs=load_detector, outputs=load_detector)
     return demo
