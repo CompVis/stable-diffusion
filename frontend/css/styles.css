@@ -1,0 +1,21 @@
+[data-testid="image"] {min-height: 512px !important}
+* #body>.col:nth-child(2){width:250%;max-width:89vw}
+
+#prompt_input, #img2img_prompt_input {
+    padding: 0px;
+    border: none;
+}
+
+#prompt_row input,
+#prompt_row textarea {
+    font-size: 1.2rem;
+    line-height: 1.6rem;
+}
+
+#edit_mode_select{width:auto !important}
+
+input[type=number]:disabled { -moz-appearance: textfield;+ }
+
+#generate, #img2img_mask_btn, #img2img_edit_btn {
+    align-self: stretch;
+}
