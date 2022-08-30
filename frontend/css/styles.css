@@ -12,8 +12,6 @@
     line-height: 1.6rem;
 }
 
-#edit_mode_select{width:auto !important}
-
 input[type=number]:disabled { -moz-appearance: textfield; }
 
 #generate, #img2img_mask_btn, #img2img_edit_btn {
