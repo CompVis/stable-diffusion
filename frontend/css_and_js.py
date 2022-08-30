@@ -33,3 +33,5 @@ def js_copy_to_clipboard(from_id):
 def js_painterro_launch(to_id):
     return w(f"Painterro.init('{to_id}')")
 
+def js_img2img_submit(prompt_row_id):
+    return w(f"clickFirstVisibleButton('{prompt_row_id}')")
