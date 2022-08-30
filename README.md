@@ -150,8 +150,7 @@ You can install **Real-ESRGAN** by typing the following command.
 pip install realesrgan
 ```
 
-**Preloading Models**
-
+**Note: Internet connection needed:**
 Users whose GPU machines are isolated from the Internet (e.g. on a
 University cluster) should be aware that the first time you run
 dream.py with GFPGAN and Real-ESRGAN turned on, it will try to
