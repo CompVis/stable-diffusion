@@ -365,7 +365,7 @@ Credit goes to @rinongal and the repository located at
 https://github.com/rinongal/textual_inversion Please see the
 repository and associated paper for details and limitations.
 
-## Changes
+# Changes
 
 - v1.13 (in process)
 
@@ -466,11 +466,11 @@ repository and associated paper for details and limitations.
   - use half precision arithmetic by default, resulting in faster execution and lower memory requirements
     Pass argument --full_precision to dream.py to get slower but more accurate image generation
 
-## Installation
+# Installation
 
 There are separate installation walkthroughs for [Linux/Mac](#linuxmac) and [Windows](#windows).
 
-### Linux/Mac
+## Linux/Mac
 
 1. You will need to install the following prerequisites if they are not already available. Use your
    operating system's preferred installer
@@ -556,7 +556,7 @@ link from the stable-diffusion model.ckpt file, to the true location of the sd-v
 9. Subsequently, to relaunch the script, be sure to run "conda activate ldm" (step 5, second command), enter the "stable-diffusion"
    directory, and then launch the dream script (step 8). If you forget to activate the ldm environment, the script will fail with multiple ModuleNotFound errors.
 
-#### Updating to newer versions of the script
+### Updating to newer versions of the script
 
 This distribution is changing rapidly. If you used the "git clone" method (step 5) to download the stable-diffusion directory, then to update to the latest and greatest version, launch the Anaconda window, enter "stable-diffusion", and type:
 
@@ -566,7 +566,7 @@ This distribution is changing rapidly. If you used the "git clone" method (step 
 
 This will bring your local copy into sync with the remote one.
 
-### Windows
+## Windows
 
 1. Install Anaconda3 (miniconda3 version) from here: https://docs.anaconda.com/anaconda/install/windows/
 
@@ -647,9 +647,12 @@ python scripts\dream.py
 
 10. Subsequently, to relaunch the script, first activate the Anaconda command window (step 3), enter the stable-diffusion directory (step 5, "cd \path\to\stable-diffusion"), run "conda activate ldm" (step 6b), and then launch the dream script (step 9).
 
-#### Updating to newer versions of the script
+### Updating to newer versions of the script
 
-This distribution is changing rapidly. If you used the "git clone" method (step 5) to download the stable-diffusion directory, then to update to the latest and greatest version, launch the Anaconda window, enter "stable-diffusion", and type:
+This distribution is changing rapidly. If you used the "git clone"
+method (step 5) to download the stable-diffusion directory, then to
+update to the latest and greatest version, launch the Anaconda window,
+enter "stable-diffusion", and type:
 
 ```
 git pull
@@ -701,21 +704,21 @@ Downloading: "https://github.com/DagnyT/hardnet/raw/master/pretrained/train_libe
 100%|███████████████████████████████████████████████| 5.10M/5.10M [00:00<00:00, 101MB/s]
 ...success
 ```
-## Troubleshooting
+# Troubleshooting
 
 Here are a few common installation problems and their solutions. Often
 these are caused by incomplete installations or crashes during the
 install process.
 
 * PROBLEM: During "conda env create -f environment.yaml", conda
-  hangs indefinitely.
+hangs indefinitely.
 
 * SOLUTION: Enter the stable-diffusion directory and completely
-  remove the "src" directory and all its contents. The safest way
-  to do this is to enter the stable-diffusion directory and
-  give the command "git clean -f". If this still doesn't fix
-  the problem, try "conda clean -all" and then restart at the
-  "conda env create" step.
+remove the "src" directory and all its contents. The safest way
+to do this is to enter the stable-diffusion directory and
+give the command "git clean -f". If this still doesn't fix
+the problem, try "conda clean -all" and then restart at the
+"conda env create" step.
 
 ---
 
@@ -770,7 +773,7 @@ of branch>
 You will need to go through the install procedure again, but it should
 be fast because all the dependencies are already loaded.
 
-## Support
+# Support
 
 For support,
 please use this repository's GitHub Issues tracking service. Feel free
