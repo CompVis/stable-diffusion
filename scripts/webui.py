@@ -420,7 +420,7 @@ def image_grid(imgs, batch_size, force_n_rows=None, captions=None):
 
     for i, img in enumerate(imgs):
         grid.paste(img, box=(i % cols * w, i // cols * h))
-        if captions:
+        if captions and i<len(captions):
             d = ImageDraw.Draw( grid )
             size = d.textbbox( (0,0), captions[i], font=fnt, stroke_width=2, align="center" )
             d.multiline_text((i % cols * w + w/2, i // cols * h + h - size[3]), captions[i], font=fnt, fill=(255,255,255), stroke_width=2, stroke_fill=(0,0,0), anchor="mm", align="center")
@@ -580,7 +580,7 @@ skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoisin
             info_dict["denoising_strength"] = denoising_strength
             info_dict["resize_mode"] = resize_mode
         with open(f"{filename_i}.yaml", "w", encoding="utf8") as f:
-            yaml.dump(info_dict, f, allow_unicode=True)
+            yaml.dump(info_dict, f, allow_unicode=True, width=10000)
 
 
 def get_next_sequence_number(path, prefix=''):
@@ -710,8 +710,12 @@ def process_images(
     comments = []
 
     prompt_matrix_parts = []
+    simple_templating = False
+    add_original_image = True
     if prompt_matrix:
         if prompt.startswith("@"):
+            simple_templating = True
+            add_original_image = not (use_RealESRGAN or use_GFPGAN)
             all_seeds, n_iter, prompt_matrix_parts, all_prompts, frows = oxlamon_matrix(prompt, seed, n_iter, batch_size)
         else:
             all_prompts = []
@@ -745,6 +749,7 @@ def process_images(
 
     precision_scope = autocast if opt.precision == "autocast" else nullcontext
     output_images = []
+    grid_captions = []
     stats = []
     with torch.no_grad(), precision_scope("cuda"), (model.ema_scope() if not opt.optimized else nullcontext()):
         init_data = func_init()
@@ -766,6 +771,7 @@ def process_images(
         for n in range(n_iter):
             print(f"Iteration: {n+1}/{n_iter}")
             prompts = all_prompts[n * batch_size:(n + 1) * batch_size]
+            captions = prompt_matrix_parts[n * batch_size:(n + 1) * batch_size]
             seeds = all_seeds[n * batch_size:(n + 1) * batch_size]
 
             if opt.optimized:
@@ -776,20 +782,14 @@ def process_images(
 
             # split the prompt if it has : for weighting
             # TODO for speed it might help to have this occur when all_prompts filled??
-            subprompts,weights = split_weighted_subprompts(prompts[0])
-            # get total weight for normalizing, this gets weird if large negative values used
-            totalPromptWeight = sum(weights)
+            weighted_subprompts = split_weighted_subprompts(prompts[0], normalize_prompt_weights)
 
             # sub-prompt weighting used if more than 1
-            if len(subprompts) > 1:
+            if len(weighted_subprompts) > 1:
                 c = torch.zeros_like(uc) # i dont know if this is correct.. but it works
-                for i in range(0,len(subprompts)): # normalize each prompt and add it
-                    weight = weights[i]
-                    if normalize_prompt_weights:
-                        weight = weight / totalPromptWeight
-                    #print(f"{subprompts[i]} {weight*100.0}%")
+                for i in range(0, len(weighted_subprompts)):
                     # note if alpha negative, it functions same as torch.sub
-                    c = torch.add(c, (model if not opt.optimized else modelCS).get_learned_conditioning(subprompts[i]), alpha=weight)
+                    c = torch.add(c, (model if not opt.optimized else modelCS).get_learned_conditioning(weighted_subprompts[i][0]), alpha=weighted_subprompts[i][1])
             else: # just behave like usual
                 c = (model if not opt.optimized else modelCS).get_learned_conditioning(prompts)
 
@@ -858,6 +858,8 @@ skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoisin
 normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img, uses_loopback, uses_random_seed_loopback, skip_save,
 skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode)
                     output_images.append(gfpgan_image) #287
+                    if simple_templating:
+                        grid_captions.append( captions[i] + "\ngfpgan" )
 
                 if use_RealESRGAN and RealESRGAN is not None and not use_GFPGAN:
                     skip_save = True # #287 >_>
@@ -875,6 +877,8 @@ skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoisin
 normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img, uses_loopback, uses_random_seed_loopback, skip_save,
 skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode)
                     output_images.append(esrgan_image) #287
+                    if simple_templating:
+                        grid_captions.append( captions[i] + "\nesrgan" )
 
                 if use_RealESRGAN and RealESRGAN is not None and use_GFPGAN and GFPGAN is not None:
                     skip_save = True # #287 >_>
@@ -894,13 +898,17 @@ skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoisin
 normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img, uses_loopback, uses_random_seed_loopback, skip_save,
 skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode)
                     output_images.append(gfpgan_esrgan_image) #287
+                    if simple_templating:
+                        grid_captions.append( captions[i] + "\ngfpgan_esrgan" )
 
                 if not skip_save or (not use_GFPGAN or not use_RealESRGAN):
-
                     save_sample(image, sample_path_i, filename, jpg_sample, prompts, seeds, width, height, steps, cfg_scale, 
 normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img, uses_loopback, uses_random_seed_loopback, skip_save,
 skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode)
-                    output_images.append(image)
+                    if add_original_image or not simple_templating:
+                        output_images.append(image)
+                        if simple_templating:
+                            grid_captions.append( captions[i] )
 
                 if opt.optimized:
                     mem = torch.cuda.memory_allocated()/1e6
@@ -910,8 +918,8 @@ skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoisin
 
         if (prompt_matrix or not skip_grid) and not do_not_save_grid:
             if prompt_matrix:
-                if prompt.startswith("@"):
-                    grid = image_grid(output_images, batch_size, force_n_rows=frows, captions=prompt_matrix_parts)
+                if simple_templating:
+                    grid = image_grid(output_images, batch_size, force_n_rows=frows, captions=grid_captions)
                 else:
                     grid = image_grid(output_images, batch_size, force_n_rows=1 << ((len(prompt_matrix_parts)-1)//2))
                     try:
@@ -1330,51 +1338,32 @@ def img2img(prompt: str, image_editor_mode: str, init_info, mask_mode: str, mask
         if err:
             crash(err, '!!Runtime error (img2img)!!')
 
+prompt_parser = re.compile("""
+    (?P<prompt>                # capture group for 'prompt'
+    [^:]+                      # match one or more non ':' characters
+    )                          # end 'prompt'
+    (?:                        # non-capture group
+    :+                         # match one or more ':' characters  
+    (?P<weight>                # capture group for 'weight'
+    -?\d+(?:\.\d+)?            # match positive or negative decimal number
+    )?                         # end weight capture group, make optional 
+    \s*                        # strip spaces after weight
+    |                          # OR
+    $                          # else, if no ':' then match end of line
+    )                          # end non-capture group
+""", re.VERBOSE)
+
 # grabs all text up to the first occurrence of ':' as sub-prompt
 # takes the value following ':' as weight
 # if ':' has no value defined, defaults to 1.0
 # repeats until no text remaining
-# TODO this could probably be done with less code
-def split_weighted_subprompts(text):
-    print(text)
-    remaining = len(text)
-    prompts = []
-    weights = []
-    while remaining > 0:
-        if ":" in text:
-            idx = text.index(":") # first occurrence from start
-            # grab up to index as sub-prompt
-            prompt = text[:idx]
-            remaining -= idx
-            # remove from main text
-            text = text[idx+1:]
-            # find value for weight, assume it is followed by a space or comma
-            idx = len(text) # default is read to end of text
-            if " " in text:
-                idx = min(idx,text.index(" ")) # want the closer idx
-            if "," in text:
-                idx = min(idx,text.index(",")) # want the closer idx
-            if idx != 0:
-                try:
-                    weight = float(text[:idx])
-                except: # couldn't treat as float
-                    print(f"Warning: '{text[:idx]}' is not a value, are you missing a space or comma after a value?")
-                    weight = 1.0
-            else: # no value found
-                weight = 1.0
-            # remove from main text
-            remaining -= idx
-            text = text[idx+1:]
-            # append the sub-prompt and its weight
-            prompts.append(prompt)
-            weights.append(weight)
-        else: # no : found
-            if len(text) > 0: # there is still text though
-                # take remainder as weight 1
-                prompts.append(text)
-                weights.append(1.0)
-            remaining = 0
-    return prompts, weights
+def split_weighted_subprompts(input_string, normalize=True):
+    parsed_prompts = [(match.group("prompt"), float(match.group("weight") or 1)) for match in re.finditer(prompt_parser, input_string)]
+    if not normalize:
+        return parsed_prompts
+    # this probably still doesn't handle negative weights very well
+    weight_sum = sum(map(lambda x: x[1], parsed_prompts))
+    return [(x[0], x[1] / weight_sum) for x in parsed_prompts]
 
 def slerp(device, t, v0:torch.Tensor, v1:torch.Tensor, DOT_THRESHOLD=0.9995):
     v0 = v0.detach().cpu().numpy()
