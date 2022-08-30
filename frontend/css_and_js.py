@@ -1,9 +1,8 @@
-import os
 from os import path
 
 def readTextFile(*args):
-    dir = os.path.dirname(__file__)
-    entry = os.path.join(dir, *args)
+    dir = path.dirname(__file__)
+    entry = path.join(dir, *args)
     with open(entry, "r", encoding="utf8") as f:
         data = f.read()
     return data
@@ -31,8 +30,6 @@ def js_move_image(from_id, to_id):
 def js_copy_to_clipboard(from_id):
     return w(f"copyImageFromGalleryToClipboard('{from_id}')")
 
-def js_painterro_launch():
-    return w("Painterro.init(SD.x)")
+def js_painterro_launch(to_id):
+    return w(f"Painterro.init('{to_id}')")
 
-def js_painterro_load_image(to_id):
-    return w(f"Painterro.loadImage('{to_id}')")
