@@ -437,7 +437,7 @@ def create_cmd_parser():
         '--cfg_scale',
         default=7.5,
         type=float,
-        help='Prompt configuration scale',
+        help='Classifier free guidance (CFG) scale - higher numbers cause generator to "try" harder.',
     )
     parser.add_argument(
         '-g', '--grid', action='store_true', help='generate a grid'
