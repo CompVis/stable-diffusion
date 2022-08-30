@@ -1,19 +1,78 @@
 window.SD = (() => {
+  /*
+   * Painterro is made a field of the SD global object
+   * To provide convinience when using w() method in css_and_js.py
+   */
   class PainterroClass {
-    static init (img) {
-      Painterro({
-        hiddenTools: ['arrow'],
-        saveHandler: function (image, done) {
-          localStorage.setItem('painterro-image', image.asDataURL());
-          done(true);
-        },
-      }).show(Array.isArray(img) ? img[0] : img);
-    }
-    static loadImage (toId) {
-      window.SD.clearImageInput(window.SD.el.get(`#${toId}`));
+    static isOpen = false;
+    static async init (toId) {
+      const img = SD.x;
+      const originalImage = Array.isArray(img) ? img[0] : img;
 
-      const image = localStorage.getItem('painterro-image')
-      return [image, image];
+      if (window.Painterro === undefined) {
+        try {
+          await this.load();
+        } catch (e) {
+          SDClass.error(e);
+
+          return this.fallback(originalImage);
+        }
+      }
+
+      if (this.isOpen) {
+        return this.fallback(originalImage);
+      }
+      this.isOpen = true;
+
+      let resolveResult;
+      const paintClient = Painterro({
+        hiddenTools: ['arrow'],
+        onHide: () => {
+          resolveResult?.(null);
+        },
+        saveHandler: (image, done) => {
+          const data = image.asDataURL();
+
+          // ensures stable performance even
+          // when the editor is in interactive mode
+          SD.clearImageInput(SD.el.get(`#${toId}`));
+
+          resolveResult(data);
+
+          done(true);
+          paintClient.hide();
+        },
+      });
+
+      const result = await new Promise((resolve) => {
+        resolveResult = resolve;
+        paintClient.show(originalImage);
+      });
+      this.isOpen = false;
+
+      return result ? this.success(result) : this.fallback(originalImage);
+    }
+    static success (result) { return [result, result]; }
+    static fallback (image) { return [image, image]; }
+    static load () {
+      return new Promise((resolve, reject) => {
+        /* Ensure Painterro window is always on top */
+        const style = document.createElement('style');
+        style.setAttribute('type', 'text/css');
+        style.appendChild(document.createTextNode(`
+          .ptro-holder-wrapper {
+              z-index: 100;
+          }
+        `));
+        document.head.appendChild(style);
+
+        const script = document.createElement('script');
+        script.id = '__painterro-script';
+        script.src = 'https://unpkg.com/painterro@1.2.78/build/painterro.min.js';
+        script.onload = () => resolve(true);
+        script.onerror = () => reject(false);
+        document.head.appendChild(script);
+      });
     }
   }
 
@@ -35,7 +94,7 @@ window.SD = (() => {
    * The main helper class to incapsulate functions
    * that change gradio ui functionality
    */
-  class SD {
+  class SDClass {
     el = new ElementCache();
     x;
     Painterro = PainterroClass;
@@ -64,9 +123,7 @@ window.SD = (() => {
       try {
         navigator.clipboard.write([item]);
       } catch (e) {
-        // TODO: graceful error messaing
-        console.error(e);
-        alert(e.message);
+        SDClass.error(e);
       }
 
       return this.x;
@@ -74,19 +131,19 @@ window.SD = (() => {
     clearImageInput (imageEditor) {
       imageEditor?.querySelector('.modify-upload button:last-child')?.click();
     }
+    static error (e) {
+      console.error(e);
+      if (typeof e === 'string') {
+        alert(e);
+      } else if(typeof e === 'object' && Object.hasOwn(e, 'message')) {
+        alert(e.message);
+      }
+    }
     #getGallerySelectedIndex (gallery) {
       const selected = gallery.querySelector(`.\\!ring-2`);
       return selected ? [...selected.parentNode.children].indexOf(selected) : 0;
     }
   }
 
-  // Painterro stuff
-  const script = document.createElement('script');
-  script.src = 'https://unpkg.com/painterro@1.2.78/build/painterro.min.js';
-  document.head.appendChild(script);
-  const style = document.createElement('style');
-  style.appendChild(document.createTextNode('.ptro-holder-wrapper { z-index: 9999 !important; }'));
-  document.head.appendChild(style);
-
-  return new SD();
+  return new SDClass();
 })();
