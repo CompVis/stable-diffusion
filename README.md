@@ -29,6 +29,15 @@ This fork is rapidly evolving, so use the Issues panel to report bugs
 and make feature requests, and check back periodically for
 improvements and bug fixes.
 
+# Table of Contents
+1. [Major Features](#features)
+2. [Changelog](#changes)
+3. [Installation](#installation)
+4. [Troubleshooting](#troubleshooting)
+5. [Support](#support)
+
+# Features
+
 ## Interactive command-line interface similar to the Discord bot
 
 The _dream.py_ script, located in scripts/dream.py,
@@ -746,10 +755,10 @@ you start to see errors about missing or incorrect modules, use the
 command "pip install -e ." and/or "conda env update -f environment.yaml"
 (These commands won't break anything.)
 
--If the feature/fix is on a branch (e.g. "foo-bugfix"), the recipe is similar, but
+* If the feature/fix is on a branch (e.g. "foo-bugfix"), the recipe is similar, but
 do a "git pull <name of branch>".
 
--If the feature/fix is in a pull request that has not yet been made
+* If the feature/fix is in a pull request that has not yet been made
 part of the main branch or a feature/bugfix branch, then from the page
 for the desired pull request, look for the line at the top that reads
 "xxxx wants to merge xx commits into lstein:main from YYYYYY". Copy
@@ -757,7 +766,7 @@ the URL in YYYY. It should have the format
 https://github.com/<name of contributor>/stable-diffusion/tree/<name
 of branch>
 
-Then **go to the directory above stable-diffusion**, and rename the
+* Then **go to the directory above stable-diffusion**, and rename the
 directory to "stable-diffusion.lstein", "stable-diffusion.old", or
 whatever. You can then git clone the branch that contains the
 pull request:
