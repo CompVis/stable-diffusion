@@ -22,8 +22,8 @@ parser.add_argument("--realesrgan-model", type=str, help="Upscaling model for Re
 parser.add_argument("--no-verify-input", action='store_true', help="do not verify input to check if it's too long", default=False)
 parser.add_argument("--no-half", action='store_true', help="do not switch the model to 16-bit floats", default=False)
 parser.add_argument("--no-progressbar-hiding", action='store_true', help="do not hide progressbar in gradio UI (we hide it because it slows down ML if you have hardware accleration in browser)", default=False)
-#parser.add_argument("--share", action='store_true', help="Should share your server on gradio.app, this allows you to use the UI from your mobile app", default=False)
-#parser.add_argument("--share-password", type=str, help="Sharing is open by default, use this to set a password. Username: webui", default=None)
+parser.add_argument("--share", action='store_true', help="Should share your server on gradio.app, this allows you to use the UI from your mobile app", default=False)
+parser.add_argument("--share-password", type=str, help="Sharing is open by default, use this to set a password. Username: webui", default=None)
 parser.add_argument("--defaults", type=str, help="path to configuration file providing UI defaults, uses same format as cli parameter", default='configs/webui/webui.yaml')
 parser.add_argument("--gpu", type=int, help="choose which GPU to use if you have multiple", default=0)
 parser.add_argument("--extra-models-cpu", action='store_true', help="run extra models (GFGPAN/ESRGAN) on cpu", default=False)
@@ -1604,15 +1604,13 @@ class ServerLauncher(threading.Thread):
         asyncio.set_event_loop(loop)
         gradio_params = {
             'show_error': True, 
-            'server_name': '0.0.0.0'
+            'server_name': '0.0.0.0', 
+            'share': opt.share
         }
-        demo.queue(concurrency_count=1)
-        #     'share': opt.share
-        # }
-        # if not opt.share:
-        #     demo.queue(concurrency_count=1)
-        # if opt.share and opt.share_password:
-        #     gradio_params['auth'] = ('webui', opt.share_password)    
+        if not opt.share:
+            demo.queue(concurrency_count=1)
+        if opt.share and opt.share_password:
+            gradio_params['auth'] = ('webui', opt.share_password)    
         self.demo.launch(**gradio_params)
 
     def stop(self):
