@@ -41,8 +41,8 @@ def chunk(it, size):
 def load_model_from_config(config, ckpt, verbose=False):
     print(f"Loading model from {ckpt}")
     pl_sd = torch.load(ckpt, map_location="cpu")
-    if "global_step" in pl_sd:
-        print(f"Global Step: {pl_sd['global_step']}")
+    # if "global_step" in pl_sd:
+    #     print(f"Global Step: {pl_sd['global_step']}")
     sd = pl_sd["state_dict"]
     model = instantiate_from_config(config.model)
     m, u = model.load_state_dict(sd, strict=False)
@@ -68,7 +68,7 @@ def get_resampling_mode():
 def load_img(path):
     image = Image.open(path).convert("RGB")
     w, h = image.size
-    print(f"loaded input image of size ({w}, {h}) from {path}")
+    #print(f"loaded input image of size ({w}, {h}) from {path}")
     w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
     image = image.resize((w, h), get_resampling_mode())
     image = np.array(image).astype(np.float32) / 255.0
@@ -98,7 +98,6 @@ def thats_numberwang(dir, wildcard):
         numberwang = 0
     else:
         numberwang = max(filenums) + 1
-    print(numberwang)
     return numberwang
 
 class CFGDenoiser(nn.Module):
@@ -144,7 +143,7 @@ def do_run(device, model, opt):
         # strength is like skip_steps I think
         assert 0. <= opt.strength <= 1., 'can only work with strength in [0.0, 1.0]'
         t_enc = int(opt.strength * opt.ddim_steps)
-        print(f"target t_enc is {t_enc} steps")
+        #print(f"target t_enc is {t_enc} steps")
     else:
         model_wrap = K.external.CompVisDenoiser(model)
         sigma_min, sigma_max = model_wrap.sigmas[0].item(), model_wrap.sigmas[-1].item()
@@ -695,6 +694,7 @@ def do_gobig(gobig_init, device, model, opt):
         finished_slice = addalpha(betterslice, mask)
         finished_slices.append((finished_slice, x, y))
     final_output = grid_merge(target_image, finished_slices)
+    result = result.replace('.png','')
     final_output.save(f'{result}_gobig{opt.filetype}', quality = opt.quality)
 
 def main():
@@ -820,7 +820,6 @@ def main():
                     time.sleep(0.5)
 
         for p in range(len(prompts)):
-            print(f'p is {p}')
             for i in range(settings.n_batches):
                 # pack up our settings into a simple namespace for the renderer
                 opt = {
@@ -867,7 +866,7 @@ def main():
                     gobig_init = cl_args.gobig_init
                 if cl_args.gobig:
                     do_gobig(gobig_init, device, model, opt)
-                if settings.cool_down > 0 and ((i < (settings.n_batches - 1)) or p < len(prompts)):
+                if settings.cool_down > 0 and ((i < (settings.n_batches - 1)) or p < (len(prompts) - 1)):
                     print(f'Pausing {settings.cool_down} seconds to give your poor GPU a rest...')
                     time.sleep(settings.cool_down)
             if not settings.frozen_seed:
