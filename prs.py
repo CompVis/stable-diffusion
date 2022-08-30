@@ -867,7 +867,6 @@ def main():
                 if cl_args.gobig:
                     do_gobig(gobig_init, device, model, opt)
                 if settings.cool_down > 0 and ((i < (settings.n_batches - 1)) or p < (len(prompts) - 1)):
-                    print(f'i is {i}, settings {settings.n_batches - 1}, p is {p} and len prompts is {len(prompts)}')
                     print(f'Pausing {settings.cool_down} seconds to give your poor GPU a rest...')
                     time.sleep(settings.cool_down)
             if not settings.frozen_seed:
