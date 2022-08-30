@@ -89,23 +89,26 @@ async function generateSubmit(form) {
             for (let event of value.split('\n').filter(e => e !== '')) {
                 const data = JSON.parse(event);
 
-                if (data.event == 'result') {
+                if (data.event === 'result') {
                     noOutputs = false;
                     document.querySelector("#no-results-message")?.remove();
                     appendOutput(data.files[0],data.files[1],data.config);
                     progressEle.setAttribute('value', 0);
                     progressEle.setAttribute('max', formData.steps);
                     progressImageEle.src = BLANK_IMAGE_URL;
-                } else if (data.event == 'upscaling-started') {
+                } else if (data.event === 'upscaling-started') {
                     document.getElementById("processing_cnt").textContent=data.processed_file_cnt;
                     document.getElementById("scaling-inprocess-message").style.display = "block";
-                } else if (data.event == 'upscaling-done') {
+                } else if (data.event === 'upscaling-done') {
                     document.getElementById("scaling-inprocess-message").style.display = "none";
-                } else if (data.event == 'step') {
+                } else if (data.event === 'step') {
                     progressEle.setAttribute('value', data.step);
                     if (data.url) {
                         progressImageEle.src = data.url;
                     }
+                } else if (data.event === 'canceled') {
+                    // avoid alerting as if this were an error case
+                    noOutputs = false;
                 }
             }
         }
@@ -143,6 +146,12 @@ window.onload = () => {
         clearFields(e.target.form);
     });
     loadFields(document.querySelector("#generate-form"));
+
+    document.querySelector('#cancel-button').addEventListener('click', () => {
+        fetch('/cancel').catch(e => {
+            console.error(e);
+        });
+    });
 
     if (!config.gfpgan_model_exists) {
         document.querySelector("#gfpgan").style.display = 'none';
