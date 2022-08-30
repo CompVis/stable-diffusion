@@ -701,11 +701,74 @@ Downloading: "https://github.com/DagnyT/hardnet/raw/master/pretrained/train_libe
 100%|███████████████████████████████████████████████| 5.10M/5.10M [00:00<00:00, 101MB/s]
 ...success
 ```
+## Troubleshooting
 
-If you don't need this change and want to download the files just in
-time, copy over the file ldm/modules/encoders/modules.py from the
-CompVis/stable-diffusion repository. Or you can run preload_models.py
-on the target machine.
+Here are a few common installation problems and their solutions. Often
+these are caused by incomplete installations or crashes during the
+install process.
+
+* PROBLEM: During "conda env create -f environment.yaml", conda
+  hangs indefinitely.
+
+* SOLUTION: Enter the stable-diffusion directory and completely
+  remove the "src" directory and all its contents. The safest way
+  to do this is to enter the stable-diffusion directory and
+  give the command "git clean -f". If this still doesn't fix
+  the problem, try "conda clean -all" and then restart at the
+  "conda env create" step.
+
+---
+
+* PROBLEM: dream.py crashes with the complaint that it can't find
+ldm.simplet2i.py. Or it complains that function is being passed
+incorrect parameters.
+
+* SOLUTION: Reinstall the stable diffusion modules. Enter the 
+stable-diffusion directory and give the command "pip install -e ."
+
+---
+
+* PROBLEM: dream.py dies, complaining of various missing modules, none
+of which starts with "ldm".
+
+* SOLUTION: From within the stable-diffusion directory, run "conda env
+update -f environment.yaml" This is also frequently the solution to
+complaints about an unknown function in a module.
+
+---
+
+* PROBLEM: There's a feature or bugfix in the Stable Diffusion GitHub
+that you want to try out.
+
+* SOLUTION: If the fix/feature is on the "main" branch, enter the stable-diffusion
+directory and do a "git pull". Usually this will be sufficient, but if
+you start to see errors about missing or incorrect modules, use the
+command "pip install -e ." and/or "conda env update -f environment.yaml"
+(These commands won't break anything.)
+
+-If the feature/fix is on a branch (e.g. "foo-bugfix"), the recipe is similar, but
+do a "git pull <name of branch>".
+
+-If the feature/fix is in a pull request that has not yet been made
+part of the main branch or a feature/bugfix branch, then from the page
+for the desired pull request, look for the line at the top that reads
+"xxxx wants to merge xx commits into lstein:main from YYYYYY". Copy
+the URL in YYYY. It should have the format
+https://github.com/<name of contributor>/stable-diffusion/tree/<name
+of branch>
+
+Then **go to the directory above stable-diffusion**, and rename the
+directory to "stable-diffusion.lstein", "stable-diffusion.old", or
+whatever. You can then git clone the branch that contains the
+pull request:
+
+~~~~
+git clone https://github.com/<name of contributor>/stable-diffusion/tree/<name
+of branch>
+~~~~
+
+You will need to go through the install procedure again, but it should
+be fast because all the dependencies are already loaded.
 
 ## Support
 
