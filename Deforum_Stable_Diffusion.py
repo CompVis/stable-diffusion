@@ -3,7 +3,7 @@
 # !!   "id": "c442uQJ_gUgy"
 # !! }}
 """
-# **Deforum Stable Diffusion v0.1**
+# **Deforum Stable Diffusion v0.2**
 [Stable Diffusion](https://github.com/CompVis/stable-diffusion) by Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer and the [Stability.ai](https://stability.ai/) Team. [K Diffusion](https://github.com/crowsonkb/k-diffusion) by [Katherine Crowson](https://twitter.com/RiversHaveWings). You need to get the ckpt file and put it on your Google Drive first to use this. It can be downloaded from [HuggingFace](https://huggingface.co/CompVis/stable-diffusion).
 
 Notebook by [deforum](https://discord.gg/upmXXsrwZc)
@@ -440,7 +440,7 @@ else:
     print(f"download model checkpoint and place in {models_path+'/'+model_checkpoint}")
     #download_model(model_checkpoint)
 
-if check_sha256:
+if check_sha256 and model_checkpoint != "custom":
     import hashlib
     print("\n...checking sha256")
     with open(models_path+'/'+model_checkpoint, "rb") as f:
@@ -556,6 +556,10 @@ def DeforumAnimArgs():
     #@markdown ####**Interpolation:**
     interpolate_key_frames = False #@param {type:"boolean"}
     interpolate_x_frames = 4 #@param {type:"number"}
+    
+    #@markdown ####**Resume Animation:**
+    resume_from_timestring = False #@param {type:"boolean"}
+    resume_timestring = "20220829210106" #@param {type:"string"}
 
     return locals()
 
@@ -804,6 +808,14 @@ def render_image_batch(args):
 def render_animation(args, anim_args):
     # animations use key framed prompts
     args.prompts = animation_prompts
+    
+    # resume animation
+    start_frame = 0
+    if anim_args.resume_from_timestring:
+        for tmp in os.listdir(args.outdir):
+            if tmp.split("_")[0] == anim_args.resume_timestring:
+                start_frame += 1
+        start_frame = start_frame - 1
 
     # create output folder for the batch
     os.makedirs(args.outdir, exist_ok=True)
@@ -814,6 +826,10 @@ def render_animation(args, anim_args):
     with open(settings_filename, "w+", encoding="utf-8") as f:
         s = {**dict(args.__dict__), **dict(anim_args.__dict__)}
         json.dump(s, f, ensure_ascii=False, indent=4)
+        
+    # resume from timestring
+    if anim_args.resume_from_timestring:
+        args.timestring = anim_args.resume_timestring
 
     # expand prompts out to per-frame
     prompt_series = pd.Series([np.nan for a in range(anim_args.max_frames)])
@@ -827,8 +843,15 @@ def render_animation(args, anim_args):
     args.n_samples = 1
     prev_sample = None
     color_match_sample = None
-    for frame_idx in range(anim_args.max_frames):
+    for frame_idx in range(start_frame,anim_args.max_frames):
         print(f"Rendering animation frame {frame_idx} of {anim_args.max_frames}")
+        
+        # resume animation
+        if anim_args.resume_from_timestring:
+            path = os.path.join(args.outdir,f"{args.timestring}_{frame_idx-1:05}.png")
+            img = cv2.imread(path)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            prev_sample = sample_from_cv2(img)
 
         # apply transforms to previous frame
         if prev_sample is not None:
