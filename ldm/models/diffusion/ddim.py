@@ -375,6 +375,7 @@ class DDIMSampler(object):
         x_latent,
         cond,
         t_start,
+        img_callback=None,
         unconditional_guidance_scale=1.0,
         unconditional_conditioning=None,
         use_original_steps=False,
@@ -410,4 +411,7 @@ class DDIMSampler(object):
                 unconditional_guidance_scale=unconditional_guidance_scale,
                 unconditional_conditioning=unconditional_conditioning,
             )
+            if img_callback:
+                img_callback(x_dec, i)
+
         return x_dec

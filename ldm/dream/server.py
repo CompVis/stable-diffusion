@@ -145,7 +145,7 @@ class DreamServer(BaseHTTPRequestHandler):
                 step_writer.write_image(image, seed) # TODO PngWriter to return path
                 url = step_writer.filepath
             self.wfile.write(bytes(json.dumps(
-                {'event':'step', 'step':step, 'url': url}
+                {'event':'step', 'step':step + 1, 'url': url}
             ) + '\n',"utf-8"))
 
         try:

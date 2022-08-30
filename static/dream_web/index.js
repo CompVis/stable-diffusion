@@ -61,10 +61,13 @@ async function generateSubmit(form) {
     let formData = Object.fromEntries(new FormData(form));
     formData.initimg = formData.initimg.name !== '' ? await toBase64(formData.initimg) : null;
 
+    let strength = 0.75; // TODO let this be specified in the UI
+    let totalSteps = formData.initimg ? Math.floor(.75 * formData.steps) : formData.steps;
+
     let progressSectionEle = document.querySelector('#progress-section');
     progressSectionEle.style.display = 'initial';
     let progressEle = document.querySelector('#progress-bar');
-    progressEle.setAttribute('max', formData.steps);
+    progressEle.setAttribute('max', totalSteps);
     let progressImageEle = document.querySelector('#progress-image');
     progressImageEle.src = BLANK_IMAGE_URL;
 
@@ -94,7 +97,7 @@ async function generateSubmit(form) {
                     document.querySelector("#no-results-message")?.remove();
                     appendOutput(data.files[0],data.files[1],data.config);
                     progressEle.setAttribute('value', 0);
-                    progressEle.setAttribute('max', formData.steps);
+                    progressEle.setAttribute('max', totalSteps);
                     progressImageEle.src = BLANK_IMAGE_URL;
                 } else if (data.event === 'upscaling-started') {
                     document.getElementById("processing_cnt").textContent=data.processed_file_cnt;

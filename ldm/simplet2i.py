@@ -489,6 +489,7 @@ class T2I:
                 z_enc,
                 c,
                 t_enc,
+                img_callback=callback,
                 unconditional_guidance_scale=cfg_scale,
                 unconditional_conditioning=uc,
             )
