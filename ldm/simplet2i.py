@@ -27,6 +27,7 @@ from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 from ldm.models.diffusion.ksampler import KSampler
 from ldm.dream.pngwriter import PngWriter
+from ldm.dream.image_util import InitImageResizer
 
 """Simplified text to image API for stable diffusion/latent diffusion
 
@@ -204,7 +205,6 @@ class T2I:
         skip_normalize=False,
         image_callback=None,
         step_callback=None,
-        # these are specific to txt2img
         width=None,
         height=None,
         # these are specific to img2img
@@ -270,14 +270,16 @@ class T2I:
         assert (
             0.0 <= strength <= 1.0
         ), 'can only work with strength in [0.0, 1.0]'
-        w = int(width / 64) * 64
-        h = int(height / 64) * 64
+        w, h = map(
+            lambda x: x - x % 64, (width, height)
+        )  # resize to integer multiple of 64
+
         if h != height or w != width:
             print(
                 f'Height and width must be multiples of 64. Resizing to {h}x{w}.'
             )
             height = h
-            width = w
+            width  = w
 
         scope = autocast if self.precision == 'autocast' else nullcontext
 
@@ -301,6 +303,8 @@ class T2I:
                     ddim_eta=ddim_eta,
                     skip_normalize=skip_normalize,
                     init_img=init_img,
+                    width=width,
+                    height=height,
                     strength=strength,
                     callback=step_callback,
                 )
@@ -441,6 +445,8 @@ class T2I:
         ddim_eta,
         skip_normalize,
         init_img,
+        width,
+        height,
         strength,
         callback, # Currently not implemented for img2img
     ):
@@ -457,7 +463,7 @@ class T2I:
         else:
             sampler = self.sampler
 
-        init_image = self._load_img(init_img).to(self.device)
+        init_image = self._load_img(init_img,width,height).to(self.device)
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         with precision_scope(self.device.type):
             init_latent = self.model.get_first_stage_encoding(
@@ -616,17 +622,15 @@ class T2I:
             model.half()
         return model
 
-    def _load_img(self, path):
+    def _load_img(self, path, width, height):
         print(f'image path = {path}, cwd = {os.getcwd()}')
         with Image.open(path) as img:
             image = img.convert('RGB')
+        print(f'loaded input image of size {image.width}x{image.height} from {path}')
 
-        w, h = image.size
-        print(f'loaded input image of size ({w}, {h}) from {path}')
-        w, h = map(
-            lambda x: x - x % 32, (w, h)
-        )  # resize to integer multiple of 32
-        image = image.resize((w, h), resample=Image.Resampling.LANCZOS)
+        image = InitImageResizer(image).resize(width,height)
+        print(f'resized input image to size {image.width}x{image.height}')
+
         image = np.array(image).astype(np.float32) / 255.0
         image = image[None].transpose(0, 3, 1, 2)
         image = torch.from_numpy(image)
