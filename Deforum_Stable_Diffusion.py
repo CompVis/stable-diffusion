@@ -145,7 +145,7 @@ def add_noise(sample: torch.Tensor, noise_amt: float):
     return sample + torch.randn(sample.shape, device=sample.device) * noise_amt
 
 def get_output_folder(output_path, batch_folder):
-    out_path = os.path.join(output_path,time.strftime('%Y-%m/'))
+    out_path = os.path.join(output_path,time.strftime('%Y-%m'))
     if batch_folder != "":
         out_path = os.path.join(out_path, batch_folder)
     os.makedirs(out_path, exist_ok=True)
@@ -600,7 +600,6 @@ def DeforumArgs():
     #@markdown **Save & Display Settings**
     batch_name = "StableFun" #@param {type:"string"}
     outdir = get_output_folder(output_path, batch_name)
-    save_grid = False
     save_settings = True #@param {type:"boolean"}
     save_samples = True #@param {type:"boolean"}
     display_samples = True #@param {type:"boolean"}
@@ -646,15 +645,6 @@ def DeforumArgs():
 
     return locals()
 
-def next_seed(args):
-    if args.seed_behavior == 'iter':
-        args.seed += 1
-    elif args.seed_behavior == 'fixed':
-        pass # always keep seed the same
-    else:
-        args.seed = random.randint(0, 2**32)
-    return args.seed
-
 
 args = SimpleNamespace(**DeforumArgs())
 args.timestring = time.strftime('%Y%m%d%H%M%S')
@@ -674,6 +664,15 @@ if args.sampler == 'plms' and (args.use_init or anim_args.animation_mode != 'Non
 if args.sampler != 'ddim':
     args.ddim_eta = 0
 
+
+def next_seed(args):
+    if args.seed_behavior == 'iter':
+        args.seed += 1
+    elif args.seed_behavior == 'fixed':
+        pass # always keep seed the same
+    else:
+        args.seed = random.randint(0, 2**32)
+    return args.seed
 
 def render_image_batch(args):
     args.prompts = prompts
@@ -709,12 +708,17 @@ def render_image_batch(args):
     else:
         init_array = [""]
 
+    # when doing large batches don't flood browser with images
+    clear_between_batches = args.n_batch >= 32
+
     for iprompt, prompt in enumerate(prompts):  
         args.prompt = prompt
 
         all_images = []
 
         for batch_index in range(args.n_batch):
+            if clear_between_batches: 
+                display.clear_output(wait=True)            
             print(f"Batch {batch_index+1} of {args.n_batch}")
             
             for image in init_array: # iterates the init images
@@ -736,7 +740,10 @@ def render_image_batch(args):
             grid = make_grid(all_images, nrow=int(len(all_images)/args.grid_rows))
             grid = rearrange(grid, 'c h w -> h w c').cpu().numpy()
             filename = f"{args.timestring}_{iprompt:05d}_grid_{args.seed}.png"
-            Image.fromarray(grid.astype(np.uint8)).save(os.path.join(args.outdir, filename))
+            grid_image = Image.fromarray(grid.astype(np.uint8))
+            grid_image.save(os.path.join(args.outdir, filename))
+            display.clear_output(wait=True)            
+            display.display(grid_image)
 
 
 def render_animation(args, anim_args):
