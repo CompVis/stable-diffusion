@@ -64,7 +64,8 @@ class DreamServer(BaseHTTPRequestHandler):
         upscale_level    = post_data['upscale_level']
         upscale_strength = post_data['upscale_strength']
         upscale = [int(upscale_level),float(upscale_strength)] if upscale_level != '' else None
-        seed = None if int(post_data['seed']) == -1 else int(post_data['seed'])
+        progress_images = 'progress_images' in post_data
+        seed = self.model.seed if int(post_data['seed']) == -1 else int(post_data['seed'])
 
         print(f"Request to generate with prompt: {prompt}")
         # In order to handle upscaled images, the PngWriter needs to maintain state
@@ -116,9 +117,20 @@ class DreamServer(BaseHTTPRequestHandler):
                         {'event':action,'processed_file_cnt':f'{x}/{iterations}'}
                     ) + '\n',"utf-8"))
 
-        def image_progress(image, step):
+        # TODO: refactor PngWriter:
+        # it doesn't need to know if batch_size > 1, just if this is _part of a batch_
+        step_writer = PngWriter('./outputs/intermediates/', prompt, 2)
+        def image_progress(sample, step):
+            url = None
+            # since rendering images is moderately expensive, only render every 5th image
+            # and don't bother with the last one, since it'll render anyway
+            if progress_images and step % 5 == 0 and step < steps - 1:
+                images = self.model._samples_to_images(sample)
+                image = images[0]
+                step_writer.write_image(image, seed) # TODO PngWriter to return path
+                url = step_writer.filepath
             self.wfile.write(bytes(json.dumps(
-                {'event':'step', 'step':step}
+                {'event':'step', 'step':step, 'url': url}
             ) + '\n',"utf-8"))
 
         if initimg is None:

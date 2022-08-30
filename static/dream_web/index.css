@@ -46,7 +46,7 @@ fieldset {
     margin: auto;
     padding-top: 10px;
 }
-img {
+#results img {
     cursor: pointer;
     height: 30vh;
     border-radius: 5px;
@@ -66,4 +66,11 @@ hr {
 }
 label {
     white-space: nowrap;
+}
+#progress-section {
+    display: none;
+}
+#progress-image {
+    width: 30vh;
+    height: 30vh;
 }

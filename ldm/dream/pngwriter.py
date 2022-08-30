@@ -73,6 +73,7 @@ class PngWriter:
                     if upscaled:
                         break
                     filename = f'{basecount:06}.{seed}.{series:02}.png'
+                path = os.path.join(self.outdir, filename)
                 finished = not os.path.exists(path)
             return os.path.join(self.outdir, filename)
 
