@@ -92,8 +92,10 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                                                                             visible=RealESRGAN is not None)  # TODO: Feels like I shouldnt slot it in here.
                                 txt2img_ddim_eta = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label="DDIM ETA",
                                                              value=txt2img_defaults['ddim_eta'], visible=False)
-                                txt2img_variant_amount = gr.Slider(minimum=0.0, maximum=1.0, label='Variation Amount',value=txt2img_defaults['variant_amount'])
-                                txt2img_variant_seed = gr.Textbox(label="Variant Seed (blank to randomize)", lines=1, max_lines=1,value=txt2img_defaults["variant_seed"])
+                                txt2img_variant_amount = gr.Slider(minimum=0.0, maximum=1.0, label='Variation Amount',
+                                                                   value=txt2img_defaults['variant_amount'])
+                                txt2img_variant_seed = gr.Textbox(label="Variant Seed (blank to randomize)", lines=1,
+                                                                  max_lines=1, value=txt2img_defaults["variant_seed"])
                         txt2img_embeddings = gr.File(label="Embeddings file for textual inversion",
                                                      visible=show_embeddings)
 
@@ -139,7 +141,6 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                                                              value="Crop", elem_id='edit_mode_select')
 
                             img2img_painterro_btn = gr.Button("Advanced Editor")
-                            img2img_copy_from_painterro_btn = gr.Button(value="Get Image from Advanced Editor")
                             img2img_show_help_btn = gr.Button("Show Hints")
                             img2img_hide_help_btn = gr.Button("Hide Hints", visible=False)
                         img2img_help = gr.Markdown(visible=False, value="")
@@ -224,7 +225,7 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                     uifn.change_image_editor_mode,
                     [img2img_image_editor_mode, img2img_image_editor, img2img_resize, img2img_width, img2img_height],
                     [img2img_image_editor, img2img_image_mask, img2img_btn_editor, img2img_btn_mask,
-                     img2img_painterro_btn, img2img_copy_from_painterro_btn, img2img_mask, img2img_mask_blur_strength]
+                     img2img_painterro_btn, img2img_mask, img2img_mask_blur_strength]
                 )
 
                 img2img_image_editor.edit(
@@ -288,9 +289,7 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                 img2img_btn_editor.click(*img2img_submit_params())
                 img2img_prompt.submit(*img2img_submit_params())
 
-                img2img_painterro_btn.click(None, [img2img_image_editor], None, _js=js_painterro_launch())
-
-                img2img_copy_from_painterro_btn.click(None, None, [img2img_image_editor, img2img_image_mask], _js=js_painterro_load_image("img2img_editor"))
+                img2img_painterro_btn.click(None, [img2img_image_editor], [img2img_image_editor, img2img_image_mask], _js=js_painterro_launch('img2img_editor'))
 
             if GFPGAN is not None:
                 gfpgan_defaults = {
