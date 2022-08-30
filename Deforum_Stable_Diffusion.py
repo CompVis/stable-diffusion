@@ -375,7 +375,7 @@ else:
     print(f"download model checkpoint and place in {models_path+'/'+model_checkpoint}")
     #download_model(model_checkpoint)
 
-if check_sha256:
+if check_sha256 and model_checkpoint != "custom":
     import hashlib
     print("\n...checking sha256")
     with open(models_path+'/'+model_checkpoint, "rb") as f:
