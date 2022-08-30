@@ -357,7 +357,8 @@ if opt.optimized:
 
     model = instantiate_from_config(config.modelUNet)
     _, _ = model.load_state_dict(sd, strict=False)
-    model.cuda()
+    if not opt.optimized:
+        model.cuda()
     model.eval()
     model.turbo = opt.optimized_turbo
 
