@@ -71,8 +71,7 @@
           <label for="progress_images">Display in-progress images (slows down generation):</label>
           <input type="checkbox" name="progress_images" id="progress_images">
           <div id="gfpgan">
-            <p><em>The options below require the GFPGAN and ESRGAN packages to be installed</em></p>
-            <label title="Strength of the gfpgan (face fixing) algorithm." for="gfpgan_strength">GPFGAN Strength:</label>
+            <label title="Strength of the gfpgan (face fixing) algorithm." for="gfpgan_strength">GPFGAN Strength (0 to disable):</label>
             <input value="0.8" min="0" max="1" type="number" id="gfpgan_strength" name="gfpgan_strength" step="0.05">
             <label title="Upscaling to perform using ESRGAN." for="upscale_level">Upscaling Level</label>
             <select id="upscale_level" name="upscale_level" value="">
