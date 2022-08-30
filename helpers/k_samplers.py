@@ -41,7 +41,10 @@ def sampler_fn(
         else:
             x = init_latent
     else:
-        x = torch.randn([args.n_samples, *shape], device=device)
+        if len(sigmas) > 0:
+            x = torch.randn([args.n_samples, *shape], device=device) * sigmas[0]
+        else:
+            x = torch.zeros([args.n_samples, *shape], device=device)
     sampler_args = {
         "model": CFGDenoiser(model_wrap),
         "x": x,

@@ -207,10 +207,10 @@ def make_callback(sampler_name, dynamic_threshold=None, static_threshold=None, m
     # Callback for samplers in the k-diffusion repo, called thus:
     #   callback({'x': x, 'i': i, 'sigma': sigmas[i], 'sigma_hat': sigmas[i], 'denoised': denoised})
     def k_callback_(args_dict):
-        if static_threshold is not None:
-            torch.clamp_(args_dict['x'], -1*static_threshold, static_threshold)
         if dynamic_threshold is not None:
             dynamic_thresholding_(args_dict['x'], dynamic_threshold)
+        if static_threshold is not None:
+            torch.clamp_(args_dict['x'], -1*static_threshold, static_threshold)
         if mask is not None:
             init_noise = init_latent + noise * args_dict['sigma']
             is_masked = torch.logical_and(mask >= mask_schedule[args_dict['i']], mask != 0 )
@@ -271,7 +271,7 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
         init_latent = args.init_latent
     elif args.init_sample is not None:
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(args.init_sample))
-    elif args.init_image != None and args.init_image != '':
+    elif args.use_init and args.init_image != None and args.init_image != '':
         init_image = load_img(args.init_image, shape=(args.W, args.H)).to(device)
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space        
@@ -295,7 +295,7 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
     sigmas = model_wrap.get_sigmas(args.steps)
     if args.sampler in ['plms','ddim']:
         sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.ddim_eta, verbose=False)
-    sigmas = sigmas[len(sigmas)-t_enc:]
+    sigmas = sigmas[len(sigmas)-t_enc-1:]
 
 
     callback = make_callback(sampler_name=args.sampler,
@@ -338,12 +338,27 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
                             z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
                         else:
                             z_enc = torch.randn([args.n_samples, args.C, args.H // args.f, args.W // args.f], device=device)
-                        samples = sampler.decode(z_enc, 
-                                                 c, 
-                                                 t_enc, 
-                                                 unconditional_guidance_scale=args.scale,
-                                                 unconditional_conditioning=uc,
-                                                 img_callback=callback)
+                        if args.sampler == 'ddim':
+                            samples = sampler.decode(z_enc, 
+                                                     c, 
+                                                     t_enc, 
+                                                     unconditional_guidance_scale=args.scale,
+                                                     unconditional_conditioning=uc,
+                                                     img_callback=callback)
+                        elif args.sampler == 'plms':
+                            shape = [args.C, args.H // args.f, args.W // args.f]
+                            samples, _ = sampler.sample(S=args.steps,
+                                                            conditioning=c,
+                                                            batch_size=args.n_samples,
+                                                            shape=shape,
+                                                            verbose=False,
+                                                            unconditional_guidance_scale=args.scale,
+                                                            unconditional_conditioning=uc,
+                                                            eta=args.ddim_eta,
+                                                            x_T=z_enc,
+                                                            img_callback=callback)
+                        else:
+                            raise Exception(f"Sampler {args.sampler} not recognised.")
 
                     if return_latent:
                         results.append(samples.clone())
