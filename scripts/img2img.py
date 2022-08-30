@@ -39,8 +39,8 @@ def load_model_from_config(config, ckpt, verbose=False):
     if len(u) > 0 and verbose:
         print("unexpected keys:")
         print(u)
-
-    model.cuda()
+        
+    model.cuda() if torch.cuda.is_available() else torch.device("cpu")
     model.eval()
     return model
 
@@ -69,7 +69,7 @@ def main():
     )
 
     parser.add_argument(
-        "--init-img",
+        "--init_img",
         type=str,
         nargs="?",
         help="path to the input image"
