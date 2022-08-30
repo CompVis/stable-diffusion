@@ -173,9 +173,9 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                 with gr.Row():
 
                     with gr.Column():
-                        img2img_batch_size = gr.Slider(minimum=1, maximum=8, step=1,
-                                                       label='Batch size (how many images are in a batch; memory-hungry)',
-                                                       value=img2img_defaults['batch_size'])
+                        img2img_batch_count = gr.Slider(minimum=1, maximum=250, step=1,
+                                                        label='Batch count (how many batches of images to generate)',
+                                                        value=img2img_defaults['n_iter'])
                         img2img_width = gr.Slider(minimum=64, maximum=2048, step=64, label="Width",
                                                   value=img2img_defaults["width"])
                         img2img_height = gr.Slider(minimum=64, maximum=2048, step=64, label="Height",
@@ -184,9 +184,9 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                                                   value=img2img_defaults["seed"])
                         img2img_steps = gr.Slider(minimum=1, maximum=250, step=1, label="Sampling Steps",
                                                   value=img2img_defaults['ddim_steps'])
-                        img2img_batch_count = gr.Slider(minimum=1, maximum=250, step=1,
-                                                        label='Batch count (how many batches of images to generate)',
-                                                        value=img2img_defaults['n_iter'])
+                        img2img_batch_size = gr.Slider(minimum=1, maximum=8, step=1,
+                                                       label='Batch size (how many images are in a batch; memory-hungry)',
+                                                       value=img2img_defaults['batch_size'])
                     with gr.Column():
                         img2img_mask = gr.Radio(choices=["Keep masked area", "Regenerate only masked area"],
                                                 label="Mask Mode", type="index",
