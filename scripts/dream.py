@@ -4,6 +4,7 @@
 import argparse
 import shlex
 import os
+import re
 import sys
 import copy
 import warnings
@@ -91,13 +92,22 @@ def main():
     if opt.web:
         dream_server_loop(t2i)
     else:
-        main_loop(t2i, opt.outdir, cmd_parser, infile)
+        main_loop(t2i, opt.outdir, opt.prompt_as_dir, cmd_parser, infile)
 
 
-def main_loop(t2i, outdir, parser, infile):
+def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
     """prompt/read/execute loop"""
     done = False
     last_seeds = []
+    path_filter = re.compile(r'[<>:"/\\|?*]')
+
+    # os.pathconf is not available on Windows
+    if hasattr(os, 'pathconf'):
+        path_max = os.pathconf(outdir, 'PC_PATH_MAX')
+        name_max = os.pathconf(outdir, 'PC_NAME_MAX')
+    else:
+        path_max = 260
+        name_max = 255
 
     while not done:
         try:
@@ -170,6 +180,20 @@ def main_loop(t2i, outdir, parser, infile):
             if not os.path.exists(opt.outdir):
                 os.makedirs(opt.outdir)
             current_outdir = opt.outdir
+        elif prompt_as_dir:
+            # sanitize the prompt to a valid folder name
+            subdir = path_filter.sub('_', opt.prompt)[:name_max].rstrip(' .')
+
+            # truncate path to maximum allowed length
+            # 27 is the length of '######.##########.##.png', plus two separators and a NUL
+            subdir = subdir[:(path_max - 27 - len(os.path.abspath(outdir)))]
+            current_outdir = os.path.join(outdir, subdir)
+
+            print ('Writing files to directory: "' + current_outdir + '"')
+
+            # make sure the output directory exists
+            if not os.path.exists(current_outdir):
+                os.makedirs(current_outdir)
         else:
             current_outdir = outdir
 
@@ -335,6 +359,12 @@ def create_argv_parser():
         default='cuda',
         help='Device to run Stable Diffusion on. Defaults to cuda `torch.cuda.current_device()` if avalible',
     )
+    parser.add_argument(
+        '--prompt_as_dir',
+        '-p',
+        action='store_true',
+        help='Place images in subdirectories named after the prompt.',
+    )
     # GFPGAN related args
     parser.add_argument(
         '--gfpgan_bg_upsampler',
@@ -407,7 +437,7 @@ def create_cmd_parser():
         '--cfg_scale',
         default=7.5,
         type=float,
-        help='Prompt configuration scale',
+        help='Classifier free guidance (CFG) scale - higher numbers cause generator to "try" harder.',
     )
     parser.add_argument(
         '-g', '--grid', action='store_true', help='generate a grid'
