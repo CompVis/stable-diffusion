@@ -760,6 +760,10 @@ def render_animation(args, anim_args):
     with open(settings_filename, "w+", encoding="utf-8") as f:
         s = {**dict(args.__dict__), **dict(anim_args.__dict__)}
         json.dump(s, f, ensure_ascii=False, indent=4)
+        
+    # resume from timestring
+    if anim_args.resume_from_timestring:
+        args.timestring = anim_args.resume_timestring
 
     # expand prompts out to per-frame
     prompt_series = pd.Series([np.nan for a in range(anim_args.max_frames)])
