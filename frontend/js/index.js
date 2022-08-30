@@ -56,21 +56,35 @@ window.SD = (() => {
     static fallback (image) { return [image, image]; }
     static load () {
       return new Promise((resolve, reject) => {
-        /* Ensure Painterro window is always on top */
-        const style = document.createElement('style');
-        style.setAttribute('type', 'text/css');
-        style.appendChild(document.createTextNode(`
-          .ptro-holder-wrapper {
-              z-index: 100;
-          }
-        `));
-        document.head.appendChild(style);
+        const scriptId = '__painterro-script';
+        if (document.getElementById(scriptId)) {
+          reject(new Error('Tried to load painterro script, but script tag already exists.'));
+          return;
+        }
+
+        const styleId = '__painterro-css-override';
+        if (!document.getElementById(styleId)) {
+          /* Ensure Painterro window is always on top */
+          const style = document.createElement('style');
+          style.id = styleId;
+          style.setAttribute('type', 'text/css');
+          style.appendChild(document.createTextNode(`
+            .ptro-holder-wrapper {
+                z-index: 100;
+            }
+          `));
+          document.head.appendChild(style);
+        }
 
         const script = document.createElement('script');
-        script.id = '__painterro-script';
+        script.id = scriptId;
         script.src = 'https://unpkg.com/painterro@1.2.78/build/painterro.min.js';
         script.onload = () => resolve(true);
-        script.onerror = () => reject(false);
+        script.onerror = (e) => {
+          // remove self on error to enable reattempting load
+          document.head.removeChild(script);
+          reject(e);
+        };
         document.head.appendChild(script);
       });
     }
@@ -130,6 +144,22 @@ window.SD = (() => {
     }
     clearImageInput (imageEditor) {
       imageEditor?.querySelector('.modify-upload button:last-child')?.click();
+    }
+    clickFirstVisibleButton(rowId) {
+      const generateButtons = this.el.get(`#${rowId}`).querySelectorAll('.gr-button-primary');
+
+      if (!generateButtons) return;
+
+      for (let i = 0, arr = [...generateButtons]; i < arr.length; i++) {
+        const cs = window.getComputedStyle(arr[i]);
+
+        if (cs.display !== 'none' && cs.visibility !== 'hidden') {
+          console.log(arr[i]);
+
+          arr[i].click();
+          break;
+        }
+      }
     }
     static error (e) {
       console.error(e);
