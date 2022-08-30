@@ -1,0 +1,1 @@
+"a photograph of an astronaut riding a horse" -s50 -S42
