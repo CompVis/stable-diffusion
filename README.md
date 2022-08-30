@@ -84,6 +84,10 @@ dream> q
 00011.png: "there's a fly in my soup" -n6 -g -S 2685670268
 ```
 
+<p align='center'>
+<img src="static/dream-py-demo.png"/>
+</p>
+
 The dream> prompt's arguments are pretty much identical to those used
 in the Discord bot, except you don't need to type "!dream" (it doesn't
 hurt if you do). A significant change is that creation of individual
