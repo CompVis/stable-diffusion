@@ -4,6 +4,14 @@
 <img src="static/logo_temp.png"/>
 </p>
 
+<p align="center">
+    <img src="https://img.shields.io/github/last-commit/lstein/stable-diffusion?logo=Python&logoColor=green&style=for-the-badge" alt="last-commit"/>
+    <img src="https://img.shields.io/github/stars/lstein/stable-diffusion?logo=GitHub&style=for-the-badge" alt="stars"/>
+    <br>
+    <img src="https://img.shields.io/github/issues/lstein/stable-diffusion?logo=GitHub&style=for-the-badge" alt="issues"/>
+    <img src="https://img.shields.io/github/issues-pr/lstein/stable-diffusion?logo=GitHub&style=for-the-badge" alt="pull-requests"/>
+</p>
+
 This is a fork of CompVis/stable-diffusion, the wonderful open source
 text-to-image generator. This fork supports:
 
@@ -15,7 +23,6 @@ text-to-image generator. This fork supports:
 
 3. A basic Web interface that allows you to run a local web server for
    generating images in your browser.
-   
 4. A notebook for running the code on Google Colab.
 
 5. Upscaling and face fixing using the optional ESRGAN and GFPGAN
@@ -32,8 +39,9 @@ and make feature requests, and check back periodically for
 improvements and bug fixes.
 
 # Table of Contents
+
 1. [Major Features](#features)
-2. [Changelog](#changes)
+2. [Changelog](#latest)
 3. [Installation](#installation)
 4. [Troubleshooting](#troubleshooting)
 5. [Support](#support)
@@ -380,7 +388,7 @@ Credit goes to @rinongal and the repository located at
 https://github.com/rinongal/textual_inversion Please see the
 repository and associated paper for details and limitations.
 
-# Changes
+# Latest
 
 - v1.13 (in process)
 
@@ -392,94 +400,7 @@ repository and associated paper for details and limitations.
   - Can specify --grid on dream.py command line as the default.
   - Miscellaneous internal bug and stability fixes.
 
-- v1.12 (28 August 2022)
-
-  - Improved file handling, including ability to read prompts from standard input.
-    (kudos to [Yunsaki](https://github.com/yunsaki)
-  - The web server is now integrated with the dream.py script. Invoke by adding --web to
-    the dream.py command arguments.
-  - Face restoration and upscaling via GFPGAN and Real-ESGAN are now automatically
-    enabled if the GFPGAN directory is located as a sibling to Stable Diffusion.
-    VRAM requirements are modestly reduced. Thanks to both [Blessedcoolant](https://github.com/blessedcoolant) and
-    [Oceanswave](https://github.com/oceanswave) for their work on this.
-  - You can now swap samplers on the dream> command line. [Blessedcoolant](https://github.com/blessedcoolant)
-
-- v1.11 (26 August 2022)
-  - NEW FEATURE: Support upscaling and face enhancement using the GFPGAN module. (kudos to [Oceanswave](https://github.com/Oceanswave)
-  - You now can specify a seed of -1 to use the previous image's seed, -2 to use the seed for the image generated before that, etc.
-    Seed memory only extends back to the previous command, but will work on all images generated with the -n# switch.
-  - Variant generation support temporarily disabled pending more general solution.
-  - Created a feature branch named **yunsaki-morphing-dream** which adds experimental support for
-    iteratively modifying the prompt and its parameters. Please see[ Pull Request #86](https://github.com/lstein/stable-diffusion/pull/86)
-    for a synopsis of how this works. Note that when this feature is eventually added to the main branch, it will may be modified
-    significantly.
-- v1.10 (25 August 2022)
-  - A barebones but fully functional interactive web server for online generation of txt2img and img2img.
-- v1.09 (24 August 2022)
-  - A new -v option allows you to generate multiple variants of an initial image
-    in img2img mode. (kudos to [Oceanswave](https://github.com/Oceanswave). [
-    See this discussion in the PR for examples and details on use](https://github.com/lstein/stable-diffusion/pull/71#issuecomment-1226700810))
-  - Added ability to personalize text to image generation (kudos to [Oceanswave](https://github.com/Oceanswave) and [nicolai256](https://github.com/nicolai256))
-  - Enabled all of the samplers from k_diffusion
-- v1.08 (24 August 2022)
-
-  - Escape single quotes on the dream> command before trying to parse. This avoids
-    parse errors.
-  - Removed instruction to get Python3.8 as first step in Windows install.
-    Anaconda3 does it for you.
-  - Added bounds checks for numeric arguments that could cause crashes.
-  - Cleaned up the copyright and license agreement files.
-
-- v1.07 (23 August 2022)
-
-  - Image filenames will now never fill gaps in the sequence, but will be assigned the
-    next higher name in the chosen directory. This ensures that the alphabetic and chronological
-    sort orders are the same.
-
-- v1.06 (23 August 2022)
-
-  - Added weighted prompt support contributed by [xraxra](https://github.com/xraxra)
-  - Example of using weighted prompts to tweak a demonic figure contributed by [bmaltais](https://github.com/bmaltais)
-
-- v1.05 (22 August 2022 - after the drop)
-
-  - Filenames now use the following formats:
-    000010.95183149.png -- Two files produced by the same command (e.g. -n2),
-    000010.26742632.png -- distinguished by a different seed.
-
-    000011.455191342.01.png -- Two files produced by the same command using
-    000011.455191342.02.png -- a batch size>1 (e.g. -b2). They have the same seed.
-
-    000011.4160627868.grid#1-4.png -- a grid of four images (-g); the whole grid can
-    be regenerated with the indicated key
-
-  - It should no longer be possible for one image to overwrite another
-  - You can use the "cd" and "pwd" commands at the dream> prompt to set and retrieve
-    the path of the output directory.
-
-- v1.04 (22 August 2022 - after the drop)
-
-  - Updated README to reflect installation of the released weights.
-  - Suppressed very noisy and inconsequential warning when loading the frozen CLIP
-    tokenizer.
-
-- v1.03 (22 August 2022)
-
-  - The original txt2img and img2img scripts from the CompViz repository have been moved into
-    a subfolder named "orig_scripts", to reduce confusion.
-
-- v1.02 (21 August 2022)
-
-  - A copy of the prompt and all of its switches and options is now stored in the corresponding
-    image in a tEXt metadata field named "Dream". You can read the prompt using scripts/images2prompt.py,
-    or an image editor that allows you to explore the full metadata.
-    **Please run "conda env update -f environment.yaml" to load the k_lms dependencies!!**
-
-- v1.01 (21 August 2022)
-  - added k_lms sampling.
-    **Please run "conda env update -f environment.yaml" to load the k_lms dependencies!!**
-  - use half precision arithmetic by default, resulting in faster execution and lower memory requirements
-    Pass argument --full_precision to dream.py to get slower but more accurate image generation
+For older changelogs, please visit **[CHANGELOGS](CHANGELOG.md)**.
 
 # Installation
 
@@ -719,71 +640,72 @@ Downloading: "https://github.com/DagnyT/hardnet/raw/master/pretrained/train_libe
 100%|███████████████████████████████████████████████| 5.10M/5.10M [00:00<00:00, 101MB/s]
 ...success
 ```
+
 # Troubleshooting
 
 Here are a few common installation problems and their solutions. Often
 these are caused by incomplete installations or crashes during the
 install process.
 
-* PROBLEM: During "conda env create -f environment.yaml", conda
-hangs indefinitely.
+- PROBLEM: During "conda env create -f environment.yaml", conda
+  hangs indefinitely.
 
-* SOLUTION: Enter the stable-diffusion directory and completely
-remove the "src" directory and all its contents. The safest way
-to do this is to enter the stable-diffusion directory and
-give the command "git clean -f". If this still doesn't fix
-the problem, try "conda clean -all" and then restart at the
-"conda env create" step.
-
----
-
-* PROBLEM: dream.py crashes with the complaint that it can't find
-ldm.simplet2i.py. Or it complains that function is being passed
-incorrect parameters.
-
-* SOLUTION: Reinstall the stable diffusion modules. Enter the 
-stable-diffusion directory and give the command "pip install -e ."
+- SOLUTION: Enter the stable-diffusion directory and completely
+  remove the "src" directory and all its contents. The safest way
+  to do this is to enter the stable-diffusion directory and
+  give the command "git clean -f". If this still doesn't fix
+  the problem, try "conda clean -all" and then restart at the
+  "conda env create" step.
 
 ---
 
-* PROBLEM: dream.py dies, complaining of various missing modules, none
-of which starts with "ldm".
+- PROBLEM: dream.py crashes with the complaint that it can't find
+  ldm.simplet2i.py. Or it complains that function is being passed
+  incorrect parameters.
 
-* SOLUTION: From within the stable-diffusion directory, run "conda env
-update -f environment.yaml" This is also frequently the solution to
-complaints about an unknown function in a module.
+- SOLUTION: Reinstall the stable diffusion modules. Enter the
+  stable-diffusion directory and give the command "pip install -e ."
 
 ---
 
-* PROBLEM: There's a feature or bugfix in the Stable Diffusion GitHub
-that you want to try out.
+- PROBLEM: dream.py dies, complaining of various missing modules, none
+  of which starts with "ldm".
 
-* SOLUTION: If the fix/feature is on the "main" branch, enter the stable-diffusion
-directory and do a "git pull". Usually this will be sufficient, but if
-you start to see errors about missing or incorrect modules, use the
-command "pip install -e ." and/or "conda env update -f environment.yaml"
-(These commands won't break anything.)
+- SOLUTION: From within the stable-diffusion directory, run "conda env
+  update -f environment.yaml" This is also frequently the solution to
+  complaints about an unknown function in a module.
 
-* If the feature/fix is on a branch (e.g. "foo-bugfix"), the recipe is similar, but
-do a "git pull <name of branch>".
+---
 
-* If the feature/fix is in a pull request that has not yet been made
-part of the main branch or a feature/bugfix branch, then from the page
-for the desired pull request, look for the line at the top that reads
-"xxxx wants to merge xx commits into lstein:main from YYYYYY". Copy
-the URL in YYYY. It should have the format
-https://github.com/<name of contributor>/stable-diffusion/tree/<name
-of branch>
+- PROBLEM: There's a feature or bugfix in the Stable Diffusion GitHub
+  that you want to try out.
 
-* Then **go to the directory above stable-diffusion**, and rename the
-directory to "stable-diffusion.lstein", "stable-diffusion.old", or
-whatever. You can then git clone the branch that contains the
-pull request:
+- SOLUTION: If the fix/feature is on the "main" branch, enter the stable-diffusion
+  directory and do a "git pull". Usually this will be sufficient, but if
+  you start to see errors about missing or incorrect modules, use the
+  command "pip install -e ." and/or "conda env update -f environment.yaml"
+  (These commands won't break anything.)
 
-~~~~
+- If the feature/fix is on a branch (e.g. "foo-bugfix"), the recipe is similar, but
+  do a "git pull <name of branch>".
+
+- If the feature/fix is in a pull request that has not yet been made
+  part of the main branch or a feature/bugfix branch, then from the page
+  for the desired pull request, look for the line at the top that reads
+  "xxxx wants to merge xx commits into lstein:main from YYYYYY". Copy
+  the URL in YYYY. It should have the format
+  https://github.com/<name of contributor>/stable-diffusion/tree/<name
+  of branch>
+
+- Then **go to the directory above stable-diffusion**, and rename the
+  directory to "stable-diffusion.lstein", "stable-diffusion.old", or
+  whatever. You can then git clone the branch that contains the
+  pull request:
+
+```
 git clone https://github.com/<name of contributor>/stable-diffusion/tree/<name
 of branch>
-~~~~
+```
 
 You will need to go through the install procedure again, but it should
 be fast because all the dependencies are already loaded.
