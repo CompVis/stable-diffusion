@@ -3,10 +3,18 @@
 # !!   "id": "c442uQJ_gUgy"
 # !! }}
 """
-# **Deforum Stable Diffusion v0.1**
+# **Deforum Stable Diffusion v0.2**
 [Stable Diffusion](https://github.com/CompVis/stable-diffusion) by Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer and the [Stability.ai](https://stability.ai/) Team. [K Diffusion](https://github.com/crowsonkb/k-diffusion) by [Katherine Crowson](https://twitter.com/RiversHaveWings). You need to get the ckpt file and put it on your Google Drive first to use this. It can be downloaded from [HuggingFace](https://huggingface.co/CompVis/stable-diffusion).
 
 Notebook by [deforum](https://discord.gg/upmXXsrwZc)
+"""
+
+# %%
+# !! {"metadata":{
+# !!   "id": "T4knibRpAQ06"
+# !! }}
+"""
+# Setup
 """
 
 # %%
@@ -24,7 +32,7 @@ print(sub_p_res)
 # !!   "cellView": "form",
 # !!   "id": "TxIOPT0G5Lx1"
 # !! }}
-#@markdown **Model Path Variables**
+#@markdown **Model and Output Paths**
 # ask for the link
 print("Local Path Variables:\n")
 
@@ -144,14 +152,10 @@ class CFGDenoiser(nn.Module):
 def add_noise(sample: torch.Tensor, noise_amt: float):
     return sample + torch.randn(sample.shape, device=sample.device) * noise_amt
 
-def get_output_folder(output_path,batch_folder=None):
-    yearMonth = time.strftime('%Y-%m/')
-    out_path = os.path.join(output_path,yearMonth)
+def get_output_folder(output_path, batch_folder):
+    out_path = os.path.join(output_path,time.strftime('%Y-%m'))
     if batch_folder != "":
-        out_path = os.path.join(out_path,batch_folder)
-        # we will also make sure the path suffix is a slash if linux and a backslash if windows
-        if out_path[-1] != os.path.sep:
-            out_path += os.path.sep
+        out_path = os.path.join(out_path, batch_folder)
     os.makedirs(out_path, exist_ok=True)
     return out_path
 
@@ -167,14 +171,19 @@ def load_img(path, shape):
     image = torch.from_numpy(image)
     return 2.*image - 1.
 
-def maintain_colors(prev_img, color_match_sample, hsv=False):
-    if hsv:
+def maintain_colors(prev_img, color_match_sample, mode):
+    if mode == 'Match Frame 0 RGB':
+        return match_histograms(prev_img, color_match_sample, multichannel=True)
+    elif mode == 'Match Frame 0 HSV':
         prev_img_hsv = cv2.cvtColor(prev_img, cv2.COLOR_RGB2HSV)
         color_match_hsv = cv2.cvtColor(color_match_sample, cv2.COLOR_RGB2HSV)
         matched_hsv = match_histograms(prev_img_hsv, color_match_hsv, multichannel=True)
         return cv2.cvtColor(matched_hsv, cv2.COLOR_HSV2RGB)
-    else:
-        return match_histograms(prev_img, color_match_sample, multichannel=True)
+    else: # Match Frame 0 LAB
+        prev_img_lab = cv2.cvtColor(prev_img, cv2.COLOR_RGB2LAB)
+        color_match_lab = cv2.cvtColor(color_match_sample, cv2.COLOR_RGB2LAB)
+        matched_lab = match_histograms(prev_img_lab, color_match_lab, multichannel=True)
+        return cv2.cvtColor(matched_lab, cv2.COLOR_LAB2RGB)
 
 def make_callback(sampler, dynamic_threshold=None, static_threshold=None):  
     # Creates the callback function to be passed into the samplers
@@ -253,64 +262,63 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
     with torch.no_grad():
         with precision_scope("cuda"):
             with model.ema_scope():
-                for n in range(args.n_samples):
-                    for prompts in data:
-                        uc = None
-                        if args.scale != 1.0:
-                            uc = model.get_learned_conditioning(batch_size * [""])
-                        if isinstance(prompts, tuple):
-                            prompts = list(prompts)
-                        c = model.get_learned_conditioning(prompts)
+                for prompts in data:
+                    uc = None
+                    if args.scale != 1.0:
+                        uc = model.get_learned_conditioning(batch_size * [""])
+                    if isinstance(prompts, tuple):
+                        prompts = list(prompts)
+                    c = model.get_learned_conditioning(prompts)
 
-                        if args.init_c != None:
-                          c = args.init_c
+                    if args.init_c != None:
+                        c = args.init_c
 
-                        if args.sampler in ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral"]:
-                            samples = sampler_fn(
-                                c=c, 
-                                uc=uc, 
-                                args=args, 
-                                model_wrap=model_wrap, 
-                                init_latent=init_latent, 
-                                t_enc=t_enc, 
-                                device=device, 
-                                cb=callback)
+                    if args.sampler in ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral"]:
+                        samples = sampler_fn(
+                            c=c, 
+                            uc=uc, 
+                            args=args, 
+                            model_wrap=model_wrap, 
+                            init_latent=init_latent, 
+                            t_enc=t_enc, 
+                            device=device, 
+                            cb=callback)
+                    else:
+
+                        if init_latent != None:
+                            z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
+                            samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=args.scale,
+                                                    unconditional_conditioning=uc,)
                         else:
+                            if args.sampler == 'plms' or args.sampler == 'ddim':
+                                shape = [args.C, args.H // args.f, args.W // args.f]
+                                samples, _ = sampler.sample(S=args.steps,
+                                                                conditioning=c,
+                                                                batch_size=args.n_samples,
+                                                                shape=shape,
+                                                                verbose=False,
+                                                                unconditional_guidance_scale=args.scale,
+                                                                unconditional_conditioning=uc,
+                                                                eta=args.ddim_eta,
+                                                                x_T=start_code,
+                                                                img_callback=callback)
 
-                            if init_latent != None:
-                                z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
-                                samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=args.scale,
-                                                        unconditional_conditioning=uc,)
-                            else:
-                                if args.sampler == 'plms' or args.sampler == 'ddim':
-                                    shape = [args.C, args.H // args.f, args.W // args.f]
-                                    samples, _ = sampler.sample(S=args.steps,
-                                                                    conditioning=c,
-                                                                    batch_size=args.n_samples,
-                                                                    shape=shape,
-                                                                    verbose=False,
-                                                                    unconditional_guidance_scale=args.scale,
-                                                                    unconditional_conditioning=uc,
-                                                                    eta=args.ddim_eta,
-                                                                    x_T=start_code,
-                                                                    img_callback=callback)
+                    if return_latent:
+                        results.append(samples.clone())
 
-                        if return_latent:
-                            results.append(samples.clone())
+                    x_samples = model.decode_first_stage(samples)
+                    if return_sample:
+                        results.append(x_samples.clone())
 
-                        x_samples = model.decode_first_stage(samples)
-                        if return_sample:
-                            results.append(x_samples.clone())
+                    x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
 
-                        x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
+                    if return_c:
+                        results.append(c.clone())
 
-                        if return_c:
-                            results.append(c.clone())
-
-                        for x_sample in x_samples:
-                            x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                            image = Image.fromarray(x_sample.astype(np.uint8))
-                            results.append(image)
+                    for x_sample in x_samples:
+                        x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
+                        image = Image.fromarray(x_sample.astype(np.uint8))
+                        results.append(image)
     return results
 
 def sample_from_cv2(sample: np.ndarray) -> torch.Tensor:
@@ -330,8 +338,7 @@ def sample_to_cv2(sample: torch.Tensor) -> np.ndarray:
 # !!   "cellView": "form",
 # !!   "id": "CIUJ7lWI4v53"
 # !! }}
-#@markdown **Select Model**
-print("\nSelect Model:\n")
+#@markdown **Select and Load Model**
 
 model_config = "v1-inference.yaml" #@param ["custom","v1-inference.yaml"]
 model_checkpoint =  "sd-v1-4.ckpt" #@param ["custom","sd-v1-4-full-ema.ckpt","sd-v1-4.ckpt","sd-v1-3-full-ema.ckpt","sd-v1-3.ckpt","sd-v1-2-full-ema.ckpt","sd-v1-2.ckpt","sd-v1-1-full-ema.ckpt","sd-v1-1.ckpt"]
@@ -339,6 +346,9 @@ custom_config_path = "" #@param {type:"string"}
 custom_checkpoint_path = "" #@param {type:"string"}
 
 check_sha256 = True #@param {type:"boolean"}
+
+load_on_run_all = True #@param {type: 'boolean'}
+half_precision = True # needs to be fixed
 
 model_map = {
     "sd-v1-4-full-ema.ckpt": {'sha256': '14749efc0ae8ef0329391ad4436feb781b402f4fece4883c7ad8d10556d8a36a'},
@@ -351,34 +361,27 @@ model_map = {
     "sd-v1-1.ckpt": {'sha256': '86cd1d3ccb044d7ba8db743d717c9bac603c4043508ad2571383f954390f3cea'}
 }
 
-def wget(url, outputdir):
-    res = subprocess.run(['wget', url, '-P', f'{outputdir}'], stdout=subprocess.PIPE).stdout.decode('utf-8')
-    print(res)
-
-def download_model(model_checkpoint):
-    download_link = model_map[model_checkpoint]["link"][0]
-    print(f"!wget -O {models_path}/{model_checkpoint} {download_link}")
-    wget(download_link, models_path)
-    return
-
 # config path
-if os.path.exists(models_path+'/'+model_config):
-    print(f"{models_path+'/'+model_config} exists")
+ckpt_config_path = custom_config_path if model_config == "custom" else os.path.join(models_path, model_config)
+if os.path.exists(ckpt_config_path):
+    print(f"{ckpt_config_path} exists")
 else:
-    print("cp ./stable-diffusion/configs/stable-diffusion/v1-inference.yaml $models_path/.")
-    shutil.copy('./stable-diffusion/configs/stable-diffusion/v1-inference.yaml', models_path)
+    ckpt_config_path = "./stable-diffusion/configs/stable-diffusion/v1-inference.yaml"
+print(f"Using config: {ckpt_config_path}")
 
 # checkpoint path or download
-if os.path.exists(models_path+'/'+model_checkpoint):
-    print(f"{models_path+'/'+model_checkpoint} exists")
+ckpt_path = custom_checkpoint_path if model_checkpoint == "custom" else os.path.join(models_path, model_checkpoint)
+ckpt_valid = True
+if os.path.exists(ckpt_path):
+    print(f"{ckpt_path} exists")
 else:
-    print(f"download model checkpoint and place in {models_path+'/'+model_checkpoint}")
-    #download_model(model_checkpoint)
+    print(f"Please download model checkpoint and place in {os.path.join(models_path, model_checkpoint)}")
+    ckpt_valid = False
 
-if check_sha256:
+if check_sha256 and model_checkpoint != "custom" and ckpt_valid:
     import hashlib
     print("\n...checking sha256")
-    with open(models_path+'/'+model_checkpoint, "rb") as f:
+    with open(ckpt_path, "rb") as f:
         bytes = f.read() 
         hash = hashlib.sha256(bytes).hexdigest()
         del bytes
@@ -386,26 +389,10 @@ if check_sha256:
         print("hash is correct\n")
     else:
         print("hash in not correct\n")
+        ckpt_valid = False
 
-if model_config == "custom":
-  config = custom_config_path
-else:
-  config = models_path+'/'+model_config
-
-if model_checkpoint == "custom":
-  ckpt = custom_checkpoint_path
-else:
-  ckpt = models_path+'/'+model_checkpoint
-
-print(f"config: {config}")
-print(f"ckpt: {ckpt}")
-
-# %%
-# !! {"metadata":{
-# !!   "cellView": "form",
-# !!   "id": "IJiMgz_96nr3"
-# !! }}
-#@markdown **Load Stable Diffusion**
+if ckpt_valid:
+    print(f"Using ckpt: {ckpt_path}")
 
 def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_precision=True):
     map_location = "cuda" #@param ["cpu", "cuda"]
@@ -423,7 +410,6 @@ def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_prec
         print("unexpected keys:")
         print(u)
 
-    #model.cuda()
     if half_precision:
         model = model.half().to(device)
     else:
@@ -431,15 +417,12 @@ def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_prec
     model.eval()
     return model
 
-load_on_run_all = True #@param {type: 'boolean'}
-half_precision = True # needs to be fixed
+if load_on_run_all and ckpt_valid:
+    local_config = OmegaConf.load(f"{ckpt_config_path}")
+    model = load_model_from_config(local_config, f"{ckpt_path}",half_precision=half_precision)
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    model = model.to(device)
 
-if load_on_run_all:
-
-  local_config = OmegaConf.load(f"{config}")
-  model = load_model_from_config(local_config, f"{ckpt}",half_precision=half_precision)
-  device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-  model = model.to(device)
 
 # %%
 # !! {"metadata":{
@@ -477,18 +460,24 @@ def DeforumAnimArgs():
     zoom = "0: (1.04)"#@param {type:"string"}
     translation_x = "0: (0)"#@param {type:"string"}
     translation_y = "0: (0)"#@param {type:"string"}
+    noise_schedule = "0: (0.02)"#@param {type:"string"}
+    strength_schedule = "0: (0.65)"#@param {type:"string"}
+    contrast_schedule = "0: (1.0)"#@param {type:"string"}
 
     #@markdown ####**Coherence:**
-    color_coherence = 'MatchFrame0' #@param ['None', 'MatchFrame0'] {type:'string'}
-    previous_frame_noise = 0.02#@param {type:"number"}
-    previous_frame_strength = 0.65 #@param {type:"number"}
+    color_coherence = 'Match Frame 0 LAB' #@param ['None', 'Match Frame 0 HSV', 'Match Frame 0 LAB', 'Match Frame 0 RGB'] {type:'string'}
 
     #@markdown ####**Video Input:**
     video_init_path ='/content/video_in.mp4'#@param {type:"string"}
     extract_nth_frame = 1#@param {type:"number"}
 
     #@markdown ####**Interpolation:**
+    interpolate_key_frames = False #@param {type:"boolean"}
     interpolate_x_frames = 4 #@param {type:"number"}
+    
+    #@markdown ####**Resume Animation:**
+    resume_from_timestring = False #@param {type:"boolean"}
+    resume_timestring = "20220829210106" #@param {type:"string"}
 
     return locals()
 
@@ -546,6 +535,9 @@ if anim_args.key_frames:
     zoom_series = get_inbetweens(parse_key_frames(anim_args.zoom))
     translation_x_series = get_inbetweens(parse_key_frames(anim_args.translation_x))
     translation_y_series = get_inbetweens(parse_key_frames(anim_args.translation_y))
+    noise_schedule_series = get_inbetweens(parse_key_frames(anim_args.noise_schedule))
+    strength_schedule_series = get_inbetweens(parse_key_frames(anim_args.strength_schedule))
+    contrast_schedule_series = get_inbetweens(parse_key_frames(anim_args.contrast_schedule))
 
 # %%
 # !! {"metadata":{
@@ -560,6 +552,7 @@ if anim_args.key_frames:
 # !! {"metadata":{
 # !!   "id": "2ujwkGZTcGev"
 # !! }}
+
 prompts = [
     "a beautiful forest by Asher Brown Durand, trending on Artstation", #the first prompt I want
     "a beautiful portrait of a woman by Artgerm, trending on Artstation", #the second prompt I want
@@ -568,9 +561,9 @@ prompts = [
 
 animation_prompts = {
     0: "a beautiful apple, trending on Artstation",
-    10: "a beautiful banana, trending on Artstation",
-    100: "a beautiful coconut, trending on Artstation",
-    101: "a beautiful durian, trending on Artstation",
+    20: "a beautiful banana, trending on Artstation",
+    30: "a beautiful coconut, trending on Artstation",
+    40: "a beautiful durian, trending on Artstation",
 }
 
 # %%
@@ -590,7 +583,6 @@ def DeforumArgs():
     #@markdown **Save & Display Settings**
     batch_name = "StableFun" #@param {type:"string"}
     outdir = get_output_folder(output_path, batch_name)
-    save_grid = False
     save_settings = True #@param {type:"boolean"}
     save_samples = True #@param {type:"boolean"}
     display_samples = True #@param {type:"boolean"}
@@ -620,7 +612,7 @@ def DeforumArgs():
     seed_behavior = "iter" #@param ["iter","fixed","random"]
 
     #@markdown **Grid Settings**
-    make_grid = True #@param {type:"boolean"}
+    make_grid = False #@param {type:"boolean"}
     grid_rows = 2 #@param 
 
     precision = 'autocast' 
@@ -635,15 +627,6 @@ def DeforumArgs():
     init_c = None
 
     return locals()
-
-def next_seed(args):
-    if args.seed_behavior == 'iter':
-        args.seed += 1
-    elif args.seed_behavior == 'fixed':
-        pass # always keep seed the same
-    else:
-        args.seed = random.randint(0, 2**32)
-    return args.seed
 
 
 args = SimpleNamespace(**DeforumArgs())
@@ -664,6 +647,15 @@ if args.sampler == 'plms' and (args.use_init or anim_args.animation_mode != 'Non
 if args.sampler != 'ddim':
     args.ddim_eta = 0
 
+
+def next_seed(args):
+    if args.seed_behavior == 'iter':
+        args.seed += 1
+    elif args.seed_behavior == 'fixed':
+        pass # always keep seed the same
+    else:
+        args.seed = random.randint(0, 2**32)
+    return args.seed
 
 def render_image_batch(args):
     args.prompts = prompts
@@ -699,12 +691,17 @@ def render_image_batch(args):
     else:
         init_array = [""]
 
+    # when doing large batches don't flood browser with images
+    clear_between_batches = args.n_batch >= 32
+
     for iprompt, prompt in enumerate(prompts):  
         args.prompt = prompt
 
         all_images = []
 
         for batch_index in range(args.n_batch):
+            if clear_between_batches: 
+                display.clear_output(wait=True)            
             print(f"Batch {batch_index+1} of {args.n_batch}")
             
             for image in init_array: # iterates the init images
@@ -726,12 +723,23 @@ def render_image_batch(args):
             grid = make_grid(all_images, nrow=int(len(all_images)/args.grid_rows))
             grid = rearrange(grid, 'c h w -> h w c').cpu().numpy()
             filename = f"{args.timestring}_{iprompt:05d}_grid_{args.seed}.png"
-            Image.fromarray(grid.astype(np.uint8)).save(os.path.join(args.outdir, filename))
+            grid_image = Image.fromarray(grid.astype(np.uint8))
+            grid_image.save(os.path.join(args.outdir, filename))
+            display.clear_output(wait=True)            
+            display.display(grid_image)
 
 
 def render_animation(args, anim_args):
     # animations use key framed prompts
     args.prompts = animation_prompts
+    
+    # resume animation
+    start_frame = 0
+    if anim_args.resume_from_timestring:
+        for tmp in os.listdir(args.outdir):
+            if tmp.split("_")[0] == anim_args.resume_timestring:
+                start_frame += 1
+        start_frame = start_frame - 1
 
     # create output folder for the batch
     os.makedirs(args.outdir, exist_ok=True)
@@ -742,6 +750,10 @@ def render_animation(args, anim_args):
     with open(settings_filename, "w+", encoding="utf-8") as f:
         s = {**dict(args.__dict__), **dict(anim_args.__dict__)}
         json.dump(s, f, ensure_ascii=False, indent=4)
+        
+    # resume from timestring
+    if anim_args.resume_from_timestring:
+        args.timestring = anim_args.resume_timestring
 
     # expand prompts out to per-frame
     prompt_series = pd.Series([np.nan for a in range(anim_args.max_frames)])
@@ -755,8 +767,15 @@ def render_animation(args, anim_args):
     args.n_samples = 1
     prev_sample = None
     color_match_sample = None
-    for frame_idx in range(anim_args.max_frames):
+    for frame_idx in range(start_frame,anim_args.max_frames):
         print(f"Rendering animation frame {frame_idx} of {anim_args.max_frames}")
+        
+        # resume animation
+        if anim_args.resume_from_timestring:
+            path = os.path.join(args.outdir,f"{args.timestring}_{frame_idx-1:05}.png")
+            img = cv2.imread(path)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            prev_sample = sample_from_cv2(img)
 
         # apply transforms to previous frame
         if prev_sample is not None:
@@ -765,11 +784,17 @@ def render_animation(args, anim_args):
                 zoom = zoom_series[frame_idx]
                 translation_x = translation_x_series[frame_idx]
                 translation_y = translation_y_series[frame_idx]
+                noise = noise_schedule_series[frame_idx]
+                strength = strength_schedule_series[frame_idx]
+                contrast = contrast_schedule_series[frame_idx]
                 print(
                     f'angle: {angle}',
                     f'zoom: {zoom}',
                     f'translation_x: {translation_x}',
                     f'translation_y: {translation_y}',
+                    f'noise: {noise}',
+                    f'strength: {strength}',
+                    f'contrast: {contrast}',
                 )
             xform = make_xform_2d(args.W, args.H, translation_x, translation_y, angle, zoom)
 
@@ -783,19 +808,21 @@ def render_animation(args, anim_args):
             )
 
             # apply color matching
-            if anim_args.color_coherence == 'MatchFrame0':
+            if anim_args.color_coherence != 'None':
                 if color_match_sample is None:
                     color_match_sample = prev_img.copy()
                 else:
-                    prev_img = maintain_colors(prev_img, color_match_sample, (frame_idx%2) == 0)
+                    prev_img = maintain_colors(prev_img, color_match_sample, anim_args.color_coherence)
 
+            # apply scaling
+            contrast_sample = prev_img * contrast
             # apply frame noising
-            noised_sample = add_noise(sample_from_cv2(prev_img), anim_args.previous_frame_noise)
+            noised_sample = add_noise(sample_from_cv2(contrast_sample), noise)
 
             # use transformed previous frame as init for current
             args.use_init = True
             args.init_sample = noised_sample.half().to(device)
-            args.strength = max(0.0, min(1.0, anim_args.previous_frame_strength))
+            args.strength = max(0.0, min(1.0, strength))
 
         # grab prompt for current frame
         args.prompt = prompt_series[frame_idx]
@@ -887,25 +914,52 @@ def render_interpolation(args, anim_args):
 
     frame_idx = 0
 
-    for i in range(len(prompts_c_s)-1):
-      for j in range(anim_args.interpolate_x_frames+1):
-        # interpolate the text embedding
-        prompt1_c = prompts_c_s[i]
-        prompt2_c = prompts_c_s[i+1]  
-        args.init_c = prompt1_c.add(prompt2_c.sub(prompt1_c).mul(j * 1/(anim_args.interpolate_x_frames+1)))
+    if anim_args.interpolate_key_frames:
+      for i in range(len(prompts_c_s)-1):
+        dist_frames = list(animation_prompts.items())[i+1][0] - list(animation_prompts.items())[i][0]
+        if dist_frames <= 0:
+          print("key frames duplicated or reversed. interpolation skipped.")
+          return
+        else:
+          for j in range(dist_frames):
+            # interpolate the text embedding
+            prompt1_c = prompts_c_s[i]
+            prompt2_c = prompts_c_s[i+1]  
+            args.init_c = prompt1_c.add(prompt2_c.sub(prompt1_c).mul(j * 1/dist_frames))
 
-        # sample the diffusion model
-        results = generate(args)
-        image = results[0]
+            # sample the diffusion model
+            results = generate(args)
+            image = results[0]
 
-        filename = f"{args.timestring}_{frame_idx:05}.png"
-        image.save(os.path.join(args.outdir, filename))
-        frame_idx += 1
+            filename = f"{args.timestring}_{frame_idx:05}.png"
+            image.save(os.path.join(args.outdir, filename))
+            frame_idx += 1
 
-        display.clear_output(wait=True)
-        display.display(image)
+            display.clear_output(wait=True)
+            display.display(image)
 
-        args.seed = next_seed(args)
+            args.seed = next_seed(args)
+
+    else:
+      for i in range(len(prompts_c_s)-1):
+        for j in range(anim_args.interpolate_x_frames+1):
+          # interpolate the text embedding
+          prompt1_c = prompts_c_s[i]
+          prompt2_c = prompts_c_s[i+1]  
+          args.init_c = prompt1_c.add(prompt2_c.sub(prompt1_c).mul(j * 1/(anim_args.interpolate_x_frames+1)))
+
+          # sample the diffusion model
+          results = generate(args)
+          image = results[0]
+
+          filename = f"{args.timestring}_{frame_idx:05}.png"
+          image.save(os.path.join(args.outdir, filename))
+          frame_idx += 1
+
+          display.clear_output(wait=True)
+          display.display(image)
+
+          args.seed = next_seed(args)
 
     # generate the last prompt
     args.init_c = prompts_c_s[-1]
@@ -989,7 +1043,7 @@ else:
 # !!   "accelerator": "GPU",
 # !!   "colab": {
 # !!     "collapsed_sections": [],
-# !!     "name": "Deforum_Stable_Diffusion_+_Interpolation.ipynb",
+# !!     "name": "Deforum_Stable_Diffusion.ipynb",
 # !!     "provenance": [],
 # !!     "private_outputs": true
 # !!   },
