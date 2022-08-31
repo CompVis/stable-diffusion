@@ -61,8 +61,8 @@ async function generateSubmit(form) {
     let formData = Object.fromEntries(new FormData(form));
     formData.initimg = formData.initimg.name !== '' ? await toBase64(formData.initimg) : null;
 
-    let strength = 0.75; // TODO let this be specified in the UI
-    let totalSteps = formData.initimg ? Math.floor(.75 * formData.steps) : formData.steps;
+    let strength = formData.strength;
+    let totalSteps = formData.initimg ? Math.floor(strength * formData.steps) : formData.steps;
 
     let progressSectionEle = document.querySelector('#progress-section');
     progressSectionEle.style.display = 'initial';
