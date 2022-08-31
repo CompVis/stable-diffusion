@@ -98,7 +98,6 @@ async function generateSubmit(form) {
                     appendOutput(data.url, data.seed, data.config);
                     progressEle.setAttribute('value', 0);
                     progressEle.setAttribute('max', totalSteps);
-                    progressImageEle.src = BLANK_IMAGE_URL;
                 } else if (data.event === 'upscaling-started') {
                     document.getElementById("processing_cnt").textContent=data.processed_file_cnt;
                     document.getElementById("scaling-inprocess-message").style.display = "block";
