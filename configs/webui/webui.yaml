@@ -1,7 +1,7 @@
 # UI defaults configuration file. Is read automatically if located at configs/webui/webui.yaml, or specify path via --defaults.
 
 txt2img:
-  prompt: 
+  prompt:
   ddim_steps: 50
   # Adding an int to toggles enables the corresponding feature.
   # 0: Create prompt matrix (separate multiple prompts using |, and get all combinations of them)
@@ -10,8 +10,9 @@ txt2img:
   # 3: Save grid
   # 4: Sort samples by prompt
   # 5: Write sample info files
-  # 6: Fix faces using GFPGAN
-  # 7: Upscale images using Real-ESRGAN
+  # 6: jpg samples
+  # 7: Fix faces using GFPGAN
+  # 8: Upscale images using Real-ESRGAN
   toggles: [1, 2, 3, 4, 5]
   sampler_name: k_lms
   ddim_eta: 0.0  # legacy name, applies to all algorithms.
@@ -19,7 +20,7 @@ txt2img:
   batch_size: 1
   cfg_scale: 7.5
   # Leave blank for random seed:
-  seed: 
+  seed:
   height: 512
   width: 512
   # Textual inversion embeddings file path:
@@ -37,8 +38,9 @@ img2img:
   # 5: Save grid
   # 6: Sort samples by prompt
   # 7: Write sample info files
-  # 8: Fix faces using GFPGAN
-  # 9: Upscale images using Real-ESRGAN
+  # 8: jpg samples
+  # 9: Fix faces using GFPGAN
+  # 10: Upscale images using Real-ESRGAN
   toggles: [1, 4, 5, 6, 7]
   sampler_name: k_lms
   ddim_eta: 0.0
