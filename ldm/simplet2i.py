@@ -171,10 +171,14 @@ class T2I:
         Optional named arguments are the same as those passed to T2I and prompt2image()
         """
         results = self.prompt2image(prompt, **kwargs)
-        pngwriter = PngWriter(outdir, prompt)
-        for r in results:
-            pngwriter.write_image(r[0], r[1])
-        return pngwriter.files_written
+        pngwriter = PngWriter(outdir)
+        prefix = pngwriter.unique_prefix()
+        outputs = []
+        for image, seed in results:
+            name = f'{prefix}.{seed}.png'
+            path = pngwriter.save_image_and_prompt_to_png(image, f'{prompt} -S{seed}', name)
+            outputs.append([path, seed])
+        return outputs
 
     def txt2img(self, prompt, **kwargs):
         outdir = kwargs.pop('outdir', 'outputs/img-samples')
@@ -349,10 +353,7 @@ class T2I:
                                 f'Error running RealESRGAN - Your image was not upscaled.\n{e}'
                             )
                         if image_callback is not None:
-                            if save_original:
-                                image_callback(image, seed)
-                            else:
-                                image_callback(image, seed, upscaled=True)
+                            image_callback(image, seed, upscaled=True)
                         else: # no callback passed, so we simply replace old image with rescaled one
                             result[0] = image
 
