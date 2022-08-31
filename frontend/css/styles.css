@@ -17,3 +17,8 @@ input[type=number]:disabled { -moz-appearance: textfield; }
 #generate, #img2img_mask_btn, #img2img_edit_btn {
     align-self: stretch;
 }
+
+#gan_image {
+    width: 512px;
+    height: auto;
+}
