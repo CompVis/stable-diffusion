@@ -65,6 +65,7 @@ class DreamServer(BaseHTTPRequestHandler):
         post_data = json.loads(self.rfile.read(content_length))
         prompt = post_data['prompt']
         initimg = post_data['initimg']
+        strength = float(post_data['strength'])
         iterations = int(post_data['iterations'])
         steps = int(post_data['steps'])
         width = int(post_data['width'])
@@ -174,6 +175,7 @@ class DreamServer(BaseHTTPRequestHandler):
                     # Run img2img
                     self.model.prompt2image(prompt,
                                             init_img = "./img2img-tmp.png",
+                                            strength = strength,
                                             iterations = iterations,
                                             cfg_scale = cfgscale,
                                             seed = seed,

@@ -59,13 +59,14 @@
             <option value="832">832</option> <option value="896">896</option>
             <option value="960">960</option> <option value="1024">1024</option>
           </select>
-          <br>
-          <label title="Upload an image to use img2img" for="initimg">Img2Img Init:</label>
-          <input type="file" id="initimg" name="initimg" accept=".jpg, .jpeg, .png">
           <label title="Set to -1 for random seed" for="seed">Seed:</label>
           <input value="-1" type="number" id="seed" name="seed">
           <button type="button" id="reset-seed">&olarr;</button>
-          <span>&bull;</span>
+          <br>
+          <label for="strength">Img2Img Strength:</label>
+          <input value="0.75" type="number" id="strength" name="strength" step="0.01" min="0" max="1">
+          <label title="Upload an image to use img2img" for="initimg">Init:</label>
+          <input type="file" id="initimg" name="initimg" accept=".jpg, .jpeg, .png">
           <button type="button" id="reset-all">Reset to Defaults</button>
           <br>
           <label for="progress_images">Display in-progress images (slows down generation):</label>
