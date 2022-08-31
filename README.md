@@ -387,7 +387,7 @@ Credit goes to @rinongal and the repository located at
 https://github.com/rinongal/textual_inversion Please see the
 repository and associated paper for details and limitations.
 
-# Latest
+# Latest Changes
 
 - v1.13 (in process)
 
@@ -403,9 +403,9 @@ For older changelogs, please visit **[CHANGELOGS](CHANGELOG.md)**.
 
 # Installation
 
-There are separate installation walkthroughs for [Linux/Mac](#linuxmac) and [Windows](#windows).
+There are separate installation walkthroughs for [Linux](#linux), [Windows](#windows) and [Macintosh](#Macintosh)
 
-## Linux/Mac
+## Linux
 
 1. You will need to install the following prerequisites if they are not already available. Use your
    operating system's preferred installer
@@ -580,7 +580,15 @@ python scripts\dream.py -l
 python scripts\dream.py
 ```
 
-10. Subsequently, to relaunch the script, first activate the Anaconda command window (step 3), enter the stable-diffusion directory (step 5, "cd \path\to\stable-diffusion"), run "conda activate ldm" (step 6b), and then launch the dream script (step 9).
+10. Subsequently, to relaunch the script, first activate the Anaconda
+command window (step 3), enter the stable-diffusion directory (step 5,
+"cd \path\to\stable-diffusion"), run "conda activate ldm" (step 6b),
+and then launch the dream script (step 9).
+
+**Note:** Tildebyte has written an alternative ["Easy peasy Windows
+install"](https://github.com/lstein/stable-diffusion/wiki/Easy-peasy-Windows-install)
+which uses the Windows Powershell and pew. If you are having trouble
+with Anaconda on Windows, give this a try (or try it first!)
 
 ### Updating to newer versions of the script
 
@@ -595,11 +603,16 @@ git pull
 
 This will bring your local copy into sync with the remote one.
 
-## Simplified API for text to image generation
+## Macintosh
+
+See (README-Mac-MPS)[README-Mac-MPS.md] for instructions.
+
+# Simplified API for text to image generation
 
 For programmers who wish to incorporate stable-diffusion into other
-products, this repository includes a simplified API for text to image generation, which
-lets you create images from a prompt in just three lines of code:
+products, this repository includes a simplified API for text to image
+generation, which lets you create images from a prompt in just three
+lines of code:
 
 ```
 from ldm.simplet2i import T2I
@@ -608,9 +621,10 @@ outputs = model.txt2img("a unicorn in manhattan")
 ```
 
 Outputs is a list of lists in the format [[filename1,seed1],[filename2,seed2]...]
-Please see ldm/simplet2i.py for more information.
+Please see ldm/simplet2i.py for more information. A set of example scripts is
+coming RSN.
 
-## Workaround for machines with limited internet connectivity
+# Workaround for machines with limited internet connectivity
 
 My development machine is a GPU node in a high-performance compute
 cluster which has no connection to the internet. During model

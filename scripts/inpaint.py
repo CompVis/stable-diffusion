@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from main import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
-
+from ldm.dream.devices import choose_torch_device
 
 def make_batch(image, mask, device):
     image = np.array(Image.open(image).convert("RGB"))
@@ -61,8 +61,8 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load("models/ldm/inpainting_big/last.ckpt")["state_dict"],
                           strict=False)
 
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    model = model.to(device)
+    device  = choose_torch_device()
+    model   = model.to(device)
     sampler = DDIMSampler(model)
 
     os.makedirs(opt.outdir, exist_ok=True)

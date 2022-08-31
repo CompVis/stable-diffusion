@@ -5,6 +5,7 @@ import clip
 from einops import rearrange, repeat
 from transformers import CLIPTokenizer, CLIPTextModel
 import kornia
+from ldm.dream.devices import choose_torch_device
 
 from ldm.modules.x_transformer import (
     Encoder,
@@ -67,7 +68,12 @@ class TransformerEmbedder(AbstractEncoder):
     """Some transformer encoder layers"""
 
     def __init__(
-        self, n_embed, n_layer, vocab_size, max_seq_len=77, device='cuda'
+        self,
+        n_embed,
+        n_layer,
+        vocab_size,
+        max_seq_len=77,
+        device=choose_torch_device(),
     ):
         super().__init__()
         self.device = device
@@ -89,7 +95,9 @@ class TransformerEmbedder(AbstractEncoder):
 class BERTTokenizer(AbstractEncoder):
     """Uses a pretrained BERT tokenizer by huggingface. Vocab size: 30522 (?)"""
 
-    def __init__(self, device='cuda', vq_interface=True, max_length=77):
+    def __init__(
+        self, device=choose_torch_device(), vq_interface=True, max_length=77
+    ):
         super().__init__()
         from transformers import (
             BertTokenizerFast,
@@ -145,7 +153,7 @@ class BERTEmbedder(AbstractEncoder):
         n_layer,
         vocab_size=30522,
         max_seq_len=77,
-        device='cuda',
+        device=choose_torch_device(),
         use_tokenizer=True,
         embedding_dropout=0.0,
     ):
@@ -230,7 +238,7 @@ class FrozenCLIPEmbedder(AbstractEncoder):
     def __init__(
         self,
         version='openai/clip-vit-large-patch14',
-        device='cuda',
+        device=choose_torch_device(),
         max_length=77,
     ):
         super().__init__()
@@ -455,13 +463,13 @@ class FrozenCLIPTextEmbedder(nn.Module):
     def __init__(
         self,
         version='ViT-L/14',
-        device='cuda',
+        device=choose_torch_device(),
         max_length=77,
         n_repeat=1,
         normalize=True,
     ):
         super().__init__()
-        self.model, _ = clip.load(version, jit=False, device='cpu')
+        self.model, _ = clip.load(version, jit=False, device=device)
         self.device = device
         self.max_length = max_length
         self.n_repeat = n_repeat
@@ -496,7 +504,7 @@ class FrozenClipImageEmbedder(nn.Module):
         self,
         model,
         jit=False,
-        device='cuda' if torch.cuda.is_available() else 'cpu',
+        device=choose_torch_device(),
         antialias=False,
     ):
         super().__init__()

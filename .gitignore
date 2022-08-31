@@ -181,3 +181,5 @@ outputs
 logs
 testtube
 checkpoints
+# If it's a Mac
+.DS_Store

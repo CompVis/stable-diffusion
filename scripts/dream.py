@@ -8,10 +8,10 @@ import re
 import sys
 import copy
 import warnings
+import time
 import ldm.dream.readline
 from ldm.dream.pngwriter import PngWriter, PromptFormatter
 from ldm.dream.server import DreamServer, ThreadingDreamServer
-
 
 def main():
     """Initialize command-line parsers and the diffusion model"""
@@ -81,7 +81,11 @@ def main():
             sys.exit(-1)
 
     # preload the model
+    tic = time.time()
     t2i.load_model()
+    print(
+        f'model loaded in', '%4.2fs' % (time.time() - tic)
+    )
 
     if not infile:
         print(

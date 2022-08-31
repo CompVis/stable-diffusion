@@ -2,7 +2,7 @@
 import k_diffusion as K
 import torch
 import torch.nn as nn
-
+from ldm.dream.devices import choose_torch_device
 
 class CFGDenoiser(nn.Module):
     def __init__(self, model):
@@ -18,11 +18,11 @@ class CFGDenoiser(nn.Module):
 
 
 class KSampler(object):
-    def __init__(self, model, schedule='lms', device='cuda', **kwargs):
+    def __init__(self, model, schedule='lms', device=None, **kwargs):
         super().__init__()
         self.model = K.external.CompVisDenoiser(model)
         self.schedule = schedule
-        self.device = device
+        self.device   = device or choose_torch_device()
 
         def forward(self, x, sigma, uncond, cond, cond_scale):
             x_in = torch.cat([x] * 2)

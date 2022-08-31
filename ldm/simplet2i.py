@@ -28,6 +28,7 @@ from ldm.models.diffusion.plms import PLMSSampler
 from ldm.models.diffusion.ksampler import KSampler
 from ldm.dream.pngwriter import PngWriter
 from ldm.dream.image_util import InitImageResizer
+from ldm.dream.devices import choose_torch_device
 
 """Simplified text to image API for stable diffusion/latent diffusion
 
@@ -523,19 +524,15 @@ class T2I:
         return self.seed
 
     def _get_device(self):
-        if torch.cuda.is_available():
-            return torch.device('cuda')
-        elif torch.backends.mps.is_available():
-            return torch.device('mps')
-        else:
-            return torch.device('cpu')
+        device_type = choose_torch_device()
+        return torch.device(device_type)
 
     def load_model(self):
         """Load and initialize the model from configuration variables passed at object creation time"""
         if self.model is None:
             seed_everything(self.seed)
             try:
-                config = OmegaConf.load(self.config)
+                config      = OmegaConf.load(self.config)
                 self.device = self._get_device()
                 model = self._load_model_from_config(config, self.weights)
                 if self.embedding_path is not None:

@@ -14,7 +14,7 @@ from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.util import ismap
 import time
 from omegaconf import OmegaConf
-
+from ldm.dream.devices import choose_torch_device
 
 def download_models(mode):
 
@@ -117,7 +117,8 @@ def get_cond(mode, selected_path):
         c = rearrange(c, '1 c h w -> 1 h w c')
         c = 2. * c - 1.
 
-        c = c.to(torch.device("cuda"))
+        device = choose_torch_device()
+        c = c.to(device)
         example["LR_image"] = c
         example["image"] = c_up
 
