@@ -43,6 +43,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+.env_docker
 .env_updated
 condaenv.*.requirements.txt
 

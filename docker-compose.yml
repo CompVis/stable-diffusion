@@ -6,6 +6,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file: .env_docker
     volumes:
       - .:/sd
       - ./outputs:/sd/outputs

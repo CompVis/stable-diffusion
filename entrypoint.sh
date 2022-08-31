@@ -30,7 +30,7 @@ if ! conda env list | grep ".*${ENV_NAME}.*" >/dev/null 2>&1; then
     conda env create -f $ENV_FILE
     echo "source activate ${ENV_NAME}" > /root/.bashrc
     ENV_UPDATED=1
-elif (( $ENV_MODIFIED > $ENV_MODIFIED_CACHED )); then
+elif [[ ! -z $CONDA_FORCE_UPDATE && $CONDA_FORCE_UPDATE == "true" ]] || (( $ENV_MODIFIED > $ENV_MODIFIED_CACHED )); then
     echo "Updating conda env: ${ENV_NAME} ..."
     conda env update --file $ENV_FILE --prune
     ENV_UPDATED=1
@@ -68,22 +68,37 @@ validateDownloadModel() {
 }
 
 # Validate model files
-echo "Validating model files..."
-for models in "${MODEL_FILES[@]}"; do
-    model=($models)
-    validateDownloadModel ${model[0]} ${model[1]} ${model[2]} ${model[3]}
-done
+if [[ -z $VALIDATE_MODELS || $VALIDATE_MODELS == "true" ]]; then
+    echo "Validating model files..."
+    for models in "${MODEL_FILES[@]}"; do
+        model=($models)
+        validateDownloadModel ${model[0]} ${model[1]} ${model[2]} ${model[3]}
+    done
+fi
 
 # Launch web gui
-n=0
 cd /sd
-while true; do
-    echo "entrypoint.sh: Launching..."
-    if (( $n > 0 )); then
-        echo "Relaunch count: ${n}"
-    fi
-    python -u scripts/webui.py
-    echo "entrypoint.sh: Process is ending. Relaunching in 0.5s..."
-    ((n++))
-    sleep 0.5
-done
+
+if [[ -z $WEBUI_ARGS ]]; then
+    launch_message="entrypoint.sh: Launching..."
+else
+    launch_message="entrypoint.sh: Launching with arguments ${WEBUI_ARGS}"
+fi
+
+if [[ -z $WEBUI_RELAUNCH || $WEBUI_RELAUNCH == "true" ]]; then
+    n=0
+    while true; do
+
+        echo $launch_message
+        if (( $n > 0 )); then
+            echo "Relaunch count: ${n}"
+        fi
+        python -u scripts/webui.py $WEBUI_ARGS
+        echo "entrypoint.sh: Process is ending. Relaunching in 0.5s..."
+        ((n++))
+        sleep 0.5
+    done
+else
+    echo $launch_message
+    python -u scripts/webui.py $WEBUI_ARGS
+fi
