@@ -12,6 +12,7 @@ import time
 import ldm.dream.readline
 from ldm.dream.pngwriter import PngWriter, PromptFormatter
 from ldm.dream.server import DreamServer, ThreadingDreamServer
+from ldm.dream.image_util import make_grid
 
 def main():
     """Initialize command-line parsers and the diffusion model"""
@@ -226,7 +227,7 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
             t2i.prompt2image(image_callback=image_writer, **vars(opt))
 
             if do_grid and len(grid_images) > 0:
-                grid_img = file_writer.make_grid(list(grid_images.values()))
+                grid_img = make_grid(list(grid_images.values()))
                 first_seed = next(iter(seeds))
                 filename = f'{prefix}.{first_seed}.png'
                 # TODO better metadata for grid images
