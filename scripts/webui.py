@@ -901,11 +901,11 @@ skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoisin
                         if simple_templating:
                             grid_captions.append( captions[i] )
 
-                if opt.optimized:
-                    mem = torch.cuda.memory_allocated()/1e6
-                    modelFS.to("cpu")
-                    while(torch.cuda.memory_allocated()/1e6 >= mem):
-                        time.sleep(1)
+            if opt.optimized:
+                mem = torch.cuda.memory_allocated()/1e6
+                modelFS.to("cpu")
+                while(torch.cuda.memory_allocated()/1e6 >= mem):
+                    time.sleep(1)
 
         if (prompt_matrix or not skip_grid) and not do_not_save_grid:
             if prompt_matrix:
@@ -1324,18 +1324,18 @@ def img2img(prompt: str, image_editor_mode: str, init_info, mask_mode: str, mask
 
 
 prompt_parser = re.compile("""
-    (?P<prompt>                # capture group for 'prompt'
-    [^:]+                      # match one or more non ':' characters
-    )                          # end 'prompt'
-    (?:                        # non-capture group
-    :+                         # match one or more ':' characters  
-    (?P<weight>                # capture group for 'weight'
-    -?\d+(?:\.\d+)?            # match positive or negative decimal number
-    )?                         # end weight capture group, make optional 
-    \s*                        # strip spaces after weight
-    |                          # OR
-    $                          # else, if no ':' then match end of line
-    )                          # end non-capture group
+    (?P<prompt>     # capture group for 'prompt'
+    (?:\\\:|[^:])+  # match one or more non ':' characters or escaped colons '\:'
+    )               # end 'prompt'
+    (?:             # non-capture group
+    :+              # match one or more ':' characters  
+    (?P<weight>     # capture group for 'weight'
+    -?\d+(?:\.\d+)? # match positive or negative integer or decimal number
+    )?              # end weight capture group, make optional 
+    \s*             # strip spaces after weight
+    |               # OR
+    $               # else, if no ':' then match end of line
+    )               # end non-capture group
 """, re.VERBOSE)
 
 # grabs all text up to the first occurrence of ':' as sub-prompt
@@ -1343,11 +1343,14 @@ prompt_parser = re.compile("""
 # if ':' has no value defined, defaults to 1.0
 # repeats until no text remaining
 def split_weighted_subprompts(input_string, normalize=True):
-    parsed_prompts = [(match.group("prompt"), float(match.group("weight") or 1)) for match in re.finditer(prompt_parser, input_string)]
+    parsed_prompts = [(match.group("prompt").replace("\\:", ":"), float(match.group("weight") or 1)) for match in re.finditer(prompt_parser, input_string)]
     if not normalize:
         return parsed_prompts
-    # this probably still doesn't handle negative weights very well
     weight_sum = sum(map(lambda x: x[1], parsed_prompts))
+    if weight_sum == 0:
+        print("Warning: Subprompt weights add up to zero. Discarding and using even weights instead.")
+        equal_weight = 1 / len(parsed_prompts)
+        return [(x[0], equal_weight) for x in parsed_prompts]
     return [(x[0], x[1] / weight_sum) for x in parsed_prompts]
 
 def slerp(device, t, v0:torch.Tensor, v1:torch.Tensor, DOT_THRESHOLD=0.9995):
