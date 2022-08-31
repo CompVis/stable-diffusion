@@ -157,7 +157,9 @@ class T2I:
         self.latent_diffusion_weights = latent_diffusion_weights
         self.device = device
 
-        self.session_peakmem = torch.cuda.max_memory_allocated()
+        # for VRAM usage statistics
+        self.session_peakmem = torch.cuda.max_memory_allocated() if self.device == 'cuda' else None
+            
         if seed is None:
             self.seed = self._new_seed()
         else:
@@ -363,9 +365,6 @@ class T2I:
             print('Are you sure your system has an adequate NVIDIA GPU?')
 
         toc = time.time()
-        self.session_peakmem = max(
-            self.session_peakmem, torch.cuda.max_memory_allocated()
-        )
         print('Usage stats:')
         print(
             f'   {len(results)} image(s) generated in', '%4.2fs' % (toc - tic)
@@ -374,10 +373,15 @@ class T2I:
             f'   Max VRAM used for this generation:',
             '%4.2fG' % (torch.cuda.max_memory_allocated() / 1e9),
         )
-        print(
-            f'   Max VRAM used since script start: ',
-            '%4.2fG' % (self.session_peakmem / 1e9),
-        )
+
+        if self.session_peakmem:
+            self.session_peakmem = max(
+                self.session_peakmem, torch.cuda.max_memory_allocated()
+            )
+            print(
+                f'   Max VRAM used since script start: ',
+                '%4.2fG' % (self.session_peakmem / 1e9),
+            )
         return results
 
     @torch.no_grad()
