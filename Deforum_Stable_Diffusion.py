@@ -78,7 +78,7 @@ if setup_environment:
     print("...setting up environment")
     all_process = [['pip', 'install', 'torch==1.11.0+cu113', 'torchvision==0.12.0+cu113', 'torchaudio==0.11.0', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'],
                    ['pip', 'install', 'omegaconf==2.1.1', 'einops==0.3.0', 'pytorch-lightning==1.4.2', 'torchmetrics==0.6.0', 'torchtext==0.2.3', 'transformers==4.19.2', 'kornia==0.6'],
-                   ['git', 'clone', '-b', 'inpainting_1.0', 'https://github.com/deforum/stable-diffusion'],
+                   ['git', 'clone', '-b', 'dev', 'https://github.com/deforum/stable-diffusion'],
                    ['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'],
                    ['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'],
                    ['pip', 'install', 'accelerate', 'ftfy', 'jsonmerge', 'resize-right', 'torchdiffeq'],
@@ -171,7 +171,7 @@ def load_img(path, shape):
     image = torch.from_numpy(image)
     return 2.*image - 1.
 
-def load_mask(path, shape):
+def load_mask_img(path, shape):
     # path (str): Path to the mask image
     # shape (list-like len(4)): shape of the image to match, usually latent_image.shape
     mask_w_h = (shape[-1], shape[-2])
@@ -181,10 +181,37 @@ def load_mask(path, shape):
         mask_image = Image.open(path).convert('RGBA')
     mask = mask_image.resize(mask_w_h, resample=Image.LANCZOS)
     mask = mask.convert("L")
+    return mask
+
+def prepare_mask(mask_file,
+                mask_shape,
+                mask_brightness_adjust=1.0,
+                mask_contrast_adjust=1.0):
+    # path (str): Path to the mask image
+    # shape (list-like len(4)): shape of the image to match, usually latent_image.shape
+    # mask_brightness_adjust (non-negative float): amount to adjust brightness of the iamge, 
+    #     0 is black, 1 is no adjustment, >1 is brighter
+    # mask_contrast_adjust (non-negative float): amount to adjust contrast of the image, 
+    #     0 is a flat grey image, 1 is no adjustment, >1 is more contrast
+                            
+    mask = load_mask_img(mask_file, mask_shape)
+
+    # Mask brightness/contrast adjustments
+    if mask_brightness_adjust != 1:
+        mask = TF.adjust_brightness(mask, mask_brightness_adjust)
+    if mask_contrast_adjust != 1:
+        mask = TF.adjust_contrast(mask, mask_contrast_adjust)
+
+    # Mask image to array
     mask = np.array(mask).astype(np.float32) / 255.0
     mask = np.tile(mask,(4,1,1))
     mask = np.expand_dims(mask,axis=0)
     mask = torch.from_numpy(mask)
+
+    if args.invert_mask:
+        mask = ( (mask - 0.5) * -1) + 0.5
+    
+    mask = np.clip(mask,0,1)
     return mask
 
 def maintain_colors(prev_img, color_match_sample, mode):
@@ -287,14 +314,18 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
     if not args.use_init and args.strength > 0:
         print("\nNo init image, but strength > 0. This may give you some strange results.\n")
 
+    # Mask functions
     mask = None
     if args.use_mask:
         assert args.mask_file is not None, "use_mask==True: An mask image is required for a mask"
         assert args.use_init, "use_mask==True: use_init is required for a mask"
         assert init_latent is not None, "use_mask==True: An latent init image is required for a mask"
-        mask = load_mask(args.mask_file, init_latent.shape)
-        if args.invert_mask:
-            mask = ( (mask - 0.5) * -1) + 0.5
+
+        mask = prepare_mask(args.mask_file, 
+                            init_latent.shape, 
+                            args.mask_contrast_adjust, 
+                            args.mask_brightness_adjust)
+        
         mask = mask.to(device)
         mask = repeat(mask, '1 ... -> b ...', b=batch_size)
         
@@ -354,7 +385,7 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
                                                      unconditional_guidance_scale=args.scale,
                                                      unconditional_conditioning=uc,
                                                      img_callback=callback)
-                        elif args.sampler == 'plms':
+                        elif args.sampler == 'plms': # no "decode" function in plms, so use "sample"
                             shape = [args.C, args.H // args.f, args.W // args.f]
                             samples, _ = sampler.sample(S=args.steps,
                                                             conditioning=c,
@@ -663,9 +694,13 @@ def DeforumArgs():
     use_init = False #@param {type:"boolean"}
     strength = 0.0 #@param {type:"number"}
     init_image = "https://cdn.pixabay.com/photo/2022/07/30/13/10/green-longhorn-beetle-7353749_1280.jpg" #@param {type:"string"}
+    # Whiter areas of the mask are areas that change more
     use_mask = False #@param {type:"boolean"}
     mask_file = "https://www.filterforge.com/wiki/images/archive/b/b7/20080927223728%21Polygonal_gradient_thumb.jpg" #@param {type:"string"}
     invert_mask = False #@param {type:"boolean"}
+    # Adjust mask image, 1.0 is no adjustment. Should be positive numbers.
+    mask_brightness_adjust = 1.0  #@param {type:"number"}
+    mask_contrast_adjust = 1.0  #@param {type:"number"}
 
     #@markdown **Sampling Settings**
     seed = -1 #@param
