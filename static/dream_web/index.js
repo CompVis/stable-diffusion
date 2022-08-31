@@ -95,7 +95,7 @@ async function generateSubmit(form) {
                 if (data.event === 'result') {
                     noOutputs = false;
                     document.querySelector("#no-results-message")?.remove();
-                    appendOutput(data.files[0],data.files[1],data.config);
+                    appendOutput(data.url, data.seed, data.config);
                     progressEle.setAttribute('value', 0);
                     progressEle.setAttribute('max', totalSteps);
                     progressImageEle.src = BLANK_IMAGE_URL;
