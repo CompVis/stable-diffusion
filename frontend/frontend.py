@@ -29,7 +29,7 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                                                    value=txt2img_defaults["height"])
                         txt2img_cfg = gr.Slider(minimum=-40.0, maximum=30.0, step=0.5,
                                                 label='Classifier Free Guidance Scale (how strongly the image should follow the prompt)',
-                                                value=txt2img_defaults['cfg_scale'])
+                                                value=txt2img_defaults['cfg_scale'], elem_id='cfg_slider')
                         txt2img_seed = gr.Textbox(label="Seed (blank to randomize)", lines=1, max_lines=1,
                                                   value=txt2img_defaults["seed"])
                         txt2img_batch_count = gr.Slider(minimum=1, maximum=250, step=1,
@@ -195,7 +195,7 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                         
                         img2img_cfg = gr.Slider(minimum=-40.0, maximum=30.0, step=0.5,
                                                 label='Classifier Free Guidance Scale (how strongly the image should follow the prompt)',
-                                                value=img2img_defaults['cfg_scale'])
+                                                value=img2img_defaults['cfg_scale'], elem_id='cfg_slider')
 
                         img2img_seed = gr.Textbox(label="Seed (blank to randomize)", lines=1, max_lines=1,
                                                   value=img2img_defaults["seed"])
@@ -311,7 +311,7 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                                                         value=gfpgan_defaults['strength'])
                             gfpgan_btn = gr.Button("Generate", variant="primary")
                         with gr.Column():
-                            gfpgan_output = gr.Image(label="Output")
+                            gfpgan_output = gr.Image(label="Output", elem_id='gan_image')
                     gfpgan_btn.click(
                         run_GFPGAN,
                         [gfpgan_source, gfpgan_strength],
@@ -328,7 +328,7 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
                                                                 value='RealESRGAN_x4plus')
                             realesrgan_btn = gr.Button("Generate")
                         with gr.Column():
-                            realesrgan_output = gr.Image(label="Output")
+                            realesrgan_output = gr.Image(label="Output", elem_id='gan_image')
                     realesrgan_btn.click(
                         run_RealESRGAN,
                         [realesrgan_source, realesrgan_model_name],
