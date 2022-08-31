@@ -235,7 +235,7 @@ def make_callback(sampler_name, dynamic_threshold=None, static_threshold=None, m
     if init_latent is not None:
         noise = torch.randn_like(init_latent, device=device) * masked_noise_modifier
     if sigmas is not None and len(sigmas) > 0:
-        mask_schedule = torch.flip(sigmas/sigmas[0],[0])
+        mask_schedule, _ = torch.sort(sigmas/torch.max(sigmas))
     elif len(sigmas) == 0:
         mask = None # no mask needed if no steps (usually happens because strength==1.0)
     if sampler_name in ["plms","ddim"]: 
@@ -292,18 +292,19 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
         
     t_enc = int((1.0-args.strength) * args.steps)
 
-    sigmas = model_wrap.get_sigmas(args.steps)
-    if args.sampler in ['plms','ddim']:
-        sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.ddim_eta, verbose=False)
-    sigmas = sigmas[len(sigmas)-t_enc-1:]
+    # Noise schedule for the k-diffusion samplers (used for masking)
+    k_sigmas = model_wrap.get_sigmas(args.steps)
+    k_sigmas = k_sigmas[len(k_sigmas)-t_enc-1:]
 
+    if args.sampler in ['plms','ddim']:
+        sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.ddim_eta, ddim_discretize='fill', verbose=False)
 
     callback = make_callback(sampler_name=args.sampler,
                             dynamic_threshold=args.dynamic_threshold, 
                             static_threshold=args.static_threshold,
                             mask=mask, 
                             init_latent=init_latent,
-                            sigmas=sigmas,
+                            sigmas=k_sigmas,
                             sampler=sampler)    
 
     results = []
