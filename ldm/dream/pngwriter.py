@@ -117,7 +117,6 @@ class PromptFormatter:
         switches = list()
         switches.append(f'"{opt.prompt}"')
         switches.append(f'-s{opt.steps        or t2i.steps}')
-        switches.append(f'-b{opt.batch_size   or t2i.batch_size}')
         switches.append(f'-W{opt.width        or t2i.width}')
         switches.append(f'-H{opt.height       or t2i.height}')
         switches.append(f'-C{opt.cfg_scale    or t2i.cfg_scale}')

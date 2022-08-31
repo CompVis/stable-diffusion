@@ -297,13 +297,13 @@ face enhancement (see previous section):
 ```
 dream> a cute child playing hopscotch -G0.5
 [...]
-outputs/img-samples/000039.3498014304.png: "a cute child playing hopscotch" -s50 -b1 -W512 -H512 -C7.5 -mk_lms -S3498014304
+outputs/img-samples/000039.3498014304.png: "a cute child playing hopscotch" -s50 -W512 -H512 -C7.5 -mk_lms -S3498014304
 
 # I wonder what it will look like if I bump up the steps and set facial enhancement to full strength?
 dream> a cute child playing hopscotch -G1.0 -s100 -S -1
 reusing previous seed 3498014304
 [...]
-outputs/img-samples/000040.3498014304.png: "a cute child playing hopscotch" -G1.0 -s100 -b1 -W512 -H512 -C7.5 -mk_lms -S3498014304
+outputs/img-samples/000040.3498014304.png: "a cute child playing hopscotch" -G1.0 -s100 -W512 -H512 -C7.5 -mk_lms -S3498014304
 ```
 
 ## Weighted Prompts

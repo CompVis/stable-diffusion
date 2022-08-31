@@ -199,7 +199,7 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
 
         # Here is where the images are actually generated!
         try:
-            file_writer = PngWriter(current_outdir, normalized_prompt, opt.batch_size)
+            file_writer = PngWriter(current_outdir, normalized_prompt)
             callback    = file_writer.write_image if individual_images else None
             image_list  = t2i.prompt2image(image_callback=callback, **vars(opt))
             results = (
@@ -418,13 +418,6 @@ def create_cmd_parser():
         type=int,
         default=1,
         help='Number of samplings to perform (slower, but will provide seeds for individual images)',
-    )
-    parser.add_argument(
-        '-b',
-        '--batch_size',
-        type=int,
-        default=1,
-        help='Number of images to produce per sampling (will not provide seeds for individual images!)',
     )
     parser.add_argument(
         '-W', '--width', type=int, help='Image width, multiple of 64'

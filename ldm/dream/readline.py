@@ -89,7 +89,6 @@ if readline_available:
                 '--steps','-s',
                 '--seed','-S',
                 '--iterations','-n',
-                '--batch_size','-b',
                 '--width','-W','--height','-H',
                 '--cfg_scale','-C',
                 '--grid','-g',

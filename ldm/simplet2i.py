@@ -39,7 +39,6 @@ from ldm.simplet2i import T2I
 t2i = T2I(model       = <path>        // models/ldm/stable-diffusion-v1/model.ckpt
           config      = <path>        // configs/stable-diffusion/v1-inference.yaml
           iterations  = <integer>     // how many times to run the sampling (1)
-          batch_size  = <integer>     // how many images to generate per sampling (1)
           steps       = <integer>     // 50
           seed        = <integer>     // current system time
           sampler_name= ['ddim', 'k_dpm_2_a', 'k_dpm_2', 'k_euler_a', 'k_euler', 'k_heun', 'k_lms', 'plms']  // k_lms
@@ -98,7 +97,6 @@ class T2I:
         model
         config
         iterations
-        batch_size
         steps
         seed
         sampler_name
@@ -116,7 +114,6 @@ class T2I:
 
     def __init__(
         self,
-        batch_size=1,
         iterations=1,
         steps=50,
         seed=None,
@@ -138,7 +135,6 @@ class T2I:
         latent_diffusion_weights=False,
         device='cuda',
     ):
-        self.batch_size = batch_size
         self.iterations = iterations
         self.width = width
         self.height = height
@@ -174,9 +170,7 @@ class T2I:
         Optional named arguments are the same as those passed to T2I and prompt2image()
         """
         results = self.prompt2image(prompt, **kwargs)
-        pngwriter = PngWriter(
-            outdir, prompt, kwargs.get('batch_size', self.batch_size)
-        )
+        pngwriter = PngWriter(outdir, prompt)
         for r in results:
             pngwriter.write_image(r[0], r[1])
         return pngwriter.files_written
@@ -196,7 +190,6 @@ class T2I:
         self,
         # these are common
         prompt,
-        batch_size=None,
         iterations=None,
         steps=None,
         seed=None,
@@ -222,8 +215,7 @@ class T2I:
         ldm.prompt2image() is the common entry point for txt2img() and img2img()
         It takes the following arguments:
            prompt                          // prompt string (no default)
-           iterations                      // iterations (1); image count=iterations x batch_size
-           batch_size                      // images per iteration (1)
+           iterations                      // iterations (1); image count=iterations
            steps                           // refinement steps per iteration
            seed                            // seed for random number generator
            width                           // width of image, in multiples of 64 (512)
@@ -258,7 +250,6 @@ class T2I:
         height = height or self.height
         cfg_scale = cfg_scale or self.cfg_scale
         ddim_eta = ddim_eta or self.ddim_eta
-        batch_size = batch_size or self.batch_size
         iterations = iterations or self.iterations
         strength = strength or self.strength
         self.log_tokenization = log_tokenization
@@ -297,7 +288,6 @@ class T2I:
                 images_iterator = self._img2img(
                     prompt,
                     precision_scope=scope,
-                    batch_size=batch_size,
                     steps=steps,
                     cfg_scale=cfg_scale,
                     ddim_eta=ddim_eta,
@@ -312,7 +302,6 @@ class T2I:
                 images_iterator = self._txt2img(
                     prompt,
                     precision_scope=scope,
-                    batch_size=batch_size,
                     steps=steps,
                     cfg_scale=cfg_scale,
                     ddim_eta=ddim_eta,
@@ -325,11 +314,10 @@ class T2I:
             with scope(self.device.type), self.model.ema_scope():
                 for n in trange(iterations, desc='Generating'):
                     seed_everything(seed)
-                    iter_images = next(images_iterator)
-                    for image in iter_images:
-                        results.append([image, seed])
-                        if image_callback is not None:
-                            image_callback(image, seed)
+                    image = next(images_iterator)
+                    results.append([image, seed])
+                    if image_callback is not None:
+                        image_callback(image, seed)
                     seed = self._new_seed()
 
                 if upscale is not None or gfpgan_strength > 0:
@@ -399,7 +387,6 @@ class T2I:
         self,
         prompt,
         precision_scope,
-        batch_size,
         steps,
         cfg_scale,
         ddim_eta,
@@ -415,16 +402,16 @@ class T2I:
         sampler = self.sampler
 
         while True:
-            uc, c = self._get_uc_and_c(prompt, batch_size, skip_normalize)
+            uc, c = self._get_uc_and_c(prompt, skip_normalize)
             shape = [
                 self.latent_channels,
                 height // self.downsampling_factor,
                 width // self.downsampling_factor,
             ]
             samples, _ = sampler.sample(
+                batch_size=1,
                 S=steps,
                 conditioning=c,
-                batch_size=batch_size,
                 shape=shape,
                 verbose=False,
                 unconditional_guidance_scale=cfg_scale,
@@ -432,14 +419,13 @@ class T2I:
                 eta=ddim_eta,
                 img_callback=callback
             )
-            yield self._samples_to_images(samples)
+            yield self._sample_to_image(samples)
 
     @torch.no_grad()
     def _img2img(
         self,
         prompt,
         precision_scope,
-        batch_size,
         steps,
         cfg_scale,
         ddim_eta,
@@ -464,7 +450,6 @@ class T2I:
             sampler = self.sampler
 
         init_image = self._load_img(init_img,width,height).to(self.device)
-        init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         with precision_scope(self.device.type):
             init_latent = self.model.get_first_stage_encoding(
                 self.model.encode_first_stage(init_image)
@@ -478,11 +463,11 @@ class T2I:
         # print(f"target t_enc is {t_enc} steps")
 
         while True:
-            uc, c = self._get_uc_and_c(prompt, batch_size, skip_normalize)
+            uc, c = self._get_uc_and_c(prompt, skip_normalize)
 
             # encode (scaled latent)
             z_enc = sampler.stochastic_encode(
-                init_latent, torch.tensor([t_enc] * batch_size).to(self.device)
+                init_latent, torch.tensor([t_enc]).to(self.device)
             )
             # decode it
             samples = sampler.decode(
@@ -493,12 +478,12 @@ class T2I:
                 unconditional_guidance_scale=cfg_scale,
                 unconditional_conditioning=uc,
             )
-            yield self._samples_to_images(samples)
+            yield self._sample_to_image(samples)
 
     # TODO: does this actually need to run every loop? does anything in it vary by random seed?
-    def _get_uc_and_c(self, prompt, batch_size, skip_normalize):
+    def _get_uc_and_c(self, prompt, skip_normalize):
 
-        uc = self.model.get_learned_conditioning(batch_size * [''])
+        uc = self.model.get_learned_conditioning([''])
 
         # weighted sub-prompts
         subprompts, weights = T2I._split_weighted_subprompts(prompt)
@@ -515,27 +500,23 @@ class T2I:
                 self._log_tokenization(subprompts[i])
                 c = torch.add(
                     c,
-                    self.model.get_learned_conditioning(
-                        batch_size * [subprompts[i]]
-                    ),
+                    self.model.get_learned_conditioning([subprompts[i]]),
                     alpha=weight,
                 )
         else:   # just standard 1 prompt
             self._log_tokenization(prompt)
-            c = self.model.get_learned_conditioning(batch_size * [prompt])
+            c = self.model.get_learned_conditioning([prompt])
         return (uc, c)
 
-    def _samples_to_images(self, samples):
+    def _sample_to_image(self, samples):
         x_samples = self.model.decode_first_stage(samples)
         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
-        images = list()
-        for x_sample in x_samples:
-            x_sample = 255.0 * rearrange(
-                x_sample.cpu().numpy(), 'c h w -> h w c'
-            )
-            image = Image.fromarray(x_sample.astype(np.uint8))
-            images.append(image)
-        return images
+        if len(x_samples) != 1:
+            raise Exception(f'expected to get a single image, but got {len(x_samples)}')
+        x_sample = 255.0 * rearrange(
+            x_samples[0].cpu().numpy(), 'c h w -> h w c'
+        )
+        return Image.fromarray(x_sample.astype(np.uint8))
 
     def _new_seed(self):
         self.seed = random.randrange(0, np.iinfo(np.uint32).max)
