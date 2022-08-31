@@ -50,6 +50,8 @@ class InitImageResizer():
         new_image = Image.new('RGB',(width,height))
         new_image.paste(resized_image,((width-rw)//2,(height-rh)//2))
 
+        print(f'>> Resized image size to {width}x{height}')
+
         return new_image
 
 def make_grid(image_list, rows=None, cols=None):
