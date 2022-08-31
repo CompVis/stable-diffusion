@@ -123,7 +123,6 @@ def generate(
     image,
     prompt,
     strength,
-    latent_scale,
     ddim_steps,
     n_iter,
     batch_size,
@@ -144,6 +143,7 @@ def generate(
         seed = randint(0, 1000000)
     seed = int(seed)
     seed_everything(seed)
+    sampler = "ddim"
 
     # Logging
     logger(locals(), log_csv = "logs/inpaint_gradio_logs.csv")
@@ -181,7 +181,6 @@ def generate(
 
     init_latent = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image))  # move to latent space
     init_latent = repeat(init_latent, "1 ... -> b ...", b=batch_size)
-    scaled_latent = latent_scale * init_latent
 
     if device != "cpu":
         mem = torch.cuda.memory_allocated() / 1e6
@@ -236,18 +235,19 @@ def generate(
 
                     # encode (scaled latent)
                     z_enc = model.stochastic_encode(
-                        scaled_latent, torch.tensor([t_enc] * batch_size).to(device),
+                        init_latent, torch.tensor([t_enc] * batch_size).to(device),
                         seed, ddim_eta, ddim_steps)
                                        
                     # decode it
-                    samples_ddim = model.decode(
-                        z_enc,
-                        c,
+                    samples_ddim = model.sample(
                         t_enc,
+                        c,
+                        z_enc,
                         unconditional_guidance_scale=scale,
                         unconditional_conditioning=uc,
                         mask = mask,
-                        init_latent = init_latent
+                        x_T = init_latent,
+                        sampler = sampler,
                     )
 
                     modelFS.to(device)
@@ -300,7 +300,6 @@ demo = gr.Interface(
         gr.Image(tool="sketch", type="pil"),
         "text",
         gr.Slider(0, 0.99, value=0.99, step = 0.01),
-        gr.Slider(0, 1, value=1),
         gr.Slider(1, 1000, value=50),
         gr.Slider(1, 100, step=1),
         gr.Slider(1, 100, step=1),

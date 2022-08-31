@@ -93,6 +93,7 @@ def generate(
     img_format,
     turbo,
     full_precision,
+    sampler,
 ):
 
     C = 4
@@ -107,7 +108,6 @@ def generate(
         seed = randint(0, 1000000)
     seed = int(seed)
     seed_everything(seed)
-
     # Logging
     logger(locals(), "logs/txt2img_gradio_logs.csv")
 
@@ -160,7 +160,7 @@ def generate(
                     else:
                         c = modelCS.get_learned_conditioning(prompts)
 
-                    shape = [C, Height // f, Width // f]
+                    shape = [batch_size, C, Height // f, Width // f]
 
                     if device != "cpu":
                         mem = torch.cuda.memory_allocated() / 1e6
@@ -171,7 +171,6 @@ def generate(
                     samples_ddim = model.sample(
                         S=ddim_steps,
                         conditioning=c,
-                        batch_size=batch_size,
                         seed=seed,
                         shape=shape,
                         verbose=False,
@@ -179,6 +178,7 @@ def generate(
                         unconditional_conditioning=uc,
                         eta=ddim_eta,
                         x_T=start_code,
+                        sampler = sampler,
                     )
 
                     modelFS.to(device)
@@ -243,6 +243,7 @@ demo = gr.Interface(
         gr.Radio(["png", "jpg"], value='png'),
         "checkbox",
         "checkbox",
+        gr.Radio(["ddim", "plms"], value="plms"),
     ],
     outputs=["image", "text"],
 )

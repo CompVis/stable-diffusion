@@ -120,6 +120,7 @@ def generate(
     seed_everything(seed)
 
     # Logging
+    sampler = "ddim"
     logger(locals(), log_csv = "logs/img2img_gradio_logs.csv")
 
     init_image = load_img(image, Height, Width).to(device)
@@ -203,12 +204,13 @@ def generate(
                         init_latent, torch.tensor([t_enc] * batch_size).to(device), seed, ddim_eta, ddim_steps
                     )
                     # decode it
-                    samples_ddim = model.decode(
-                        z_enc,
-                        c,
-                        t_enc,
-                        unconditional_guidance_scale=scale,
-                        unconditional_conditioning=uc,
+                    samples_ddim = model.sample(
+                                    t_enc,
+                                    c,
+                                    z_enc,
+                                    unconditional_guidance_scale=scale,
+                                    unconditional_conditioning=uc,
+                                    sampler = sampler
                     )
 
                     modelFS.to(device)

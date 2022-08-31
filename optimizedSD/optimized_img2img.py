@@ -167,6 +167,13 @@ parser.add_argument(
     choices=["jpg", "png"],
     default="png",
 )
+parser.add_argument(
+    "--sampler",
+    type=str,
+    help="sampler",
+    choices=["ddim"],
+    default="ddim",
+)
 opt = parser.parse_args()
 
 tic = time.time()
@@ -309,12 +316,13 @@ with torch.no_grad():
                     opt.ddim_steps,
                 )
                 # decode it
-                samples_ddim = model.decode(
-                    z_enc,
-                    c,
+                samples_ddim = model.sample(
                     t_enc,
+                    c,
+                    z_enc,
                     unconditional_guidance_scale=opt.scale,
                     unconditional_conditioning=uc,
+                    sampler = opt.sampler
                 )
 
                 modelFS.to(opt.device)
