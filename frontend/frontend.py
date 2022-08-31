@@ -23,10 +23,10 @@ def draw_gradio_ui(opt, img2img=lambda x: x, txt2img=lambda x: x, txt2img_defaul
 
                 with gr.Row(elem_id='body').style(equal_height=False):
                     with gr.Column():
-                        txt2img_height = gr.Slider(minimum=64, maximum=2048, step=64, label="Height",
-                                                   value=txt2img_defaults["height"])
                         txt2img_width = gr.Slider(minimum=64, maximum=2048, step=64, label="Width",
                                                   value=txt2img_defaults["width"])
+                        txt2img_height = gr.Slider(minimum=64, maximum=2048, step=64, label="Height",
+                                                   value=txt2img_defaults["height"])
                         txt2img_cfg = gr.Slider(minimum=-40.0, maximum=30.0, step=0.5,
                                                 label='Classifier Free Guidance Scale (how strongly the image should follow the prompt)',
                                                 value=txt2img_defaults['cfg_scale'])
