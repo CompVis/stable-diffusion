@@ -104,9 +104,8 @@ class DreamServer(BaseHTTPRequestHandler):
                 with open("./outputs/img-samples/dream_web_log.txt", "a") as log:
                     log.write(f"{path}: {json.dumps(config)}\n")
 
-                # TODO fix format of this event
                 self.wfile.write(bytes(json.dumps(
-                    {'event': 'result', 'files': [path, seed], 'config': config}
+                    {'event': 'result', 'url': path, 'seed': seed, 'config': config}
                 ) + '\n',"utf-8"))
 
             # control state of the "postprocessing..." message
