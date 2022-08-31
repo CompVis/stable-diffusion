@@ -106,3 +106,7 @@ def resize_image(resize_mode, im, width, height):
             res.paste(resized.resize((fill_width, height), box=(resized.width, 0, resized.width, height)), box=(fill_width + src_w, 0))
 
     return res
+
+def update_dimensions_info(width, height):
+    pixel_count_formated = "{:,.0f}".format(width * height)
+    return f"Aspect ratio: {round(width / height, 5)}\nTotal pixel count: {pixel_count_formated}"
