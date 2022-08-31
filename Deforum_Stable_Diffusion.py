@@ -462,7 +462,7 @@ def DeforumAnimArgs():
     translation_y = "0: (0)"#@param {type:"string"}
     noise_schedule = "0: (0.02)"#@param {type:"string"}
     strength_schedule = "0: (0.65)"#@param {type:"string"}
-    scale_schedule = "0: (1.0)"#@param {type:"string"}
+    contrast_schedule = "0: (1.0)"#@param {type:"string"}
 
     #@markdown ####**Coherence:**
     color_coherence = 'Match Frame 0 LAB' #@param ['None', 'Match Frame 0 HSV', 'Match Frame 0 LAB', 'Match Frame 0 RGB'] {type:'string'}
@@ -537,7 +537,7 @@ if anim_args.key_frames:
     translation_y_series = get_inbetweens(parse_key_frames(anim_args.translation_y))
     noise_schedule_series = get_inbetweens(parse_key_frames(anim_args.noise_schedule))
     strength_schedule_series = get_inbetweens(parse_key_frames(anim_args.strength_schedule))
-    scale_schedule_series = get_inbetweens(parse_key_frames(anim_args.scale_schedule))
+    contrast_schedule_series = get_inbetweens(parse_key_frames(anim_args.contrast_schedule))
 
 # %%
 # !! {"metadata":{
@@ -786,7 +786,7 @@ def render_animation(args, anim_args):
                 translation_y = translation_y_series[frame_idx]
                 noise = noise_schedule_series[frame_idx]
                 strength = strength_schedule_series[frame_idx]
-                scale = scale_schedule_series[frame_idx]
+                contrast = contrast_schedule_series[frame_idx]
                 print(
                     f'angle: {angle}',
                     f'zoom: {zoom}',
@@ -794,7 +794,7 @@ def render_animation(args, anim_args):
                     f'translation_y: {translation_y}',
                     f'noise: {noise}',
                     f'strength: {strength}',
-                    f'scale: {scale}',
+                    f'contrast: {contrast}',
                 )
             xform = make_xform_2d(args.W, args.H, translation_x, translation_y, angle, zoom)
 
@@ -815,9 +815,9 @@ def render_animation(args, anim_args):
                     prev_img = maintain_colors(prev_img, color_match_sample, anim_args.color_coherence)
 
             # apply scaling
-            scaled_sample = prev_img * scale
+            contrast_sample = prev_img * contrast
             # apply frame noising
-            noised_sample = add_noise(sample_from_cv2(scaled_sample), noise)
+            noised_sample = add_noise(sample_from_cv2(contrast_sample), noise)
 
             # use transformed previous frame as init for current
             args.use_init = True
