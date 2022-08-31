@@ -11,6 +11,14 @@ Notebook by [deforum](https://discord.gg/upmXXsrwZc)
 
 # %%
 # !! {"metadata":{
+# !!   "id": "T4knibRpAQ06"
+# !! }}
+"""
+# Setup
+"""
+
+# %%
+# !! {"metadata":{
 # !!   "id": "2g-f7cQmf2Nt",
 # !!   "cellView": "form"
 # !! }}
@@ -24,7 +32,7 @@ print(sub_p_res)
 # !!   "cellView": "form",
 # !!   "id": "TxIOPT0G5Lx1"
 # !! }}
-#@markdown **Model Path Variables**
+#@markdown **Model and Output Paths**
 # ask for the link
 print("Local Path Variables:\n")
 
@@ -145,7 +153,7 @@ def add_noise(sample: torch.Tensor, noise_amt: float):
     return sample + torch.randn(sample.shape, device=sample.device) * noise_amt
 
 def get_output_folder(output_path, batch_folder):
-    out_path = os.path.join(output_path,time.strftime('%Y-%m/'))
+    out_path = os.path.join(output_path,time.strftime('%Y-%m'))
     if batch_folder != "":
         out_path = os.path.join(out_path, batch_folder)
     os.makedirs(out_path, exist_ok=True)
@@ -235,7 +243,7 @@ def make_callback(sampler_name, dynamic_threshold=None, static_threshold=None, m
     if init_latent is not None:
         noise = torch.randn_like(init_latent, device=device) * masked_noise_modifier
     if sigmas is not None and len(sigmas) > 0:
-        mask_schedule = torch.flip(sigmas/sigmas[0],[0])
+        mask_schedule, _ = torch.sort(sigmas/torch.max(sigmas))
     elif len(sigmas) == 0:
         mask = None # no mask needed if no steps (usually happens because strength==1.0)
     if sampler_name in ["plms","ddim"]: 
@@ -292,18 +300,19 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
         
     t_enc = int((1.0-args.strength) * args.steps)
 
-    sigmas = model_wrap.get_sigmas(args.steps)
-    if args.sampler in ['plms','ddim']:
-        sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.ddim_eta, verbose=False)
-    sigmas = sigmas[len(sigmas)-t_enc-1:]
+    # Noise schedule for the k-diffusion samplers (used for masking)
+    k_sigmas = model_wrap.get_sigmas(args.steps)
+    k_sigmas = k_sigmas[len(k_sigmas)-t_enc-1:]
 
+    if args.sampler in ['plms','ddim']:
+        sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.ddim_eta, ddim_discretize='fill', verbose=False)
 
     callback = make_callback(sampler_name=args.sampler,
                             dynamic_threshold=args.dynamic_threshold, 
                             static_threshold=args.static_threshold,
                             mask=mask, 
                             init_latent=init_latent,
-                            sigmas=sigmas,
+                            sigmas=k_sigmas,
                             sampler=sampler)    
 
     results = []
@@ -395,8 +404,7 @@ def sample_to_cv2(sample: torch.Tensor) -> np.ndarray:
 # !!   "cellView": "form",
 # !!   "id": "CIUJ7lWI4v53"
 # !! }}
-#@markdown **Select Model**
-print("\nSelect Model:\n")
+#@markdown **Select and Load Model**
 
 model_config = "v1-inference.yaml" #@param ["custom","v1-inference.yaml"]
 model_checkpoint =  "sd-v1-4.ckpt" #@param ["custom","sd-v1-4-full-ema.ckpt","sd-v1-4.ckpt","sd-v1-3-full-ema.ckpt","sd-v1-3.ckpt","sd-v1-2-full-ema.ckpt","sd-v1-2.ckpt","sd-v1-1-full-ema.ckpt","sd-v1-1.ckpt"]
@@ -404,6 +412,9 @@ custom_config_path = "" #@param {type:"string"}
 custom_checkpoint_path = "" #@param {type:"string"}
 
 check_sha256 = True #@param {type:"boolean"}
+
+load_on_run_all = True #@param {type: 'boolean'}
+half_precision = True # needs to be fixed
 
 model_map = {
     "sd-v1-4-full-ema.ckpt": {'sha256': '14749efc0ae8ef0329391ad4436feb781b402f4fece4883c7ad8d10556d8a36a'},
@@ -416,34 +427,27 @@ model_map = {
     "sd-v1-1.ckpt": {'sha256': '86cd1d3ccb044d7ba8db743d717c9bac603c4043508ad2571383f954390f3cea'}
 }
 
-def wget(url, outputdir):
-    res = subprocess.run(['wget', url, '-P', f'{outputdir}'], stdout=subprocess.PIPE).stdout.decode('utf-8')
-    print(res)
-
-def download_model(model_checkpoint):
-    download_link = model_map[model_checkpoint]["link"][0]
-    print(f"!wget -O {models_path}/{model_checkpoint} {download_link}")
-    wget(download_link, models_path)
-    return
-
 # config path
-if os.path.exists(models_path+'/'+model_config):
-    print(f"{models_path+'/'+model_config} exists")
+ckpt_config_path = custom_config_path if model_config == "custom" else os.path.join(models_path, model_config)
+if os.path.exists(ckpt_config_path):
+    print(f"{ckpt_config_path} exists")
 else:
-    print("cp ./stable-diffusion/configs/stable-diffusion/v1-inference.yaml $models_path/.")
-    shutil.copy('./stable-diffusion/configs/stable-diffusion/v1-inference.yaml', models_path)
+    ckpt_config_path = "./stable-diffusion/configs/stable-diffusion/v1-inference.yaml"
+print(f"Using config: {ckpt_config_path}")
 
 # checkpoint path or download
-if os.path.exists(models_path+'/'+model_checkpoint):
-    print(f"{models_path+'/'+model_checkpoint} exists")
+ckpt_path = custom_checkpoint_path if model_checkpoint == "custom" else os.path.join(models_path, model_checkpoint)
+ckpt_valid = True
+if os.path.exists(ckpt_path):
+    print(f"{ckpt_path} exists")
 else:
-    print(f"download model checkpoint and place in {models_path+'/'+model_checkpoint}")
-    #download_model(model_checkpoint)
+    print(f"Please download model checkpoint and place in {os.path.join(models_path, model_checkpoint)}")
+    ckpt_valid = False
 
-if check_sha256 and model_checkpoint != "custom":
+if check_sha256 and model_checkpoint != "custom" and ckpt_valid:
     import hashlib
     print("\n...checking sha256")
-    with open(models_path+'/'+model_checkpoint, "rb") as f:
+    with open(ckpt_path, "rb") as f:
         bytes = f.read() 
         hash = hashlib.sha256(bytes).hexdigest()
         del bytes
@@ -451,26 +455,10 @@ if check_sha256 and model_checkpoint != "custom":
         print("hash is correct\n")
     else:
         print("hash in not correct\n")
+        ckpt_valid = False
 
-if model_config == "custom":
-  config = custom_config_path
-else:
-  config = models_path+'/'+model_config
-
-if model_checkpoint == "custom":
-  ckpt = custom_checkpoint_path
-else:
-  ckpt = models_path+'/'+model_checkpoint
-
-print(f"config: {config}")
-print(f"ckpt: {ckpt}")
-
-# %%
-# !! {"metadata":{
-# !!   "cellView": "form",
-# !!   "id": "IJiMgz_96nr3"
-# !! }}
-#@markdown **Load Stable Diffusion**
+if ckpt_valid:
+    print(f"Using ckpt: {ckpt_path}")
 
 def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_precision=True):
     map_location = "cuda" #@param ["cpu", "cuda"]
@@ -488,7 +476,6 @@ def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_prec
         print("unexpected keys:")
         print(u)
 
-    #model.cuda()
     if half_precision:
         model = model.half().to(device)
     else:
@@ -496,15 +483,12 @@ def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_prec
     model.eval()
     return model
 
-load_on_run_all = True #@param {type: 'boolean'}
-half_precision = True # needs to be fixed
+if load_on_run_all and ckpt_valid:
+    local_config = OmegaConf.load(f"{ckpt_config_path}")
+    model = load_model_from_config(local_config, f"{ckpt_path}",half_precision=half_precision)
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    model = model.to(device)
 
-if load_on_run_all:
-
-  local_config = OmegaConf.load(f"{config}")
-  model = load_model_from_config(local_config, f"{ckpt}",half_precision=half_precision)
-  device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-  model = model.to(device)
 
 # %%
 # !! {"metadata":{
@@ -544,10 +528,10 @@ def DeforumAnimArgs():
     translation_y = "0: (0)"#@param {type:"string"}
     noise_schedule = "0: (0.02)"#@param {type:"string"}
     strength_schedule = "0: (0.65)"#@param {type:"string"}
-    scale_schedule = "0: (1.0)"#@param {type:"string"}
+    contrast_schedule = "0: (1.0)"#@param {type:"string"}
 
     #@markdown ####**Coherence:**
-    color_coherence = 'Match Frame 0 HSV' #@param ['None', 'Match Frame 0 HSV', 'Match Frame 0 LAB', 'Match Frame 0 RGB'] {type:'string'}
+    color_coherence = 'Match Frame 0 LAB' #@param ['None', 'Match Frame 0 HSV', 'Match Frame 0 LAB', 'Match Frame 0 RGB'] {type:'string'}
 
     #@markdown ####**Video Input:**
     video_init_path ='/content/video_in.mp4'#@param {type:"string"}
@@ -619,7 +603,7 @@ if anim_args.key_frames:
     translation_y_series = get_inbetweens(parse_key_frames(anim_args.translation_y))
     noise_schedule_series = get_inbetweens(parse_key_frames(anim_args.noise_schedule))
     strength_schedule_series = get_inbetweens(parse_key_frames(anim_args.strength_schedule))
-    scale_schedule_series = get_inbetweens(parse_key_frames(anim_args.scale_schedule))
+    contrast_schedule_series = get_inbetweens(parse_key_frames(anim_args.contrast_schedule))
 
 # %%
 # !! {"metadata":{
@@ -665,7 +649,6 @@ def DeforumArgs():
     #@markdown **Save & Display Settings**
     batch_name = "StableFun" #@param {type:"string"}
     outdir = get_output_folder(output_path, batch_name)
-    save_grid = False
     save_settings = True #@param {type:"boolean"}
     save_samples = True #@param {type:"boolean"}
     display_samples = True #@param {type:"boolean"}
@@ -713,15 +696,6 @@ def DeforumArgs():
 
     return locals()
 
-def next_seed(args):
-    if args.seed_behavior == 'iter':
-        args.seed += 1
-    elif args.seed_behavior == 'fixed':
-        pass # always keep seed the same
-    else:
-        args.seed = random.randint(0, 2**32)
-    return args.seed
-
 
 args = SimpleNamespace(**DeforumArgs())
 args.timestring = time.strftime('%Y%m%d%H%M%S')
@@ -740,6 +714,15 @@ if args.sampler == 'plms' and (args.use_init or anim_args.animation_mode != 'Non
 if args.sampler != 'ddim':
     args.ddim_eta = 0
 
+
+def next_seed(args):
+    if args.seed_behavior == 'iter':
+        args.seed += 1
+    elif args.seed_behavior == 'fixed':
+        pass # always keep seed the same
+    else:
+        args.seed = random.randint(0, 2**32)
+    return args.seed
 
 def render_image_batch(args):
     args.prompts = prompts
@@ -775,12 +758,17 @@ def render_image_batch(args):
     else:
         init_array = [""]
 
+    # when doing large batches don't flood browser with images
+    clear_between_batches = args.n_batch >= 32
+
     for iprompt, prompt in enumerate(prompts):  
         args.prompt = prompt
 
         all_images = []
 
         for batch_index in range(args.n_batch):
+            if clear_between_batches: 
+                display.clear_output(wait=True)            
             print(f"Batch {batch_index+1} of {args.n_batch}")
             
             for image in init_array: # iterates the init images
@@ -802,7 +790,10 @@ def render_image_batch(args):
             grid = make_grid(all_images, nrow=int(len(all_images)/args.grid_rows))
             grid = rearrange(grid, 'c h w -> h w c').cpu().numpy()
             filename = f"{args.timestring}_{iprompt:05d}_grid_{args.seed}.png"
-            Image.fromarray(grid.astype(np.uint8)).save(os.path.join(args.outdir, filename))
+            grid_image = Image.fromarray(grid.astype(np.uint8))
+            grid_image.save(os.path.join(args.outdir, filename))
+            display.clear_output(wait=True)            
+            display.display(grid_image)
 
 
 def render_animation(args, anim_args):
@@ -862,7 +853,7 @@ def render_animation(args, anim_args):
                 translation_y = translation_y_series[frame_idx]
                 noise = noise_schedule_series[frame_idx]
                 strength = strength_schedule_series[frame_idx]
-                scale = scale_schedule_series[frame_idx]
+                contrast = contrast_schedule_series[frame_idx]
                 print(
                     f'angle: {angle}',
                     f'zoom: {zoom}',
@@ -870,7 +861,7 @@ def render_animation(args, anim_args):
                     f'translation_y: {translation_y}',
                     f'noise: {noise}',
                     f'strength: {strength}',
-                    f'scale: {scale}',
+                    f'contrast: {contrast}',
                 )
             xform = make_xform_2d(args.W, args.H, translation_x, translation_y, angle, zoom)
 
@@ -891,9 +882,9 @@ def render_animation(args, anim_args):
                     prev_img = maintain_colors(prev_img, color_match_sample, anim_args.color_coherence)
 
             # apply scaling
-            scaled_sample = prev_img * scale
+            contrast_sample = prev_img * contrast
             # apply frame noising
-            noised_sample = add_noise(sample_from_cv2(scaled_sample), noise)
+            noised_sample = add_noise(sample_from_cv2(contrast_sample), noise)
 
             # use transformed previous frame as init for current
             args.use_init = True
