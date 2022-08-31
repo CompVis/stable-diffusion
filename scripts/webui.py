@@ -847,13 +847,10 @@ def process_images(
                 if use_GFPGAN and GFPGAN is not None and not use_RealESRGAN:
                     skip_save = True # #287 >_>
                     torch_gc()
-                    cropped_faces, restored_faces, restored_img = GFPGAN.enhance(x_sample[:,:,::-1], has_aligned=False, only_center_face=False, paste_back=True)
+                    cropped_faces, restored_faces, restored_img = GFPGAN.enhance(original_sample[:,:,::-1], has_aligned=False, only_center_face=False, paste_back=True)
                     gfpgan_sample = restored_img[:,:,::-1]
                     gfpgan_image = Image.fromarray(gfpgan_sample)
                     gfpgan_filename = original_filename + '-gfpgan'
-                    save_sample(image, sample_path_i, original_filename, jpg_sample, prompts, seeds, width, height, steps, cfg_scale, 
-normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img, uses_loopback, uses_random_seed_loopback, skip_save,
-skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode)
                     save_sample(gfpgan_image, sample_path_i, gfpgan_filename, jpg_sample, prompts, seeds, width, height, steps, cfg_scale, 
 normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img, uses_loopback, uses_random_seed_loopback, skip_save,
 skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode)
@@ -866,13 +863,10 @@ skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoisin
                     torch_gc()
                     if RealESRGAN.model.name != realesrgan_model_name:
                         try_loading_RealESRGAN(realesrgan_model_name)
-                    output, img_mode = RealESRGAN.enhance(x_sample[:,:,::-1])
+                    output, img_mode = RealESRGAN.enhance(original_sample[:,:,::-1])
                     esrgan_filename = original_filename + '-esrgan4x'
                     esrgan_sample = output[:,:,::-1]
                     esrgan_image = Image.fromarray(esrgan_sample)
-                    save_sample(image, sample_path_i, original_filename, jpg_sample, prompts, seeds, width, height, steps, cfg_scale, 
-normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img, uses_loopback, uses_random_seed_loopback, skip_save,
-skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode)
                     save_sample(esrgan_image, sample_path_i, esrgan_filename, jpg_sample, prompts, seeds, width, height, steps, cfg_scale, 
 normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img, uses_loopback, uses_random_seed_loopback, skip_save,
 skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode)
@@ -891,9 +885,6 @@ skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoisin
                     gfpgan_esrgan_filename = original_filename + '-gfpgan-esrgan4x'
                     gfpgan_esrgan_sample = output[:,:,::-1]
                     gfpgan_esrgan_image = Image.fromarray(gfpgan_esrgan_sample)
-                    save_sample(image, sample_path_i, original_filename, jpg_sample, prompts, seeds, width, height, steps, cfg_scale, 
-normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img, uses_loopback, uses_random_seed_loopback, skip_save,
-skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode)
                     save_sample(gfpgan_esrgan_image, sample_path_i, gfpgan_esrgan_filename, jpg_sample, prompts, seeds, width, height, steps, cfg_scale, 
 normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img, uses_loopback, uses_random_seed_loopback, skip_save,
 skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode)
@@ -901,7 +892,7 @@ skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoisin
                     if simple_templating:
                         grid_captions.append( captions[i] + "\ngfpgan_esrgan" )
 
-                if not skip_save or (not use_GFPGAN or not use_RealESRGAN):
+                if not skip_save:
                     save_sample(image, sample_path_i, filename, jpg_sample, prompts, seeds, width, height, steps, cfg_scale, 
 normalize_prompt_weights, use_GFPGAN, write_info_files, prompt_matrix, init_img, uses_loopback, uses_random_seed_loopback, skip_save,
 skip_grid, sort_samples, sampler_name, ddim_eta, n_iter, batch_size, i, denoising_strength, resize_mode)
@@ -1126,15 +1117,15 @@ def img2img(prompt: str, image_editor_mode: str, init_info, mask_mode: str, mask
 
     if image_editor_mode == 'Mask':
         init_img = init_info["image"]
-        init_img = init_img.convert("RGBA")
+        init_img = init_img.convert("RGB")
         init_img = resize_image(resize_mode, init_img, width, height)
         init_mask = init_info["mask"]
-        init_mask = init_mask.convert("RGB")
         init_mask = resize_image(resize_mode, init_mask, width, height)
         keep_mask = mask_mode == 0
+        init_mask = init_mask.convert("RGB")
         init_mask = init_mask if keep_mask else ImageOps.invert(init_mask)
     else:
-        init_img = init_info
+        init_img = init_info.convert("RGB")
         init_mask = None
         keep_mask = False
 
@@ -1144,13 +1135,14 @@ def img2img(prompt: str, image_editor_mode: str, init_info, mask_mode: str, mask
     def init():
         image = init_img.convert("RGB")
         image = resize_image(resize_mode, image, width, height)
+        image = init_img.convert("RGB")
         image = np.array(image).astype(np.float32) / 255.0
         image = image[None].transpose(0, 3, 1, 2)
         image = torch.from_numpy(image)
 
         mask_channel = None
         if image_editor_mode == "Uncrop":
-            alpha = init_img.convert("RGBA")
+            alpha = init_img.convert("RGB")
             alpha = resize_image(resize_mode, alpha, width // 8, height // 8)
             mask_channel = alpha.split()[-1]
             mask_channel = mask_channel.filter(ImageFilter.GaussianBlur(4))
@@ -1229,70 +1221,13 @@ def img2img(prompt: str, image_editor_mode: str, init_info, mask_mode: str, mask
         return samples_ddim
 
 
-    try:
-        if loopback:
-            output_images, info = None, None
-            history = []
-            initial_seed = None
 
-            for i in range(n_iter):
-                output_images, seed, info, stats = process_images(
-                    outpath=outpath,
-                    func_init=init,
-                    func_sample=sample,
-                    prompt=prompt,
-                    seed=seed,
-                    sampler_name=sampler_name,
-                    skip_save=skip_save,
-                    skip_grid=skip_grid,
-                    batch_size=1,
-                    n_iter=1,
-                    steps=ddim_steps,
-                    cfg_scale=cfg_scale,
-                    width=width,
-                    height=height,
-                    prompt_matrix=prompt_matrix,
-                    use_GFPGAN=use_GFPGAN,
-                    use_RealESRGAN=False, # Forcefully disable upscaling when using loopback
-                    realesrgan_model_name=realesrgan_model_name,
-                    fp=fp,
-                    do_not_save_grid=True,
-                    normalize_prompt_weights=normalize_prompt_weights,
-                    init_img=init_img,
-                    init_mask=init_mask,
-                    keep_mask=keep_mask,
-                    mask_blur_strength=mask_blur_strength,
-                    denoising_strength=denoising_strength,
-                    resize_mode=resize_mode,
-                    uses_loopback=loopback,
-                    uses_random_seed_loopback=random_seed_loopback,
-                    sort_samples=sort_samples,
-                    write_info_files=write_info_files,
-                    jpg_sample=jpg_sample,
-                )
+    if loopback:
+        output_images, info = None, None
+        history = []
+        initial_seed = None
 
-                if initial_seed is None:
-                    initial_seed = seed
-
-                init_img = output_images[0]
-                if not random_seed_loopback:
-                    seed = seed + 1
-                else:
-                    seed = seed_to_int(None)
-                denoising_strength = max(denoising_strength * 0.95, 0.1)
-                history.append(init_img)
-
-            if not skip_grid:
-                grid_count = get_next_sequence_number(outpath, 'grid-')
-                grid = image_grid(history, batch_size, force_n_rows=1)
-                grid_file = f"grid-{grid_count:05}-{seed}_{prompt.replace(' ', '_').translate({ord(x): '' for x in invalid_filename_chars})[:128]}.{grid_ext}"
-                grid.save(os.path.join(outpath, grid_file), grid_format, quality=grid_quality, lossless=grid_lossless, optimize=True)
-
-
-            output_images = history
-            seed = initial_seed
-
-        else:
+        for i in range(n_iter):
             output_images, seed, info, stats = process_images(
                 outpath=outpath,
                 func_init=init,
@@ -1302,17 +1237,18 @@ def img2img(prompt: str, image_editor_mode: str, init_info, mask_mode: str, mask
                 sampler_name=sampler_name,
                 skip_save=skip_save,
                 skip_grid=skip_grid,
-                batch_size=batch_size,
-                n_iter=n_iter,
+                batch_size=1,
+                n_iter=1,
                 steps=ddim_steps,
                 cfg_scale=cfg_scale,
                 width=width,
                 height=height,
                 prompt_matrix=prompt_matrix,
                 use_GFPGAN=use_GFPGAN,
-                use_RealESRGAN=use_RealESRGAN,
+                use_RealESRGAN=False, # Forcefully disable upscaling when using loopback
                 realesrgan_model_name=realesrgan_model_name,
                 fp=fp,
+                do_not_save_grid=True,
                 normalize_prompt_weights=normalize_prompt_weights,
                 init_img=init_img,
                 init_mask=init_mask,
@@ -1321,22 +1257,71 @@ def img2img(prompt: str, image_editor_mode: str, init_info, mask_mode: str, mask
                 denoising_strength=denoising_strength,
                 resize_mode=resize_mode,
                 uses_loopback=loopback,
+                uses_random_seed_loopback=random_seed_loopback,
                 sort_samples=sort_samples,
                 write_info_files=write_info_files,
                 jpg_sample=jpg_sample,
             )
 
-        del sampler
+            if initial_seed is None:
+                initial_seed = seed
 
-        return output_images, seed, info, stats
-    except RuntimeError as e:
-        err = e
-        err_msg = f'CRASHED:<br><textarea rows="5" style="color:white;background: black;width: -webkit-fill-available;font-family: monospace;font-size: small;font-weight: bold;">{str(e)}</textarea><br><br>Please wait while the program restarts.'
-        stats = err_msg
-        return [], seed, 'err', stats
-    finally:
-        if err:
-            crash(err, '!!Runtime error (img2img)!!')
+            init_img = output_images[0]
+            if not random_seed_loopback:
+                seed = seed + 1
+            else:
+                seed = seed_to_int(None)
+            denoising_strength = max(denoising_strength * 0.95, 0.1)
+            history.append(init_img)
+
+        if not skip_grid:
+            grid_count = get_next_sequence_number(outpath, 'grid-')
+            grid = image_grid(history, batch_size, force_n_rows=1)
+            grid_file = f"grid-{grid_count:05}-{seed}_{prompt.replace(' ', '_').translate({ord(x): '' for x in invalid_filename_chars})[:128]}.{grid_ext}"
+            grid.save(os.path.join(outpath, grid_file), grid_format, quality=grid_quality, lossless=grid_lossless, optimize=True)
+
+
+        output_images = history
+        seed = initial_seed
+
+    else:
+        output_images, seed, info, stats = process_images(
+            outpath=outpath,
+            func_init=init,
+            func_sample=sample,
+            prompt=prompt,
+            seed=seed,
+            sampler_name=sampler_name,
+            skip_save=skip_save,
+            skip_grid=skip_grid,
+            batch_size=batch_size,
+            n_iter=n_iter,
+            steps=ddim_steps,
+            cfg_scale=cfg_scale,
+            width=width,
+            height=height,
+            prompt_matrix=prompt_matrix,
+            use_GFPGAN=use_GFPGAN,
+            use_RealESRGAN=use_RealESRGAN,
+            realesrgan_model_name=realesrgan_model_name,
+            fp=fp,
+            normalize_prompt_weights=normalize_prompt_weights,
+            init_img=init_img,
+            init_mask=init_mask,
+            keep_mask=keep_mask,
+            mask_blur_strength=mask_blur_strength,
+            denoising_strength=denoising_strength,
+            resize_mode=resize_mode,
+            uses_loopback=loopback,
+            sort_samples=sort_samples,
+            write_info_files=write_info_files,
+            jpg_sample=jpg_sample,
+        )
+
+    del sampler
+
+    return output_images, seed, info, stats
+
 
 prompt_parser = re.compile("""
     (?P<prompt>                # capture group for 'prompt'
