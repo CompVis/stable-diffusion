@@ -17,9 +17,8 @@ from PIL import Image, PngImagePlugin
 
 
 class PngWriter:
-    def __init__(self, outdir, prompt=None, batch_size=1):
+    def __init__(self, outdir, prompt=None):
         self.outdir = outdir
-        self.batch_size = batch_size
         self.prompt = prompt
         self.filepath = None
         self.files_written = []
@@ -50,10 +49,7 @@ class PngWriter:
             )
             basecount = int(filename.split('.', 1)[0])
             basecount += 1
-            if self.batch_size > 1:
-                filename = f'{basecount:06}.{seed}.01.png'
-            else:
-                filename = f'{basecount:06}.{seed}.png'
+            filename = f'{basecount:06}.{seed}.png'
             return os.path.join(self.outdir, filename)
 
         else:
@@ -68,11 +64,6 @@ class PngWriter:
             while not finished:
                 series += 1
                 filename = f'{basecount:06}.{seed}.png'
-                path = os.path.join(self.outdir, filename)
-                if self.batch_size > 1 or os.path.exists(path):
-                    if upscaled:
-                        break
-                    filename = f'{basecount:06}.{seed}.{series:02}.png'
                 path = os.path.join(self.outdir, filename)
                 finished = not os.path.exists(path)
             return os.path.join(self.outdir, filename)
