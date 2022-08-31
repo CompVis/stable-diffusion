@@ -17,62 +17,32 @@ from PIL import Image, PngImagePlugin
 
 
 class PngWriter:
-    def __init__(self, outdir, prompt=None):
+    def __init__(self, outdir):
         self.outdir = outdir
-        self.prompt = prompt
-        self.filepath = None
-        self.files_written = []
         os.makedirs(outdir, exist_ok=True)
 
-    def write_image(self, image, seed, upscaled=False):
-        self.filepath = self.unique_filename(
-            seed, upscaled, self.filepath
-        )   # will increment name in some sensible way
-        try:
-            prompt = f'{self.prompt} -S{seed}'
-            self.save_image_and_prompt_to_png(image, prompt, self.filepath)
-        except IOError as e:
-            print(e)
-        if not upscaled:
-            self.files_written.append([self.filepath, seed])
+    # gives the next unique prefix in outdir
+    def unique_prefix(self):
+        # sort reverse alphabetically until we find max+1
+        dirlist = sorted(os.listdir(self.outdir), reverse=True)
+        # find the first filename that matches our pattern or return 000000.0.png
+        existing_name = next(
+            (f for f in dirlist if re.match('^(\d+)\..*\.png', f)),
+            '0000000.0.png',
+        )
+        basecount = int(existing_name.split('.', 1)[0]) + 1
+        return f'{basecount:06}'
 
-    def unique_filename(self, seed, upscaled=False, previouspath=None):
-        revision = 1
-
-        if previouspath is None:
-            # sort reverse alphabetically until we find max+1
-            dirlist = sorted(os.listdir(self.outdir), reverse=True)
-            # find the first filename that matches our pattern or return 000000.0.png
-            filename = next(
-                (f for f in dirlist if re.match('^(\d+)\..*\.png', f)),
-                '0000000.0.png',
-            )
-            basecount = int(filename.split('.', 1)[0])
-            basecount += 1
-            filename = f'{basecount:06}.{seed}.png'
-            return os.path.join(self.outdir, filename)
-
-        else:
-            basename = os.path.basename(previouspath)
-            x = re.match('^(\d+)\..*\.png', basename)
-            if not x:
-                return self.unique_filename(seed, upscaled, previouspath)
-
-            basecount = int(x.groups()[0])
-            series = 0
-            finished = False
-            while not finished:
-                series += 1
-                filename = f'{basecount:06}.{seed}.png'
-                path = os.path.join(self.outdir, filename)
-                finished = not os.path.exists(path)
-            return os.path.join(self.outdir, filename)
-
-    def save_image_and_prompt_to_png(self, image, prompt, path):
+    # saves image named _image_ to outdir/name, writing metadata from prompt
+    # returns full path of output
+    def save_image_and_prompt_to_png(self, image, prompt, name):
+        path = os.path.join(self.outdir, name)
         info = PngImagePlugin.PngInfo()
         info.add_text('Dream', prompt)
         image.save(path, 'PNG', pnginfo=info)
+        return path
 
+    # TODO move this to its own helper function; it's not really a method of pngwriter
     def make_grid(self, image_list, rows=None, cols=None):
         image_cnt = len(image_list)
         if None in (rows, cols):

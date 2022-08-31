@@ -88,24 +88,25 @@ class DreamServer(BaseHTTPRequestHandler):
 
         images_generated = 0    # helps keep track of when upscaling is started
         images_upscaled = 0     # helps keep track of when upscaling is completed
-        pngwriter = PngWriter(
-            "./outputs/img-samples/", config['prompt'], 1
-        )
+        pngwriter = PngWriter("./outputs/img-samples/")
 
+        prefix = pngwriter.unique_prefix()
         # if upscaling is requested, then this will be called twice, once when
         # the images are first generated, and then again when after upscaling
         # is complete. The upscaling replaces the original file, so the second
         # entry should not be inserted into the image list.
         def image_done(image, seed, upscaled=False):
-            pngwriter.write_image(image, seed, upscaled)
+            name = f'{prefix}.{seed}.png'
+            path = pngwriter.save_image_and_prompt_to_png(image, f'{prompt} -S{seed}', name)
 
             # Append post_data to log, but only once!
             if not upscaled:
-                current_image = pngwriter.files_written[-1]
                 with open("./outputs/img-samples/dream_web_log.txt", "a") as log:
-                    log.write(f"{current_image[0]}: {json.dumps(config)}\n")
+                    log.write(f"{path}: {json.dumps(config)}\n")
+
+                # TODO fix format of this event
                 self.wfile.write(bytes(json.dumps(
-                    {'event':'result', 'files':current_image, 'config':config}
+                    {'event': 'result', 'files': [path, seed], 'config': config}
                 ) + '\n',"utf-8"))
 
             # control state of the "postprocessing..." message
@@ -129,22 +130,24 @@ class DreamServer(BaseHTTPRequestHandler):
                         {'event':action,'processed_file_cnt':f'{x}/{iterations}'}
                     ) + '\n',"utf-8"))
 
-        # TODO: refactor PngWriter:
-        # it doesn't need to know if batch_size > 1, just if this is _part of a batch_
-        step_writer = PngWriter('./outputs/intermediates/', prompt, 2)
+        step_writer = PngWriter('./outputs/intermediates/')
+        step_index = 1
         def image_progress(sample, step):
             if self.canceled.is_set():
                 self.wfile.write(bytes(json.dumps({'event':'canceled'}) + '\n', 'utf-8'))
                 raise CanceledException
-            url = None
+            path = None
             # since rendering images is moderately expensive, only render every 5th image
             # and don't bother with the last one, since it'll render anyway
+            nonlocal step_index
             if progress_images and step % 5 == 0 and step < steps - 1:
                 image = self.model._sample_to_image(sample)
-                step_writer.write_image(image, seed) # TODO PngWriter to return path
-                url = step_writer.filepath
+                name = f'{prefix}.{seed}.{step_index}.png'
+                metadata = f'{prompt} -S{seed} [intermediate]'
+                path = step_writer.save_image_and_prompt_to_png(image, metadata, name)
+                step_index += 1
             self.wfile.write(bytes(json.dumps(
-                {'event':'step', 'step':step + 1, 'url': url}
+                {'event': 'step', 'step': step + 1, 'url': path}
             ) + '\n',"utf-8"))
 
         try:
