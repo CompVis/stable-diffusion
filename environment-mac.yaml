@@ -30,3 +30,5 @@ dependencies:
     - -e git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
     - -e git+https://github.com/lstein/k-diffusion.git@master#egg=k-diffusion
     - -e .
+variables:
+  PYTORCH_ENABLE_MPS_FALLBACK: 1

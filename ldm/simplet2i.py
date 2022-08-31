@@ -124,7 +124,7 @@ class T2I:
         grid=False,
         width=512,
         height=512,
-        sampler_name='klms',
+        sampler_name='k_lms',
         latent_channels=4,
         downsampling_factor=8,
         ddim_eta=0.0,  # deterministic
