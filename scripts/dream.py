@@ -60,7 +60,6 @@ def main():
         # this is solely for recreating the prompt
         latent_diffusion_weights=opt.laion400m,
         embedding_path=opt.embedding_path,
-        device=opt.device,
     )
 
     # make sure the output directory exists
@@ -375,13 +374,6 @@ def create_argv_parser():
         '--embedding_path',
         type=str,
         help='Path to a pre-trained embedding manager checkpoint - can only be set on command line',
-    )
-    parser.add_argument(
-        '--device',
-        '-d',
-        type=str,
-        default='cuda',
-        help='Device to run Stable Diffusion on. Defaults to cuda `torch.cuda.current_device()` if avalible',
     )
     parser.add_argument(
         '--prompt_as_dir',
