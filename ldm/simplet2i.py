@@ -279,7 +279,7 @@ class T2I:
             self._set_sampler()
 
         tic = time.time()
-        torch.cuda.torch.cuda.reset_peak_memory_stats()
+        torch.cuda.reset_peak_memory_stats() if self.device == 'cuda' else None
         results = list()
 
         try:
