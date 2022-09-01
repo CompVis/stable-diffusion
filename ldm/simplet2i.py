@@ -133,31 +133,31 @@ class T2I:
         embedding_path=None,
         # just to keep track of this parameter when regenerating prompt
         latent_diffusion_weights=False,
-        device='cuda',
     ):
-        self.iterations = iterations
-        self.width = width
-        self.height = height
-        self.steps = steps
-        self.cfg_scale = cfg_scale
-        self.weights = weights
-        self.config = config
-        self.sampler_name = sampler_name
-        self.latent_channels = latent_channels
-        self.downsampling_factor = downsampling_factor
-        self.grid = grid
-        self.ddim_eta = ddim_eta
-        self.precision = precision
-        self.full_precision = full_precision
-        self.strength = strength
-        self.embedding_path = embedding_path
-        self.model = None     # empty for now
-        self.sampler = None
+        self.iterations               = iterations
+        self.width                    = width
+        self.height                   = height
+        self.steps                    = steps
+        self.cfg_scale                = cfg_scale
+        self.weights                  = weights
+        self.config                   = config
+        self.sampler_name             = sampler_name
+        self.latent_channels          = latent_channels
+        self.downsampling_factor      = downsampling_factor
+        self.grid                     = grid
+        self.ddim_eta                 = ddim_eta
+        self.precision                = precision
+        self.full_precision           = full_precision
+        self.strength                 = strength
+        self.embedding_path           = embedding_path
+        self.model                    = None     # empty for now
+        self.sampler                  = None
+        self.device                   = None
         self.latent_diffusion_weights = latent_diffusion_weights
-        self.device = device
 
         # for VRAM usage statistics
-        self.session_peakmem = torch.cuda.max_memory_allocated() if self.device == 'cuda' else None
+        device_type          = choose_torch_device()
+        self.session_peakmem = torch.cuda.max_memory_allocated() if device_type == 'cuda' else None
 
         if seed is None:
             self.seed = self._new_seed()
@@ -194,29 +194,29 @@ class T2I:
         return self.prompt2png(prompt, outdir, **kwargs)
 
     def prompt2image(
-        self,
-        # these are common
-        prompt,
-        iterations=None,
-        steps=None,
-        seed=None,
-        cfg_scale=None,
-        ddim_eta=None,
-        skip_normalize=False,
-        image_callback=None,
-        step_callback=None,
-        width=None,
-        height=None,
-        # these are specific to img2img
-        init_img=None,
-        strength=None,
-        gfpgan_strength=0,
-        save_original=False,
-        upscale=None,
-        variants=None,
-        sampler_name=None,
-        log_tokenization=False,
-        **args,
+            self,
+            # these are common
+            prompt,
+            iterations     =    None,
+            steps          =    None,
+            seed           =    None,
+            cfg_scale      =    None,
+            ddim_eta       =    None,
+            skip_normalize =    False,
+            image_callback =    None,
+            step_callback  =    None,
+            width          =    None,
+            height         =    None,
+            # these are specific to img2img
+            init_img       =    None,
+            fit            =    False,
+            strength       =    None,
+            gfpgan_strength=    0,
+            save_original  =    False,
+            upscale        =    None,
+            sampler_name   =    None,
+            log_tokenization=  False,
+            **args,
     ):   # eat up additional cruft
         """
         ldm.prompt2image() is the common entry point for txt2img() and img2img()
@@ -232,7 +232,6 @@ class T2I:
            strength                        // strength for noising/unnoising init_img. 0.0 preserves image exactly, 1.0 replaces it completely
            gfpgan_strength                 // strength for GFPGAN. 0.0 preserves image exactly, 1.0 replaces it completely
            ddim_eta                        // image randomness (eta=0.0 means the same seed always produces the same image)
-           variants                        // if >0, the 1st generated image will be passed back to img2img to generate the requested number of variants
            step_callback                   // a function or method that will be called each step
            image_callback                  // a function or method that will be called each time an image is generated
 
@@ -251,14 +250,15 @@ class T2I:
         to create the requested output directory, select a unique informative name for each image, and
         write the prompt into the PNG metadata.
         """
-        steps = steps or self.steps
-        seed = seed or self.seed
-        width = width or self.width
-        height = height or self.height
-        cfg_scale = cfg_scale or self.cfg_scale
-        ddim_eta = ddim_eta or self.ddim_eta
-        iterations = iterations or self.iterations
-        strength = strength or self.strength
+        # TODO: convert this into a getattr() loop
+        steps                 = steps      or self.steps
+        seed                  = seed       or self.seed
+        width                 = width      or self.width
+        height                = height     or self.height
+        cfg_scale             = cfg_scale  or self.cfg_scale
+        ddim_eta              = ddim_eta   or self.ddim_eta
+        iterations            = iterations or self.iterations
+        strength              = strength   or self.strength
         self.log_tokenization = log_tokenization
 
         model = (
@@ -269,10 +269,8 @@ class T2I:
             0.0 <= strength <= 1.0
         ), 'can only work with strength in [0.0, 1.0]'
 
-        if not(width == self.width and height == self.height):
-            width, height, _ = self._resolution_check(width, height, log=True)
-
-        scope = autocast if self.precision == 'autocast' and torch.cuda.is_available() else nullcontext
+        width, height, _ = self._resolution_check(width, height, log=True)
+        scope = autocast if self.precision == 'autocast' else nullcontext
 
         if sampler_name and (sampler_name != self.sampler_name):
             self.sampler_name = sampler_name
@@ -296,6 +294,7 @@ class T2I:
                     init_img=init_img,
                     width=width,
                     height=height,
+                    fit=fit,
                     strength=strength,
                     callback=step_callback,
                 )
@@ -313,7 +312,7 @@ class T2I:
                 )
 
             with scope(self.device.type), self.model.ema_scope():
-                for n in trange(iterations, desc='Generating'):
+                for n in trange(iterations, desc='>> Generating'):
                     seed_everything(seed)
                     image = next(images_iterator)
                     results.append([image, seed])
@@ -366,12 +365,12 @@ class T2I:
             print('Are you sure your system has an adequate NVIDIA GPU?')
 
         toc = time.time()
-        print('Usage stats:')
+        print('>> Usage stats:')
         print(
-            f'   {len(results)} image(s) generated in', '%4.2fs' % (toc - tic)
+            f'>>   {len(results)} image(s) generated in', '%4.2fs' % (toc - tic)
         )
         print(
-            f'   Max VRAM used for this generation:',
+            f'>>   Max VRAM used for this generation:',
             '%4.2fG' % (torch.cuda.max_memory_allocated() / 1e9),
         )
 
@@ -380,7 +379,7 @@ class T2I:
                 self.session_peakmem, torch.cuda.max_memory_allocated()
             )
             print(
-                f'   Max VRAM used since script start: ',
+                f'>>   Max VRAM used since script start: ',
                 '%4.2fG' % (self.session_peakmem / 1e9),
             )
         return results
@@ -426,18 +425,19 @@ class T2I:
 
     @torch.no_grad()
     def _img2img(
-        self,
-        prompt,
-        precision_scope,
-        steps,
-        cfg_scale,
-        ddim_eta,
-        skip_normalize,
-        init_img,
-        width,
-        height,
-        strength,
-        callback,  # Currently not implemented for img2img
+            self,
+            prompt,
+            precision_scope,
+            steps,
+            cfg_scale,
+            ddim_eta,
+            skip_normalize,
+            init_img,
+            width,
+            height,
+            fit,
+            strength,
+            callback,  # Currently not implemented for img2img
     ):
         """
         An infinite iterator of images from the prompt and the initial image
@@ -446,13 +446,13 @@ class T2I:
         # PLMS sampler not supported yet, so ignore previous sampler
         if self.sampler_name != 'ddim':
             print(
-                f"sampler '{self.sampler_name}' is not yet supported. Using DDIM sampler"
+                f">> sampler '{self.sampler_name}' is not yet supported. Using DDIM sampler"
             )
             sampler = DDIMSampler(self.model, device=self.device)
         else:
             sampler = self.sampler
 
-        init_image = self._load_img(init_img, width, height).to(self.device)
+        init_image = self._load_img(init_img, width, height,fit).to(self.device)
         with precision_scope(self.device.type):
             init_latent = self.model.get_first_stage_encoding(
                 self.model.encode_first_stage(init_image)
@@ -583,7 +583,7 @@ class T2I:
         print(msg)
 
     def _load_model_from_config(self, config, ckpt):
-        print(f'Loading model from {ckpt}')
+        print(f'>> Loading model from {ckpt}')
         pl_sd = torch.load(ckpt, map_location='cpu')
         #        if "global_step" in pl_sd:
         #            print(f"Global Step: {pl_sd['global_step']}")
@@ -598,41 +598,63 @@ class T2I:
             )
         else:
             print(
-                'Using half precision math. Call with --full_precision to use more accurate but VRAM-intensive full precision.'
+                '>> Using half precision math. Call with --full_precision to use more accurate but VRAM-intensive full precision.'
             )
             model.half()
         return model
 
-    def _load_img(self, path, width, height):
-        print(f'image path = {path}, cwd = {os.getcwd()}')
+    def _load_img(self, path, width, height, fit=False):
         with Image.open(path) as img:
             image = img.convert('RGB')
         print(
-            f'loaded input image of size {image.width}x{image.height} from {path}')
-
-        from ldm.dream.image_util import InitImageResizer
-        if width == self.width and height == self.height:
-            new_image_width, new_image_height, resize_needed = self._resolution_check(
-                image.width, image.height)
+            f'>> loaded input image of size {image.width}x{image.height} from {path}'
+        )
+        
+        # The logic here is:
+        # 1. If "fit" is true, then the image will be fit into the bounding box defined
+        #    by width and height. It will do this in a way that preserves the init image's
+        #    aspect ratio while preventing letterboxing. This means that if there is
+        #    leftover horizontal space after rescaling the image to fit in the bounding box,
+        #    the generated image's width will be reduced to the rescaled init image's width.
+        #    Similarly for the vertical space.
+        # 2. Otherwise, if "fit" is false, then the image will be scaled, preserving its
+        #    aspect ratio, to the nearest multiple of 64. Large images may generate an
+        #    unexpected OOM error.
+        if fit:
+            image = self._fit_image(image,(width,height))
         else:
-            if height == self.height:
-                new_image_width, new_image_height, resize_needed = self._resolution_check(
-                    width, image.height)
-            if width == self.width:
-                new_image_width, new_image_height, resize_needed = self._resolution_check(
-                    image.width, height)
-            else:
-                image = InitImageResizer(image).resize(width, height)
-                resize_needed = False
-        if resize_needed:
-            image = InitImageResizer(image).resize(
-                new_image_width, new_image_height)
-
+            image = self._squeeze_image(image)
         image = np.array(image).astype(np.float32) / 255.0
         image = image[None].transpose(0, 3, 1, 2)
         image = torch.from_numpy(image)
         return 2.0 * image - 1.0
 
+    def _squeeze_image(self,image):
+        x,y,resize_needed = self._resolution_check(image.width,image.height)
+        if resize_needed:
+            return InitImageResizer(image).resize(x,y)
+        return image
+        
+
+    def _fit_image(self,image,max_dimensions):
+        w,h = max_dimensions
+        print(
+            f'>> image will be resized to fit inside a box {w}x{h} in size.'
+        )
+        if image.width > image.height:
+            h   = None   # by setting h to none, we tell InitImageResizer to fit into the width and calculate height
+        elif image.height > image.width:
+            w   = None   # ditto for w
+        else:
+            pass
+        image = InitImageResizer(image).resize(w,h)   # note that InitImageResizer does the multiple of 64 truncation internally
+        print(
+            f'>> after adjusting image dimensions to be multiples of 64, init image is {image.width}x{image.height}'
+            )
+        return image
+
+
+    # TO DO: Move this and related weighted subprompt code into its own module.
     def _split_weighted_subprompts(text, skip_normalize=False):
         """
         grabs all text up to the first occurrence of ':'
@@ -702,7 +724,7 @@ class T2I:
                     f'>> Provided width and height must be multiples of 64. Auto-resizing to {w}x{h}'
                 )
             height = h
-            width = w
+            width  = w
             resize_needed = True
 
         if (width * height) > (self.width * self.height):

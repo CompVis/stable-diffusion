@@ -8,11 +8,10 @@ class InitImageResizer():
 
     def resize(self,width=None,height=None) -> Image:
         """
-        Return a copy of the image resized to width x height.
-        The aspect ratio is maintained, with any excess space
-        filled using black borders (i.e. letterboxed). If
-        neither width nor height are provided, then returns
-        a copy of the original image. If one or the other is
+        Return a copy of the image resized to fit within
+        a box width x height. The aspect ratio is 
+        maintained. If neither width nor height are provided, 
+        then returns a copy of the original image. If one or the other is
         provided, then the other will be calculated from the
         aspect ratio.
 
@@ -20,39 +19,35 @@ class InitImageResizer():
         that it can be passed to img2img()
         """
         im    = self.image
-
-        if not(width or height):
-            return im.copy()
-
-        ar = im.width/im.height
+        
+        ar = im.width/float(im.height)
 
         # Infer missing values from aspect ratio
-        if not height:          # height missing
+        if not(width or height): # both missing
+            width  = im.width
+            height = im.height
+        elif not height:           # height missing
             height = int(width/ar)
-        if not width:          # width missing
+        elif not width:            # width missing
             width  = int(height*ar)
 
         # rw and rh are the resizing width and height for the image
         # they maintain the aspect ratio, but may not completelyl fill up
         # the requested destination size
-        (rw,rh) = (width,int(width/ar)) if im.width>=im.height else (int(height*ar),width)
+        (rw,rh) = (width,int(width/ar)) if im.width>=im.height else (int(height*ar),height)
 
         #round everything to multiples of 64
         width,height,rw,rh = map(
             lambda x: x-x%64, (width,height,rw,rh)
-            )
+        )
 
-        # resize the original image so that it fits inside the dest
+        # no resize necessary, but return a copy
+        if im.width == width and im.height == height:
+            return im.copy()
+        
+        # otherwise resize the original image so that it fits inside the bounding box
         resized_image = self.image.resize((rw,rh),resample=Image.Resampling.LANCZOS)
-
-        # create new destination image of specified dimensions
-        # and paste the resized image into it centered appropriately
-        new_image = Image.new('RGB',(width,height))
-        new_image.paste(resized_image,((width-rw)//2,(height-rh)//2))
-
-        print(f'>> Resized image size to {width}x{height}')
-
-        return new_image
+        return resized_image
 
 def make_grid(image_list, rows=None, cols=None):
     image_cnt = len(image_list)

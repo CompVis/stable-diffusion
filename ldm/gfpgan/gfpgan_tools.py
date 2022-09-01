@@ -14,7 +14,7 @@ model_path = os.path.join(opt.gfpgan_dir, opt.gfpgan_model_path)
 gfpgan_model_exists = os.path.isfile(model_path)
 
 def _run_gfpgan(image, strength, prompt, seed, upsampler_scale=4):
-    print(f'\n* GFPGAN - Restoring Faces: {prompt} : seed:{seed}')
+    print(f'>> GFPGAN - Restoring Faces: {prompt} : seed:{seed}')
     gfpgan = None
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=DeprecationWarning)
@@ -41,12 +41,12 @@ def _run_gfpgan(image, strength, prompt, seed, upsampler_scale=4):
         except Exception:
             import traceback
 
-            print('Error loading GFPGAN:', file=sys.stderr)
+            print('>> Error loading GFPGAN:', file=sys.stderr)
             print(traceback.format_exc(), file=sys.stderr)
 
     if gfpgan is None:
         print(
-            f'GFPGAN not initialized, it must be loaded via the --gfpgan argument'
+            f'>> GFPGAN not initialized, it must be loaded via the --gfpgan argument'
         )
         return image
 
@@ -129,7 +129,7 @@ def _load_gfpgan_bg_upsampler(bg_upsampler, upsampler_scale, bg_tile=400):
 
 def real_esrgan_upscale(image, strength, upsampler_scale, prompt, seed):
     print(
-        f'\n* Real-ESRGAN Upscaling: {prompt} : seed:{seed} : scale:{upsampler_scale}x'
+        f'>> Real-ESRGAN Upscaling: {prompt} : seed:{seed} : scale:{upsampler_scale}x'
     )
 
     with warnings.catch_warnings():
@@ -143,7 +143,7 @@ def real_esrgan_upscale(image, strength, upsampler_scale, prompt, seed):
         except Exception:
             import traceback
 
-            print('Error loading Real-ESRGAN:', file=sys.stderr)
+            print('>> Error loading Real-ESRGAN:', file=sys.stderr)
             print(traceback.format_exc(), file=sys.stderr)
 
     output, img_mode = upsampler.enhance(
