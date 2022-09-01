@@ -22,5 +22,30 @@ COPY /data/DejaVuSans.ttf /usr/share/fonts/truetype/
 
 EXPOSE 7860
 
-COPY ./entrypoint.sh /sd/
-ENTRYPOINT /sd/entrypoint.sh
+COPY    entrypoint.sh /sd/
+COPY    entrypoint_docker.sh /sd/
+COPY 	assets /sd/assets/   
+COPY 	configs /sd/configs/ 
+COPY 	data /sd/data/   
+COPY 	docker-compose.yml /sd/   
+COPY 	Dockerfile /sd/   
+COPY 	docker-reset.sh /sd/   
+COPY 	environment.yaml /sd/   
+COPY 	environment.yml /sd/   
+COPY 	frontend /sd/frontend/   
+COPY 	install.sh /sd/
+COPY 	ldm /sd/ldm/   
+COPY 	LICENSE /sd/   
+COPY 	main.py /sd/   
+COPY 	models /sd/models/   
+COPY 	notebook_helpers.py /sd/   
+COPY 	optimizedSD /sd/optimizedSD/   
+COPY 	README.md /sd/   
+COPY 	scripts /sd/scripts   
+COPY 	setup.py /sd/   
+COPY 	src /sd/src/   
+COPY 	Stable_Diffusion_v1_Model_Card.md /sd/   
+COPY 	txt2img.yaml /sd/   
+COPY 	webui.cmd /sd/   
+COPY 	webuildm.cmd /sd/   
+ENTRYPOINT /sd/entrypoint_docker.sh

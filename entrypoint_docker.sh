@@ -18,10 +18,10 @@ MODEL_FILES=(
 # Conda environment installs/updates
 # @see https://github.com/ContinuumIO/docker-images/issues/89#issuecomment-467287039
 ENV_NAME="ldm"
-ENV_FILE="environment.yaml"
+ENV_FILE="/sd/environment.yaml"
 ENV_UPDATED=0
 ENV_MODIFIED=$(date -r $ENV_FILE "+%s")
-ENV_MODIFED_FILE=".env_updated"
+ENV_MODIFED_FILE="/sd/.env_updated"
 if [[ -f $ENV_MODIFED_FILE ]]; then ENV_MODIFIED_CACHED=$(<${ENV_MODIFED_FILE}); else ENV_MODIFIED_CACHED=0; fi
 
 # Create/update conda env if needed
@@ -80,9 +80,9 @@ fi
 cd ./sd
 
 if [[ -z $WEBUI_ARGS ]]; then
-    launch_message="entrypoint.sh: Launching..."
+    launch_message="entrypoint_docker.sh: Launching..."
 else
-    launch_message="entrypoint.sh: Launching with arguments ${WEBUI_ARGS}"
+    launch_message="entrypoint_docker.sh: Launching with arguments ${WEBUI_ARGS}"
 fi
 
 if [[ -z $WEBUI_RELAUNCH || $WEBUI_RELAUNCH == "true" ]]; then
@@ -94,11 +94,11 @@ if [[ -z $WEBUI_RELAUNCH || $WEBUI_RELAUNCH == "true" ]]; then
             echo "Relaunch count: ${n}"
         fi
         python -u scripts/webui.py $WEBUI_ARGS --realesrgan-dir=/home/diffusion/hlky/stable-diffusion/src/realesrgan/ --share
-        echo "entrypoint.sh: Process is ending. Relaunching in 0.5s..."
+        echo "/sd/entrypoint_docker.sh: Process is ending. Relaunching in 0.5s..."
         ((n++))
         sleep 0.5
     done
 else
     echo $launch_message
-    python -u webui.py $WEBUI_ARGS --realesrgan-dir=/home/diffusion/hlky/stable-diffusion/src/realesrgan/ --share
+    python -u /sd/webui.py $WEBUI_ARGS --realesrgan-dir=/home/diffusion/hlky/stable-diffusion/src/realesrgan/ --share
 fi
