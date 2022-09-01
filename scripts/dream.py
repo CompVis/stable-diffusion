@@ -9,6 +9,7 @@ import sys
 import copy
 import warnings
 import time
+from ldm.dream.devices import choose_torch_device
 import ldm.dream.readline
 from ldm.dream.pngwriter import PngWriter, PromptFormatter
 from ldm.dream.server import DreamServer, ThreadingDreamServer
@@ -60,6 +61,7 @@ def main():
         # this is solely for recreating the prompt
         latent_diffusion_weights=opt.laion400m,
         embedding_path=opt.embedding_path,
+        device_type=opt.device
     )
 
     # make sure the output directory exists
@@ -346,6 +348,8 @@ def create_argv_parser():
         dest='full_precision',
         action='store_true',
         help='Use slower full precision math for calculations',
+        # MPS only functions with full precision, see https://github.com/lstein/stable-diffusion/issues/237
+        default=choose_torch_device() == 'mps',
     )
     parser.add_argument(
         '-g',
@@ -417,6 +421,13 @@ def create_argv_parser():
         '--weights',
         default='model',
         help='Indicates the Stable Diffusion model to use.',
+    )
+    parser.add_argument(
+        '--device',
+        '-d',
+        type=str,
+        default='cuda',
+        help="device to run stable diffusion on. defaults to cuda `torch.cuda.current_device()` if available"
     )
     return parser
 
