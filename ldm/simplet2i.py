@@ -22,12 +22,13 @@ import time
 import re
 import sys
 
-from ldm.util import instantiate_from_config
-from ldm.models.diffusion.ddim import DDIMSampler
-from ldm.models.diffusion.plms import PLMSSampler
+from ldm.util                      import instantiate_from_config
+from ldm.models.diffusion.ddim     import DDIMSampler
+from ldm.models.diffusion.plms     import PLMSSampler
 from ldm.models.diffusion.ksampler import KSampler
-from ldm.dream.pngwriter import PngWriter
-from ldm.dream.devices import choose_torch_device
+from ldm.dream.pngwriter           import PngWriter
+from ldm.dream.image_util          import InitImageResizer
+from ldm.dream.devices             import choose_torch_device
 
 """Simplified text to image API for stable diffusion/latent diffusion
 
