@@ -27,7 +27,7 @@ from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 from ldm.models.diffusion.ksampler import KSampler
 from ldm.dream.pngwriter import PngWriter
-from ldm.dream.devices import choose_torch_device
+from ldm.dream.devices import choose_autocast_device, choose_torch_device
 
 """Simplified text to image API for stable diffusion/latent diffusion
 
@@ -315,9 +315,7 @@ class T2I:
                     callback=step_callback,
                 )
 
-            device_type = self.device.type # this returns 'mps' on M1
-            if device_type != 'cuda' or device_type != 'cpu':
-                device_type = 'cpu'
+            device_type = choose_autocast_device(self.device)
             with scope(device_type), self.model.ema_scope():
                 for n in trange(iterations, desc='Generating'):
                     seed_everything(seed)
