@@ -8,4 +8,10 @@ def choose_torch_device() -> str:
         return 'mps'
     return 'cpu'
 
-    
+def choose_autocast_device(device) -> str:
+    '''Returns an autocast compatible device from a torch device'''
+    device_type = device.type # this returns 'mps' on M1
+    # autocast only supports cuda or cpu
+    if device_type not in ('cuda','cpu'):
+        return 'cpu'
+    return device_type

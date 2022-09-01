@@ -8,6 +8,7 @@ import torch
 import numpy as np
 import random
 import os
+import traceback
 from omegaconf import OmegaConf
 from PIL import Image
 from tqdm import tqdm, trange
@@ -28,7 +29,7 @@ from ldm.models.diffusion.plms     import PLMSSampler
 from ldm.models.diffusion.ksampler import KSampler
 from ldm.dream.pngwriter           import PngWriter
 from ldm.dream.image_util          import InitImageResizer
-from ldm.dream.devices             import choose_torch_device
+from ldm.dream.devices import choose_autocast_device, choose_torch_device
 
 """Simplified text to image API for stable diffusion/latent diffusion
 
@@ -114,26 +115,28 @@ class T2I:
 """
 
     def __init__(
-        self,
-        iterations=1,
-        steps=50,
-        seed=None,
-        cfg_scale=7.5,
-        weights='models/ldm/stable-diffusion-v1/model.ckpt',
-        config='configs/stable-diffusion/v1-inference.yaml',
-        grid=False,
-        width=512,
-        height=512,
-        sampler_name='k_lms',
-        latent_channels=4,
-        downsampling_factor=8,
-        ddim_eta=0.0,  # deterministic
-        precision='autocast',
-        full_precision=False,
-        strength=0.75,  # default in scripts/img2img.py
-        embedding_path=None,
-        # just to keep track of this parameter when regenerating prompt
-        latent_diffusion_weights=False,
+            self,
+            iterations=1,
+            steps=50,
+            seed=None,
+            cfg_scale=7.5,
+            weights='models/ldm/stable-diffusion-v1/model.ckpt',
+            config='configs/stable-diffusion/v1-inference.yaml',
+            grid=False,
+            width=512,
+            height=512,
+            sampler_name='k_lms',
+            latent_channels=4,
+            downsampling_factor=8,
+            ddim_eta=0.0,  # deterministic
+            precision='autocast',
+            full_precision=False,
+            strength=0.75,  # default in scripts/img2img.py
+            embedding_path=None,
+            device_type = 'cuda',
+            # just to keep track of this parameter when regenerating prompt
+            # needs to be replaced when new configuration system implemented.
+            latent_diffusion_weights=False,
     ):
         self.iterations               = iterations
         self.width                    = width
@@ -151,10 +154,16 @@ class T2I:
         self.full_precision           = full_precision
         self.strength                 = strength
         self.embedding_path           = embedding_path
+        self.device_type              = device_type
         self.model                    = None     # empty for now
         self.sampler                  = None
         self.device                   = None
         self.latent_diffusion_weights = latent_diffusion_weights
+
+        if device_type == 'cuda' and not torch.cuda.is_available():
+            device_type = choose_torch_device()
+            print(">> cuda not available, using device", device_type)
+        self.device = torch.device(device_type)
 
         # for VRAM usage statistics
         device_type          = choose_torch_device()
@@ -312,8 +321,9 @@ class T2I:
                     callback=step_callback,
                 )
 
-            with scope(self.device.type), self.model.ema_scope():
-                for n in trange(iterations, desc='>> Generating'):
+            device_type = choose_autocast_device(self.device)
+            with scope(device_type), self.model.ema_scope():
+                for n in trange(iterations, desc='Generating'):
                     seed_everything(seed)
                     image = next(images_iterator)
                     results.append([image, seed])
@@ -346,7 +356,7 @@ class T2I:
                                 )
                         except Exception as e:
                             print(
-                                f'Error running RealESRGAN - Your image was not upscaled.\n{e}'
+                                f'>> Error running RealESRGAN - Your image was not upscaled.\n{e}'
                             )
                         if image_callback is not None:
                             if save_original:
@@ -359,11 +369,11 @@ class T2I:
         except KeyboardInterrupt:
             print('*interrupted*')
             print(
-                'Partial results will be returned; if --grid was requested, nothing will be returned.'
+                '>> Partial results will be returned; if --grid was requested, nothing will be returned.'
             )
         except RuntimeError as e:
-            print(str(e))
-            print('Are you sure your system has an adequate NVIDIA GPU?')
+            print(traceback.format_exc(), file=sys.stderr)
+            print('>> Are you sure your system has an adequate NVIDIA GPU?')
 
         toc = time.time()
         print('>> Usage stats:')
@@ -464,7 +474,6 @@ class T2I:
         )
 
         t_enc = int(strength * steps)
-        # print(f"target t_enc is {t_enc} steps")
 
         while True:
             uc, c = self._get_uc_and_c(prompt, skip_normalize)
@@ -515,7 +524,7 @@ class T2I:
         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
         if len(x_samples) != 1:
             raise Exception(
-                f'expected to get a single image, but got {len(x_samples)}')
+                f'>> expected to get a single image, but got {len(x_samples)}')
         x_sample = 255.0 * rearrange(
             x_samples[0].cpu().numpy(), 'c h w -> h w c'
         )
@@ -525,17 +534,12 @@ class T2I:
         self.seed = random.randrange(0, np.iinfo(np.uint32).max)
         return self.seed
 
-    def _get_device(self):
-        device_type = choose_torch_device()
-        return torch.device(device_type)
-
     def load_model(self):
         """Load and initialize the model from configuration variables passed at object creation time"""
         if self.model is None:
             seed_everything(self.seed)
             try:
                 config = OmegaConf.load(self.config)
-                self.device = self._get_device()
                 model = self._load_model_from_config(config, self.weights)
                 if self.embedding_path is not None:
                     model.embedding_manager.load(
@@ -544,12 +548,10 @@ class T2I:
                 self.model = model.to(self.device)
                 # model.to doesn't change the cond_stage_model.device used to move the tokenizer output, so set it here
                 self.model.cond_stage_model.device = self.device
-            except AttributeError:
-                import traceback
-                print(
-                    'Error loading model. Only the CUDA backend is supported', file=sys.stderr)
+            except AttributeError as e:
+                print(f'>> Error loading model. {str(e)}', file=sys.stderr)
                 print(traceback.format_exc(), file=sys.stderr)
-                raise SystemExit
+                raise SystemExit from e
 
             self._set_sampler()
 
