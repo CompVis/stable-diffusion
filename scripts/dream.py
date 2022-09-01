@@ -19,23 +19,14 @@ def main():
     """Initialize command-line parsers and the diffusion model"""
     arg_parser = create_argv_parser()
     opt = arg_parser.parse_args()
-    """
+    
     if opt.laion400m:
-        # defaults suitable to the older latent diffusion weights
-        width = 256
-        height = 256
-        config = 'configs/latent-diffusion/txt2img-1p4B-eval.yaml'
-        weights = 'models/ldm/text2img-large/model.ckpt'
-    else:
-        # some defaults suitable for stable diffusion weights
-        width = 512
-        height = 512
-        config = 'configs/stable-diffusion/v1-inference.yaml'
-        if '.ckpt' in opt.weights:
-            weights = opt.weights
-        else:
-            weights = f'models/ldm/stable-diffusion-v1/{opt.weights}.ckpt'
-    """
+        print('--laion400m flag has been deprecated. Please use --model laion400m instead.')
+        sys.exit(-1)
+    if opt.weights != 'model':
+        print('--weights argument has been deprecated. Please configure /configs/models.yaml, and call it using --model instead.')
+        sys.exit(-1)
+        
     try:
         models = OmegaConf.load('configs/models.yaml')
         width = models[opt.model].width
@@ -44,6 +35,7 @@ def main():
         weights = models[opt.model].weights
     except (FileNotFoundError, IOError, KeyError) as e:
         print(f'{e}. Aborting.')
+        sys.exit(-1)
 
     print('* Initializing, be patient...\n')
     sys.path.append('.')
