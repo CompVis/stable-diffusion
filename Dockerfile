@@ -15,7 +15,7 @@ RUN conda update -y conda
 # i am using git clone instead during development of this dockerfile
 COPY . /app/ 
 RUN mkdir /app/outputs/
-RUN mkdir /app/weigths/
+RUN mkdir /app/weights/
 # RUN git clone https://github.com/CompVis/stable-diffusion.git /app/
 WORKDIR /app/
 RUN conda env create -f /app/environment.yaml -n ldm
