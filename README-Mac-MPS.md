@@ -12,7 +12,7 @@ issue](https://github.com/CompVis/stable-diffusion/issues/25), and generally on
 
 You have to have macOS 12.3 Monterey or later. Anything earlier than that won't work.
 
-Tested on a 2022 Macbook M2 Air with 10-core gpu 24 GB unified memory.
+Tested on a 2022 Macbook M2 Air with 10-core GPU and 24 GB unified memory.
 
 How to:
 
@@ -31,13 +31,13 @@ python scripts/preload_models.py
 python scripts/dream.py --full_precision  # half-precision requires autocast and won't work
 ```
 
-After you follow all the instructions and run txt2img.py you might get several errors. Here's the errors I've seen and found solutions for.
+After you follow all the instructions and run dream.py you might get several errors. Here's the errors I've seen and found solutions for.
 
 ### Is it slow?
 
 Be sure to specify 1 sample and 1 iteration.
 
-	python ./scripts/txt2img.py --prompt "ocean" --ddim_steps 5 --n_samples 1 --n_iter 1
+	python ./scripts/orig_scripts/txt2img.py --prompt "ocean" --ddim_steps 5 --n_samples 1 --n_iter 1
 
 ### Doesn't work anymore?
 
