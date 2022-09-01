@@ -272,14 +272,15 @@ class T2I:
         if not(width == self.width and height == self.height):
             width, height, _ = self._resolution_check(width, height, log=True)
 
-        scope = autocast if self.precision == 'autocast' else nullcontext
+        scope = autocast if self.precision == 'autocast' and torch.cuda.is_available() else nullcontext
 
         if sampler_name and (sampler_name != self.sampler_name):
             self.sampler_name = sampler_name
             self._set_sampler()
 
         tic = time.time()
-        torch.cuda.torch.cuda.reset_peak_memory_stats()
+        if torch.cuda.is_available():
+            torch.cuda.torch.cuda.reset_peak_memory_stats()
         results = list()
 
         try:
