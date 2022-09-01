@@ -12,8 +12,7 @@ issue](https://github.com/CompVis/stable-diffusion/issues/25), and generally on
 
 You have to have macOS 12.3 Monterey or later. Anything earlier than that won't work.
 
-BTW, I haven't tested any of this on Intel Macs but I have read that one person
-got it to work.
+Tested on a 2022 Macbook M2 Air with 10-core GPU and 24 GB unified memory.
 
 How to:
 
@@ -22,24 +21,23 @@ git clone https://github.com/lstein/stable-diffusion.git
 cd stable-diffusion
 
 mkdir -p models/ldm/stable-diffusion-v1/
-ln -s /path/to/ckpt/sd-v1-1.ckpt models/ldm/stable-diffusion-v1/model.ckpt
+PATH_TO_CKPT="$HOME/Documents/stable-diffusion-v-1-4-original"  # or wherever yours is.
+ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
 
-conda env create -f environment-mac.yaml
+CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
 conda activate ldm
 
 python scripts/preload_models.py
-python scripts/orig_scripts/txt2img.py --prompt "a photograph of an astronaut riding a horse" --plms
+python scripts/dream.py --full_precision  # half-precision requires autocast and won't work
 ```
 
-We have not gotten lstein's dream.py to work yet.
-
-After you follow all the instructions and run txt2img.py you might get several errors. Here's the errors I've seen and found solutions for.
+After you follow all the instructions and run dream.py you might get several errors. Here's the errors I've seen and found solutions for.
 
 ### Is it slow?
 
 Be sure to specify 1 sample and 1 iteration.
 
-	python ./scripts/txt2img.py --prompt "ocean" --ddim_steps 5 --n_samples 1 --n_iter 1
+	python ./scripts/orig_scripts/txt2img.py --prompt "ocean" --ddim_steps 5 --n_samples 1 --n_iter 1
 
 ### Doesn't work anymore?
 
@@ -94,10 +92,6 @@ get quick feedback.
 
 	python ./scripts/txt2img.py --prompt "ocean" --ddim_steps 5 --n_samples 1 --n_iter 1
 
-### MAC: torch._C' has no attribute '_cuda_resetPeakMemoryStats' #234
-
-We haven't fixed gotten dream.py to work on Mac yet.
-
 ### OSError: Can't load tokenizer for 'openai/clip-vit-large-patch14'...
 
 	python scripts/preload_models.py
@@ -108,7 +102,7 @@ Example error.
 
 ```
 ...
-NotImplementedError: The operator 'aten::index.Tensor' is not current implemented for the MPS device. If you want this op to be added in priority during the prototype phase of this feature, please comment on [https://github.com/pytorch/pytorch/issues/77764](https://github.com/pytorch/pytorch/issues/77764). As a temporary fix, you can set the environment variable `PYTORCH_ENABLE_MPS_FALLBACK=1` to use the CPU as a fallback for this op. WARNING: this will be slower than running natively on MPS.
+NotImplementedError: The operator 'aten::_index_put_impl_' is not current implemented for the MPS device. If you want this op to be added in priority during the prototype phase of this feature, please comment on [https://github.com/pytorch/pytorch/issues/77764](https://github.com/pytorch/pytorch/issues/77764). As a temporary fix, you can set the environment variable `PYTORCH_ENABLE_MPS_FALLBACK=1` to use the CPU as a fallback for this op. WARNING: this will be slower than running natively on MPS.
 ```
 
 The lstein branch includes this fix in [environment-mac.yaml](https://github.com/lstein/stable-diffusion/blob/main/environment-mac.yaml).
@@ -137,27 +131,18 @@ still working on it.
 
 	OMP: Error #15: Initializing libiomp5.dylib, but found libomp.dylib already initialized.
 
-There are several things you can do. First, you could use something
-besides Anaconda like miniforge. I read a lot of things online telling
-people to use something else, but I am stuck with Anaconda for other
-reasons.
+You are likely using an Intel package by mistake. Be sure to run conda with
+the environment variable `CONDA_SUBDIR=osx-arm64`, like so:
 
-Or you can try this.
+`CONDA_SUBDIR=osx-arm64 conda install ...`
 
-	export KMP_DUPLICATE_LIB_OK=True
+This error happens with Anaconda on Macs when the Intel-only `mkl` is pulled in by
+a dependency. [nomkl](https://stackoverflow.com/questions/66224879/what-is-the-nomkl-python-package-used-for)
+is a metapackage designed to prevent this, by making it impossible to install
+`mkl`, but if your environment is already broken it may not work. 
 
-Or this (which takes forever on my computer and didn't work anyway).
-
-	conda install nomkl
-
-This error happens with Anaconda on Macs, and
-[nomkl](https://stackoverflow.com/questions/66224879/what-is-the-nomkl-python-package-used-for)
-is supposed to fix the issue (it isn't a module but a fix of some
-sort). [There's more
-suggestions](https://stackoverflow.com/questions/53014306/error-15-initializing-libiomp5-dylib-but-found-libiomp5-dylib-already-initial),
-like uninstalling tensorflow and reinstalling. I haven't tried them.
-
-Since I switched to miniforge I haven't seen the error.
+Do *not* use `os.environ['KMP_DUPLICATE_LIB_OK']='True'` or equivalents as this
+masks the underlying issue of using Intel packages.
 
 ### Not enough memory.
 
@@ -226,4 +211,8 @@ What? Intel? On an Apple Silicon?
 	The processor must support the Intel(R) Streaming SIMD Extensions 4.2 (Intel(R) SSE4.2) instructions.
 	The processor must support the Intel(R) Advanced Vector Extensions (Intel(R) AVX) instructions.
 
-This was actually the issue that I couldn't solve until I switched to miniforge.
+This is due to the Intel `mkl` package getting picked up when you try to install
+something that depends on it-- Rosetta can translate some Intel instructions but
+not the specialized ones here. To avoid this, make sure to use the environment
+variable `CONDA_SUBDIR=osx-arm64`, which restricts the Conda environment to only
+use ARM packages, and use `nomkl` as described above.

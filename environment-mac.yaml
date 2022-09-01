@@ -1,33 +1,57 @@
 name: ldm
 channels:
-  - apple
-  - conda-forge
   - pytorch-nightly
-  - defaults
+  - conda-forge
 dependencies:
-  - python=3.10.4
-  - pip=22.1.2
+  - python==3.9.13
+  - pip==22.2.2
+ 
+  # pytorch-nightly, left unpinned
   - pytorch
+  - torchmetrics
   - torchvision
-  - numpy=1.23.1
+
+  # I suggest to keep the other deps sorted for convenience.
+  # If you wish to upgrade to 3.10, try to run this:
+  #
+  # ```shell
+  # CONDA_CMD=conda
+  # sed -E 's/python==3.9.13/python==3.10.5/;s/ldm/ldm-3.10/;21,99s/- ([^=]+)==.+/- \1/' environment-mac.yaml > /tmp/environment-mac-updated.yml
+  # CONDA_SUBDIR=osx-arm64 $CONDA_CMD env create -f /tmp/environment-mac-updated.yml && $CONDA_CMD list -n ldm-3.10 | awk ' {print "  - " $1 "==" $2;} '
+  # ```
+  #
+  # Unfortunately, as of 2022-08-31, this fails at the pip stage.
+  - albumentations==1.2.1
+  - coloredlogs==15.0.1
+  - einops==0.4.1
+  - grpcio==1.46.4
+  - humanfriendly
+  - imageio-ffmpeg==0.4.7
+  - imageio==2.21.2
+  - imgaug==0.4.0
+  - kornia==0.6.7
+  - mpmath==1.2.1
+  - nomkl
+  - numpy==1.23.2
+  - omegaconf==2.1.1
+  - onnx==1.12.0
+  - onnxruntime==1.12.1
+  - opencv==4.6.0
+  - pudb==2022.1
+  - pytorch-lightning==1.6.5
+  - scipy==1.9.1
+  - streamlit==1.12.2
+  - sympy==1.10.1
+  - tensorboard==2.9.0
+  - transformers==4.21.2
   - pip:
-    - albumentations==0.4.6
-    - opencv-python==4.6.0.66
-    - pudb==2019.2
-    - imageio==2.9.0
-    - imageio-ffmpeg==0.4.2
-    - pytorch-lightning==1.4.2
-    - omegaconf==2.1.1
-    - test-tube>=0.7.5
-    - streamlit==1.12.0
-    - pillow==9.2.0
-    - einops==0.3.0
-    - torch-fidelity==0.3.0
-    - transformers==4.19.2
-    - torchmetrics==0.6.0
-    - kornia==0.6.0
-    - -e git+https://github.com/openai/CLIP.git@main#egg=clip
+    - invisible-watermark
+    - test-tube
+    - tokenizers
+    - torch-fidelity
+    - -e git+https://github.com/huggingface/diffusers.git@v0.2.4#egg=diffusers
     - -e git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
+    - -e git+https://github.com/openai/CLIP.git@main#egg=clip
     - -e git+https://github.com/lstein/k-diffusion.git@master#egg=k-diffusion
     - -e .
 variables:
