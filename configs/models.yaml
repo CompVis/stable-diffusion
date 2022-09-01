@@ -5,6 +5,6 @@ laion400m:
     height: 256
 stable-diffusion-1.4:
     config: configs/stable-diffusion/v1-inference.yaml
-    weights: models/ldm/stable-diffusion-v1.4/model.ckpt
+    weights: models/ldm/stable-diffusion-v1/model.ckpt
     width: 512
     height: 512
