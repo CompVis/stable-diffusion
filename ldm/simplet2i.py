@@ -27,7 +27,6 @@ from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 from ldm.models.diffusion.ksampler import KSampler
 from ldm.dream.pngwriter import PngWriter
-from ldm.dream.image_util import InitImageResizer
 from ldm.dream.devices import choose_torch_device
 
 """Simplified text to image API for stable diffusion/latent diffusion
@@ -159,7 +158,7 @@ class T2I:
 
         # for VRAM usage statistics
         self.session_peakmem = torch.cuda.max_memory_allocated() if self.device == 'cuda' else None
-            
+
         if seed is None:
             self.seed = self._new_seed()
         else:
@@ -178,7 +177,8 @@ class T2I:
         outputs = []
         for image, seed in results:
             name = f'{prefix}.{seed}.png'
-            path = pngwriter.save_image_and_prompt_to_png(image, f'{prompt} -S{seed}', name)
+            path = pngwriter.save_image_and_prompt_to_png(
+                image, f'{prompt} -S{seed}', name)
             outputs.append([path, seed])
         return outputs
 
@@ -488,7 +488,8 @@ class T2I:
         uc = self.model.get_learned_conditioning([''])
 
         # get weighted sub-prompts
-        weighted_subprompts = T2I._split_weighted_subprompts(prompt, skip_normalize)
+        weighted_subprompts = T2I._split_weighted_subprompts(
+            prompt, skip_normalize)
 
         if len(weighted_subprompts) > 1:
             # i dont know if this is correct.. but it works
@@ -531,7 +532,7 @@ class T2I:
         if self.model is None:
             seed_everything(self.seed)
             try:
-                config      = OmegaConf.load(self.config)
+                config = OmegaConf.load(self.config)
                 self.device = self._get_device()
                 model = self._load_model_from_config(config, self.weights)
                 if self.embedding_path is not None:
@@ -621,7 +622,7 @@ class T2I:
                     image.width, height)
             else:
                 image = InitImageResizer(image).resize(width, height)
-                resize_needed=False
+                resize_needed = False
         if resize_needed:
             image = InitImageResizer(image).resize(
                 new_image_width, new_image_height)
@@ -652,18 +653,20 @@ class T2I:
             $               # else, if no ':' then match end of line
             )               # end non-capture group
         """, re.VERBOSE)
-        parsed_prompts = [(match.group("prompt").replace("\\:", ":"), float(match.group("weight") or 1)) for match in re.finditer(prompt_parser, text)]
+        parsed_prompts = [(match.group("prompt").replace("\\:", ":"), float(
+            match.group("weight") or 1)) for match in re.finditer(prompt_parser, text)]
         if skip_normalize:
             return parsed_prompts
         weight_sum = sum(map(lambda x: x[1], parsed_prompts))
         if weight_sum == 0:
-            print("Warning: Subprompt weights add up to zero. Discarding and using even weights instead.")
+            print(
+                "Warning: Subprompt weights add up to zero. Discarding and using even weights instead.")
             equal_weight = 1 / len(parsed_prompts)
             return [(x[0], equal_weight) for x in parsed_prompts]
         return [(x[0], x[1] / weight_sum) for x in parsed_prompts]
-        
-    # shows how the prompt is tokenized 
-    # usually tokens have '</w>' to indicate end-of-word, 
+
+    # shows how the prompt is tokenized
+    # usually tokens have '</w>' to indicate end-of-word,
     # but for readability it has been replaced with ' '
     def _log_tokenization(self, text):
         if not self.log_tokenization:
@@ -700,4 +703,8 @@ class T2I:
             height = h
             width = w
             resize_needed = True
+
+        if (width * height) > (self.width * self.height):
+            print(">> This input is larger than your defaults. If you run out of memory, please use a smaller image.")
+
         return width, height, resize_needed
