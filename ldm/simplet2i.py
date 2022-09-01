@@ -133,31 +133,31 @@ class T2I:
         embedding_path=None,
         # just to keep track of this parameter when regenerating prompt
         latent_diffusion_weights=False,
-        device='cuda',
     ):
-        self.iterations = iterations
-        self.width = width
-        self.height = height
-        self.steps = steps
-        self.cfg_scale = cfg_scale
-        self.weights = weights
-        self.config = config
-        self.sampler_name = sampler_name
-        self.latent_channels = latent_channels
-        self.downsampling_factor = downsampling_factor
-        self.grid = grid
-        self.ddim_eta = ddim_eta
-        self.precision = precision
-        self.full_precision = full_precision
-        self.strength = strength
-        self.embedding_path = embedding_path
-        self.model = None     # empty for now
-        self.sampler = None
+        self.iterations               = iterations
+        self.width                    = width
+        self.height                   = height
+        self.steps                    = steps
+        self.cfg_scale                = cfg_scale
+        self.weights                  = weights
+        self.config                   = config
+        self.sampler_name             = sampler_name
+        self.latent_channels          = latent_channels
+        self.downsampling_factor      = downsampling_factor
+        self.grid                     = grid
+        self.ddim_eta                 = ddim_eta
+        self.precision                = precision
+        self.full_precision           = full_precision
+        self.strength                 = strength
+        self.embedding_path           = embedding_path
+        self.model                    = None     # empty for now
+        self.sampler                  = None
+        self.device                   = None
         self.latent_diffusion_weights = latent_diffusion_weights
-        self.device = device
 
         # for VRAM usage statistics
-        self.session_peakmem = torch.cuda.max_memory_allocated() if self.device == 'cuda' else None
+        device_type          = choose_torch_device()
+        self.session_peakmem = torch.cuda.max_memory_allocated() if device_type == 'cuda' else None
 
         if seed is None:
             self.seed = self._new_seed()
@@ -250,14 +250,15 @@ class T2I:
         to create the requested output directory, select a unique informative name for each image, and
         write the prompt into the PNG metadata.
         """
-        steps      = steps or self.steps
-        seed       = seed or self.seed
-        width      = width or self.width
-        height     = height or self.height
-        cfg_scale  = cfg_scale or self.cfg_scale
-        ddim_eta   = ddim_eta or self.ddim_eta
-        iterations = iterations or self.iterations
-        strength   = strength or self.strength
+        # TODO: convert this into a getattr() loop
+        steps                 = steps      or self.steps
+        seed                  = seed       or self.seed
+        width                 = width      or self.width
+        height                = height     or self.height
+        cfg_scale             = cfg_scale  or self.cfg_scale
+        ddim_eta              = ddim_eta   or self.ddim_eta
+        iterations            = iterations or self.iterations
+        strength              = strength   or self.strength
         self.log_tokenization = log_tokenization
 
         model = (
