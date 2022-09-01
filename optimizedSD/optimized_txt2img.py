@@ -15,7 +15,7 @@ from contextlib import contextmanager, nullcontext
 from ldm.util import instantiate_from_config
 from optimUtils import split_weighted_subprompts, logger
 from transformers import logging
-import pandas as pd
+# from samplers import CompVisDenoiser
 logging.set_verbosity_error()
 
 
@@ -163,7 +163,7 @@ parser.add_argument(
 parser.add_argument(
     "--sampler",
     type=str,
-    help="sampler to choose from ddim and plms",
+    help="sampler",
     choices=["ddim", "plms"],
     default="plms",
 )
