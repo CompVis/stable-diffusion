@@ -544,12 +544,11 @@ class T2I:
                 self.model = model.to(self.device)
                 # model.to doesn't change the cond_stage_model.device used to move the tokenizer output, so set it here
                 self.model.cond_stage_model.device = self.device
-            except AttributeError:
+            except AttributeError as e:
                 import traceback
-                print(
-                    'Error loading model. Only the CUDA backend is supported', file=sys.stderr)
+                print(f'Error loading model. {str(e)}', file=sys.stderr)
                 print(traceback.format_exc(), file=sys.stderr)
-                raise SystemExit
+                raise SystemExit from e
 
             self._set_sampler()
 
