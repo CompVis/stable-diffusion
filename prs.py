@@ -253,6 +253,9 @@ def do_run(device, model, opt):
                             metadata.add_text("prompt", str(prompts))
                             metadata.add_text("seed", str(opt.seed))
                             metadata.add_text("steps", str(opt.ddim_steps))
+                            metadata.add_text("scale", str(opt.scale))
+                            metadata.add_text("ETA", str(opt.ddim_eta))
+                            metadata.add_text("method", str(opt.method))
 
                         for x_sample in x_samples_ddim:
                             x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
