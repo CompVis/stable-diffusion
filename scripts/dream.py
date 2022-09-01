@@ -88,7 +88,7 @@ def main():
     tic = time.time()
     t2i.load_model()
     print(
-        f'model loaded in', '%4.2fs' % (time.time() - tic)
+        f'>> model loaded in', '%4.2fs' % (time.time() - tic)
     )
 
     if not infile:
@@ -482,6 +482,13 @@ def create_cmd_parser():
         '--init_img',
         type=str,
         help='Path to input image for img2img mode (supersedes width and height)',
+    )
+    parser.add_argument(
+        '-T',
+        '-fit',
+        '--fit',
+        action='store_true',
+        help='If specified, will resize the input image to fit within the dimensions of width x height (512x512 default)',
     )
     parser.add_argument(
         '-f',

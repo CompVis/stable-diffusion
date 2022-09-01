@@ -8,12 +8,14 @@
     margin-top: 20vh;
     margin-left: auto;
     margin-right: auto;
-    max-width: 800px;
-
+    max-width: 1024px;
     text-align: center;
 }
 fieldset {
     border: none;
+}
+div {
+    padding: 10px 10px 10px 10px;
 }
 #fieldset-search {
     display: flex;
@@ -77,4 +79,19 @@ label {
 #cancel-button {
     cursor: pointer;
     color: red;
+}
+#txt2img {
+    background-color: #DCDCDC;
+}
+#img2img {
+    background-color: #F5F5F5;
+}
+#gfpgan {
+    background-color: #DCDCDC;
+}
+#progress-section {
+    background-color: #F5F5F5;
+}
+#about {
+    background-color: #DCDCDC;
 }
