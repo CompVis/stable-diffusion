@@ -280,7 +280,7 @@ class T2I:
 
         tic = time.time()
         if torch.cuda.is_available():
-            torch.cuda.torch.cuda.reset_peak_memory_stats()
+            torch.cuda.reset_peak_memory_stats()
         results = list()
 
         try:
