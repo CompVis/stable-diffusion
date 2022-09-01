@@ -88,7 +88,7 @@ def main():
     tic = time.time()
     t2i.load_model()
     print(
-        f'model loaded in', '%4.2fs' % (time.time() - tic)
+        f'>> model loaded in', '%4.2fs' % (time.time() - tic)
     )
 
     if not infile:
