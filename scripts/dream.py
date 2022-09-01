@@ -12,6 +12,7 @@ import time
 import ldm.dream.readline
 from ldm.dream.pngwriter import PngWriter, PromptFormatter
 from ldm.dream.server import DreamServer, ThreadingDreamServer
+from ldm.dream.image_util import make_grid
 
 def main():
     """Initialize command-line parsers and the diffusion model"""
@@ -28,7 +29,10 @@ def main():
         width = 512
         height = 512
         config = 'configs/stable-diffusion/v1-inference.yaml'
-        weights = 'models/ldm/stable-diffusion-v1/model.ckpt'
+        if '.ckpt' in opt.weights:
+            weights = opt.weights
+        else:
+            weights = f'models/ldm/stable-diffusion-v1/{opt.weights}.ckpt'
 
     print('* Initializing, be patient...\n')
     sys.path.append('.')
@@ -203,24 +207,40 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
 
         # Here is where the images are actually generated!
         try:
-            file_writer = PngWriter(current_outdir, normalized_prompt)
-            callback    = file_writer.write_image if individual_images else None
-            image_list  = t2i.prompt2image(image_callback=callback, **vars(opt))
-            results = (
-                file_writer.files_written if individual_images else image_list
-            )
+            file_writer = PngWriter(current_outdir)
+            prefix = file_writer.unique_prefix()
+            seeds = set()
+            results = []
+            grid_images = dict() # seed -> Image, only used if `do_grid`
+            def image_writer(image, seed, upscaled=False):
+                if do_grid:
+                    grid_images[seed] = image
+                else:
+                    if upscaled and opt.save_original:
+                        filename = f'{prefix}.{seed}.postprocessed.png'
+                    else:
+                        filename = f'{prefix}.{seed}.png'
+                    path = file_writer.save_image_and_prompt_to_png(image, f'{normalized_prompt} -S{seed}', filename)
+                    if (not upscaled) or opt.save_original:
+                        # only append to results if we didn't overwrite an earlier output
+                        results.append([path, seed])
 
-            if do_grid and len(results) > 0:
-                grid_img = file_writer.make_grid([r[0] for r in results])
-                filename = file_writer.unique_filename(results[0][1])
-                seeds = [a[1] for a in results]
-                results = [[filename, seeds]]
-                metadata_prompt = f'{normalized_prompt} -S{results[0][1]}'
-                file_writer.save_image_and_prompt_to_png(
+                seeds.add(seed)
+
+            t2i.prompt2image(image_callback=image_writer, **vars(opt))
+
+            if do_grid and len(grid_images) > 0:
+                grid_img = make_grid(list(grid_images.values()))
+                first_seed = next(iter(seeds))
+                filename = f'{prefix}.{first_seed}.png'
+                # TODO better metadata for grid images
+                metadata_prompt = f'{normalized_prompt} -S{first_seed}'
+                path = file_writer.save_image_and_prompt_to_png(
                     grid_img, metadata_prompt, filename
                 )
+                results = [[path, seeds]]
 
-            last_seeds = [r[1] for r in results]
+            last_seeds = list(seeds)
 
         except AssertionError as e:
             print(e)
@@ -400,6 +420,11 @@ def create_argv_parser():
         dest='web',
         action='store_true',
         help='Start in web server mode.',
+    )
+    parser.add_argument(
+        '--weights',
+        default='model',
+        help='Indicates the Stable Diffusion model to use.',
     )
     return parser
 

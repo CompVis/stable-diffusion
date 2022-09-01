@@ -1,3 +1,4 @@
+from math import sqrt, floor, ceil
 from PIL import Image
 
 class InitImageResizer():
@@ -49,6 +50,26 @@ class InitImageResizer():
         new_image = Image.new('RGB',(width,height))
         new_image.paste(resized_image,((width-rw)//2,(height-rh)//2))
 
+        print(f'>> Resized image size to {width}x{height}')
+
         return new_image
 
-            
+def make_grid(image_list, rows=None, cols=None):
+    image_cnt = len(image_list)
+    if None in (rows, cols):
+        rows = floor(sqrt(image_cnt))  # try to make it square
+        cols = ceil(image_cnt / rows)
+    width = image_list[0].width
+    height = image_list[0].height
+
+    grid_img = Image.new('RGB', (width * cols, height * rows))
+    i = 0
+    for r in range(0, rows):
+        for c in range(0, cols):
+            if i >= len(image_list):
+                break
+            grid_img.paste(image_list[i], (c * width, r * height))
+            i = i + 1
+
+    return grid_img
+

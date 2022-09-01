@@ -605,7 +605,7 @@ This will bring your local copy into sync with the remote one.
 
 ## Macintosh
 
-See (README-Mac-MPS)[README-Mac-MPS.md] for instructions.
+See [README-Mac-MPS](README-Mac-MPS.md) for instructions.
 
 # Simplified API for text to image generation
 

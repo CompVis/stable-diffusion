@@ -52,7 +52,7 @@ model:
         ddconfig:
           double_z: true
           z_channels: 4
-          resolution: 512
+          resolution: 256
           in_channels: 3
           out_ch: 3
           ch: 128
@@ -74,7 +74,7 @@ data:
   target: main.DataModuleFromConfig
   params:
     batch_size: 1
-    num_workers: 16
+    num_workers: 2
     wrap: false
     train:
       target: ldm.data.personalized.PersonalizedBase
@@ -105,4 +105,5 @@ lightning:
 
   trainer:
     benchmark: True
-    max_steps: 6100
+    max_steps: 4000
+    

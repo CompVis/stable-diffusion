@@ -1,20 +1,19 @@
 # Apple Silicon Mac Users
 
 Several people have gotten Stable Diffusion to work on Apple Silicon
-Macs using Anaconda. I've gathered up most of their instructions and
-put them in this fork (and readme). I haven't tested anything besides
-Anaconda, and I've read about issues with things like miniforge, so if
-you have an issue that isn't dealt with in this fork then head on over
-to the [Apple
-Silicon](https://github.com/CompVis/stable-diffusion/issues/25) issue
-on GitHub (that page is so long that GitHub hides most of it by
-default, so you need to find the hidden part and expand it to view the
-whole thing). This fork would not have been possible without the work
-done by the people on that issue.
+Macs using Anaconda, miniforge, etc. I've gathered up most of their instructions and
+put them in this fork (and readme). Things have moved really fast and so these
+instructions change often. Hopefully things will settle down a little.
+
+There's several places where people are discussing Apple
+MPS functionality: [the original CompVis
+issue](https://github.com/CompVis/stable-diffusion/issues/25), and generally on
+[lstein's fork](https://github.com/lstein/stable-diffusion/).
 
 You have to have macOS 12.3 Monterey or later. Anything earlier than that won't work.
 
-BTW, I haven't tested any of this on Intel Macs.
+BTW, I haven't tested any of this on Intel Macs but I have read that one person
+got it to work.
 
 How to:
 
@@ -27,38 +26,41 @@ ln -s /path/to/ckpt/sd-v1-1.ckpt models/ldm/stable-diffusion-v1/model.ckpt
 
 conda env create -f environment-mac.yaml
 conda activate ldm
+
+python scripts/preload_models.py
+python scripts/orig_scripts/txt2img.py --prompt "a photograph of an astronaut riding a horse" --plms
 ```
 
-These instructions are identical to the main repo except I added
-environment-mac.yaml because Mac doesn't have cudatoolkit.
+We have not gotten lstein's dream.py to work yet.
 
 After you follow all the instructions and run txt2img.py you might get several errors. Here's the errors I've seen and found solutions for.
 
+### Is it slow?
+
+Be sure to specify 1 sample and 1 iteration.
+
+	python ./scripts/txt2img.py --prompt "ocean" --ddim_steps 5 --n_samples 1 --n_iter 1
+
 ### Doesn't work anymore?
 
-We are using PyTorch nightly, which includes support for MPS. I don't
-know exactly how Anaconda does updates, but I woke up one morning and
-Stable Diffusion crashed and I couldn't think of anything I did that
-would've changed anything the night before, when it worked. A day and
-a half later I finally got it working again. I don't know what changed
-overnight. PyTorch-nightly changes overnight but I'm pretty sure I
-didn't manually update it. Either way, things are probably going to be
-bumpy on Apple Silicon until PyTorch releases a firm version that we
-can lock to.
+PyTorch nightly includes support for MPS. Because of this, this setup is
+inherently unstable. One morning I woke up and it no longer worked no matter
+what I did until I switched to miniforge. However, I have another Mac that works
+just fine with Anaconda. If you can't get it to work, please search a little
+first because many of the errors will get posted and solved. If you can't find
+a solution please [create an issue](https://github.com/lstein/stable-diffusion/issues).
 
-To manually update to the latest version of PyTorch nightly (which could fix issues), run this command.
+One debugging step is to update to the latest version of PyTorch nightly.
 
 	conda install pytorch torchvision torchaudio -c pytorch-nightly
 
-## Debugging?
+Or you can clean everything up.
 
-Tired of waiting for your renders to finish before you can see if it
-works? Reduce the steps! The picture wont look like anything but if it
-finishes, hey, it works! This could also help you figure out if you've
-got a memory problem, because I'm betting 1 step doesn't use much
-memory.
+	conda clean --yes --all
 
-	python ./scripts/txt2img.py --prompt "ocean" --ddim_steps 1
+Or you can reset Anaconda.
+
+	conda update --force-reinstall -y -n base -c defaults conda
 
 ### "No module named cv2" (or some other module)
 
@@ -83,6 +85,23 @@ globally.
 
 You might also need to install Rust (I mention this again below).
 
+
+### Debugging?
+
+Tired of waiting for your renders to finish before you can see if it
+works? Reduce the steps! The image quality will be horrible but at least you'll
+get quick feedback.
+
+	python ./scripts/txt2img.py --prompt "ocean" --ddim_steps 5 --n_samples 1 --n_iter 1
+
+### MAC: torch._C' has no attribute '_cuda_resetPeakMemoryStats' #234
+
+We haven't fixed gotten dream.py to work on Mac yet.
+
+### OSError: Can't load tokenizer for 'openai/clip-vit-large-patch14'...
+
+	python scripts/preload_models.py
+
 ### "The operator [name] is not current implemented for the MPS device." (sic)
 
 Example error.
@@ -92,9 +111,7 @@ Example error.
 NotImplementedError: The operator 'aten::index.Tensor' is not current implemented for the MPS device. If you want this op to be added in priority during the prototype phase of this feature, please comment on [https://github.com/pytorch/pytorch/issues/77764](https://github.com/pytorch/pytorch/issues/77764). As a temporary fix, you can set the environment variable `PYTORCH_ENABLE_MPS_FALLBACK=1` to use the CPU as a fallback for this op. WARNING: this will be slower than running natively on MPS.
 ```
 
-Just do what it says:
-
-	export PYTORCH_ENABLE_MPS_FALLBACK=1
+The lstein branch includes this fix in [environment-mac.yaml](https://github.com/lstein/stable-diffusion/blob/main/environment-mac.yaml).
 
 ### "Could not build wheels for tokenizers"
 
@@ -104,6 +121,8 @@ I have not seen this error because I had Rust installed on my computer before I 
 
 ### How come `--seed` doesn't work?
 
+First this:
+
 > Completely reproducible results are not guaranteed across PyTorch
 releases, individual commits, or different platforms. Furthermore,
 results may not be reproducible between CPU and GPU executions, even
@@ -111,7 +130,8 @@ when using identical seeds.
 
 [PyTorch docs](https://pytorch.org/docs/stable/notes/randomness.html)
 
-There is an [open issue](https://github.com/pytorch/pytorch/issues/78035) (as of August 2022) in pytorch regarding gradient inconsistency. I am guessing that's what is causing this.
+Second, we might have a fix that at least gets a consistent seed sort of. We're
+still working on it.
 
 ### libiomp5.dylib error?
 
@@ -136,6 +156,8 @@ is supposed to fix the issue (it isn't a module but a fix of some
 sort). [There's more
 suggestions](https://stackoverflow.com/questions/53014306/error-15-initializing-libiomp5-dylib-but-found-libiomp5-dylib-already-initial),
 like uninstalling tensorflow and reinstalling. I haven't tried them.
+
+Since I switched to miniforge I haven't seen the error.
 
 ### Not enough memory.
 
@@ -174,10 +196,10 @@ Actually, this could be happening because there's not enough RAM. You could try 
 
 ### My images come out black
 
-I haven't solved this issue. I just throw away my black
-images. There's a [similar
-issue](https://github.com/CompVis/stable-diffusion/issues/69) on CUDA
-GPU's where the images come out green. Maybe it's the same issue?
+We might have this fixed, we are still testing.
+
+There's a [similar issue](https://github.com/CompVis/stable-diffusion/issues/69)
+on CUDA GPU's where the images come out green. Maybe it's the same issue?
 Someone in that issue says to use "--precision full", but this fork
 actually disables that flag. I don't know why, someone else provided
 that code and I don't know what it does. Maybe the `model.half()`
@@ -204,25 +226,4 @@ What? Intel? On an Apple Silicon?
 	The processor must support the Intel(R) Streaming SIMD Extensions 4.2 (Intel(R) SSE4.2) instructions.
 	The processor must support the Intel(R) Advanced Vector Extensions (Intel(R) AVX) instructions.
 
-This fixed it for me:
-
-	conda clean --yes --all
-
-### Still slow?
-
-I changed the defaults of n_samples and n_iter to 1 so that it uses
-less RAM and makes less images so it will be faster the first time you
-use it. I don't actually know what n_samples does internally, but I
-know it consumes a lot more RAM. The n_iter flag just loops around the
-image creation code, so it shouldn't consume more RAM (it should be
-faster if you're going to do multiple images because the libraries and
-model will already be loaded--use a prompt file to get this speed
-boost).
-
-These flags are the default sample and iter settings in this fork/branch:
-
-~~~~
-python scripts/txt2img.py --prompt "ocean" --n_samples=1 --n_iter=1
-~~~
-
-
+This was actually the issue that I couldn't solve until I switched to miniforge.
