@@ -798,6 +798,8 @@ def render_image_batch(args):
 
     for iprompt, prompt in enumerate(prompts):  
         args.prompt = prompt
+        print(f"{args.prompt}")
+        print(f"Prompt {iprompt+1} of {len(prompts)}")
 
         all_images = []
 
