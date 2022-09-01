@@ -17,6 +17,14 @@ To achieve this, the stable diffusion model is fragmented into four parts which 
 
 All the modified files are in the [optimizedSD](optimizedSD) folder, so if you have already cloned the original repository you can just download and copy this folder into the original instead of cloning the entire repo. You can also clone this repo and follow the same installation steps as the original (mainly creating the conda environment and placing the weights at the specified location).
 
+Alternatively, if you prefer to use Docker, you can do the following:
+1. Install [Docker](https://docs.docker.com/engine/install/), [Docker Compose plugin](https://docs.docker.com/compose/install/), and [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker)
+2. Clone this repo to, e.g., `~/stable-diffusion`
+3. Put your downloaded `model.ckpt` file into `~/sd-data` (it's a relative path, you can change it in `docker-compose.yml`)
+4. `cd` into `~/stable-diffusion` and execute `docker compose up --build`
+
+This will launch gradio on port 7860 with txt2img. You can also use `docker compose run` to execute other Python scripts.
+
 <h1 align="center">Usage</h1>
 
 ## img2img

@@ -1,0 +1,13 @@
+version: "3.9"
+services:
+  sd:
+    build: .
+    ports:
+      - "7860:7860"
+    volumes:
+      - ../sd-data:/data
+      - ../sd-output:/output
+      - sd-cache:/root/.cache
+    runtime: nvidia
+volumes:
+  sd-cache:
