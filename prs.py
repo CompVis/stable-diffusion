@@ -10,7 +10,6 @@ from PIL.PngImagePlugin import PngInfo
 from einops import rearrange, repeat
 from tqdm import tqdm, trange
 from itertools import islice
-from torchvision.utils import make_grid
 import time
 from pytorch_lightning import seed_everything
 from torch import autocast
@@ -100,6 +99,26 @@ def thats_numberwang(dir, wildcard):
         numberwang = max(filenums) + 1
     return numberwang
 
+def slerp(device, t, v0:torch.Tensor, v1:torch.Tensor, DOT_THRESHOLD=0.9995):
+    v0 = v0.detach().cpu().numpy()
+    v1 = v1.detach().cpu().numpy()
+    
+    dot = np.sum(v0 * v1 / (np.linalg.norm(v0) * np.linalg.norm(v1)))
+    if np.abs(dot) > DOT_THRESHOLD:
+        v2 = (1 - t) * v0 + t * v1
+    else:
+        theta_0 = np.arccos(dot)
+        sin_theta_0 = np.sin(theta_0)
+        theta_t = theta_0 * t
+        sin_theta_t = np.sin(theta_t)
+        s0 = np.sin(theta_0 - theta_t) / sin_theta_0
+        s1 = sin_theta_t / sin_theta_0
+        v2 = s0 * v0 + s1 * v1
+
+    v2 = torch.from_numpy(v2).to(device)
+
+    return v2
+
 class CFGDenoiser(nn.Module):
     def __init__(self, model):
         super().__init__()
@@ -119,16 +138,12 @@ def do_run(device, model, opt):
     os.makedirs(opt.outdir, exist_ok=True)
     outpath = opt.outdir
 
-    batch_size = opt.n_samples
-    n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
+    batch_size = 1
 
     # prompt = opt.prompt
     data = [batch_size * [opt.prompt]]
     # data = opt.prompt
 
-    sample_path = os.path.join(outpath, "samples")
-    os.makedirs(sample_path, exist_ok=True)
-    base_count = thats_numberwang(sample_path, opt.batch_name)
     grid_count = thats_numberwang(outpath, opt.batch_name)
 
     sampler = DDIMSampler(model, device)
@@ -150,8 +165,6 @@ def do_run(device, model, opt):
         init_image = None
 
     start_code = None
-    if opt.fixed_code:
-        start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
     
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
     # apple silicon support
@@ -189,7 +202,16 @@ def do_run(device, model, opt):
                             shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
                             if opt.method != "ddim":
                                 sigmas = model_wrap.get_sigmas(opt.ddim_steps)
-                                x = torch.randn([opt.n_samples, *shape], device=device) * sigmas[0]
+                                if opt.variance == 0.0 or n == 0:
+                                    # use regular starting noise
+                                    x = torch.randn([batch_size, *shape], device=device) * sigmas[0]
+                                else:
+                                    # add a little extra random noise to get varying output with same seed
+                                    torch.manual_seed(opt.seed)
+                                    base_x = torch.randn([batch_size, *shape], device=device) * sigmas[0]
+                                    torch.manual_seed(opt.variance_seed + n)
+                                    target_x = torch.randn([batch_size, *shape], device=device) * sigmas[0]
+                                    x = slerp(device, max(0.0, min(1.0, opt.variance)), base_x, target_x)
                                 model_wrap_cfg = CFGDenoiser(model_wrap)
                                 extra_args = {'cond': c, 'uncond': uc, 'cond_scale': opt.scale}
                                 if opt.method == "k_euler":
@@ -207,7 +229,7 @@ def do_run(device, model, opt):
                             else:
                                 samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
                                                                 conditioning=c,
-                                                                batch_size=opt.n_samples,
+                                                                batch_size=batch_size,
                                                                 shape=shape,
                                                                 verbose=False,
                                                                 unconditional_guidance_scale=opt.scale,
@@ -226,34 +248,18 @@ def do_run(device, model, opt):
                         x_samples_ddim = model.decode_first_stage(samples_ddim)
                         x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
 
-                        if not opt.skip_save:
-                            for x_sample in x_samples_ddim:
-                                x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                                Image.fromarray(x_sample.astype(np.uint8)).save(
-                                    os.path.join(sample_path, f"{opt.device_id}{base_count:05}{opt.filetype}"), quality = opt.quality)
-                                base_count += 1
+                        metadata = PngInfo()
+                        if opt.hide_metadata == False:
+                            metadata.add_text("prompt", str(prompts))
+                            metadata.add_text("seed", str(opt.seed))
+                            metadata.add_text("steps", str(opt.ddim_steps))
 
-                        if not opt.skip_grid:
-                            all_samples.append(x_samples_ddim)
-
-                if not opt.skip_grid:
-                    # additionally, save as grid
-                    grid = torch.stack(all_samples, 0)
-                    grid = rearrange(grid, 'n b c h w -> (n b) c h w')
-                    grid = make_grid(grid, nrow=n_rows)
-
-                    metadata = PngInfo()
-                    if opt.hide_metadata == False:
-                        metadata.add_text("prompt", str(prompts))
-                        metadata.add_text("seed", str(opt.seed))
-                        metadata.add_text("steps", str(opt.ddim_steps))
-
-                    # to image
-                    grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-                    output_filename = os.path.join(outpath, f'{opt.batch_name}{opt.device_id}-{grid_count:04}{opt.filetype}')
-                    Image.fromarray(grid.astype(np.uint8)).save(output_filename, pnginfo=metadata, quality = opt.quality)
-                    print(f'\nYour output was saved as "{output_filename}"\n')
-                    grid_count += 1
+                        for x_sample in x_samples_ddim:
+                            x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
+                            output_filename = os.path.join(outpath, f'{opt.batch_name}{opt.device_id}-{grid_count:04}{opt.filetype}')
+                            Image.fromarray(x_sample.astype(np.uint8)).save(output_filename, pnginfo=metadata, quality = opt.quality)
+                            print(f'\nOutput saved as "{output_filename}"\n')
+                            grid_count += 1
 
                 toc = time.time()
     return output_filename
@@ -401,7 +407,15 @@ def parse_args():
         type=int,
         action='store',
         required=False,
-        help='How many images to generate'
+        help='How many batches of images to generate'
+    )
+    my_parser.add_argument(
+        '-i',
+        '--n_iter',
+        type=int,
+        action='store',
+        required=False,
+        help='How many images to generate within a batch'
     )
     my_parser.add_argument(
         '--seed',
@@ -500,8 +514,8 @@ def dynamic_value(incoming):
         elif "<" in incoming:   # ...and if < is in the string...
             text = incoming
             while "<" in text:
-                start = text.index('<')
-                end = text.index('>')
+                start = text.find('<')
+                end = text.find('>')
                 swap = text[(start + 1):end]
                 value = ""
                 count = 1
@@ -514,7 +528,7 @@ def dynamic_value(incoming):
                 for i in range(count):
                     value = value + values[i] + " "
                 value = value[:-1]  # remove final space
-                text = text.replace(f'<{swap}>', value)
+                text = text.replace(f'<{swap}>', value, 1)
             return text
         else:
             return incoming
@@ -530,18 +544,18 @@ class Settings:
     n_iter = 1
     width = 512
     height = 512
-    n_samples = 1
-    n_rows = 2
     scale = 5.0
     dyn = None
     from_file = None
     seed = "random"
+    variance = 0.0
     frozen_seed = False
     init_image = None
     init_strength = 0.5
     gobig_maximize = True
     gobig_overlap = 64
     gobig_realesrgan = False
+    gobig_keep_slices = False
     cool_down = 0.0
     checkpoint = "./models/sd-v1-4.ckpt"
     use_jpg = False
@@ -567,10 +581,6 @@ class Settings:
             self.width = (settings_file["width"])
         if is_json_key_present(settings_file, 'height'):
             self.height = (settings_file["height"])
-        if is_json_key_present(settings_file, 'n_samples'):
-            self.n_samples = (settings_file["n_samples"])
-        if is_json_key_present(settings_file, 'n_rows'):
-            self.n_rows = (settings_file["n_rows"])
         if is_json_key_present(settings_file, 'scale'):
             self.scale = (settings_file["scale"])
         if is_json_key_present(settings_file, 'dyn'):
@@ -581,6 +591,8 @@ class Settings:
             self.seed = (settings_file["seed"])
             if self.seed == "random":
                 self.seed = random.randint(1, 10000000)
+        if is_json_key_present(settings_file, 'variance'):
+            self.variance = (settings_file["variance"])
         if is_json_key_present(settings_file, 'frozen_seed'):
             self.frozen_seed = (settings_file["frozen_seed"])
         if is_json_key_present(settings_file, 'init_strength'):
@@ -593,6 +605,8 @@ class Settings:
             self.gobig_overlap = (settings_file["gobig_overlap"])
         if is_json_key_present(settings_file, 'gobig_realesrgan'):
             self.gobig_realesrgan = (settings_file["gobig_realesrgan"])
+        if is_json_key_present(settings_file, 'gobig_keep_slices'):
+            self.gobig_keep_slices = (settings_file["gobig_keep_slices"])
         if is_json_key_present(settings_file, 'cool_down'):
             self.cool_down = (settings_file["cool_down"])
         if is_json_key_present(settings_file, 'checkpoint'):
@@ -615,16 +629,16 @@ def save_settings(options, prompt, filenum):
         'n_iter' : options.n_iter,
         'width' : options.W,
         'height' : options.H,
-        'n_samples' : options.n_samples,
-        'n_rows' : options.n_rows,
         'scale' : options.scale,
         'dyn' : options.dyn,
         'seed' : options.seed,
+        'variance' : options.variance,
         'init_image' : options.init_image,
         'init_strength' : 1.0 - options.strength,
         'gobig_maximize' : options.gobig_maximize,
         'gobig_overlap' : options.gobig_overlap,
         'gobig_realesrgan' : options.gobig_realesrgan,
+        'gobig_keep_slices' : options.gobig_keep_slices,
         'use_jpg' : "true" if options.filetype == ".jpg" else "false",
         'hide_metadata' : options.hide_metadata,
         'method' : options.method
@@ -671,19 +685,25 @@ def do_gobig(gobig_init, device, model, opt):
         chunk, coord_x, coord_y = chunk_w_coords
         chunk.save(slice_image)
         opt.init_image = slice_image
+        opt.save_settings = False # we don't need to keep settings for each slice, just the main image.
+        opt.n_iter = 1 # no point doing multiple iterations since only one will be used
         result = do_run(device, model, opt)
         resultslice = Image.open(result).convert('RGBA')
         betterslices.append((resultslice.copy(), coord_x, coord_y))
         resultslice.close()
+        if opt.gobig_keep_slices == False:
+            os.remove(result)
     # create an alpha channel for compositing the slices
     alpha = Image.new('L', (opt.W, opt.H), color=0xFF)
     alpha_gradient = ImageDraw.Draw(alpha)
     a = 0
     i = 0
+    a_overlap = overlap # int(overlap / 2) # we want the alpha gradient to be half the size of the overlap, otherwise we always see some of the original background underneath
     shape = ((opt.W, opt.H), (0,0))
     while i < overlap:
         alpha_gradient.rectangle(shape, fill = a)
-        a += int(255 / overlap)
+        a += int(255 / a_overlap)
+        a = 255 if a > 255 else a
         i += 1
         shape = ((opt.W - i, opt.H - i), (i,i))
     mask = Image.new('RGBA', (opt.W, opt.H), color=0)
@@ -694,8 +714,13 @@ def do_gobig(gobig_init, device, model, opt):
         finished_slice = addalpha(betterslice, mask)
         finished_slices.append((finished_slice, x, y))
     final_output = grid_merge(target_image, finished_slices)
+    # name the file in a way that hopefully doesn't break things
     result = result.replace('.png','')
-    final_output.save(f'{result}_gobig{opt.filetype}', quality = opt.quality)
+    result_split = result.split('-')
+    result_split[0] = result_split[0] + '_gobig-'
+    result = result_split[0] + result_split[1]
+    print(f'Gobig output saving as {result}{opt.filetype}')
+    final_output.save(f'{result}{opt.filetype}', quality = opt.quality)
 
 def main():
     print('\nPROG ROCK STABLE')
@@ -733,6 +758,9 @@ def main():
 
     if cl_args.n_batches:
         settings.n_batches = cl_args.n_batches
+
+    if cl_args.n_iter:
+        settings.n_iter = cl_args.n_iter
 
     if cl_args.from_file:
         settings.from_file = cl_args.from_file
@@ -826,8 +854,6 @@ def main():
                     "prompt" : prompts[p],
                     "batch_name" : settings.batch_name,
                     "outdir" : outdir,
-                    "skip_grid" : False,
-                    "skip_save" : False,
                     "ddim_steps" : settings.steps,
                     "ddim_eta" : settings.eta,
                     "n_iter" : settings.n_iter,
@@ -835,12 +861,11 @@ def main():
                     "H" : settings.height,
                     "C" : 4,
                     "f" : 8,
-                    "n_samples" : settings.n_samples,
-                    "n_rows" : settings.n_rows,
                     "scale" : settings.scale,
                     "dyn" : settings.dyn,
                     "seed" : settings.seed + i,
-                    "fixed_code": False,
+                    "variance": settings.variance,
+                    "variance_seed": settings.seed + i + 1,
                     "precision": "autocast",
                     "init_image": settings.init_image,
                     "strength": 1.0 - settings.init_strength,
@@ -848,6 +873,7 @@ def main():
                     "gobig_maximize": settings.gobig_maximize,
                     "gobig_overlap": settings.gobig_overlap,
                     "gobig_realesrgan": settings.gobig_realesrgan,
+                    "gobig_keep_slices": settings.gobig_keep_slices,
                     "config": config,
                     "filetype": filetype,
                     "hide_metadata": settings.hide_metadata,
