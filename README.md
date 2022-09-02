@@ -132,6 +132,11 @@ conda activate prs
 ```
 You can now continue with [installation above](#download-stable-diffusion-weights).
 
+## MacOS troubleshooting
+You may get an error from pytorch about functional.py. To fix this, unfortunately for now you need to hand-edit the file it errors on. The path to it should be visible in the error.
+
+In the file, in layer_norm(), change to return torch.layer_norm(input.contiguous(), ...
+
 # About Stable Diffusion
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
 
