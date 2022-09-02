@@ -721,8 +721,9 @@ def do_gobig(gobig_init, device, model, opt):
         finished_slices.append((finished_slice, x, y))
     final_output = grid_merge(target_image, finished_slices)
     # name the file in a way that hopefully doesn't break things
+    print(f'result is {result}')
     result = result.replace('.png','')
-    result_split = result.split('-')
+    result_split = result.rsplit('-', 1)
     result_split[0] = result_split[0] + '_gobig-'
     result = result_split[0] + result_split[1]
     print(f'Gobig output saving as {result}{opt.filetype}')
