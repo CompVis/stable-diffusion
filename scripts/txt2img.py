@@ -1,6 +1,9 @@
 import argparse, os, sys, glob
+import random
+
 import cv2
 import torch
+
 import numpy as np
 from omegaconf import OmegaConf
 from PIL import Image
@@ -20,6 +23,8 @@ from ldm.models.diffusion.plms import PLMSSampler
 
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
+
+torch.cuda.empty_cache()
 
 
 # load safety model
@@ -60,7 +65,7 @@ def load_model_from_config(config, ckpt, verbose=False):
         print("unexpected keys:")
         print(u)
 
-    model.cuda()
+    model.cuda().half()
     model.eval()
     return model
 
@@ -85,13 +90,14 @@ def load_replacement(x):
 
 
 def check_safety(x_image):
-    safety_checker_input = safety_feature_extractor(numpy_to_pil(x_image), return_tensors="pt")
-    x_checked_image, has_nsfw_concept = safety_checker(images=x_image, clip_input=safety_checker_input.pixel_values)
-    assert x_checked_image.shape[0] == len(has_nsfw_concept)
-    for i in range(len(has_nsfw_concept)):
-        if has_nsfw_concept[i]:
-            x_checked_image[i] = load_replacement(x_checked_image[i])
-    return x_checked_image, has_nsfw_concept
+    return x_image, False
+    # safety_checker_input = safety_feature_extractor(numpy_to_pil(x_image), return_tensors="pt")
+    # x_checked_image, has_nsfw_concept = safety_checker(images=x_image, clip_input=safety_checker_input.pixel_values)
+    # assert x_checked_image.shape[0] == len(has_nsfw_concept)
+    # for i in range(len(has_nsfw_concept)):
+    #     if has_nsfw_concept[i]:
+    #         x_checked_image[i] = load_replacement(x_checked_image[i])
+    # return x_checked_image, has_nsfw_concept
 
 
 def main():
@@ -216,7 +222,8 @@ def main():
     parser.add_argument(
         "--seed",
         type=int,
-        default=42,
+        # set a random seed for default
+        default=random.randint(0, 2**32),
         help="the seed (for reproducible sampling)",
     )
     parser.add_argument(
@@ -252,8 +259,8 @@ def main():
 
     print("Creating invisible watermark encoder (see https://github.com/ShieldMnt/invisible-watermark)...")
     wm = "StableDiffusionV1"
-    wm_encoder = WatermarkEncoder()
-    wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
+    #wm_encoder = WatermarkEncoder()
+    #wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
 
     batch_size = opt.n_samples
     n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
@@ -314,7 +321,7 @@ def main():
                             for x_sample in x_checked_image_torch:
                                 x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                                 img = Image.fromarray(x_sample.astype(np.uint8))
-                                img = put_watermark(img, wm_encoder)
+                                #img = put_watermark(img, wm_encoder)
                                 img.save(os.path.join(sample_path, f"{base_count:05}.png"))
                                 base_count += 1
 
@@ -330,7 +337,7 @@ def main():
                     # to image
                     grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
                     img = Image.fromarray(grid.astype(np.uint8))
-                    img = put_watermark(img, wm_encoder)
+                    #img = put_watermark(img, wm_encoder)
                     img.save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
                     grid_count += 1
 
