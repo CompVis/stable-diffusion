@@ -19,24 +19,45 @@ always break.
 
 How to (this hasn't been 100% tested yet):
 
-First [download the model](https://huggingface.co/CompVis/stable-diffusion).
+First get the weights checkpoint download started - it's big:
+
+Sign up at https://huggingface.co
+Accept the terms and click Access Repository: https://huggingface.co/CompVis/stable-diffusion-v-1-4-original
+Download sd-v1-4.ckpt (4.27 GB) and note where you have saved it (probably the Downloads folder)
+While that is downloading, open Terminal and run the following commands one at a time.
 
 ```
-brew install --cask miniconda
-brew install Cmake protobuf rust
+# install brew (and Xcode command line tools):
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
+# install python 3, git, cmake, protobuf:
+brew install cmake protobuf rust
+
+# install miniconda (M1 arm64 version):
+curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o Miniconda3-latest-MacOSX-arm64.sh
+/bin/bash Miniconda3-latest-MacOSX-arm64.sh
+
+# clone the repo
 git clone https://github.com/lstein/stable-diffusion.git
 cd stable-diffusion
 
+#
+# wait until the checkpoint file has downloaded, then proceed
+#
+
+# create symlink to checkpoint
 mkdir -p models/ldm/stable-diffusion-v1/
-PATH_TO_CKPT="$HOME/Documents/stable-diffusion-v-1-4-original"  # or wherever yours is.
+PATH_TO_CKPT="$HOME/Downloads"  # or wherever you saved sd-v1-4.ckpt
 ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
 
-export PIP_EXISTS_ACTION=w
-CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
+# install packages
+PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
 conda activate ldm
 
+# only need to do this once
 python scripts/preload_models.py
+
+# run SD!
 python scripts/dream.py --full_precision  # half-precision requires autocast and won't work
 ```
 
