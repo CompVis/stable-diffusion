@@ -280,6 +280,10 @@ class T2I:
         ), 'can only work with strength in [0.0, 1.0]'
 
         width, height, _ = self._resolution_check(width, height, log=True)
+
+        # TODO: - Check if this is still necessary to run on M1 devices.
+        #       - Move code into ldm.dream.devices to live alongside other
+        #         special-hardware casing code.
         if self.precision == 'autocast' and torch.cuda.is_available():
             scope = autocast
         else:
