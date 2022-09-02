@@ -307,7 +307,7 @@ change instead. This is a 32-bit vs 16-bit problem.
 What? Intel? On an Apple Silicon?
 
 	Intel MKL FATAL ERROR: This system does not meet the minimum requirements for use of the Intel(R) Math Kernel Library.
-	The processor must support the Intel(R) Supplemental Streaming SIMD Extensions 3 (Intel(R) SSSE3) instructions.██████████████| 50/50 [02:25<00:00,  2.53s/it]
+	The processor must support the Intel(R) Supplemental Streaming SIMD Extensions 3 (Intel(R) SSSE3) instructions.
 	The processor must support the Intel(R) Streaming SIMD Extensions 4.2 (Intel(R) SSE4.2) instructions.
 	The processor must support the Intel(R) Advanced Vector Extensions (Intel(R) AVX) instructions.
 
