@@ -74,15 +74,16 @@ setup_environment = True #@param {type:"boolean"}
 print_subprocess = False #@param {type:"boolean"}
 
 if setup_environment:
-    import subprocess
-    print("...setting up environment")
+    import subprocess, time
+    print("Setting up environment...")
+    start_time = time.time()
     all_process = [
-        ['pip', 'install', 'torch==1.11.0+cu113', 'torchvision==0.12.0+cu113', 'torchaudio==0.11.0', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'],
-        ['pip', 'install', 'omegaconf==2.1.1', 'einops==0.3.0', 'pytorch-lightning==1.4.2', 'torchmetrics==0.6.0', 'torchtext==0.2.3', 'transformers==4.19.2', 'kornia==0.6'],
+        ['pip', 'install', 'torch==1.12.1+cu113', 'torchvision==0.13.1+cu113', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'],
+        ['pip', 'install', 'omegaconf==2.2.3', 'einops==0.4.1', 'pytorch-lightning==1.7.4', 'torchmetrics==0.9.3', 'torchtext==0.13.1', 'transformers==4.21.2', 'kornia==0.6.7'],
         ['git', 'clone', '-b', 'dev', 'https://github.com/deforum/stable-diffusion'],
         ['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'],
         ['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'],
-        ['pip', 'install', 'accelerate', 'ftfy', 'jsonmerge', 'resize-right', 'timm', 'torchdiffeq'],
+        ['pip', 'install', 'accelerate', 'ftfy', 'jsonmerge', 'matplotlib', 'resize-right', 'timm', 'torchdiffeq'],
         ['git', 'clone', 'https://github.com/shariqfarooq123/AdaBins.git'],
         ['git', 'clone', 'https://github.com/isl-org/MiDaS.git'],
         ['git', 'clone', 'https://github.com/MSFTserver/pytorch3d-lite.git'],
@@ -95,6 +96,9 @@ if setup_environment:
     print(subprocess.run(['git', 'clone', 'https://github.com/deforum/k-diffusion/'], stdout=subprocess.PIPE).stdout.decode('utf-8'))
     with open('k-diffusion/k_diffusion/__init__.py', 'w') as f:
         f.write('')
+
+    end_time = time.time()
+    print(f"Environment set up in {end_time-start_time:.0f} seconds")
 
 # %%
 # !! {"metadata":{
@@ -148,18 +152,6 @@ from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 from midas.dpt_depth import DPTDepthModel
 from midas.transforms import Resize, NormalizeImage, PrepareForNet
-
-class CFGDenoiser(nn.Module):
-    def __init__(self, model):
-        super().__init__()
-        self.inner_model = model
-
-    def forward(self, x, sigma, uncond, cond, cond_scale):
-        x_in = torch.cat([x] * 2)
-        sigma_in = torch.cat([sigma] * 2)
-        cond_in = torch.cat([uncond, cond])
-        uncond, cond = self.inner_model(x_in, sigma_in, cond=cond_in).chunk(2)
-        return uncond + (cond - uncond) * cond_scale
 
 def anim_frame_warp_2d(prev_img_cv2, args, anim_args, keys, frame_idx):
     angle = keys.angle_series[frame_idx]
