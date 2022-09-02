@@ -117,11 +117,7 @@ class Predictor(BasePredictor):
             default="plms",
         ),
         fps: int = Input(
-            default=15,
-            ge=10,
-            le=60,
-            description="Choose fps for the video."
-
+            default=15, ge=10, le=60, description="Choose fps for the video."
         ),
         seed: int = Input(
             description="Random seed. Leave blank to randomize the seed", default=None
@@ -133,23 +129,23 @@ class Predictor(BasePredictor):
         animation_prompts_dict = {}
         animation_prompts = animation_prompts.split("|")
         assert len(animation_prompts) > 0, "Please provide valid prompt for animation."
-        for frame_prompt in animation_prompts:
-            frame_prompt = frame_prompt.split(":")
-            assert (
-                len(frame_prompt) == 2
-            ), "Please follow the 'frame_num: prompt' format."
-            frame_id, prompt = frame_prompt[0].strip(), frame_prompt[1].strip()
-            assert (
-                frame_id.isdigit() and int(frame_id) <= max_frames
-            ), "frame_num should be an integer and <= max_frames"
-            assert (
-                int(frame_id) not in animation_prompts_dict
-            ), f"Duplicate prompts for frame_num {frame_id}. "
-            assert len(prompt) > 0, "prompt cannot be empty"
-            animation_prompts_dict[int(frame_id)] = prompt
-        if len(animation_prompts_dict) == 1:
-            animation_prompts = {0: list(animation_prompts_dict.values())[0]}
+        if len(animation_prompts) == 1:
+            animation_prompts = {0: animation_prompts[0]}
         else:
+            for frame_prompt in animation_prompts:
+                frame_prompt = frame_prompt.split(":")
+                assert (
+                    len(frame_prompt) == 2
+                ), "Please follow the 'frame_num: prompt' format."
+                frame_id, prompt = frame_prompt[0].strip(), frame_prompt[1].strip()
+                assert (
+                    frame_id.isdigit() and 0<= int(frame_id) <= max_frames
+                ), "frame_num should be an integer and 0<= frame_num <= max_frames"
+                assert (
+                    int(frame_id) not in animation_prompts_dict
+                ), f"Duplicate prompts for frame_num {frame_id}. "
+                assert len(prompt) > 0, "prompt cannot be empty"
+                animation_prompts_dict[int(frame_id)] = prompt
             animation_prompts = OrderedDict(sorted(animation_prompts_dict.items()))
 
         outdir = "cog_out"
