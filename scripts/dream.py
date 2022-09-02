@@ -282,9 +282,9 @@ def dream_server_loop(t2i, host, port):
     dream_server = ThreadingDreamServer((host, port))
     print("\nStarted Stable Diffusion dream server!")
     if host == '0.0.0.0':
-      print(f"Point your browser at http://localhost:{port} or use the host's DNS name or IP address.")
+        print(f"Point your browser at http://localhost:{port} or use the host's DNS name or IP address.")
     else:
-      print(f"Point your browser at http://{host}:{port}.")
+        print(f"Point your browser at http://{host}:{port}.")
 
     try:
         dream_server.serve_forever()
