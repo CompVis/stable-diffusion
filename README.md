@@ -18,12 +18,13 @@ text-to-image generator. This fork supports:
 1. An interactive command-line interface that accepts the same prompt
    and switches as the Discord bot.
 
-2. Support for img2img in which you provide a seed image to build on
-   top of.
-
-3. A basic Web interface that allows you to run a local web server for
+2. A basic Web interface that allows you to run a local web server for
    generating images in your browser.
-4. A notebook for running the code on Google Colab.
+
+3. A notebook for running the code on Google Colab.
+
+4. Support for img2img in which you provide a seed image to guide the
+      image creation. (inpainting & masking coming soon)
 
 5. Upscaling and face fixing using the optional ESRGAN and GFPGAN
    packages.
@@ -44,7 +45,8 @@ improvements and bug fixes.
 2. [Changelog](#latest)
 3. [Installation](#installation)
 4. [Troubleshooting](#troubleshooting)
-5. [Support](#support)
+5. [Contributing](#contributing)
+6. [Support](#support)
 
 # Features
 
@@ -394,10 +396,10 @@ repository and associated paper for details and limitations.
   - Supports a Google Colab notebook for a standalone server running on Google hardware [Arturo Mendivil](https://github.com/artmen1516)
   - WebUI supports GFPGAN/ESRGAN facial reconstruction and upscaling [Kevin Gibbons](https://github.com/bakkot)
   - WebUI supports incremental display of in-progress images during generation [Kevin Gibbons](https://github.com/bakkot)
-  - Output directory can be specified on the dream> command line.
-  - The grid was displaying duplicated images when not enough images to fill the final row [Muhammad Usama](https://github.com/SMUsamaShah)
   - Can specify --grid on dream.py command line as the default.
   - Miscellaneous internal bug and stability fixes.
+  - Works on M1 Apple hardware.
+  - Multiple bug fixes.
 
 For older changelogs, please visit **[CHANGELOGS](CHANGELOG.md)**.
 
@@ -723,6 +725,20 @@ of branch>
 You will need to go through the install procedure again, but it should
 be fast because all the dependencies are already loaded.
 
+# Contributing
+
+Anyone who wishes to contribute to this project, whether
+documentation, features, bug fixes, code cleanup, testing, or code
+reviews, is very much encouraged to do so. If you are unfamiliar with
+how to contribute to GitHub projects, here is a (Getting Started
+Guide)[https://opensource.com/article/19/7/create-pull-request-github].
+
+A full set of contribution guidelines, along with templates, are in
+progress, but for now the most important thing is to **make your pull
+request against the "development" branch**, and not against
+"main". This will help keep public breakage to a minimum and will
+allow you to propose more radical changes.
+
 # Support
 
 For support,
@@ -735,8 +751,12 @@ _Contributions by:_
 [Peter Kowalczyk](https://github.com/slix), [Henry Harrison](https://github.com/hwharrison),
 [xraxra](https://github.com/xraxra), [bmaltais](https://github.com/bmaltais), [Sean McLellan](https://github.com/Oceanswave),
 [nicolai256](https://github.com/nicolai256), [Benjamin Warner](https://github.com/warner-benjamin),
-[tildebyte](https://github.com/tildebyte),[yunsaki](https://github.com/yunsaki)
-and [Tesseract Cat](https://github.com/TesseractCat)
+[tildebyte](https://github.com/tildebyte),[yunsaki](https://github.com/yunsaki), [James Reynolds][https://github.com/magnusviri],
+[Tesseract Cat](https://github.com/TesseractCat), and many more!
+
+(If you have contributed and don't see your name on the list of
+contributors, please let lstein know about the omission, or make a
+pull request)
 
 Original portions of the software are Copyright (c) 2020 Lincoln D. Stein (https://github.com/lstein)
 
