@@ -200,7 +200,7 @@ def main():
     config = OmegaConf.load(f"{opt.config}")
     model = load_model_from_config(config, f"{opt.ckpt}")
 
-    device = choose_torch_device()
+    device = torch.device(choose_torch_device())
     model = model.to(device)
 
     if opt.plms:

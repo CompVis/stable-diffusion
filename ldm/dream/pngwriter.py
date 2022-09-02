@@ -61,6 +61,8 @@ class PromptFormatter:
         switches.append(f'-A{opt.sampler_name or t2i.sampler_name}')
         if opt.init_img:
             switches.append(f'-I{opt.init_img}')
+        if opt.fit:
+            switches.append(f'--fit')
         if opt.strength and opt.init_img is not None:
             switches.append(f'-f{opt.strength or t2i.strength}')
         if opt.gfpgan_strength:

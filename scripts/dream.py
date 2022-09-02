@@ -9,6 +9,7 @@ import sys
 import copy
 import warnings
 import time
+from ldm.dream.devices import choose_torch_device
 import ldm.dream.readline
 from ldm.dream.pngwriter import PngWriter, PromptFormatter
 from ldm.dream.server import DreamServer, ThreadingDreamServer
@@ -60,7 +61,7 @@ def main():
         # this is solely for recreating the prompt
         latent_diffusion_weights=opt.laion400m,
         embedding_path=opt.embedding_path,
-        device=opt.device,
+        device_type=opt.device
     )
 
     # make sure the output directory exists
@@ -88,7 +89,7 @@ def main():
     tic = time.time()
     t2i.load_model()
     print(
-        f'model loaded in', '%4.2fs' % (time.time() - tic)
+        f'>> model loaded in', '%4.2fs' % (time.time() - tic)
     )
 
     if not infile:
@@ -347,6 +348,8 @@ def create_argv_parser():
         dest='full_precision',
         action='store_true',
         help='Use slower full precision math for calculations',
+        # MPS only functions with full precision, see https://github.com/lstein/stable-diffusion/issues/237
+        default=choose_torch_device() == 'mps',
     )
     parser.add_argument(
         '-g',
@@ -375,13 +378,6 @@ def create_argv_parser():
         '--embedding_path',
         type=str,
         help='Path to a pre-trained embedding manager checkpoint - can only be set on command line',
-    )
-    parser.add_argument(
-        '--device',
-        '-d',
-        type=str,
-        default='cuda',
-        help='Device to run Stable Diffusion on. Defaults to cuda `torch.cuda.current_device()` if avalible',
     )
     parser.add_argument(
         '--prompt_as_dir',
@@ -425,6 +421,13 @@ def create_argv_parser():
         '--weights',
         default='model',
         help='Indicates the Stable Diffusion model to use.',
+    )
+    parser.add_argument(
+        '--device',
+        '-d',
+        type=str,
+        default='cuda',
+        help="device to run stable diffusion on. defaults to cuda `torch.cuda.current_device()` if available"
     )
     return parser
 
@@ -482,6 +485,13 @@ def create_cmd_parser():
         '--init_img',
         type=str,
         help='Path to input image for img2img mode (supersedes width and height)',
+    )
+    parser.add_argument(
+        '-T',
+        '-fit',
+        '--fit',
+        action='store_true',
+        help='If specified, will resize the input image to fit within the dimensions of width x height (512x512 default)',
     )
     parser.add_argument(
         '-f',

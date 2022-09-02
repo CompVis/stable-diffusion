@@ -740,7 +740,7 @@ and [Tesseract Cat](https://github.com/TesseractCat)
 
 Original portions of the software are Copyright (c) 2020 Lincoln D. Stein (https://github.com/lstein)
 
-#Further Reading
+# Further Reading
 
 Please see the original README for more information on this software
-and underlying algorithm, located in the file README-CompViz.md.
+and underlying algorithm, located in the file [README-CompViz.md](README-CompViz.md).
