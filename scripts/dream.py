@@ -424,7 +424,7 @@ def create_argv_parser():
         '--host',
         type=str,
         default='127.0.0.1',
-        help='Web server: Host or IP to listen on'
+        help='Web server: Host or IP to listen on. Set to 0.0.0.0 to accept traffic from other devices on your network.'
     )
     parser.add_argument(
         '--port',
