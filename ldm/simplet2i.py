@@ -226,6 +226,8 @@ class T2I:
             upscale        =    None,
             sampler_name   =    None,
             log_tokenization=  False,
+            threshold      =   0,
+            perlin         =   0,
             **args,
     ):   # eat up additional cruft
         """
@@ -319,6 +321,8 @@ class T2I:
                     width=width,
                     height=height,
                     callback=step_callback,
+                    threshold=threshold,
+                    perlin=perlin,
                 )
 
             device_type = choose_autocast_device(self.device)
@@ -407,6 +411,8 @@ class T2I:
         width,
         height,
         callback,
+        threshold,
+        perlin,
     ):
         """
         An infinite iterator of images from the prompt.
@@ -430,7 +436,9 @@ class T2I:
                 unconditional_guidance_scale=cfg_scale,
                 unconditional_conditioning=uc,
                 eta=ddim_eta,
-                img_callback=callback
+                img_callback=callback,
+                threshold=threshold,
+                perlin=perlin,
             )
             yield self._sample_to_image(samples)
 

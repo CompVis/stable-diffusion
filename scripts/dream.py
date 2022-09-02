@@ -9,6 +9,7 @@ import sys
 import copy
 import warnings
 import time
+sys.path.insert(0, '.')
 from ldm.dream.devices import choose_torch_device
 import ldm.dream.readline
 from ldm.dream.pngwriter import PngWriter, PromptFormatter
@@ -545,6 +546,18 @@ def create_cmd_parser():
         '--log_tokenization',
         action='store_true',
         help='shows how the prompt is split into tokens'
+    )
+    parser.add_argument(
+        '--threshold',
+        default=0.0,
+        type=float,
+        help='Add threshold value aka perform clipping.',
+    )
+    parser.add_argument(
+        '--perlin',
+        default=0.0,
+        type=float,
+        help='Add perlin noise.',
     )
     return parser
 
