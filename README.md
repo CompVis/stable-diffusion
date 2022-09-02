@@ -46,8 +46,11 @@ improvements and bug fixes.
 # Table of Contents
 
 1. [Major Features](#features)
-2. [Changelog](#latest)
+2. [Changelog](#latest-changes)
 3. [Installation](#installation)
+   1. [Linux](#linux)
+   1. [Windows](#windows)
+   1. [MacOS](README-Mac-MPS.md)
 4. [Troubleshooting](#troubleshooting)
 5. [Support](#support)
 
