@@ -101,7 +101,7 @@ Outputs:
 ./outputs/Xena/000004.2664260391.png: "prompt" -s50 -W512 -H512 -C7.5 -Ak_lms -V 3647897225,0.1;1614299449,0.1;2664260391,0.05 -S3357757885
 ./outputs/Xena/000004.1642517170.png: "prompt" -s50 -W512 -H512 -C7.5 -Ak_lms -V 3647897225,0.1;1614299449,0.1;1642517170,0.05 -S3357757885
 ./outputs/Xena/000004.2183375608.png: "prompt" -s50 -W512 -H512 -C7.5 -Ak_lms -V 3647897225,0.1;1614299449,0.1;2183375608,0.05 -S3357757885
-~~~
+~~~~
 
 This produces six images, all slight variations on the combination of
 the chosen two images. Here's the one I like best:
