@@ -1,6 +1,5 @@
 name: prs
 channels:
-  - apple
   - conda-forge
   - pytorch-nightly
   - defaults
@@ -8,11 +7,11 @@ dependencies:
   - python=3.10.4
   - pip=22.1.2
   - pytorch
-  - torchvision
+  - torchvision=0.12.0
   - numpy=1.23.1
   - pip:
-    - albumentations==0.4.6
-    - opencv-python==4.6.0.66
+    - albumentations==0.4.3
+    - opencv-python==4.1.2.30
     - pudb==2019.2
     - imageio==2.9.0
     - imageio-ffmpeg==0.4.2
@@ -33,5 +32,3 @@ dependencies:
     - -e git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
     - -e git+https://github.com/openai/CLIP.git@main#egg=clip
     - -e .
-variables:
-  PYTORCH_ENABLE_MPS_FALLBACK: 1

@@ -3,7 +3,8 @@
 // python prs.py -s settings/my_settings.json
 {
     "prompt" : "A druid in his shop, selling potions and trinkets, fantasy painting by Tomer Hanuka and Esao Andrews, detailed",
-    "batch_name" : "Default", // Directory to save to inside "out"
+    "batch_name" : "Default", // Directory to save to inside out_path
+    "out_path" : "./out", // base output directory, default is "out" inside your prs folder.
     "width" : 512, // resolution (not used when doing init_image)
     "height" : 512, // resolution (not used when doing init_image)
     "steps" : 50, // Number of steps to do
