@@ -31,7 +31,7 @@ text-to-image generator. This fork supports:
 
 6. Weighted subprompts for prompt tuning.
 
-7. [Image variations](Variations.md) which allow you to systematically
+7. [Image variations](VARIATIONS.md) which allow you to systematically
 generate variations of an image you like and combine two or more
 images together to combine the best features of both.
 
