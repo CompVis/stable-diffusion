@@ -280,7 +280,10 @@ class T2I:
         ), 'can only work with strength in [0.0, 1.0]'
 
         width, height, _ = self._resolution_check(width, height, log=True)
-        scope = autocast if self.precision == 'autocast' else nullcontext
+        if self.precision == 'autocast' and torch.cuda.is_available():
+            scope = autocast
+        else:
+            scope = nullcontext
 
         if sampler_name and (sampler_name != self.sampler_name):
             self.sampler_name = sampler_name
