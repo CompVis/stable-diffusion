@@ -21,5 +21,5 @@ styles = [
 style = random.choice(styles)
 
 prompt = f"{style} of a bird"
-command = f'python scripts/txt2img.py --prompt "{prompt}" --plms --n_samples 1'
+command = f'python scripts/txt2img.py --prompt "" --plms --n_samples 1'
 os.system(command)
