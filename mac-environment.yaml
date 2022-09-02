@@ -6,7 +6,7 @@ channels:
 dependencies:
   - python=3.10.4
   - pip=22.1.2
-  - pytorch=1.13.0.dev20220825
+  - pytorch
   - torchvision=0.12.0
   - numpy=1.23.1
   - pip:

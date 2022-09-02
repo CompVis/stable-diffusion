@@ -541,6 +541,7 @@ def dynamic_value(incoming):
 class Settings:
     prompt = "A druid in his shop, selling potions and trinkets, fantasy painting by raphael lacoste and craig mullins"
     batch_name = "default"
+    out_path = "./out"
     n_batches = 1
     steps = 50
     eta = 0.0
@@ -572,6 +573,8 @@ class Settings:
             self.prompt = (settings_file["prompt"])
         if is_json_key_present(settings_file, 'batch_name'):
             self.batch_name = (settings_file["batch_name"])
+        if is_json_key_present(settings_file, 'out_path'):
+            self.out_path = (settings_file["out_path"])
         if is_json_key_present(settings_file, 'n_batches'):
             self.n_batches = (settings_file["n_batches"])
         if is_json_key_present(settings_file, 'steps'):
@@ -771,10 +774,6 @@ def main():
     if cl_args.seed:
         settings.seed = cl_args.seed
 
-    outdir = (f'./out/{settings.batch_name}')
-    filetype = ".jpg" if settings.use_jpg else ".png"
-    quality = 97 if settings.use_jpg else 100
-
     valid_methods = ['k_lms', 'k_dpm_2_ancestral', 'k_dpm_2', 'k_heun', 'k_euler_ancestral', 'k_euler', 'ddim']
     if any(settings.method in s for s in valid_methods):
         print(f'Using {settings.method} sampling method.')
@@ -818,14 +817,6 @@ def main():
         model = model.half() # half-precision mode for gpus, saves vram, good good
     model = model.to(device)
 
-
-    prompts = []
-    if settings.from_file is not None:
-        with open(settings.from_file, "r", encoding="utf-8") as f:
-            prompts = f.read().splitlines()
-    else:
-        prompts.append(settings.prompt)
-    
     there_is_work_to_do = True
     while there_is_work_to_do:
         if cl_args.interactive:
@@ -849,6 +840,20 @@ def main():
                         os.remove(job_json)
                 else:
                     time.sleep(0.5)
+
+        #outdir = (f'{settings.out_path}/{settings.batch_name}')
+        outdir = os.path.join(settings.out_path, settings.batch_name)
+        print(f'Saving output to {outdir}')
+        filetype = ".jpg" if settings.use_jpg else ".png"
+        quality = 97 if settings.use_jpg else 100
+
+        prompts = []
+        if settings.from_file is not None:
+            with open(settings.from_file, "r", encoding="utf-8") as f:
+                prompts = f.read().splitlines()
+        else:
+            prompts.append(settings.prompt)
+
 
         for p in range(len(prompts)):
             for i in range(settings.n_batches):

@@ -69,6 +69,29 @@ Create a text file (let's call it myprompts.txt), then edit your settings file a
 ```
 Each prompt will be run, in order, n_batches of times. So if n_batches = 5 you'll get 5 images for the first prompt, then five for the second, and so on.
 
+## Randomize things a bit
+There are two ways to randomize your prompts.
+
+### Random selections from files
+Placing a word in your prompt between _ characters will replace that word with a random selection from a txt file of the same name (inside the settings folder).
+
+For example, ```"A painting by _artist_"``` would replace artist with a randomly selected entry in the file artist.txt
+
+A few starting files are provided.
+
+### Dynamic prompts
+A dynamic selection set from which the code will randomly choose one or more values.
+For example:
+```
+    "A <castle|inn|mansion|shop> in New York"
+```
+would pick one of those values and leave out the rest, the prompt becoming (for example) "A mansion in New York".
+If you want more than one of the choices, you can start it with this little trigger:
+```
+    "A <^^2|strange|wonderful|mysterious|weird|lovely> car."
+```
+This would select two items, perhaps becoming "A wonderful weird car."
+
 # GoBIG! What it is and how to use it
 GoBIG is an upscaling technique, where a starting image is cut up into sections, and then each of those sections is re-rendered at a higher resolution. Once each section is done, they're all gathered and composited together, resulting in a new image that is 2x the size of the original.
 
