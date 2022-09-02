@@ -260,7 +260,9 @@ def do_run(device, model, opt):
                         for x_sample in x_samples_ddim:
                             x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                             output_filename = os.path.join(outpath, f'{opt.batch_name}{opt.device_id}-{grid_count:04}{opt.filetype}')
-                            Image.fromarray(x_sample.astype(np.uint8)).save(output_filename, pnginfo=metadata, quality = opt.quality)
+                            output_image = Image.fromarray(x_sample.astype(np.uint8))
+                            output_image.save(output_filename, pnginfo=metadata, quality = opt.quality)
+                            output_image.close()
                             print(f'\nOutput saved as "{output_filename}"\n')
                             grid_count += 1
 
@@ -654,6 +656,7 @@ def save_settings(options, prompt, filenum):
 
 def esrgan_resize(input, id):
     input.save(f'_esrgan_orig{id}.png')
+    input.close()
     try:
         subprocess.run(
             ['realesrgan-ncnn-vulkan', '-i', '_esrgan_orig.png', '-o', '_esrgan_.png'],
@@ -690,6 +693,7 @@ def do_gobig(gobig_init, device, model, opt):
     for count, chunk_w_coords in enumerate(slices):
         chunk, coord_x, coord_y = chunk_w_coords
         chunk.save(slice_image)
+        chunk.close()
         opt.init_image = slice_image
         opt.save_settings = False # we don't need to keep settings for each slice, just the main image.
         opt.n_iter = 1 # no point doing multiple iterations since only one will be used
@@ -728,6 +732,7 @@ def do_gobig(gobig_init, device, model, opt):
     result = result_split[0] + result_split[1]
     print(f'Gobig output saving as {result}{opt.filetype}')
     final_output.save(f'{result}{opt.filetype}', quality = opt.quality)
+    final_output.close()
 
 def main():
     print('\nPROG ROCK STABLE')
@@ -845,7 +850,7 @@ def main():
         #outdir = (f'{settings.out_path}/{settings.batch_name}')
         outdir = os.path.join(settings.out_path, settings.batch_name)
         print(f'Saving output to {outdir}')
-        filetype = ".jpg" if settings.use_jpg else ".png"
+        filetype = ".jpg" if settings.use_jpg == True else ".png"
         quality = 97 if settings.use_jpg else 100
 
         prompts = []
