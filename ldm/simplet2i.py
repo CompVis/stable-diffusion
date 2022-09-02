@@ -266,7 +266,6 @@ class T2I:
         """
         # TODO: convert this into a getattr() loop
         steps                 = steps      or self.steps
-        seed                  = seed       or self.seed
         width                 = width      or self.width
         height                = height     or self.height
         cfg_scale             = cfg_scale  or self.cfg_scale
@@ -296,6 +295,7 @@ class T2I:
             assert all(0 <= weight <= 1 for _, weight in with_variations),\
                 f'variation weights must be in [0.0, 1.0]: got {[weight for _, weight in with_variations]}'
 
+        seed                  = seed       or self.seed
         width, height, _ = self._resolution_check(width, height, log=True)
 
         # TODO: - Check if this is still necessary to run on M1 devices.
@@ -319,7 +319,7 @@ class T2I:
             if init_img:
                 assert os.path.exists(init_img), f'{init_img}: File not found'
                 init_image = self._load_img(init_img, width, height, fit).to(self.device)
-                with scope(device.type):
+                with scope(self.device.type):
                     init_latent = self.model.get_first_stage_encoding(
                         self.model.encode_first_stage(init_image)
                     ) # move to latent space
