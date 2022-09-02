@@ -21,7 +21,8 @@ git clone https://github.com/lstein/stable-diffusion.git
 cd stable-diffusion
 
 mkdir -p models/ldm/stable-diffusion-v1/
-PATH_TO_CKPT="$HOME/Documents/stable-diffusion-v-1-4-original"  # or wherever yours is.
+# You will have to signup then download this model:  https://huggingface.co/CompVis/stable-diffusion-v-1-4-original
+PATH_TO_CKPT="$HOME/Documents/stable-diffusion-v-1-4-original"  # or wherever yours is. 
 ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
 
 CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
