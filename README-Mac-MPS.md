@@ -1,37 +1,77 @@
-# Apple Silicon Mac Users
+# macOS Instructions
 
-Several people have gotten Stable Diffusion to work on Apple Silicon
-Macs using Anaconda, miniforge, etc. I've gathered up most of their instructions and
-put them in this fork (and readme). Things have moved really fast and so these
-instructions change often. Hopefully things will settle down a little.
+Requirements
 
-There's several places where people are discussing Apple
-MPS functionality: [the original CompVis
-issue](https://github.com/CompVis/stable-diffusion/issues/25), and generally on
-[lstein's fork](https://github.com/lstein/stable-diffusion/).
+- macOS 12.3 Monterey or later
+- Python
+- Patience
+- Apple Silicon*
 
-You have to have macOS 12.3 Monterey or later. Anything earlier than that won't work.
+*I haven't tested any of this on Intel Macs but I have read that one person got
+it to work, so Apple Silicon might not be requried.
 
-Tested on a 2022 Macbook M2 Air with 10-core GPU and 24 GB unified memory.
+Things have moved really fast and so these instructions change often and are
+often out-of-date. One of the problems is that there are so many different ways to
+run this.
 
-How to:
+We are trying to build a testing setup so that when we make changes it doesn't
+always break.
+
+How to (this hasn't been 100% tested yet):
+
+First get the weights checkpoint download started - it's big:
+
+Sign up at https://huggingface.co
+Accept the terms and click Access Repository: https://huggingface.co/CompVis/stable-diffusion-v-1-4-original
+Download sd-v1-4.ckpt (4.27 GB) and note where you have saved it (probably the Downloads folder)
+While that is downloading, open Terminal and run the following commands one at a time.
 
 ```
+# install brew (and Xcode command line tools):
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# install python 3, git, cmake, protobuf:
+brew install cmake protobuf rust
+
+# install miniconda (M1 arm64 version):
+curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o Miniconda3-latest-MacOSX-arm64.sh
+/bin/bash Miniconda3-latest-MacOSX-arm64.sh
+
+# clone the repo
 git clone https://github.com/lstein/stable-diffusion.git
 cd stable-diffusion
 
+#
+# wait until the checkpoint file has downloaded, then proceed
+#
+
+# create symlink to checkpoint
 mkdir -p models/ldm/stable-diffusion-v1/
-PATH_TO_CKPT="$HOME/Documents/stable-diffusion-v-1-4-original"  # or wherever yours is.
+PATH_TO_CKPT="$HOME/Downloads"  # or wherever you saved sd-v1-4.ckpt
 ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
 
-CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
+# install packages
+PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
 conda activate ldm
 
+# only need to do this once
 python scripts/preload_models.py
+
+# run SD!
 python scripts/dream.py --full_precision  # half-precision requires autocast and won't work
 ```
 
-After you follow all the instructions and run dream.py you might get several errors. Here's the errors I've seen and found solutions for.
+The original scripts should work as well.
+
+```
+python scripts/orig_scripts/txt2img.py --prompt "a photograph of an astronaut riding a horse" --plms
+```
+
+Note, `export PIP_EXISTS_ACTION=w` is a precaution to fix `conda env create -f environment-mac.yaml`
+never finishing in some situations. So it isn't required but wont hurt.
+
+After you follow all the instructions and run dream.py you might get several
+errors. Here's the errors I've seen and found solutions for.
 
 ### Is it slow?
 
@@ -52,27 +92,37 @@ One debugging step is to update to the latest version of PyTorch nightly.
 
 	conda install pytorch torchvision torchaudio -c pytorch-nightly
 
-Or you can clean everything up.
+If `conda env create -f environment-mac.yaml` takes forever run this.
+
+	git clean -f
+
+And run this.
 
 	conda clean --yes --all
 
-Or you can reset Anaconda.
+Or you could reset Anaconda.
 
 	conda update --force-reinstall -y -n base -c defaults conda
 
-### "No module named cv2" (or some other module)
+### "No module named cv2", torch, 'ldm', 'transformers', 'taming', etc.
 
-Did you remember to `conda activate ldm`? If your terminal prompt
+There are several causes of these errors.
+
+First, did you remember to `conda activate ldm`? If your terminal prompt
 begins with "(ldm)" then you activated it. If it begins with "(base)"
 or something else you haven't.
 
-If it says you're missing taming you need to rebuild your virtual
+Second, you might've run `./scripts/preload_models.py` or `./scripts/dream.py`
+instead of `python ./scripts/preload_models.py` or `python ./scripts/dream.py`.
+The cause of this error is long so it's below.
+
+Third, if it says you're missing taming you need to rebuild your virtual
 environment.
 
 	conda env remove -n ldm
 	conda env create -f environment-mac.yaml
 
-If you have activated the ldm virtual environment and tried rebuilding
+Fourth, If you have activated the ldm virtual environment and tried rebuilding
 it, maybe the problem could be that I have something installed that
 you don't and you'll just need to manually install it. Make sure you
 activate the virtual environment so it installs there instead of
@@ -83,6 +133,56 @@ globally.
 
 You might also need to install Rust (I mention this again below).
 
+### How many snakes are living in your computer?
+
+Here's the reason why you have to specify which python to use.
+There are several versions of python on macOS and the computer is
+picking the wrong one. More specifically, preload_models.py and dream.py says to
+find the first `python3` in the path environment variable. You can see which one
+it is picking with `which python3`. These are the mostly likely paths you'll see.
+
+	% which python3
+	/usr/bin/python3
+
+The above path is part of the OS. However, that path is a stub that asks you if
+you want to install Xcode. If you have Xcode installed already,
+/usr/bin/python3 will execute /Library/Developer/CommandLineTools/usr/bin/python3 or
+/Applications/Xcode.app/Contents/Developer/usr/bin/python3 (depending on which
+Xcode you've selected with `xcode-select`).
+
+	% which python3
+	/opt/homebrew/bin/python3
+
+If you installed python3 with Homebrew and you've modified your path to search
+for Homebrew binaries before system ones, you'll see the above path.
+
+	% which python
+	/opt/anaconda3/bin/python
+
+If you drop the "3" you get an entirely different python. Note: starting in
+macOS 12.3, /usr/bin/python no longer exists (it was python 2 anyway).
+
+If you have Anaconda installed, this is what you'll see. There is a
+/opt/anaconda3/bin/python3 also.
+
+	(ldm) % which python
+	/Users/name/miniforge3/envs/ldm/bin/python
+
+This is what you'll see if you have miniforge and you've correctly activated
+the ldm environment. This is the goal.
+
+It's all a mess and you should know [how to modify the path environment variable](https://support.apple.com/guide/terminal/use-environment-variables-apd382cc5fa-4f58-4449-b20a-41c53c006f8f/mac)
+if you want to fix it. Here's a brief hint of all the ways you can modify it
+(don't really have the time to explain it all here).
+
+- ~/.zshrc
+- ~/.bash_profile
+- ~/.bashrc
+- /etc/paths.d
+- /etc/path
+
+Which one you use will depend on what you have installed except putting a file
+in /etc/paths.d is what I prefer to do.
 
 ### Debugging?
 
@@ -139,7 +239,7 @@ the environment variable `CONDA_SUBDIR=osx-arm64`, like so:
 This error happens with Anaconda on Macs when the Intel-only `mkl` is pulled in by
 a dependency. [nomkl](https://stackoverflow.com/questions/66224879/what-is-the-nomkl-python-package-used-for)
 is a metapackage designed to prevent this, by making it impossible to install
-`mkl`, but if your environment is already broken it may not work. 
+`mkl`, but if your environment is already broken it may not work.
 
 Do *not* use `os.environ['KMP_DUPLICATE_LIB_OK']='True'` or equivalents as this
 masks the underlying issue of using Intel packages.
@@ -207,7 +307,7 @@ change instead. This is a 32-bit vs 16-bit problem.
 What? Intel? On an Apple Silicon?
 
 	Intel MKL FATAL ERROR: This system does not meet the minimum requirements for use of the Intel(R) Math Kernel Library.
-	The processor must support the Intel(R) Supplemental Streaming SIMD Extensions 3 (Intel(R) SSSE3) instructions.██████████████| 50/50 [02:25<00:00,  2.53s/it]
+	The processor must support the Intel(R) Supplemental Streaming SIMD Extensions 3 (Intel(R) SSSE3) instructions.
 	The processor must support the Intel(R) Streaming SIMD Extensions 4.2 (Intel(R) SSE4.2) instructions.
 	The processor must support the Intel(R) Advanced Vector Extensions (Intel(R) AVX) instructions.
 
