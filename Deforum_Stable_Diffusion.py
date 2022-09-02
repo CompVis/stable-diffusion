@@ -76,13 +76,17 @@ print_subprocess = False #@param {type:"boolean"}
 if setup_environment:
     import subprocess
     print("...setting up environment")
-    all_process = [['pip', 'install', 'torch==1.11.0+cu113', 'torchvision==0.12.0+cu113', 'torchaudio==0.11.0', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'],
-                   ['pip', 'install', 'omegaconf==2.1.1', 'einops==0.3.0', 'pytorch-lightning==1.4.2', 'torchmetrics==0.6.0', 'torchtext==0.2.3', 'transformers==4.19.2', 'kornia==0.6'],
-                   ['git', 'clone', '-b', 'dev', 'https://github.com/deforum/stable-diffusion'],
-                   ['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'],
-                   ['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'],
-                   ['pip', 'install', 'accelerate', 'ftfy', 'jsonmerge', 'resize-right', 'torchdiffeq'],
-                 ]
+    all_process = [
+        ['pip', 'install', 'torch==1.11.0+cu113', 'torchvision==0.12.0+cu113', 'torchaudio==0.11.0', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'],
+        ['pip', 'install', 'omegaconf==2.1.1', 'einops==0.3.0', 'pytorch-lightning==1.4.2', 'torchmetrics==0.6.0', 'torchtext==0.2.3', 'transformers==4.19.2', 'kornia==0.6'],
+        ['git', 'clone', '-b', 'dev', 'https://github.com/deforum/stable-diffusion'],
+        ['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'],
+        ['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'],
+        ['pip', 'install', 'accelerate', 'ftfy', 'jsonmerge', 'resize-right', 'timm', 'torchdiffeq'],
+        ['git', 'clone', 'https://github.com/shariqfarooq123/AdaBins.git'],
+        ['git', 'clone', 'https://github.com/isl-org/MiDaS.git'],
+        ['git', 'clone', 'https://github.com/MSFTserver/pytorch3d-lite.git'],
+    ]
     for process in all_process:
         running = subprocess.run(process,stdout=subprocess.PIPE).stdout.decode('utf-8')
         if print_subprocess:
@@ -101,14 +105,13 @@ if setup_environment:
 import json
 from IPython import display
 
-import argparse, glob, os, pathlib, subprocess, sys, time
+import math, os, pathlib, shutil, subprocess, sys, time
 import cv2
 import numpy as np
 import pandas as pd
 import random
 import requests
-import shutil
-import torch
+import torch, torchvision
 import torch.nn as nn
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
@@ -124,18 +127,27 @@ from tqdm import tqdm, trange
 from types import SimpleNamespace
 from torch import autocast
 
-sys.path.append('./src/taming-transformers')
-sys.path.append('./src/clip')
-sys.path.append('./stable-diffusion/')
-sys.path.append('./k-diffusion')
+sys.path.extend([
+    'src/taming-transformers',
+    'src/clip',
+    'stable-diffusion/',
+    'k-diffusion',
+    'pytorch3d-lite',
+    'AdaBins',
+    'MiDaS',
+])
+
+import py3d_tools as p3d
 
 from helpers import save_samples, sampler_fn
+from infer import InferenceHelper
+from k_diffusion import sampling
+from k_diffusion.external import CompVisDenoiser
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
-
-from k_diffusion import sampling
-from k_diffusion.external import CompVisDenoiser
+from midas.dpt_depth import DPTDepthModel
+from midas.transforms import Resize, NormalizeImage, PrepareForNet
 
 class CFGDenoiser(nn.Module):
     def __init__(self, model):
@@ -149,8 +161,56 @@ class CFGDenoiser(nn.Module):
         uncond, cond = self.inner_model(x_in, sigma_in, cond=cond_in).chunk(2)
         return uncond + (cond - uncond) * cond_scale
 
+def anim_frame_warp_2d(prev_img_cv2, args, anim_args, keys, frame_idx):
+    angle = keys.angle_series[frame_idx]
+    zoom = keys.zoom_series[frame_idx]
+    translation_x = keys.translation_x_series[frame_idx]
+    translation_y = keys.translation_y_series[frame_idx]
+
+    center = (args.W // 2, args.H // 2)
+    trans_mat = np.float32([[1, 0, translation_x], [0, 1, translation_y]])
+    rot_mat = cv2.getRotationMatrix2D(center, angle, zoom)
+    trans_mat = np.vstack([trans_mat, [0,0,1]])
+    rot_mat = np.vstack([rot_mat, [0,0,1]])
+    xform = np.matmul(rot_mat, trans_mat)
+
+    return cv2.warpPerspective(
+        prev_img_cv2,
+        xform,
+        (prev_img_cv2.shape[1], prev_img_cv2.shape[0]),
+        borderMode=cv2.BORDER_WRAP if anim_args.border == 'wrap' else cv2.BORDER_REPLICATE
+    )
+
+def anim_frame_warp_3d(prev_img_cv2, anim_args, keys, frame_idx, adabins_helper, midas_model, midas_transform):
+    TRANSLATION_SCALE = 1.0/200.0 # matches Disco
+    translate_xyz = [
+        -keys.translation_x_series[frame_idx] * TRANSLATION_SCALE, 
+        keys.translation_y_series[frame_idx] * TRANSLATION_SCALE, 
+        -keys.translation_z_series[frame_idx] * TRANSLATION_SCALE
+    ]
+    rotate_xyz = [
+        math.radians(keys.rotation_3d_x_series[frame_idx]), 
+        math.radians(keys.rotation_3d_y_series[frame_idx]), 
+        math.radians(keys.rotation_3d_z_series[frame_idx])
+    ]
+    rot_mat = p3d.euler_angles_to_matrix(torch.tensor(rotate_xyz, device=device), "XYZ").unsqueeze(0)
+    result = transform_image_3d(prev_img_cv2, adabins_helper, midas_model, midas_transform, rot_mat, translate_xyz, anim_args)
+    torch.cuda.empty_cache()
+    return result
+
 def add_noise(sample: torch.Tensor, noise_amt: float):
     return sample + torch.randn(sample.shape, device=sample.device) * noise_amt
+
+def download_depth_models():
+    def wget(url, outputdir):
+        print(subprocess.run(['wget', url, '-P', outputdir], stdout=subprocess.PIPE).stdout.decode('utf-8'))
+    if not os.path.exists(os.path.join(models_path, 'dpt_large-midas-2f21e586.pt')):
+        print("Downloading dpt_large-midas-2f21e586.pt...")
+        wget("https://github.com/intel-isl/DPT/releases/download/1_0/dpt_large-midas-2f21e586.pt", models_path)
+    if not os.path.exists('pretrained/AdaBins_nyu.pt'):
+        print("Downloading AdaBins_nyu.pt...")
+        os.makedirs('pretrained', exist_ok=True)
+        wget("https://cloudflare-ipfs.com/ipfs/Qmd2mMnDLWePKmgfS8m6ntAg4nhV5VkUyAydYBp8cWWeB7/AdaBins_nyu.pt", 'pretrained')
 
 def get_output_folder(output_path, batch_folder):
     out_path = os.path.join(output_path,time.strftime('%Y-%m'))
@@ -158,6 +218,36 @@ def get_output_folder(output_path, batch_folder):
         out_path = os.path.join(out_path, batch_folder)
     os.makedirs(out_path, exist_ok=True)
     return out_path
+
+def load_depth_model(optimize=True):
+    midas_model = DPTDepthModel(
+        path=f"{models_path}/dpt_large-midas-2f21e586.pt",
+        backbone="vitl16_384",
+        non_negative=True,
+    )
+    normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+
+    midas_transform = T.Compose([
+        Resize(
+            384, 384,
+            resize_target=None,
+            keep_aspect_ratio=True,
+            ensure_multiple_of=32,
+            resize_method="minimal",
+            image_interpolation_method=cv2.INTER_CUBIC,
+        ),
+        normalization,
+        PrepareForNet()
+    ])
+
+    midas_model.eval()    
+    if optimize:
+        if device == torch.device("cuda"):
+            midas_model = midas_model.to(memory_format=torch.channels_last)
+            midas_model = midas_model.half()
+    midas_model.to(device)
+
+    return midas_model, midas_transform
 
 def load_img(path, shape):
     if path.startswith('http://') or path.startswith('https://'):
@@ -181,37 +271,6 @@ def load_mask_img(path, shape):
         mask_image = Image.open(path).convert('RGBA')
     mask = mask_image.resize(mask_w_h, resample=Image.LANCZOS)
     mask = mask.convert("L")
-    return mask
-
-def prepare_mask(mask_file,
-                mask_shape,
-                mask_brightness_adjust=1.0,
-                mask_contrast_adjust=1.0):
-    # path (str): Path to the mask image
-    # shape (list-like len(4)): shape of the image to match, usually latent_image.shape
-    # mask_brightness_adjust (non-negative float): amount to adjust brightness of the iamge, 
-    #     0 is black, 1 is no adjustment, >1 is brighter
-    # mask_contrast_adjust (non-negative float): amount to adjust contrast of the image, 
-    #     0 is a flat grey image, 1 is no adjustment, >1 is more contrast
-                            
-    mask = load_mask_img(mask_file, mask_shape)
-
-    # Mask brightness/contrast adjustments
-    if mask_brightness_adjust != 1:
-        mask = TF.adjust_brightness(mask, mask_brightness_adjust)
-    if mask_contrast_adjust != 1:
-        mask = TF.adjust_contrast(mask, mask_contrast_adjust)
-
-    # Mask image to array
-    mask = np.array(mask).astype(np.float32) / 255.0
-    mask = np.tile(mask,(4,1,1))
-    mask = np.expand_dims(mask,axis=0)
-    mask = torch.from_numpy(mask)
-
-    if args.invert_mask:
-        mask = ( (mask - 0.5) * -1) + 0.5
-    
-    mask = np.clip(mask,0,1)
     return mask
 
 def maintain_colors(prev_img, color_match_sample, mode):
@@ -285,6 +344,162 @@ def make_callback(sampler_name, dynamic_threshold=None, static_threshold=None, m
         callback = k_callback_
 
     return callback
+
+def prepare_mask(mask_file, mask_shape, mask_brightness_adjust=1.0, mask_contrast_adjust=1.0):
+    # path (str): Path to the mask image
+    # shape (list-like len(4)): shape of the image to match, usually latent_image.shape
+    # mask_brightness_adjust (non-negative float): amount to adjust brightness of the iamge, 
+    #     0 is black, 1 is no adjustment, >1 is brighter
+    # mask_contrast_adjust (non-negative float): amount to adjust contrast of the image, 
+    #     0 is a flat grey image, 1 is no adjustment, >1 is more contrast
+                            
+    mask = load_mask_img(mask_file, mask_shape)
+
+    # Mask brightness/contrast adjustments
+    if mask_brightness_adjust != 1:
+        mask = TF.adjust_brightness(mask, mask_brightness_adjust)
+    if mask_contrast_adjust != 1:
+        mask = TF.adjust_contrast(mask, mask_contrast_adjust)
+
+    # Mask image to array
+    mask = np.array(mask).astype(np.float32) / 255.0
+    mask = np.tile(mask,(4,1,1))
+    mask = np.expand_dims(mask,axis=0)
+    mask = torch.from_numpy(mask)
+
+    if args.invert_mask:
+        mask = ( (mask - 0.5) * -1) + 0.5
+    
+    mask = np.clip(mask,0,1)
+    return mask
+
+def sample_from_cv2(sample: np.ndarray) -> torch.Tensor:
+    sample = ((sample.astype(float) / 255.0) * 2) - 1
+    sample = sample[None].transpose(0, 3, 1, 2).astype(np.float16)
+    sample = torch.from_numpy(sample)
+    return sample
+
+def sample_to_cv2(sample: torch.Tensor) -> np.ndarray:
+    sample_f32 = rearrange(sample.squeeze().cpu().numpy(), "c h w -> h w c").astype(np.float32)
+    sample_f32 = ((sample_f32 * 0.5) + 0.5).clip(0, 1)
+    sample_int8 = (sample_f32 * 255).astype(np.uint8)
+    return sample_int8
+
+@torch.no_grad()
+def transform_image_3d(prev_img_cv2, adabins_helper, midas_model, midas_transform, rot_mat, translate, anim_args):
+    # adapted and optimized version of transform_image_3d from Disco Diffusion https://github.com/alembics/disco-diffusion 
+
+    w, h = prev_img_cv2.shape[1], prev_img_cv2.shape[0]
+
+    # predict depth with AdaBins    
+    use_adabins = anim_args.midas_weight < 1.0 and adabins_helper is not None
+    if use_adabins:
+        print(f"Estimating depth of {w}x{h} image with AdaBins...")
+        MAX_ADABINS_AREA = 500000
+        MIN_ADABINS_AREA = 448*448
+
+        # resize image if too large or too small
+        img_pil = Image.fromarray(cv2.cvtColor(prev_img_cv2, cv2.COLOR_RGB2BGR))
+        image_pil_area = w*h
+        resized = True
+        if image_pil_area > MAX_ADABINS_AREA:
+            scale = math.sqrt(MAX_ADABINS_AREA) / math.sqrt(image_pil_area)
+            depth_input = img_pil.resize((int(w*scale), int(h*scale)), Image.LANCZOS) # LANCZOS is good for downsampling
+            print(f"  resized to {depth_input.width}x{depth_input.height}")
+        elif image_pil_area < MIN_ADABINS_AREA:
+            scale = math.sqrt(MIN_ADABINS_AREA) / math.sqrt(image_pil_area)
+            depth_input = img_pil.resize((int(w*scale), int(h*scale)), Image.BICUBIC)
+            print(f"  resized to {depth_input.width}x{depth_input.height}")
+        else:
+            depth_input = img_pil
+            resized = False
+
+        # predict depth and resize back to original dimensions
+        try:
+            _, adabins_depth = adabins_helper.predict_pil(depth_input)
+            if resized:
+                adabins_depth = torchvision.transforms.functional.resize(
+                    torch.from_numpy(adabins_depth), 
+                    torch.Size([h, w]),
+                    interpolation=torchvision.transforms.functional.InterpolationMode.BICUBIC
+                )
+            adabins_depth = adabins_depth.squeeze()
+        except:
+            print(f"  exception encountered, falling back to pure MiDaS")
+            use_adabins = False
+        torch.cuda.empty_cache()
+
+    if midas_model is not None:
+        # convert image from 0->255 uint8 to 0->1 float for feeding to MiDaS
+        img_midas = prev_img_cv2.astype(np.float32) / 255.0
+        img_midas_input = midas_transform({"image": img_midas})["image"]
+
+        # MiDaS depth estimation implementation
+        print(f"Estimating depth of {w}x{h} image with MiDaS...")
+        sample = torch.from_numpy(img_midas_input).float().to(device).unsqueeze(0)
+        if device == torch.device("cuda"):
+            sample = sample.to(memory_format=torch.channels_last)  
+            sample = sample.half()
+        midas_depth = midas_model.forward(sample)
+        midas_depth = torch.nn.functional.interpolate(
+            midas_depth.unsqueeze(1),
+            size=img_midas.shape[:2],
+            mode="bicubic",
+            align_corners=False,
+        ).squeeze()
+        midas_depth = midas_depth.cpu().numpy()
+        torch.cuda.empty_cache()
+
+        # MiDaS makes the near values greater, and the far values lesser. Let's reverse that and try to align with AdaBins a bit better.
+        midas_depth = np.subtract(50.0, midas_depth)
+        midas_depth = midas_depth / 19.0
+
+        # blend between MiDaS and AdaBins predictions
+        if use_adabins:
+            depth_map = midas_depth*anim_args.midas_weight + adabins_depth*(1.0-anim_args.midas_weight)
+        else:
+            depth_map = midas_depth
+
+        depth_map = np.expand_dims(depth_map, axis=0)
+        depth_tensor = torch.from_numpy(depth_map).squeeze().to(device)
+    else:
+        depth_tensor = torch.ones((h, w), device=device)
+
+    pixel_aspect = 1.0 # aspect of an individual pixel (so usually 1.0)
+    near, far, fov_deg = anim_args.near_plane, anim_args.far_plane, anim_args.fov
+    persp_cam_old = p3d.FoVPerspectiveCameras(near, far, pixel_aspect, fov=fov_deg, degrees=True, device=device)
+    persp_cam_new = p3d.FoVPerspectiveCameras(near, far, pixel_aspect, fov=fov_deg, degrees=True, R=rot_mat, T=torch.tensor([translate]), device=device)
+
+    # range of [-1,1] is important to torch grid_sample's padding handling
+    y,x = torch.meshgrid(torch.linspace(-1.,1.,h,dtype=torch.float32,device=device),torch.linspace(-1.,1.,w,dtype=torch.float32,device=device))
+    z = torch.as_tensor(depth_tensor, dtype=torch.float32, device=device)
+    xyz_old_world = torch.stack((x.flatten(), y.flatten(), z.flatten()), dim=1)
+
+    xyz_old_cam_xy = persp_cam_old.get_full_projection_transform().transform_points(xyz_old_world)[:,0:2]
+    xyz_new_cam_xy = persp_cam_new.get_full_projection_transform().transform_points(xyz_old_world)[:,0:2]
+
+    offset_xy = xyz_new_cam_xy - xyz_old_cam_xy
+    # affine_grid theta param expects a batch of 2D mats. Each is 2x3 to do rotation+translation.
+    identity_2d_batch = torch.tensor([[1.,0.,0.],[0.,1.,0.]], device=device).unsqueeze(0)
+    # coords_2d will have shape (N,H,W,2).. which is also what grid_sample needs.
+    coords_2d = torch.nn.functional.affine_grid(identity_2d_batch, [1,1,h,w], align_corners=False)
+    offset_coords_2d = coords_2d - torch.reshape(offset_xy, (h,w,2)).unsqueeze(0)
+
+    image_tensor = torchvision.transforms.functional.to_tensor(Image.fromarray(prev_img_cv2)).to(device)
+    new_image = torch.nn.functional.grid_sample(
+        image_tensor.add(1/512 - 0.0001).unsqueeze(0), 
+        offset_coords_2d, 
+        mode=anim_args.sampling_mode, 
+        padding_mode=anim_args.padding_mode, 
+        align_corners=False
+    )
+
+    # convert back to cv2 style numpy array 0->255 uint8
+    result = rearrange(
+        new_image.squeeze().clamp(0,1) * 255.0, 
+        'c h w -> h w c'
+    ).cpu().numpy().astype(np.uint8)
+    return result
 
 def generate(args, return_latent=False, return_sample=False, return_c=False):
     seed_everything(args.seed)
@@ -418,18 +633,6 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
                         results.append(image)
     return results
 
-def sample_from_cv2(sample: np.ndarray) -> torch.Tensor:
-    sample = ((sample.astype(float) / 255.0) * 2) - 1
-    sample = sample[None].transpose(0, 3, 1, 2).astype(np.float16)
-    sample = torch.from_numpy(sample)
-    return sample
-
-def sample_to_cv2(sample: torch.Tensor) -> np.ndarray:
-    sample_f32 = rearrange(sample.squeeze().cpu().numpy(), "c h w -> h w c").astype(np.float32)
-    sample_f32 = ((sample_f32 * 0.5) + 0.5).clip(0, 1)
-    sample_int8 = (sample_f32 * 255).astype(np.uint8)
-    return sample_int8
-
 # %%
 # !! {"metadata":{
 # !!   "cellView": "form",
@@ -551,18 +754,29 @@ def DeforumAnimArgs():
     border = 'wrap' #@param ['wrap', 'replicate'] {type:'string'}
 
     #@markdown ####**Motion Parameters:**
-    key_frames = True #@param {type:"boolean"}
-    interp_spline = 'Linear' #Do not change, currently will not look good. param ['Linear','Quadratic','Cubic']{type:"string"}
     angle = "0:(0)"#@param {type:"string"}
-    zoom = "0: (1.04)"#@param {type:"string"}
-    translation_x = "0: (0)"#@param {type:"string"}
-    translation_y = "0: (0)"#@param {type:"string"}
+    zoom = "0:(1.04)"#@param {type:"string"}
+    translation_x = "0:(0)"#@param {type:"string"}
+    translation_y = "0:(0)"#@param {type:"string"}
+    translation_z = "0:(10)"#@param {type:"string"}
+    rotation_3d_x = "0:(0)"#@param {type:"string"}
+    rotation_3d_y = "0:(0)"#@param {type:"string"}
+    rotation_3d_z = "0:(0)"#@param {type:"string"}
     noise_schedule = "0: (0.02)"#@param {type:"string"}
     strength_schedule = "0: (0.65)"#@param {type:"string"}
     contrast_schedule = "0: (1.0)"#@param {type:"string"}
 
     #@markdown ####**Coherence:**
     color_coherence = 'Match Frame 0 LAB' #@param ['None', 'Match Frame 0 HSV', 'Match Frame 0 LAB', 'Match Frame 0 RGB'] {type:'string'}
+
+    #@markdown #### Depth Warping
+    use_depth_warping = True #@param {type:"boolean"}
+    midas_weight = 0.3#@param {type:"number"}
+    near_plane = 200
+    far_plane = 10000
+    fov = 40#@param {type:"number"}
+    padding_mode = 'border'#@param ['border', 'reflection', 'zeros'] {type:'string'}
+    sampling_mode = 'bicubic'#@param ['bicubic', 'bilinear', 'nearest'] {type:'string'}
 
     #@markdown ####**Video Input:**
     video_init_path ='/content/video_in.mp4'#@param {type:"string"}
@@ -578,15 +792,39 @@ def DeforumAnimArgs():
 
     return locals()
 
-anim_args = SimpleNamespace(**DeforumAnimArgs())
+class DeformAnimKeys():
+    def __init__(self, anim_args):
+        self.angle_series = get_inbetweens(parse_key_frames(anim_args.angle))
+        self.zoom_series = get_inbetweens(parse_key_frames(anim_args.zoom))
+        self.translation_x_series = get_inbetweens(parse_key_frames(anim_args.translation_x))
+        self.translation_y_series = get_inbetweens(parse_key_frames(anim_args.translation_y))
+        self.translation_z_series = get_inbetweens(parse_key_frames(anim_args.translation_z))
+        self.rotation_3d_x_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_x))
+        self.rotation_3d_y_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_y))
+        self.rotation_3d_z_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_z))
+        self.noise_schedule_series = get_inbetweens(parse_key_frames(anim_args.noise_schedule))
+        self.strength_schedule_series = get_inbetweens(parse_key_frames(anim_args.strength_schedule))
+        self.contrast_schedule_series = get_inbetweens(parse_key_frames(anim_args.contrast_schedule))
 
-def make_xform_2d(width, height, translation_x, translation_y, angle, scale):
-    center = (width // 2, height // 2)
-    trans_mat = np.float32([[1, 0, translation_x], [0, 1, translation_y]])
-    rot_mat = cv2.getRotationMatrix2D(center, angle, scale)
-    trans_mat = np.vstack([trans_mat, [0,0,1]])
-    rot_mat = np.vstack([rot_mat, [0,0,1]])
-    return np.matmul(rot_mat, trans_mat)
+
+def get_inbetweens(key_frames, integer=False, interp_method='Linear'):
+    key_frame_series = pd.Series([np.nan for a in range(anim_args.max_frames)])
+
+    for i, value in key_frames.items():
+        key_frame_series[i] = value
+    key_frame_series = key_frame_series.astype(float)
+    
+    if interp_method == 'Cubic' and len(key_frames.items()) <= 3:
+      interp_method = 'Quadratic'    
+    if interp_method == 'Quadratic' and len(key_frames.items()) <= 2:
+      interp_method = 'Linear'
+          
+    key_frame_series[0] = key_frame_series[key_frame_series.first_valid_index()]
+    key_frame_series[anim_args.max_frames-1] = key_frame_series[key_frame_series.last_valid_index()]
+    key_frame_series = key_frame_series.interpolate(method=interp_method.lower(),limit_direction='both')
+    if integer:
+        return key_frame_series.astype(int)
+    return key_frame_series
 
 def parse_key_frames(string, prompt_parser=None):
     import re
@@ -603,38 +841,7 @@ def parse_key_frames(string, prompt_parser=None):
         raise RuntimeError('Key Frame string not correctly formatted')
     return frames
 
-def get_inbetweens(key_frames, integer=False):
-    key_frame_series = pd.Series([np.nan for a in range(anim_args.max_frames)])
 
-    for i, value in key_frames.items():
-        key_frame_series[i] = value
-    key_frame_series = key_frame_series.astype(float)
-    
-    interp_method = anim_args.interp_spline
-    if interp_method == 'Cubic' and len(key_frames.items()) <=3:
-      interp_method = 'Quadratic'    
-    if interp_method == 'Quadratic' and len(key_frames.items()) <= 2:
-      interp_method = 'Linear'
-          
-    key_frame_series[0] = key_frame_series[key_frame_series.first_valid_index()]
-    key_frame_series[anim_args.max_frames-1] = key_frame_series[key_frame_series.last_valid_index()]
-    key_frame_series = key_frame_series.interpolate(method=interp_method.lower(),limit_direction='both')
-    if integer:
-        return key_frame_series.astype(int)
-    return key_frame_series
-
-
-if anim_args.animation_mode == 'None':
-    anim_args.max_frames = 1
-
-if anim_args.key_frames:
-    angle_series = get_inbetweens(parse_key_frames(anim_args.angle))
-    zoom_series = get_inbetweens(parse_key_frames(anim_args.zoom))
-    translation_x_series = get_inbetweens(parse_key_frames(anim_args.translation_x))
-    translation_y_series = get_inbetweens(parse_key_frames(anim_args.translation_y))
-    noise_schedule_series = get_inbetweens(parse_key_frames(anim_args.noise_schedule))
-    strength_schedule_series = get_inbetweens(parse_key_frames(anim_args.strength_schedule))
-    contrast_schedule_series = get_inbetweens(parse_key_frames(anim_args.contrast_schedule))
 
 # %%
 # !! {"metadata":{
@@ -732,23 +939,6 @@ def DeforumArgs():
     return locals()
 
 
-args = SimpleNamespace(**DeforumArgs())
-args.timestring = time.strftime('%Y%m%d%H%M%S')
-args.strength = max(0.0, min(1.0, args.strength))
-
-
-if args.seed == -1:
-    args.seed = random.randint(0, 2**32)
-if anim_args.animation_mode == 'Video Input':
-    args.use_init = True
-if not args.use_init:
-    args.init_image = None
-if args.sampler == 'plms' and (args.use_init or anim_args.animation_mode != 'None'):
-    print(f"Init images aren't supported with PLMS yet, switching to KLMS")
-    args.sampler = 'klms'
-if args.sampler != 'ddim':
-    args.ddim_eta = 0
-
 
 def next_seed(args):
     if args.seed_behavior == 'iter':
@@ -834,7 +1024,10 @@ def render_image_batch(args):
 def render_animation(args, anim_args):
     # animations use key framed prompts
     args.prompts = animation_prompts
-    
+
+    # expand key frame strings to values
+    keys = DeformAnimKeys(anim_args)
+
     # resume animation
     start_frame = 0
     if anim_args.resume_from_timestring:
@@ -866,11 +1059,22 @@ def render_animation(args, anim_args):
     # check for video inits
     using_vid_init = anim_args.animation_mode == 'Video Input'
 
+    # load depth model for 3D
+    if anim_args.animation_mode == '3D' and anim_args.use_depth_warping:
+        download_depth_models()
+        adabins_helper = InferenceHelper(dataset='nyu', device=device)
+        midas_model, midas_transform = load_depth_model()
+    else:
+        adabins_helper, midas_model, midas_transform = None, None, None
+
     args.n_samples = 1
     prev_sample = None
     color_match_sample = None
     for frame_idx in range(start_frame,anim_args.max_frames):
         print(f"Rendering animation frame {frame_idx} of {anim_args.max_frames}")
+        noise = keys.noise_schedule_series[frame_idx]
+        strength = keys.strength_schedule_series[frame_idx]
+        contrast = keys.contrast_schedule_series[frame_idx]
         
         # resume animation
         if anim_args.resume_from_timestring:
@@ -881,33 +1085,11 @@ def render_animation(args, anim_args):
 
         # apply transforms to previous frame
         if prev_sample is not None:
-            if anim_args.key_frames:
-                angle = angle_series[frame_idx]
-                zoom = zoom_series[frame_idx]
-                translation_x = translation_x_series[frame_idx]
-                translation_y = translation_y_series[frame_idx]
-                noise = noise_schedule_series[frame_idx]
-                strength = strength_schedule_series[frame_idx]
-                contrast = contrast_schedule_series[frame_idx]
-                print(
-                    f'angle: {angle}',
-                    f'zoom: {zoom}',
-                    f'translation_x: {translation_x}',
-                    f'translation_y: {translation_y}',
-                    f'noise: {noise}',
-                    f'strength: {strength}',
-                    f'contrast: {contrast}',
-                )
-            xform = make_xform_2d(args.W, args.H, translation_x, translation_y, angle, zoom)
 
-            # transform previous frame
-            prev_img = sample_to_cv2(prev_sample)
-            prev_img = cv2.warpPerspective(
-                prev_img,
-                xform,
-                (prev_img.shape[1], prev_img.shape[0]),
-                borderMode=cv2.BORDER_WRAP if anim_args.border == 'wrap' else cv2.BORDER_REPLICATE
-            )
+            if anim_args.animation_mode == '2D':
+                prev_img = anim_frame_warp_2d(sample_to_cv2(prev_sample), args, anim_args, keys, frame_idx)
+            else: # '3D'
+                prev_img = anim_frame_warp_3d(sample_to_cv2(prev_sample), anim_args, keys, frame_idx, adabins_helper, midas_model, midas_transform)
 
             # apply color matching
             if anim_args.color_coherence != 'None':
@@ -1077,7 +1259,30 @@ def render_interpolation(args, anim_args):
     #clear init_c
     args.init_c = None
 
-if anim_args.animation_mode == '2D':
+
+args = SimpleNamespace(**DeforumArgs())
+anim_args = SimpleNamespace(**DeforumAnimArgs())
+
+args.timestring = time.strftime('%Y%m%d%H%M%S')
+args.strength = max(0.0, min(1.0, args.strength))
+
+if args.seed == -1:
+    args.seed = random.randint(0, 2**32)
+if not args.use_init:
+    args.init_image = None
+if args.sampler == 'plms' and (args.use_init or anim_args.animation_mode != 'None'):
+    print(f"Init images aren't supported with PLMS yet, switching to KLMS")
+    args.sampler = 'klms'
+if args.sampler != 'ddim':
+    args.ddim_eta = 0
+
+if anim_args.animation_mode == 'None':
+    anim_args.max_frames = 1
+elif anim_args.animation_mode == 'Video Input':
+    args.use_init = True
+
+# dispatch to appropriate renderer
+if anim_args.animation_mode == '2D' or anim_args.animation_mode == '3D':
     render_animation(args, anim_args)
 elif anim_args.animation_mode == 'Video Input':
     render_input_video(args, anim_args)
