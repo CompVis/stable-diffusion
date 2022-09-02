@@ -99,7 +99,7 @@ def main():
 
     cmd_parser = create_cmd_parser()
     if opt.web:
-        dream_server_loop(t2i)
+        dream_server_loop(t2i, opt.host, opt.port)
     else:
         main_loop(t2i, opt.outdir, opt.prompt_as_dir, cmd_parser, infile)
 
@@ -270,7 +270,7 @@ def get_next_command(infile=None) -> str: #command string
         print(f'#{command}')
     return command
 
-def dream_server_loop(t2i):
+def dream_server_loop(t2i, host, port):
     print('\n* --web was specified, starting web server...')
     # Change working directory to the stable-diffusion directory
     os.chdir(
@@ -279,9 +279,9 @@ def dream_server_loop(t2i):
 
     # Start server
     DreamServer.model = t2i
-    dream_server = ThreadingDreamServer(("0.0.0.0", 9090))
+    dream_server = ThreadingDreamServer((host, port))
     print("\nStarted Stable Diffusion dream server!")
-    print("Point your browser at http://localhost:9090 or use the host's DNS name or IP address.")
+    print(f"Point your browser at http://{host}:{port} or use the host's DNS name or IP address.")
 
     try:
         dream_server.serve_forever()
@@ -416,6 +416,18 @@ def create_argv_parser():
         dest='web',
         action='store_true',
         help='Start in web server mode.',
+    )
+    parser.add_argument(
+        '--host',
+        type=str,
+        default='127.0.0.1',
+        help='Web server: Host or IP to listen on'
+    )
+    parser.add_argument(
+        '--port',
+        type=int,
+        default='9090',
+        help='Web server: Port to listen on'
     )
     parser.add_argument(
         '--weights',
