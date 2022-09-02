@@ -15,6 +15,8 @@ from contextlib import nullcontext
 import time
 from pytorch_lightning import seed_everything
 
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
