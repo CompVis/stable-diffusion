@@ -6,3 +6,4 @@
 /dist/
 /latent_diffusion.egg-info/
 __pycache__/
+/src/
