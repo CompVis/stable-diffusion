@@ -8,7 +8,8 @@
 *.log
 example.png
 scores.json
-
+danbooru-aesthetic
+logs
 
 # =========================================================================== #
 # 	Python-related

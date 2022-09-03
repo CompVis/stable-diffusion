@@ -9,15 +9,19 @@ import glob
 
 import random
 
+PIL.Image.MAX_IMAGE_PIXELS = 933120000
 
 class LocalBase(Dataset):
     def __init__(self,
-                 data_root,
-                 size=None,
+                 data_root='./danbooru-aesthetic',
+                 size=512,
                  interpolation="bicubic",
-                 flip_p=0.5
+                 flip_p=0.5,
+                 shuffle=False,
                  ):
         super().__init__()
+
+        self.shuffle=shuffle
 
         print('Fetching data.')
 
@@ -56,9 +60,7 @@ class LocalBase(Dataset):
         return self.__getitem__(i + 1)
 
     def skip_sample(self, i):
-        if self.shuffle:
-            return self.random_sample()
-        return self.sequential_sample(i=i)
+        return None
 
     def get_caption(self, i):
         example = self.examples[self.hashes[i]]
@@ -78,7 +80,7 @@ class LocalBase(Dataset):
                 image = image.convert("RGB")
         except (OSError, ValueError) as e:
             print(f'Error with {image_file} -- skipping {i}')
-            return self.skip_sample(i)
+            return None
         
         try:
             caption = self.get_caption(i)
@@ -105,13 +107,56 @@ class LocalBase(Dataset):
         image = np.array(image).astype(np.uint8)
         example_ret["image"] = (image / 127.5 - 1.0).astype(np.float32)
         return example_ret
+    
+    def get_image(self, i):
+        try:
+            image_file = self.examples[self.hashes[i]]['image']
+            image = Image.open(image_file)
+            if not image.mode == "RGB":
+                image = image.convert("RGB")
+        except Exception as e:
+            print(f'Error with {image_file} -- skipping {i}')
+            return self.skip_sample(i)
 
+        # default to score-sde preprocessing
+        img = np.array(image).astype(np.uint8)
+        crop = min(img.shape[0], img.shape[1])
+        h, w, = img.shape[0], img.shape[1]
+        img = img[(h - crop) // 2:(h + crop) // 2,
+              (w - crop) // 2:(w + crop) // 2]
 
-if __name__ == "__main__":
-    dataset = LocalBase('../250k_data-0', size=512)
+        image = Image.fromarray(img)
+        if self.size is not None:
+            image = image.resize((self.size, self.size), resample=self.interpolation)
+
+        image = self.flip(image)
+        return image
+"""
     example = dataset.__getitem__(137)
     print(example['caption'])
     image = example['image']
     image = ((image + 1) * 127.5).astype(np.uint8)
     image = Image.fromarray(image)
     image.save('example.png')
+"""
+
+from tqdm import tqdm
+
+# touhou aesthetic
+# lewd aesthetic
+# portrait aesthetic
+# scenery aesthetic
+# touhou lewd aesthetic
+# touhou-portrait-aesthetic
+"""
+if __name__ == "__main__":
+    dataset = LocalBase('../glide-finetune/touhou-portrait-aesthetic', size=512)
+    for i in tqdm(range(dataset.__len__())):
+        image = dataset.get_image(i)
+        if image == None:
+            continue
+        image.save(f'./danbooru-aesthetic/img/{dataset.hashes[i]}.png')
+        with open(f'./danbooru-aesthetic/txt/{dataset.hashes[i]}.txt', 'w') as f:
+            f.write(dataset.get_caption(i))
+
+"""

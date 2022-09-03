@@ -1,0 +1,1 @@
+python main.py --base "configs/stable-diffusion/v1-finetune.yaml" -t --no-test --actual-resume "./models/ldm/stable-diffusion/model.ckpt" -n "waifu-diffusion" --gpus 1 --data_root "./danbooru-aesthetic"
