@@ -320,11 +320,12 @@ def dream_server_loop(t2i, host, port):
     # Start server
     DreamServer.model = t2i
     dream_server = ThreadingDreamServer((host, port))
-    print("\nStarted Stable Diffusion dream server!")
+    print(">> Started Stable Diffusion dream server!")
     if host == '0.0.0.0':
         print(f"Point your browser at http://localhost:{port} or use the host's DNS name or IP address.")
     else:
-        print(f"Point your browser at http://{host}:{port}.")
+        print(">> Default host address now 127.0.0.1 (localhost). Use --host 0.0.0.0 to bind any address.")
+        print(f">> Point your browser at http://{host}:{port}.")
 
     try:
         dream_server.serve_forever()
