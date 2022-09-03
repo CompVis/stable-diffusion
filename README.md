@@ -23,6 +23,7 @@ text-to-image generator. This fork supports:
 
 3. A basic Web interface that allows you to run a local web server for
    generating images in your browser.
+
 4. A notebook for running the code on Google Colab.
 
 5. Upscaling and face fixing using the optional ESRGAN and GFPGAN
@@ -30,7 +31,11 @@ text-to-image generator. This fork supports:
 
 6. Weighted subprompts for prompt tuning.
 
-7. Textual inversion for customization of the prompt language and images.
+7. [Image variations](VARIATIONS.md) which allow you to systematically
+generate variations of an image you like and combine two or more
+images together to combine the best features of both.
+
+8. Textual inversion for customization of the prompt language and images.
 
 8. ...and more!
 
@@ -329,8 +334,10 @@ and introducing a new vocabulary to the fixed model.
 
 To train, prepare a folder that contains images sized at 512x512 and execute the following:
 
+
+WINDOWS: As the default backend is not available on Windows, if you're using that platform, set the environment variable `PL_TORCH_DISTRIBUTED_BACKEND=gloo`
+    
 ```
-# As the default backend is not available on Windows, if you're using that platform, execute SET PL_TORCH_DISTRIBUTED_BACKEND=gloo
 (ldm) ~/stable-diffusion$ python3 ./main.py --base ./configs/stable-diffusion/v1-finetune.yaml \
                                             -t \
                                             --actual_resume ./models/ldm/stable-diffusion-v1/model.ckpt \
