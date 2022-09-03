@@ -427,10 +427,12 @@ There are separate installation walkthroughs for [Linux](#linux), [Windows](#win
 - Python (version 3.8.5 recommended; higher may work)
 - git
 
-2. Install the Python Anaconda environment manager using pip3.
+2. Install the Python Anaconda environment manager.
 
 ```
-~$ pip3 install anaconda
+~$  wget https://repo.anaconda.com/archive/Anaconda3-2022.05-Linux-x86_64.sh
+~$  chmod +x Anaconda3-2022.05-Linux-x86_64.sh 
+~$  ./Anaconda3-2022.05-Linux-x86_64.sh  
 ```
 
 After installing anaconda, you should log out of your system and log back in. If the installation
