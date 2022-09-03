@@ -1309,7 +1309,7 @@ else:
 # !!   "cellView": "form",
 # !!   "id": "no2jP8HTMBM0"
 # !! }}
-skip_video_for_run_all = False #@param {type: 'boolean'}
+skip_video_for_run_all = True #@param {type: 'boolean'}
 fps = 12 #@param {type:"number"}
 #@markdown **Manual Settings**
 use_manual_settings = False #@param {type:"boolean"}
