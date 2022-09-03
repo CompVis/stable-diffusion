@@ -9,6 +9,7 @@ import sys
 import copy
 import warnings
 import time
+import torch.nn as nn
 from ldm.dream.devices import choose_torch_device
 import ldm.dream.readline
 from ldm.dream.pngwriter import PngWriter, PromptFormatter
@@ -60,6 +61,7 @@ def main():
         grid  = opt.grid,
         # this is solely for recreating the prompt
         latent_diffusion_weights=opt.laion400m,
+        seamless=opt.seamless,
         embedding_path=opt.embedding_path,
         device_type=opt.device
     )
@@ -91,6 +93,14 @@ def main():
     print(
         f'>> model loaded in', '%4.2fs' % (time.time() - tic)
     )
+
+    for m in t2i.model.modules():
+        if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
+            m._orig_padding_mode = m.padding_mode
+            if opt.seamless:
+                m.padding_mode = 'circular'
+    if opt.seamless:
+        print(">> changed to seamless tiling mode")
 
     if not infile:
         print(
@@ -375,6 +385,11 @@ def create_argv_parser():
         help='Directory to save generated images and a log of prompts and seeds. Default: outputs/img-samples',
     )
     parser.add_argument(
+        '--seamless',
+        action='store_true',
+        help='Change the model to seamless tiling (circular) mode',
+    )
+    parser.add_argument(
         '--embedding_path',
         type=str,
         help='Path to a pre-trained embedding manager checkpoint - can only be set on command line',
@@ -473,6 +488,11 @@ def create_cmd_parser():
         type=str,
         default=None,
         help='Directory to save generated images and a log of prompts and seeds',
+    )
+    parser.add_argument(
+        '--seamless',
+        action='store_true',
+        help='Change the model to seamless tiling (circular) mode',
     )
     parser.add_argument(
         '-i',
