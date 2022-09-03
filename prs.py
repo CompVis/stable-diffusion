@@ -558,6 +558,7 @@ class Settings:
     frozen_seed = False
     init_image = None
     init_strength = 0.5
+    gobig = False
     gobig_maximize = True
     gobig_overlap = 64
     gobig_realesrgan = False
@@ -607,6 +608,8 @@ class Settings:
             self.init_strength = (settings_file["init_strength"])
         if is_json_key_present(settings_file, 'init_image'):
             self.init_image = (settings_file["init_image"])
+        if is_json_key_present(settings_file, 'gobig'):
+            self.gobig = (settings_file["gobig"])
         if is_json_key_present(settings_file, 'gobig_maximize'):
             self.gobig_maximize = (settings_file["gobig_maximize"])
         if is_json_key_present(settings_file, 'gobig_overlap'):
@@ -643,6 +646,7 @@ def save_settings(options, prompt, filenum):
         'variance' : options.variance,
         'init_image' : options.init_image,
         'init_strength' : 1.0 - options.strength,
+        'gobig' : options.gobig,
         'gobig_maximize' : options.gobig_maximize,
         'gobig_overlap' : options.gobig_overlap,
         'gobig_realesrgan' : options.gobig_realesrgan,
@@ -883,6 +887,7 @@ def main():
                     "precision": "autocast",
                     "init_image": settings.init_image,
                     "strength": 1.0 - settings.init_strength,
+                    "gobig": cl_args.gobig,
                     "gobig_scale": cl_args.gobig_scale,
                     "gobig_maximize": settings.gobig_maximize,
                     "gobig_overlap": settings.gobig_overlap,
@@ -904,7 +909,7 @@ def main():
                     gobig_init = do_run(device, model, opt)
                 else:
                     gobig_init = cl_args.gobig_init
-                if cl_args.gobig:
+                if cl_args.gobig or settings.gobig:
                     do_gobig(gobig_init, device, model, opt)
                 if settings.cool_down > 0 and ((i < (settings.n_batches - 1)) or p < (len(prompts) - 1)):
                     print(f'Pausing {settings.cool_down} seconds to give your poor GPU a rest...')
