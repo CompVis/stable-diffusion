@@ -44,7 +44,7 @@ div {
 }
 #results {
     text-align: center;
-    max-width: 1000px;
+//    max-width: 1024px;
     margin: auto;
     padding-top: 10px;
 }
@@ -64,7 +64,7 @@ input[type="number"] {
     width: 150px;
 }
 hr {
-    width: 200px;
+//    width: 200px;
 }
 label {
     white-space: nowrap;
