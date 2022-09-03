@@ -514,6 +514,30 @@ This will bring your local copy into sync with the remote one.
 
 ## Windows
 
+### Notebook install (semi-automated)
+
+We have a
+[Jupyter notebook](https://github.com/lstein/stable-diffusion/blob/main/Stable-Diffusion-local-Windows.ipynb)
+with cell-by-cell installation steps. It will download the code in this repo as
+one of the steps, so instead of cloning this repo, simply download the notebook
+from the link above and load it up in VSCode (with the
+appropriate extensions installed)/Jupyter/JupyterLab and start running the cells one-by-one.
+
+Note that you will need NVIDIA drivers, Python 3.10, and Git installed
+beforehand - simplified
+[step-by-step instructions](https://github.com/lstein/stable-diffusion/wiki/Easy-peasy-Windows-install)
+are available in the wiki (you'll only need steps 1, 2, & 3 ).
+
+### Manual installs
+
+#### pip
+
+See
+[Easy-peasy Windows install](https://github.com/lstein/stable-diffusion/wiki/Easy-peasy-Windows-install)
+in the wiki
+
+#### Conda
+
 1. Install Anaconda3 (miniconda3 version) from here: https://docs.anaconda.com/anaconda/install/windows/
 
 2. Install Git from here: https://git-scm.com/download/win
@@ -739,13 +763,8 @@ be fast because all the dependencies are already loaded.
 Anyone who wishes to contribute to this project, whether
 documentation, features, bug fixes, code cleanup, testing, or code
 reviews, is very much encouraged to do so. If you are unfamiliar with
-<<<<<<< HEAD
 how to contribute to GitHub projects, here is a [Getting Started
 Guide](https://opensource.com/article/19/7/create-pull-request-github).
-=======
-how to contribute to GitHub projects, here is a (Getting Started
-Guide)[https://opensource.com/article/19/7/create-pull-request-github].
->>>>>>> maddavid123-main
 
 A full set of contribution guidelines, along with templates, are in
 progress, but for now the most important thing is to **make your pull
