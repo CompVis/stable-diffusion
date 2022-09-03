@@ -80,7 +80,7 @@ if setup_environment:
     all_process = [
         ['pip', 'install', 'torch==1.12.1+cu113', 'torchvision==0.13.1+cu113', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'],
         ['pip', 'install', 'omegaconf==2.2.3', 'einops==0.4.1', 'pytorch-lightning==1.7.4', 'torchmetrics==0.9.3', 'torchtext==0.13.1', 'transformers==4.21.2', 'kornia==0.6.7'],
-        ['git', 'clone', 'https://github.com/deforum/stable-diffusion'],
+        ['git', 'clone', '-b', 'dev', 'https://github.com/deforum/stable-diffusion'],
         ['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'],
         ['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'],
         ['pip', 'install', 'accelerate', 'ftfy', 'jsonmerge', 'matplotlib', 'resize-right', 'timm', 'torchdiffeq'],
@@ -178,7 +178,7 @@ def anim_frame_warp_2d(prev_img_cv2, args, anim_args, keys, frame_idx):
         borderMode=cv2.BORDER_WRAP if anim_args.border == 'wrap' else cv2.BORDER_REPLICATE
     )
 
-def anim_frame_warp_3d(prev_img_cv2, anim_args, keys, frame_idx, adabins_helper, midas_model, midas_transform):
+def anim_frame_warp_3d(prev_img_cv2, depth, anim_args, keys, frame_idx):
     TRANSLATION_SCALE = 1.0/200.0 # matches Disco
     translate_xyz = [
         -keys.translation_x_series[frame_idx] * TRANSLATION_SCALE, 
@@ -191,7 +191,7 @@ def anim_frame_warp_3d(prev_img_cv2, anim_args, keys, frame_idx, adabins_helper,
         math.radians(keys.rotation_3d_z_series[frame_idx])
     ]
     rot_mat = p3d.euler_angles_to_matrix(torch.tensor(rotate_xyz, device=device), "XYZ").unsqueeze(0)
-    result = transform_image_3d(prev_img_cv2, adabins_helper, midas_model, midas_transform, rot_mat, translate_xyz, anim_args)
+    result = transform_image_3d(prev_img_cv2, depth, rot_mat, translate_xyz, anim_args)
     torch.cuda.empty_cache()
     return result
 
@@ -376,27 +376,24 @@ def sample_from_cv2(sample: np.ndarray) -> torch.Tensor:
     sample = torch.from_numpy(sample)
     return sample
 
-def sample_to_cv2(sample: torch.Tensor) -> np.ndarray:
+def sample_to_cv2(sample: torch.Tensor, type=np.uint8) -> np.ndarray:
     sample_f32 = rearrange(sample.squeeze().cpu().numpy(), "c h w -> h w c").astype(np.float32)
     sample_f32 = ((sample_f32 * 0.5) + 0.5).clip(0, 1)
-    sample_int8 = (sample_f32 * 255).astype(np.uint8)
-    return sample_int8
+    sample_int8 = (sample_f32 * 255)
+    return sample_int8.astype(type)
 
 @torch.no_grad()
-def transform_image_3d(prev_img_cv2, adabins_helper, midas_model, midas_transform, rot_mat, translate, anim_args):
-    # adapted and optimized version of transform_image_3d from Disco Diffusion https://github.com/alembics/disco-diffusion 
-
+def predict_depth(prev_img_cv2, adabins_helper, midas_model, midas_transform, anim_args) -> torch.Tensor:
     w, h = prev_img_cv2.shape[1], prev_img_cv2.shape[0]
 
     # predict depth with AdaBins    
     use_adabins = anim_args.midas_weight < 1.0 and adabins_helper is not None
     if use_adabins:
-        print(f"Estimating depth of {w}x{h} image with AdaBins...")
         MAX_ADABINS_AREA = 500000
         MIN_ADABINS_AREA = 448*448
 
         # resize image if too large or too small
-        img_pil = Image.fromarray(cv2.cvtColor(prev_img_cv2, cv2.COLOR_RGB2BGR))
+        img_pil = Image.fromarray(cv2.cvtColor(prev_img_cv2.astype(np.uint8), cv2.COLOR_RGB2BGR))
         image_pil_area = w*h
         resized = True
         if image_pil_area > MAX_ADABINS_AREA:
@@ -415,10 +412,10 @@ def transform_image_3d(prev_img_cv2, adabins_helper, midas_model, midas_transfor
         try:
             _, adabins_depth = adabins_helper.predict_pil(depth_input)
             if resized:
-                adabins_depth = torchvision.transforms.functional.resize(
+                adabins_depth = TF.resize(
                     torch.from_numpy(adabins_depth), 
                     torch.Size([h, w]),
-                    interpolation=torchvision.transforms.functional.InterpolationMode.BICUBIC
+                    interpolation=TF.InterpolationMode.BICUBIC
                 )
             adabins_depth = adabins_depth.squeeze()
         except:
@@ -432,7 +429,6 @@ def transform_image_3d(prev_img_cv2, adabins_helper, midas_model, midas_transfor
         img_midas_input = midas_transform({"image": img_midas})["image"]
 
         # MiDaS depth estimation implementation
-        print(f"Estimating depth of {w}x{h} image with MiDaS...")
         sample = torch.from_numpy(img_midas_input).float().to(device).unsqueeze(0)
         if device == torch.device("cuda"):
             sample = sample.to(memory_format=torch.channels_last)  
@@ -461,6 +457,12 @@ def transform_image_3d(prev_img_cv2, adabins_helper, midas_model, midas_transfor
         depth_tensor = torch.from_numpy(depth_map).squeeze().to(device)
     else:
         depth_tensor = torch.ones((h, w), device=device)
+    
+    return depth_tensor
+
+def transform_image_3d(prev_img_cv2, depth_tensor, rot_mat, translate, anim_args):
+    # adapted and optimized version of transform_image_3d from Disco Diffusion https://github.com/alembics/disco-diffusion 
+    w, h = prev_img_cv2.shape[1], prev_img_cv2.shape[0]
 
     pixel_aspect = 1.0 # aspect of an individual pixel (so usually 1.0)
     near, far, fov_deg = anim_args.near_plane, anim_args.far_plane, anim_args.fov
@@ -482,7 +484,7 @@ def transform_image_3d(prev_img_cv2, adabins_helper, midas_model, midas_transfor
     coords_2d = torch.nn.functional.affine_grid(identity_2d_batch, [1,1,h,w], align_corners=False)
     offset_coords_2d = coords_2d - torch.reshape(offset_xy, (h,w,2)).unsqueeze(0)
 
-    image_tensor = torchvision.transforms.functional.to_tensor(Image.fromarray(prev_img_cv2)).to(device)
+    image_tensor = rearrange(torch.from_numpy(prev_img_cv2.astype(np.float32)), 'h w c -> c h w').to(device)
     new_image = torch.nn.functional.grid_sample(
         image_tensor.add(1/512 - 0.0001).unsqueeze(0), 
         offset_coords_2d, 
@@ -491,11 +493,11 @@ def transform_image_3d(prev_img_cv2, adabins_helper, midas_model, midas_transfor
         align_corners=False
     )
 
-    # convert back to cv2 style numpy array 0->255 uint8
+    # convert back to cv2 style numpy array
     result = rearrange(
-        new_image.squeeze().clamp(0,1) * 255.0, 
+        new_image.squeeze().clamp(0,255), 
         'c h w -> h w c'
-    ).cpu().numpy().astype(np.uint8)
+    ).cpu().numpy().astype(prev_img_cv2.dtype)
     return result
 
 def generate(args, return_latent=False, return_sample=False, return_c=False):
@@ -763,8 +765,9 @@ def DeforumAnimArgs():
 
     #@markdown ####**Coherence:**
     color_coherence = 'Match Frame 0 LAB' #@param ['None', 'Match Frame 0 HSV', 'Match Frame 0 LAB', 'Match Frame 0 RGB'] {type:'string'}
+    diffusion_cadence = '3' #@param ['1','2','3','4','5','6','7','8'] {type:'string'}
 
-    #@markdown #### Depth Warping
+    #@markdown ####**3D Depth Warping:**
     use_depth_warping = True #@param {type:"boolean"}
     midas_weight = 0.3#@param {type:"number"}
     near_plane = 200
@@ -878,7 +881,7 @@ animation_prompts = {
 # !!   "cellView": "form"
 # !! }}
 def DeforumArgs():
-    
+
     #@markdown **Image Settings**
     W = 512 #@param
     H = 512 #@param
@@ -906,7 +909,7 @@ def DeforumArgs():
     make_grid = False #@param {type:"boolean"}
     grid_rows = 2 #@param 
     outdir = get_output_folder(output_path, batch_name)
-    
+
     #@markdown **Init Settings**
     use_init = False #@param {type:"boolean"}
     strength = 0.0 #@param {type:"number"}
@@ -940,7 +943,7 @@ def next_seed(args):
     elif args.seed_behavior == 'fixed':
         pass # always keep seed the same
     else:
-        args.seed = random.randint(0, 2**32)
+        args.seed = random.randint(0, 2**32 - 1)
     return args.seed
 
 def render_image_batch(args):
@@ -984,7 +987,7 @@ def render_image_batch(args):
         args.prompt = prompt
         print(f"Prompt {iprompt+1} of {len(prompts)}")
         print(f"{args.prompt}")
-      
+
         all_images = []
 
         for batch_index in range(args.n_batch):
@@ -1002,7 +1005,7 @@ def render_image_batch(args):
                         if args.filename_format == "{timestring}_{index}_{prompt}.png":
                             filename = f"{args.timestring}_{index:05}_{sanitize(prompt)[:160]}.png"
                         else:
-                            filename = f"{args.timestring}_{index:05}_{args.seed}.png"
+                        filename = f"{args.timestring}_{index:05}_{args.seed}.png"
                         image.save(os.path.join(args.outdir, filename))
                     if args.display_samples:
                         display.display(image)
@@ -1066,29 +1069,70 @@ def render_animation(args, anim_args):
     else:
         adabins_helper, midas_model, midas_transform = None, None, None
 
-    args.n_samples = 1
+    # state for interpolating between diffusion steps
+    turbo_steps = int(anim_args.diffusion_cadence)
+    turbo_prev_image, turbo_prev_frame_idx = None, 0
+    turbo_next_image, turbo_next_frame_idx = None, 0
+
+    # resume animation
     prev_sample = None
     color_match_sample = None
-    for frame_idx in range(start_frame,anim_args.max_frames):
+    if anim_args.resume_from_timestring:
+        if turbo_steps > 1:
+            start_frame = max(0, start_frame - turbo_steps)
+            start_frame -= start_frame%turbo_steps
+        path = os.path.join(args.outdir,f"{args.timestring}_{start_frame-1:05}.png")
+        img = cv2.imread(path)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        prev_sample = sample_from_cv2(img)
+        if anim_args.color_coherence != 'None':
+            color_match_sample = img
+        if turbo_steps > 1:
+            # TODO: load both past frames and carry forward to start point
+            turbo_next_image, turbo_next_frame_idx = sample_to_cv2(prev_sample, type=np.float32), start_frame-1
+
+    args.n_samples = 1
+    frame_idx = start_frame
+    while frame_idx < anim_args.max_frames:
         print(f"Rendering animation frame {frame_idx} of {anim_args.max_frames}")
         noise = keys.noise_schedule_series[frame_idx]
         strength = keys.strength_schedule_series[frame_idx]
         contrast = keys.contrast_schedule_series[frame_idx]
         
-        # resume animation
-        if anim_args.resume_from_timestring:
-            path = os.path.join(args.outdir,f"{args.timestring}_{frame_idx-1:05}.png")
-            img = cv2.imread(path)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            prev_sample = sample_from_cv2(img)
+        # emit in-between frames
+        if turbo_steps > 1:
+            tween_frame_start_idx = max(0, frame_idx-turbo_steps)
+            for tween_frame_idx in range(tween_frame_start_idx, frame_idx):
+                tween = float(tween_frame_idx - tween_frame_start_idx + 1) / float(frame_idx - tween_frame_start_idx)
+                print(f"  creating in between frame {tween_frame_idx} tween:{tween:0.2f}")
+                if turbo_prev_image is not None and tween_frame_idx > turbo_prev_frame_idx:
+                    prev_depth = predict_depth(turbo_prev_image, adabins_helper, midas_model, midas_transform, anim_args)
+                    turbo_prev_image = anim_frame_warp_3d(turbo_prev_image, prev_depth, anim_args, keys, tween_frame_idx)
+                    turbo_prev_frame_idx = tween_frame_idx
+
+                if tween_frame_idx > turbo_next_frame_idx:
+                    next_depth = predict_depth(turbo_next_image, adabins_helper, midas_model, midas_transform, anim_args)
+                    turbo_next_image = anim_frame_warp_3d(turbo_next_image, next_depth, anim_args, keys, tween_frame_idx)
+                    turbo_next_frame_idx = tween_frame_idx
+
+                if turbo_prev_image is not None and tween < 1.0:
+                    img = turbo_prev_image*(1.0-tween) + turbo_next_image*tween
+                else:
+                    img = turbo_next_image
+
+                filename = f"{args.timestring}_{tween_frame_idx:05}.png"
+                cv2.imwrite(os.path.join(args.outdir, filename), cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_RGB2BGR))
+            if turbo_next_image is not None:
+                prev_sample = sample_from_cv2(turbo_next_image)
 
         # apply transforms to previous frame
         if prev_sample is not None:
-
             if anim_args.animation_mode == '2D':
                 prev_img = anim_frame_warp_2d(sample_to_cv2(prev_sample), args, anim_args, keys, frame_idx)
             else: # '3D'
-                prev_img = anim_frame_warp_3d(sample_to_cv2(prev_sample), anim_args, keys, frame_idx, adabins_helper, midas_model, midas_transform)
+                prev_img_cv2 = sample_to_cv2(prev_sample)
+                depth = predict_depth(prev_img_cv2, adabins_helper, midas_model, midas_transform, anim_args)
+                prev_img = anim_frame_warp_3d(prev_img_cv2, depth, anim_args, keys, frame_idx)
 
             # apply color matching
             if anim_args.color_coherence != 'None':
@@ -1104,7 +1148,6 @@ def render_animation(args, anim_args):
 
             # use transformed previous frame as init for current
             args.use_init = True
-            #args.init_sample = noised_sample.half().to(device)
             if half_precision:
                 args.init_sample = noised_sample.half().to(device)
             else:
@@ -1122,14 +1165,19 @@ def render_animation(args, anim_args):
             args.init_image = init_frame
 
         # sample the diffusion model
-        results = generate(args, return_latent=False, return_sample=True)
-        sample, image = results[0], results[1]
-    
-        filename = f"{args.timestring}_{frame_idx:05}.png"
-        image.save(os.path.join(args.outdir, filename))
+        sample, image = generate(args, return_latent=False, return_sample=True)
         if not using_vid_init:
             prev_sample = sample
-        
+
+        if turbo_steps > 1:
+            turbo_prev_image, turbo_prev_frame_idx = turbo_next_image, turbo_next_frame_idx
+            turbo_next_image, turbo_next_frame_idx = sample_to_cv2(sample, type=np.float32), frame_idx
+            frame_idx += turbo_steps
+        else:    
+            filename = f"{args.timestring}_{frame_idx:05}.png"
+            image.save(os.path.join(args.outdir, filename))
+            frame_idx += 1
+
         display.clear_output(wait=True)
         display.display(image)
 
@@ -1270,7 +1318,7 @@ args.timestring = time.strftime('%Y%m%d%H%M%S')
 args.strength = max(0.0, min(1.0, args.strength))
 
 if args.seed == -1:
-    args.seed = random.randint(0, 2**32)
+    args.seed = random.randint(0, 2**32 - 1)
 if not args.use_init:
     args.init_image = None
 if args.sampler == 'plms' and (args.use_init or anim_args.animation_mode != 'None'):
