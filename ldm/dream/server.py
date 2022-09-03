@@ -70,7 +70,8 @@ class DreamServer(BaseHTTPRequestHandler):
         steps = int(post_data['steps'])
         width = int(post_data['width'])
         height = int(post_data['height'])
-        fit    = 'fit' in post_data
+        fit      = 'fit' in post_data
+        seamless = 'seamless' in post_data
         cfgscale = float(post_data['cfgscale'])
         sampler_name  = post_data['sampler']
         gfpgan_strength = float(post_data['gfpgan_strength']) if gfpgan_model_exists else 0
@@ -164,6 +165,7 @@ class DreamServer(BaseHTTPRequestHandler):
                                         gfpgan_strength = gfpgan_strength,
                                         upscale         = upscale,
                                         sampler_name    = sampler_name,
+                                        seamless        = seamless,
                                         step_callback=image_progress,
                                         image_callback=image_done)
             else:
@@ -185,6 +187,7 @@ class DreamServer(BaseHTTPRequestHandler):
                                             width      = width,
                                             height     = height,
                                             fit        = fit,
+                                            seamless   = seamless,
                                             gfpgan_strength=gfpgan_strength,
                                             upscale         = upscale,
                                             step_callback=image_progress,

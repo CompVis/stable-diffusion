@@ -62,6 +62,7 @@ def main():
         grid  = opt.grid,
         # this is solely for recreating the prompt
         latent_diffusion_weights=opt.laion400m,
+        seamless=opt.seamless,
         embedding_path=opt.embedding_path,
         device_type=opt.device
     )
@@ -86,6 +87,9 @@ def main():
         except (FileNotFoundError, IOError) as e:
             print(f'{e}. Aborting.')
             sys.exit(-1)
+
+    if opt.seamless:
+        print(">> changed to seamless tiling mode")
 
     # preload the model
     tic = time.time()
@@ -419,6 +423,11 @@ def create_argv_parser():
         help='Directory to save generated images and a log of prompts and seeds. Default: outputs/img-samples',
     )
     parser.add_argument(
+        '--seamless',
+        action='store_true',
+        help='Change the model to seamless tiling (circular) mode',
+    )
+    parser.add_argument(
         '--embedding_path',
         type=str,
         help='Path to a pre-trained embedding manager checkpoint - can only be set on command line',
@@ -539,6 +548,11 @@ def create_cmd_parser():
         type=str,
         default=None,
         help='Directory to save generated images and a log of prompts and seeds',
+    )
+    parser.add_argument(
+        '--seamless',
+        action='store_true',
+        help='Change the model to seamless tiling (circular) mode',
     )
     parser.add_argument(
         '-i',

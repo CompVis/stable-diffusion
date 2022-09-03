@@ -37,6 +37,8 @@
 	      <option value="k_euler_a">KEULER_A</option>
               <option value="k_heun">KHEUN</option>
             </select>
+            <input type="checkbox" name="seamless" id="seamless">
+	    <label for="seamless">Seamless circular tiling</label>
             <br>
             <label title="Set to multiple of 64" for="width">Width:</label>
             <select id="width" name="width" value="512">
@@ -64,7 +66,7 @@
             <input value="-1" type="number" id="seed" name="seed">
             <button type="button" id="reset-seed">&olarr;</button>
             <input type="checkbox" name="progress_images" id="progress_images">
-	    <label for="progress_images">Display in-progress images (slows down generation):</label>
+	    <label for="progress_images">Display in-progress images (slower)</label>
 	    <button type="button" id="reset-all">Reset to Defaults</button>
 	</div>
 	<div id="img2img">
@@ -74,7 +76,7 @@
           <label for="strength">Img2Img Strength:</label>
           <input value="0.75" type="number" id="strength" name="strength" step="0.01" min="0" max="1">
           <input type="checkbox" id="fit" name="fit" checked>
-          <label title="Rescale image to fit within requested width and height" for="fit">Fit to width/height:</label>
+          <label title="Rescale image to fit within requested width and height" for="fit">Fit to width/height</label>
 	</div>
         <div id="gfpgan">
           <label title="Strength of the gfpgan (face fixing) algorithm." for="gfpgan_strength">GPFGAN Strength (0 to disable):</label>
