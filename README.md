@@ -131,6 +131,13 @@ You may also pass a -v<count> option to generate count variants on the original 
 passing the first generated image back into img2img the requested number of times. It generates interesting
 variants.
 
+## Seamless Tiling
+
+The seamless tiling mode causes generated images to be seamlessly tile with itself. To use it, add the --seamless option when starting the script which will result in all generated images to tile, or for each dream> prompt as shown here:
+```
+dream> "pond garden with lotus by claude monet" --seamless -s100 -n4
+```
+
 ## GFPGAN and Real-ESRGAN Support
 
 The script also provides the ability to do face restoration and

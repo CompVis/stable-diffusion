@@ -87,20 +87,15 @@ def main():
             print(f'{e}. Aborting.')
             sys.exit(-1)
 
+    if opt.seamless:
+        print(">> changed to seamless tiling mode")
+
     # preload the model
     tic = time.time()
     t2i.load_model()
     print(
         f'>> model loaded in', '%4.2fs' % (time.time() - tic)
     )
-
-    for m in t2i.model.modules():
-        if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
-            m._orig_padding_mode = m.padding_mode
-            if opt.seamless:
-                m.padding_mode = 'circular'
-    if opt.seamless:
-        print(">> changed to seamless tiling mode")
 
     if not infile:
         print(
