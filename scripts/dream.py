@@ -9,7 +9,6 @@ import sys
 import copy
 import warnings
 import time
-from ldm.dream.devices import choose_torch_device
 import ldm.dream.readline
 from ldm.dream.pngwriter import PngWriter, PromptFormatter
 from ldm.dream.server import DreamServer, ThreadingDreamServer
@@ -99,7 +98,7 @@ def main():
 
     cmd_parser = create_cmd_parser()
     if opt.web:
-        dream_server_loop(t2i)
+        dream_server_loop(t2i, opt.host, opt.port)
     else:
         main_loop(t2i, opt.outdir, opt.prompt_as_dir, cmd_parser, infile)
 
@@ -187,8 +186,8 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
             # shotgun parsing, woo
             parts = []
             broken = False # python doesn't have labeled loops...
-            for part in opt.with_variations.split(';'):
-                seed_and_weight = part.split(',')
+            for part in opt.with_variations.split(','):
+                seed_and_weight = part.split(':')
                 if len(seed_and_weight) != 2:
                     print(f'could not parse with_variation part "{part}"')
                     broken = True
@@ -310,7 +309,7 @@ def get_next_command(infile=None) -> str: #command string
         print(f'#{command}')
     return command
 
-def dream_server_loop(t2i):
+def dream_server_loop(t2i, host, port):
     print('\n* --web was specified, starting web server...')
     # Change working directory to the stable-diffusion directory
     os.chdir(
@@ -319,9 +318,13 @@ def dream_server_loop(t2i):
 
     # Start server
     DreamServer.model = t2i
-    dream_server = ThreadingDreamServer(("0.0.0.0", 9090))
-    print("\nStarted Stable Diffusion dream server!")
-    print("Point your browser at http://localhost:9090 or use the host's DNS name or IP address.")
+    dream_server = ThreadingDreamServer((host, port))
+    print(">> Started Stable Diffusion dream server!")
+    if host == '0.0.0.0':
+        print(f"Point your browser at http://localhost:{port} or use the host's DNS name or IP address.")
+    else:
+        print(">> Default host address now 127.0.0.1 (localhost). Use --host 0.0.0.0 to bind any address.")
+        print(f">> Point your browser at http://{host}:{port}.")
 
     try:
         dream_server.serve_forever()
@@ -387,9 +390,7 @@ def create_argv_parser():
         '--full_precision',
         dest='full_precision',
         action='store_true',
-        help='Use slower full precision math for calculations',
-        # MPS only functions with full precision, see https://github.com/lstein/stable-diffusion/issues/237
-        default=choose_torch_device() == 'mps',
+        help='Use more memory-intensive full precision math for calculations',
     )
     parser.add_argument(
         '-g',
@@ -456,6 +457,18 @@ def create_argv_parser():
         dest='web',
         action='store_true',
         help='Start in web server mode.',
+    )
+    parser.add_argument(
+        '--host',
+        type=str,
+        default='127.0.0.1',
+        help='Web server: Host or IP to listen on. Set to 0.0.0.0 to accept traffic from other devices on your network.'
+    )
+    parser.add_argument(
+        '--port',
+        type=int,
+        default='9090',
+        help='Web server: Port to listen on'
     )
     parser.add_argument(
         '--weights',
@@ -598,7 +611,7 @@ def create_cmd_parser():
         '--with_variations',
         default=None,
         type=str,
-        help='list of variations to apply, in the format `seed,weight;seed,weight;...'
+        help='list of variations to apply, in the format `seed:weight,seed:weight,...'
     )
     return parser
 

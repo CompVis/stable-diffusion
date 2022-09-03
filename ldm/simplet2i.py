@@ -151,7 +151,7 @@ class T2I:
         self.grid                     = grid
         self.ddim_eta                 = ddim_eta
         self.precision                = precision
-        self.full_precision           = full_precision
+        self.full_precision           = True if choose_torch_device() == 'mps' else full_precision
         self.strength                 = strength
         self.embedding_path           = embedding_path
         self.device_type              = device_type
@@ -286,7 +286,7 @@ class T2I:
                 0.0 <= variation_amount <= 1.0
         ), '-v --variation_amount must be in [0.0, 1.0]'
 
-        if len(with_variations) > 0:
+        if len(with_variations) > 0 or variation_amount > 1.0:
             assert seed is not None,\
                 'seed must be specified when using with_variations'
             if variation_amount == 0.0:
@@ -324,6 +324,7 @@ class T2I:
                         self.model.encode_first_stage(init_image)
                     ) # move to latent space
 
+                print(f' DEBUG: seed at make_image time ={seed}')
                 make_image = self._img2img(
                     prompt,
                     steps=steps,
@@ -346,25 +347,15 @@ class T2I:
                     callback=step_callback,
                 )
 
-            def get_noise():
-                if init_img:
-                    return torch.randn_like(init_latent, device=self.device)
-                else:
-                    return torch.randn([1,
-                        self.latent_channels,
-                        height // self.downsampling_factor,
-                        width  // self.downsampling_factor],
-                        device=self.device)
-
             initial_noise = None
             if variation_amount > 0 or len(with_variations) > 0:
                 # use fixed initial noise plus random noise per iteration
                 seed_everything(seed)
-                initial_noise = get_noise()
+                initial_noise = self._get_noise(init_img,width,height)
                 for v_seed, v_weight in with_variations:
                     seed = v_seed
                     seed_everything(seed)
-                    next_noise = get_noise()
+                    next_noise = self._get_noise(init_img,width,height)
                     initial_noise = self.slerp(v_weight, initial_noise, next_noise)
                 if variation_amount > 0:
                     random.seed() # reset RNG to an actually random state, so we can get a random seed for variations
@@ -376,14 +367,17 @@ class T2I:
                     x_T = None
                     if variation_amount > 0:
                         seed_everything(seed)
-                        target_noise = get_noise()
+                        target_noise = self._get_noise(init_img,width,height)
                         x_T = self.slerp(variation_amount, initial_noise, target_noise)
                     elif initial_noise is not None:
                         # i.e. we specified particular variations
                         x_T = initial_noise
                     else:
                         seed_everything(seed)
+                        if self.device.type == 'mps':
+                            x_T = self._get_noise(init_img,width,height)
                         # make_image will do the equivalent of get_noise itself
+                    print(f' DEBUG: seed at make_image() invocation time ={seed}')
                     image = make_image(x_T)
                     results.append([image, seed])
                     if image_callback is not None:
@@ -610,6 +604,27 @@ class T2I:
             self._set_sampler()
 
         return self.model
+
+    # returns a tensor filled with random numbers from a normal distribution
+    def _get_noise(self,init_img,width,height):
+        if init_img:
+            if self.device.type == 'mps':
+                return torch.randn_like(init_latent, device='cpu').to(self.device)
+            else:
+                return torch.randn_like(init_latent, device=self.device)
+        else:
+            if self.device.type == 'mps':
+                return torch.randn([1,
+                                    self.latent_channels,
+                                    height // self.downsampling_factor,
+                                    width  // self.downsampling_factor],
+                                   device='cpu').to(self.device)
+            else:
+                return torch.randn([1,
+                                    self.latent_channels,
+                                    height // self.downsampling_factor,
+                                    width  // self.downsampling_factor],
+                                   device=self.device)
 
     def _set_sampler(self):
         msg = f'>> Setting Sampler to {self.sampler_name}'
