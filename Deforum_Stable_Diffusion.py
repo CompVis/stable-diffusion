@@ -1069,18 +1069,19 @@ def render_animation(args, anim_args):
     args.n_samples = 1
     prev_sample = None
     color_match_sample = None
+    
+    # resume animation
+    if anim_args.resume_from_timestring:
+    	path = os.path.join(args.outdir,f"{args.timestring}_{start_frame-1:05}.png")
+    	img = cv2.imread(path)
+    	img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    	prev_sample = sample_from_cv2(img)
+    
     for frame_idx in range(start_frame,anim_args.max_frames):
         print(f"Rendering animation frame {frame_idx} of {anim_args.max_frames}")
         noise = keys.noise_schedule_series[frame_idx]
         strength = keys.strength_schedule_series[frame_idx]
         contrast = keys.contrast_schedule_series[frame_idx]
-        
-        # resume animation
-        if anim_args.resume_from_timestring:
-            path = os.path.join(args.outdir,f"{args.timestring}_{frame_idx-1:05}.png")
-            img = cv2.imread(path)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            prev_sample = sample_from_cv2(img)
 
         # apply transforms to previous frame
         if prev_sample is not None:
