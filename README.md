@@ -138,6 +138,13 @@ You may also pass a -v<count> option to generate count variants on the original 
 passing the first generated image back into img2img the requested number of times. It generates interesting
 variants.
 
+## Seamless Tiling
+
+The seamless tiling mode causes generated images to seamlessly tile with itself. To use it, add the --seamless option when starting the script which will result in all generated images to tile, or for each dream> prompt as shown here:
+```
+dream> "pond garden with lotus by claude monet" --seamless -s100 -n4
+```
+
 ## GFPGAN and Real-ESRGAN Support
 
 The script also provides the ability to do face restoration and
@@ -400,7 +407,11 @@ repository and associated paper for details and limitations.
 
 # Latest Changes
 
-- v1.13 (3 September 2022)
+- v1.14 (In progress)
+
+  - Add "seamless mode" for circular tiling of image. Generates beautiful effects. ([prixt](https://github.com/prixt))
+
+- v1.13 (3 September 2022
 
   - Support image variations (see [VARIATIONS](VARIATIONS.md) ([Kevin Gibbons](https://github.com/bakkot) and many contributors and reviewers)
   - Supports a Google Colab notebook for a standalone server running on Google hardware [Arturo Mendivil](https://github.com/artmen1516)
