@@ -17,7 +17,8 @@
     // Init image stuff
     "init_image": null, // the file to use for a starting point (leave as null for no init)
     "init_strength": 0.62, // how strongly the init should be applied (essentially skip_steps)
-    // go_big stuff
+    // Go BIG stuff
+    "gobig": false, // A true setting will trigger the gobig upscaling process (or, use --gobig on the command line)
     "gobig_maximize": false, // auto-extend go_big into otherwise wasted space
     "gobig_overlap": 64, // number of pixels to blend against other areas in go_big
     "gobig_realesrgan": false, // optionally use RealESRGAN to handle initial resize
