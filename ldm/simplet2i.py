@@ -151,7 +151,7 @@ class T2I:
         self.grid                     = grid
         self.ddim_eta                 = ddim_eta
         self.precision                = precision
-        self.full_precision           = full_precision
+        self.full_precision           = True if choose_torch_device() == 'mps' else full_precision
         self.strength                 = strength
         self.embedding_path           = embedding_path
         self.device_type              = device_type

@@ -9,7 +9,6 @@ import sys
 import copy
 import warnings
 import time
-from ldm.dream.devices import choose_torch_device
 import ldm.dream.readline
 from ldm.dream.pngwriter import PngWriter, PromptFormatter
 from ldm.dream.server import DreamServer, ThreadingDreamServer
@@ -391,9 +390,7 @@ def create_argv_parser():
         '--full_precision',
         dest='full_precision',
         action='store_true',
-        help='Use slower full precision math for calculations',
-        # MPS only functions with full precision, see https://github.com/lstein/stable-diffusion/issues/237
-        default=choose_torch_device() == 'mps',
+        help='Use more memory-intensive full precision math for calculations',
     )
     parser.add_argument(
         '-g',
