@@ -1113,7 +1113,8 @@ def render_animation(args, anim_args):
 
         # grab prompt for current frame
         args.prompt = prompt_series[frame_idx]
-        print(f"{args.prompt} {args.seed}")
+        print(f"{args.prompt}")
+        print(f"{args.timestring}")
 
         # grab init image for current frame
         if using_vid_init:
