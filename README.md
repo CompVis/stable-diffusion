@@ -402,10 +402,12 @@ repository and associated paper for details and limitations.
 
 - v1.13 (3 September 2022)
 
-  - Support image variations (see [VARIATIONS](VARIATIONS.md)
+  - Support image variations (see [VARIATIONS](VARIATIONS.md) ([Kevin Gibbons](https://github.com/bakkot) and many contributors and reviewers)
   - Supports a Google Colab notebook for a standalone server running on Google hardware [Arturo Mendivil](https://github.com/artmen1516)
   - WebUI supports GFPGAN/ESRGAN facial reconstruction and upscaling [Kevin Gibbons](https://github.com/bakkot)
   - WebUI supports incremental display of in-progress images during generation [Kevin Gibbons](https://github.com/bakkot)
+  - A new configuration file scheme that allows new models (including upcoming stable-diffusion-v1.5)
+  to be added without altering the code. ([David Wager](https://github.com/maddavid12))
   - Can specify --grid on dream.py command line as the default.
   - Miscellaneous internal bug and stability fixes.
   - Works on M1 Apple hardware.
