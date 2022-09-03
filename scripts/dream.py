@@ -187,8 +187,8 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
             # shotgun parsing, woo
             parts = []
             broken = False # python doesn't have labeled loops...
-            for part in opt.with_variations.split(';'):
-                seed_and_weight = part.split(',')
+            for part in opt.with_variations.split(','):
+                seed_and_weight = part.split(':')
                 if len(seed_and_weight) != 2:
                     print(f'could not parse with_variation part "{part}"')
                     broken = True
@@ -598,7 +598,7 @@ def create_cmd_parser():
         '--with_variations',
         default=None,
         type=str,
-        help='list of variations to apply, in the format `seed,weight;seed,weight;...'
+        help='list of variations to apply, in the format `seed:weight,seed:weight,...'
     )
     return parser
 
