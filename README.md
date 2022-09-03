@@ -400,8 +400,9 @@ repository and associated paper for details and limitations.
 
 # Latest Changes
 
-- v1.13 (in process)
+- v1.13 (3 September 2022)
 
+  - Support image variations (see [VARIATIONS](VARIATIONS.md)
   - Supports a Google Colab notebook for a standalone server running on Google hardware [Arturo Mendivil](https://github.com/artmen1516)
   - WebUI supports GFPGAN/ESRGAN facial reconstruction and upscaling [Kevin Gibbons](https://github.com/bakkot)
   - WebUI supports incremental display of in-progress images during generation [Kevin Gibbons](https://github.com/bakkot)
