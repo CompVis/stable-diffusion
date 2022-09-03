@@ -21,17 +21,21 @@ text-to-image generator. This fork supports:
 2. A basic Web interface that allows you to run a local web server for
    generating images in your browser.
 
-3. A notebook for running the code on Google Colab.
-
-4. Support for img2img in which you provide a seed image to guide the
+3. Support for img2img in which you provide a seed image to guide the
       image creation. (inpainting & masking coming soon)
+
+4. A notebook for running the code on Google Colab.
 
 5. Upscaling and face fixing using the optional ESRGAN and GFPGAN
    packages.
 
 6. Weighted subprompts for prompt tuning.
 
-7. Textual inversion for customization of the prompt language and images.
+7. [Image variations](VARIATIONS.md) which allow you to systematically
+generate variations of an image you like and combine two or more
+images together to combine the best features of both.
+
+8. Textual inversion for customization of the prompt language and images.
 
 8. ...and more!
 
@@ -42,8 +46,11 @@ improvements and bug fixes.
 # Table of Contents
 
 1. [Major Features](#features)
-2. [Changelog](#latest)
+2. [Changelog](#latest-changes)
 3. [Installation](#installation)
+   1. [Linux](#linux)
+   1. [Windows](#windows)
+   1. [MacOS](README-Mac-MPS.md)
 4. [Troubleshooting](#troubleshooting)
 5. [Contributing](#contributing)
 6. [Support](#support)
@@ -331,8 +338,10 @@ and introducing a new vocabulary to the fixed model.
 
 To train, prepare a folder that contains images sized at 512x512 and execute the following:
 
+
+WINDOWS: As the default backend is not available on Windows, if you're using that platform, set the environment variable `PL_TORCH_DISTRIBUTED_BACKEND=gloo`
+    
 ```
-# As the default backend is not available on Windows, if you're using that platform, execute SET PL_TORCH_DISTRIBUTED_BACKEND=gloo
 (ldm) ~/stable-diffusion$ python3 ./main.py --base ./configs/stable-diffusion/v1-finetune.yaml \
                                             -t \
                                             --actual_resume ./models/ldm/stable-diffusion-v1/model.ckpt \
@@ -504,6 +513,30 @@ This distribution is changing rapidly. If you used the "git clone" method (step 
 This will bring your local copy into sync with the remote one.
 
 ## Windows
+
+### Notebook install (semi-automated)
+
+We have a
+[Jupyter notebook](https://github.com/lstein/stable-diffusion/blob/main/Stable-Diffusion-local-Windows.ipynb)
+with cell-by-cell installation steps. It will download the code in this repo as
+one of the steps, so instead of cloning this repo, simply download the notebook
+from the link above and load it up in VSCode (with the
+appropriate extensions installed)/Jupyter/JupyterLab and start running the cells one-by-one.
+
+Note that you will need NVIDIA drivers, Python 3.10, and Git installed
+beforehand - simplified
+[step-by-step instructions](https://github.com/lstein/stable-diffusion/wiki/Easy-peasy-Windows-install)
+are available in the wiki (you'll only need steps 1, 2, & 3 ).
+
+### Manual installs
+
+#### pip
+
+See
+[Easy-peasy Windows install](https://github.com/lstein/stable-diffusion/wiki/Easy-peasy-Windows-install)
+in the wiki
+
+#### Conda
 
 1. Install Anaconda3 (miniconda3 version) from here: https://docs.anaconda.com/anaconda/install/windows/
 
