@@ -21,9 +21,11 @@ How to (this hasn't been 100% tested yet):
 
 First get the weights checkpoint download started - it's big:
 
-Sign up at https://huggingface.co
-Accept the terms and click Access Repository: https://huggingface.co/CompVis/stable-diffusion-v-1-4-original
-Download sd-v1-4.ckpt (4.27 GB) and note where you have saved it (probably the Downloads folder)
+1. Sign up at https://huggingface.co
+2. Go to the [Stable diffusion diffusion model page](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original)
+3. Accept the terms and click Access Repository: 
+4. Download [sd-v1-4.ckpt (4.27 GB)](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/blob/main/sd-v1-4.ckpt) and note where you have saved it (probably the Downloads folder)
+
 While that is downloading, open Terminal and run the following commands one at a time.
 
 ```
@@ -47,7 +49,9 @@ cd stable-diffusion
 
 # create symlink to checkpoint
 mkdir -p models/ldm/stable-diffusion-v1/
+
 PATH_TO_CKPT="$HOME/Downloads"  # or wherever you saved sd-v1-4.ckpt
+
 ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
 
 # install packages
