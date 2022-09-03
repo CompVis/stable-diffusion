@@ -335,7 +335,6 @@ class T2I:
                         self.model.encode_first_stage(init_image)
                     ) # move to latent space
 
-                print(f' DEBUG: seed at make_image time ={seed}')
                 make_image = self._img2img(
                     prompt,
                     steps=steps,
