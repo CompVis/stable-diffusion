@@ -23,6 +23,7 @@ text-to-image generator. This fork supports:
 
 3. A basic Web interface that allows you to run a local web server for
    generating images in your browser.
+
 4. A notebook for running the code on Google Colab.
 
 5. Upscaling and face fixing using the optional ESRGAN and GFPGAN
@@ -30,7 +31,11 @@ text-to-image generator. This fork supports:
 
 6. Weighted subprompts for prompt tuning.
 
-7. Textual inversion for customization of the prompt language and images.
+7. [Image variations](VARIATIONS.md) which allow you to systematically
+generate variations of an image you like and combine two or more
+images together to combine the best features of both.
+
+8. Textual inversion for customization of the prompt language and images.
 
 8. ...and more!
 

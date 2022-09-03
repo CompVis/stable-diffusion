@@ -182,9 +182,32 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
                 print(f'No previous seed at position {opt.seed} found')
                 opt.seed = None
 
-        normalized_prompt = PromptFormatter(t2i, opt).normalize_prompt()
         do_grid           = opt.grid or t2i.grid
-        individual_images = not do_grid
+
+        if opt.with_variations is not None:
+            # shotgun parsing, woo
+            parts = []
+            broken = False # python doesn't have labeled loops...
+            for part in opt.with_variations.split(';'):
+                seed_and_weight = part.split(',')
+                if len(seed_and_weight) != 2:
+                    print(f'could not parse with_variation part "{part}"')
+                    broken = True
+                    break
+                try:
+                    seed = int(seed_and_weight[0])
+                    weight = float(seed_and_weight[1])
+                except ValueError:
+                    print(f'could not parse with_variation part "{part}"')
+                    broken = True
+                    break
+                parts.append([seed, weight])
+            if broken:
+                continue
+            if len(parts) > 0:
+                opt.with_variations = parts
+            else:
+                opt.with_variations = None
 
         if opt.outdir:
             if not os.path.exists(opt.outdir):
@@ -212,7 +235,7 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
             file_writer = PngWriter(current_outdir)
             prefix = file_writer.unique_prefix()
             seeds = set()
-            results = []
+            results = [] # list of filename, prompt pairs
             grid_images = dict() # seed -> Image, only used if `do_grid`
             def image_writer(image, seed, upscaled=False):
                 if do_grid:
@@ -222,10 +245,26 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
                         filename = f'{prefix}.{seed}.postprocessed.png'
                     else:
                         filename = f'{prefix}.{seed}.png'
-                    path = file_writer.save_image_and_prompt_to_png(image, f'{normalized_prompt} -S{seed}', filename)
+                    if opt.variation_amount > 0:
+                        iter_opt = argparse.Namespace(**vars(opt)) # copy
+                        this_variation = [[seed, opt.variation_amount]]
+                        if opt.with_variations is None:
+                            iter_opt.with_variations = this_variation
+                        else:
+                            iter_opt.with_variations = opt.with_variations + this_variation
+                        iter_opt.variation_amount = 0
+                        normalized_prompt = PromptFormatter(t2i, iter_opt).normalize_prompt()
+                        metadata_prompt = f'{normalized_prompt} -S{iter_opt.seed}'
+                    elif opt.with_variations is not None:
+                        normalized_prompt = PromptFormatter(t2i, opt).normalize_prompt()
+                        metadata_prompt = f'{normalized_prompt} -S{opt.seed}' # use the original seed - the per-iteration value is the last variation-seed
+                    else:
+                        normalized_prompt = PromptFormatter(t2i, opt).normalize_prompt()
+                        metadata_prompt = f'{normalized_prompt} -S{seed}'
+                    path = file_writer.save_image_and_prompt_to_png(image, metadata_prompt, filename)
                     if (not upscaled) or opt.save_original:
                         # only append to results if we didn't overwrite an earlier output
-                        results.append([path, seed])
+                        results.append([path, metadata_prompt])
 
                 seeds.add(seed)
 
@@ -236,11 +275,12 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
                 first_seed = next(iter(seeds))
                 filename = f'{prefix}.{first_seed}.png'
                 # TODO better metadata for grid images
-                metadata_prompt = f'{normalized_prompt} -S{first_seed}'
+                normalized_prompt = PromptFormatter(t2i, opt).normalize_prompt()
+                metadata_prompt = f'{normalized_prompt} -S{first_seed} --grid -N{len(grid_images)}'
                 path = file_writer.save_image_and_prompt_to_png(
                     grid_img, metadata_prompt, filename
                 )
-                results = [[path, seeds]]
+                results = [[path, metadata_prompt]]
 
             last_seeds = list(seeds)
 
@@ -254,7 +294,7 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
 
         print('Outputs:')
         log_path = os.path.join(current_outdir, 'dream_log.txt')
-        write_log_message(normalized_prompt, results, log_path)
+        write_log_message(results, log_path)
 
     print('goodbye!')
 
@@ -292,9 +332,9 @@ def dream_server_loop(t2i):
     dream_server.server_close()
 
 
-def write_log_message(prompt, results, log_path):
+def write_log_message(results, log_path):
     """logs the name of the output image, prompt, and prompt args to the terminal and log file"""
-    log_lines = [f'{r[0]}: {prompt} -S{r[1]}\n' for r in results]
+    log_lines = [f'{path}: {prompt}\n' for path, prompt in results]
     print(*log_lines, sep='')
 
     with open(log_path, 'a', encoding='utf-8') as file:
@@ -558,6 +598,20 @@ def create_cmd_parser():
         default=0.0,
         type=float,
         help='Add perlin noise.',
+    )
+    parser.add_argument(
+        '-v',
+        '--variation_amount',
+        default=0.0,
+        type=float,
+        help='If > 0, generates variations on the initial seed instead of random seeds per iteration. Must be between 0 and 1. Higher values will be more different.'
+    )
+    parser.add_argument(
+        '-V',
+        '--with_variations',
+        default=None,
+        type=str,
+        help='list of variations to apply, in the format `seed,weight;seed,weight;...'
     )
     return parser
 
