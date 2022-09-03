@@ -3,7 +3,7 @@
 # !!   "id": "c442uQJ_gUgy"
 # !! }}
 """
-# **Deforum Stable Diffusion v0.2**
+# **Deforum Stable Diffusion v0.3**
 [Stable Diffusion](https://github.com/CompVis/stable-diffusion) by Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer and the [Stability.ai](https://stability.ai/) Team. [K Diffusion](https://github.com/crowsonkb/k-diffusion) by [Katherine Crowson](https://twitter.com/RiversHaveWings). You need to get the ckpt file and put it on your Google Drive first to use this. It can be downloaded from [HuggingFace](https://huggingface.co/CompVis/stable-diffusion).
 
 Notebook by [deforum](https://discord.gg/upmXXsrwZc)
@@ -74,15 +74,20 @@ setup_environment = True #@param {type:"boolean"}
 print_subprocess = False #@param {type:"boolean"}
 
 if setup_environment:
-    import subprocess
-    print("...setting up environment")
-    all_process = [['pip', 'install', 'torch==1.11.0+cu113', 'torchvision==0.12.0+cu113', 'torchaudio==0.11.0', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'],
-                   ['pip', 'install', 'omegaconf==2.1.1', 'einops==0.3.0', 'pytorch-lightning==1.4.2', 'torchmetrics==0.6.0', 'torchtext==0.2.3', 'transformers==4.19.2', 'kornia==0.6'],
-                   ['git', 'clone', 'https://github.com/deforum/stable-diffusion'],
-                   ['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'],
-                   ['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'],
-                   ['pip', 'install', 'accelerate', 'ftfy', 'jsonmerge', 'resize-right', 'torchdiffeq'],
-                 ]
+    import subprocess, time
+    print("Setting up environment...")
+    start_time = time.time()
+    all_process = [
+        ['pip', 'install', 'torch==1.12.1+cu113', 'torchvision==0.13.1+cu113', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'],
+        ['pip', 'install', 'omegaconf==2.2.3', 'einops==0.4.1', 'pytorch-lightning==1.7.4', 'torchmetrics==0.9.3', 'torchtext==0.13.1', 'transformers==4.21.2', 'kornia==0.6.7'],
+        ['git', 'clone', 'https://github.com/deforum/stable-diffusion'],
+        ['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'],
+        ['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'],
+        ['pip', 'install', 'accelerate', 'ftfy', 'jsonmerge', 'matplotlib', 'resize-right', 'timm', 'torchdiffeq'],
+        ['git', 'clone', 'https://github.com/shariqfarooq123/AdaBins.git'],
+        ['git', 'clone', 'https://github.com/isl-org/MiDaS.git'],
+        ['git', 'clone', 'https://github.com/MSFTserver/pytorch3d-lite.git'],
+    ]
     for process in all_process:
         running = subprocess.run(process,stdout=subprocess.PIPE).stdout.decode('utf-8')
         if print_subprocess:
@@ -91,6 +96,9 @@ if setup_environment:
     print(subprocess.run(['git', 'clone', 'https://github.com/deforum/k-diffusion/'], stdout=subprocess.PIPE).stdout.decode('utf-8'))
     with open('k-diffusion/k_diffusion/__init__.py', 'w') as f:
         f.write('')
+
+    end_time = time.time()
+    print(f"Environment set up in {end_time-start_time:.0f} seconds")
 
 # %%
 # !! {"metadata":{
@@ -101,14 +109,13 @@ if setup_environment:
 import json
 from IPython import display
 
-import argparse, glob, os, pathlib, subprocess, sys, time
+import math, os, pathlib, shutil, subprocess, sys, time
 import cv2
 import numpy as np
 import pandas as pd
 import random
 import requests
-import shutil
-import torch
+import torch, torchvision
 import torch.nn as nn
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
@@ -124,33 +131,83 @@ from tqdm import tqdm, trange
 from types import SimpleNamespace
 from torch import autocast
 
-sys.path.append('./src/taming-transformers')
-sys.path.append('./src/clip')
-sys.path.append('./stable-diffusion/')
-sys.path.append('./k-diffusion')
+sys.path.extend([
+    'src/taming-transformers',
+    'src/clip',
+    'stable-diffusion/',
+    'k-diffusion',
+    'pytorch3d-lite',
+    'AdaBins',
+    'MiDaS',
+])
+
+import py3d_tools as p3d
 
 from helpers import save_samples, sampler_fn
+from infer import InferenceHelper
+from k_diffusion import sampling
+from k_diffusion.external import CompVisDenoiser
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
+from midas.dpt_depth import DPTDepthModel
+from midas.transforms import Resize, NormalizeImage, PrepareForNet
 
-from k_diffusion import sampling
-from k_diffusion.external import CompVisDenoiser
+def sanitize(prompt):
+    whitelist = set('abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+    tmp = ''.join(filter(whitelist.__contains__, prompt))
+    return '_'.join(prompt.split(" "))
 
-class CFGDenoiser(nn.Module):
-    def __init__(self, model):
-        super().__init__()
-        self.inner_model = model
+def anim_frame_warp_2d(prev_img_cv2, args, anim_args, keys, frame_idx):
+    angle = keys.angle_series[frame_idx]
+    zoom = keys.zoom_series[frame_idx]
+    translation_x = keys.translation_x_series[frame_idx]
+    translation_y = keys.translation_y_series[frame_idx]
 
-    def forward(self, x, sigma, uncond, cond, cond_scale):
-        x_in = torch.cat([x] * 2)
-        sigma_in = torch.cat([sigma] * 2)
-        cond_in = torch.cat([uncond, cond])
-        uncond, cond = self.inner_model(x_in, sigma_in, cond=cond_in).chunk(2)
-        return uncond + (cond - uncond) * cond_scale
+    center = (args.W // 2, args.H // 2)
+    trans_mat = np.float32([[1, 0, translation_x], [0, 1, translation_y]])
+    rot_mat = cv2.getRotationMatrix2D(center, angle, zoom)
+    trans_mat = np.vstack([trans_mat, [0,0,1]])
+    rot_mat = np.vstack([rot_mat, [0,0,1]])
+    xform = np.matmul(rot_mat, trans_mat)
+
+    return cv2.warpPerspective(
+        prev_img_cv2,
+        xform,
+        (prev_img_cv2.shape[1], prev_img_cv2.shape[0]),
+        borderMode=cv2.BORDER_WRAP if anim_args.border == 'wrap' else cv2.BORDER_REPLICATE
+    )
+
+def anim_frame_warp_3d(prev_img_cv2, anim_args, keys, frame_idx, adabins_helper, midas_model, midas_transform):
+    TRANSLATION_SCALE = 1.0/200.0 # matches Disco
+    translate_xyz = [
+        -keys.translation_x_series[frame_idx] * TRANSLATION_SCALE, 
+        keys.translation_y_series[frame_idx] * TRANSLATION_SCALE, 
+        -keys.translation_z_series[frame_idx] * TRANSLATION_SCALE
+    ]
+    rotate_xyz = [
+        math.radians(keys.rotation_3d_x_series[frame_idx]), 
+        math.radians(keys.rotation_3d_y_series[frame_idx]), 
+        math.radians(keys.rotation_3d_z_series[frame_idx])
+    ]
+    rot_mat = p3d.euler_angles_to_matrix(torch.tensor(rotate_xyz, device=device), "XYZ").unsqueeze(0)
+    result = transform_image_3d(prev_img_cv2, adabins_helper, midas_model, midas_transform, rot_mat, translate_xyz, anim_args)
+    torch.cuda.empty_cache()
+    return result
 
 def add_noise(sample: torch.Tensor, noise_amt: float):
     return sample + torch.randn(sample.shape, device=sample.device) * noise_amt
+
+def download_depth_models():
+    def wget(url, outputdir):
+        print(subprocess.run(['wget', url, '-P', outputdir], stdout=subprocess.PIPE).stdout.decode('utf-8'))
+    if not os.path.exists(os.path.join(models_path, 'dpt_large-midas-2f21e586.pt')):
+        print("Downloading dpt_large-midas-2f21e586.pt...")
+        wget("https://github.com/intel-isl/DPT/releases/download/1_0/dpt_large-midas-2f21e586.pt", models_path)
+    if not os.path.exists('pretrained/AdaBins_nyu.pt'):
+        print("Downloading AdaBins_nyu.pt...")
+        os.makedirs('pretrained', exist_ok=True)
+        wget("https://cloudflare-ipfs.com/ipfs/Qmd2mMnDLWePKmgfS8m6ntAg4nhV5VkUyAydYBp8cWWeB7/AdaBins_nyu.pt", 'pretrained')
 
 def get_output_folder(output_path, batch_folder):
     out_path = os.path.join(output_path,time.strftime('%Y-%m'))
@@ -158,6 +215,36 @@ def get_output_folder(output_path, batch_folder):
         out_path = os.path.join(out_path, batch_folder)
     os.makedirs(out_path, exist_ok=True)
     return out_path
+
+def load_depth_model(optimize=True):
+    midas_model = DPTDepthModel(
+        path=f"{models_path}/dpt_large-midas-2f21e586.pt",
+        backbone="vitl16_384",
+        non_negative=True,
+    )
+    normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+
+    midas_transform = T.Compose([
+        Resize(
+            384, 384,
+            resize_target=None,
+            keep_aspect_ratio=True,
+            ensure_multiple_of=32,
+            resize_method="minimal",
+            image_interpolation_method=cv2.INTER_CUBIC,
+        ),
+        normalization,
+        PrepareForNet()
+    ])
+
+    midas_model.eval()    
+    if optimize:
+        if device == torch.device("cuda"):
+            midas_model = midas_model.to(memory_format=torch.channels_last)
+            midas_model = midas_model.half()
+    midas_model.to(device)
+
+    return midas_model, midas_transform
 
 def load_img(path, shape):
     if path.startswith('http://') or path.startswith('https://'):
@@ -170,6 +257,18 @@ def load_img(path, shape):
     image = image[None].transpose(0, 3, 1, 2)
     image = torch.from_numpy(image)
     return 2.*image - 1.
+
+def load_mask_img(path, shape):
+    # path (str): Path to the mask image
+    # shape (list-like len(4)): shape of the image to match, usually latent_image.shape
+    mask_w_h = (shape[-1], shape[-2])
+    if path.startswith('http://') or path.startswith('https://'):
+        mask_image = Image.open(requests.get(path, stream=True).raw).convert('RGBA')
+    else:
+        mask_image = Image.open(path).convert('RGBA')
+    mask = mask_image.resize(mask_w_h, resample=Image.LANCZOS)
+    mask = mask.convert("L")
+    return mask
 
 def maintain_colors(prev_img, color_match_sample, mode):
     if mode == 'Match Frame 0 RGB':
@@ -185,9 +284,10 @@ def maintain_colors(prev_img, color_match_sample, mode):
         matched_lab = match_histograms(prev_img_lab, color_match_lab, multichannel=True)
         return cv2.cvtColor(matched_lab, cv2.COLOR_LAB2RGB)
 
-def make_callback(sampler, dynamic_threshold=None, static_threshold=None):  
+
+def make_callback(sampler_name, dynamic_threshold=None, static_threshold=None, mask=None, init_latent=None, sigmas=None, sampler=None, masked_noise_modifier=1.0):  
     # Creates the callback function to be passed into the samplers
-    # The callback function is applied to the image after each step
+    # The callback function is applied to the image at each step
     def dynamic_thresholding_(img, threshold):
         # Dynamic thresholding from Imagen paper (May 2022)
         s = np.percentile(np.abs(img.cpu()), threshold, axis=tuple(range(1,img.ndim)))
@@ -197,28 +297,206 @@ def make_callback(sampler, dynamic_threshold=None, static_threshold=None):
 
     # Callback for samplers in the k-diffusion repo, called thus:
     #   callback({'x': x, 'i': i, 'sigma': sigmas[i], 'sigma_hat': sigmas[i], 'denoised': denoised})
-    def k_callback(args_dict):
-        if static_threshold is not None:
-            torch.clamp_(args_dict['x'], -1*static_threshold, static_threshold)
+    def k_callback_(args_dict):
         if dynamic_threshold is not None:
             dynamic_thresholding_(args_dict['x'], dynamic_threshold)
+        if static_threshold is not None:
+            torch.clamp_(args_dict['x'], -1*static_threshold, static_threshold)
+        if mask is not None:
+            init_noise = init_latent + noise * args_dict['sigma']
+            is_masked = torch.logical_and(mask >= mask_schedule[args_dict['i']], mask != 0 )
+            new_img = init_noise * torch.where(is_masked,1,0) + args_dict['x'] * torch.where(is_masked,0,1)
+            args_dict['x'].copy_(new_img)
 
     # Function that is called on the image (img) and step (i) at each step
-    def img_callback(img, i):
+    def img_callback_(img, i):
         # Thresholding functions
         if dynamic_threshold is not None:
             dynamic_thresholding_(img, dynamic_threshold)
         if static_threshold is not None:
             torch.clamp_(img, -1*static_threshold, static_threshold)
-
-    if sampler in ["plms","ddim"]: 
+        if mask is not None:
+            i_inv = len(sigmas) - i - 1
+            init_noise = sampler.stochastic_encode(init_latent, torch.tensor([i_inv]*batch_size).to(device), noise=noise)
+            is_masked = torch.logical_and(mask >= mask_schedule[i], mask != 0 )
+            new_img = init_noise * torch.where(is_masked,1,0) + img * torch.where(is_masked,0,1)
+            img.copy_(new_img)
+            
+              
+    if init_latent is not None:
+        noise = torch.randn_like(init_latent, device=device) * masked_noise_modifier
+    if sigmas is not None and len(sigmas) > 0:
+        mask_schedule, _ = torch.sort(sigmas/torch.max(sigmas))
+    elif len(sigmas) == 0:
+        mask = None # no mask needed if no steps (usually happens because strength==1.0)
+    if sampler_name in ["plms","ddim"]: 
         # Callback function formated for compvis latent diffusion samplers
-        callback = img_callback
+        if mask is not None:
+            assert sampler is not None, "Callback function for stable-diffusion samplers requires sampler variable"
+            batch_size = init_latent.shape[0]
+
+        callback = img_callback_
     else: 
         # Default callback function uses k-diffusion sampler variables
-        callback = k_callback
+        callback = k_callback_
 
     return callback
+
+def prepare_mask(mask_file, mask_shape, mask_brightness_adjust=1.0, mask_contrast_adjust=1.0):
+    # path (str): Path to the mask image
+    # shape (list-like len(4)): shape of the image to match, usually latent_image.shape
+    # mask_brightness_adjust (non-negative float): amount to adjust brightness of the iamge, 
+    #     0 is black, 1 is no adjustment, >1 is brighter
+    # mask_contrast_adjust (non-negative float): amount to adjust contrast of the image, 
+    #     0 is a flat grey image, 1 is no adjustment, >1 is more contrast
+                            
+    mask = load_mask_img(mask_file, mask_shape)
+
+    # Mask brightness/contrast adjustments
+    if mask_brightness_adjust != 1:
+        mask = TF.adjust_brightness(mask, mask_brightness_adjust)
+    if mask_contrast_adjust != 1:
+        mask = TF.adjust_contrast(mask, mask_contrast_adjust)
+
+    # Mask image to array
+    mask = np.array(mask).astype(np.float32) / 255.0
+    mask = np.tile(mask,(4,1,1))
+    mask = np.expand_dims(mask,axis=0)
+    mask = torch.from_numpy(mask)
+
+    if args.invert_mask:
+        mask = ( (mask - 0.5) * -1) + 0.5
+    
+    mask = np.clip(mask,0,1)
+    return mask
+
+def sample_from_cv2(sample: np.ndarray) -> torch.Tensor:
+    sample = ((sample.astype(float) / 255.0) * 2) - 1
+    sample = sample[None].transpose(0, 3, 1, 2).astype(np.float16)
+    sample = torch.from_numpy(sample)
+    return sample
+
+def sample_to_cv2(sample: torch.Tensor) -> np.ndarray:
+    sample_f32 = rearrange(sample.squeeze().cpu().numpy(), "c h w -> h w c").astype(np.float32)
+    sample_f32 = ((sample_f32 * 0.5) + 0.5).clip(0, 1)
+    sample_int8 = (sample_f32 * 255).astype(np.uint8)
+    return sample_int8
+
+@torch.no_grad()
+def transform_image_3d(prev_img_cv2, adabins_helper, midas_model, midas_transform, rot_mat, translate, anim_args):
+    # adapted and optimized version of transform_image_3d from Disco Diffusion https://github.com/alembics/disco-diffusion 
+
+    w, h = prev_img_cv2.shape[1], prev_img_cv2.shape[0]
+
+    # predict depth with AdaBins    
+    use_adabins = anim_args.midas_weight < 1.0 and adabins_helper is not None
+    if use_adabins:
+        print(f"Estimating depth of {w}x{h} image with AdaBins...")
+        MAX_ADABINS_AREA = 500000
+        MIN_ADABINS_AREA = 448*448
+
+        # resize image if too large or too small
+        img_pil = Image.fromarray(cv2.cvtColor(prev_img_cv2, cv2.COLOR_RGB2BGR))
+        image_pil_area = w*h
+        resized = True
+        if image_pil_area > MAX_ADABINS_AREA:
+            scale = math.sqrt(MAX_ADABINS_AREA) / math.sqrt(image_pil_area)
+            depth_input = img_pil.resize((int(w*scale), int(h*scale)), Image.LANCZOS) # LANCZOS is good for downsampling
+            print(f"  resized to {depth_input.width}x{depth_input.height}")
+        elif image_pil_area < MIN_ADABINS_AREA:
+            scale = math.sqrt(MIN_ADABINS_AREA) / math.sqrt(image_pil_area)
+            depth_input = img_pil.resize((int(w*scale), int(h*scale)), Image.BICUBIC)
+            print(f"  resized to {depth_input.width}x{depth_input.height}")
+        else:
+            depth_input = img_pil
+            resized = False
+
+        # predict depth and resize back to original dimensions
+        try:
+            _, adabins_depth = adabins_helper.predict_pil(depth_input)
+            if resized:
+                adabins_depth = torchvision.transforms.functional.resize(
+                    torch.from_numpy(adabins_depth), 
+                    torch.Size([h, w]),
+                    interpolation=torchvision.transforms.functional.InterpolationMode.BICUBIC
+                )
+            adabins_depth = adabins_depth.squeeze()
+        except:
+            print(f"  exception encountered, falling back to pure MiDaS")
+            use_adabins = False
+        torch.cuda.empty_cache()
+
+    if midas_model is not None:
+        # convert image from 0->255 uint8 to 0->1 float for feeding to MiDaS
+        img_midas = prev_img_cv2.astype(np.float32) / 255.0
+        img_midas_input = midas_transform({"image": img_midas})["image"]
+
+        # MiDaS depth estimation implementation
+        print(f"Estimating depth of {w}x{h} image with MiDaS...")
+        sample = torch.from_numpy(img_midas_input).float().to(device).unsqueeze(0)
+        if device == torch.device("cuda"):
+            sample = sample.to(memory_format=torch.channels_last)  
+            sample = sample.half()
+        midas_depth = midas_model.forward(sample)
+        midas_depth = torch.nn.functional.interpolate(
+            midas_depth.unsqueeze(1),
+            size=img_midas.shape[:2],
+            mode="bicubic",
+            align_corners=False,
+        ).squeeze()
+        midas_depth = midas_depth.cpu().numpy()
+        torch.cuda.empty_cache()
+
+        # MiDaS makes the near values greater, and the far values lesser. Let's reverse that and try to align with AdaBins a bit better.
+        midas_depth = np.subtract(50.0, midas_depth)
+        midas_depth = midas_depth / 19.0
+
+        # blend between MiDaS and AdaBins predictions
+        if use_adabins:
+            depth_map = midas_depth*anim_args.midas_weight + adabins_depth*(1.0-anim_args.midas_weight)
+        else:
+            depth_map = midas_depth
+
+        depth_map = np.expand_dims(depth_map, axis=0)
+        depth_tensor = torch.from_numpy(depth_map).squeeze().to(device)
+    else:
+        depth_tensor = torch.ones((h, w), device=device)
+
+    pixel_aspect = 1.0 # aspect of an individual pixel (so usually 1.0)
+    near, far, fov_deg = anim_args.near_plane, anim_args.far_plane, anim_args.fov
+    persp_cam_old = p3d.FoVPerspectiveCameras(near, far, pixel_aspect, fov=fov_deg, degrees=True, device=device)
+    persp_cam_new = p3d.FoVPerspectiveCameras(near, far, pixel_aspect, fov=fov_deg, degrees=True, R=rot_mat, T=torch.tensor([translate]), device=device)
+
+    # range of [-1,1] is important to torch grid_sample's padding handling
+    y,x = torch.meshgrid(torch.linspace(-1.,1.,h,dtype=torch.float32,device=device),torch.linspace(-1.,1.,w,dtype=torch.float32,device=device))
+    z = torch.as_tensor(depth_tensor, dtype=torch.float32, device=device)
+    xyz_old_world = torch.stack((x.flatten(), y.flatten(), z.flatten()), dim=1)
+
+    xyz_old_cam_xy = persp_cam_old.get_full_projection_transform().transform_points(xyz_old_world)[:,0:2]
+    xyz_new_cam_xy = persp_cam_new.get_full_projection_transform().transform_points(xyz_old_world)[:,0:2]
+
+    offset_xy = xyz_new_cam_xy - xyz_old_cam_xy
+    # affine_grid theta param expects a batch of 2D mats. Each is 2x3 to do rotation+translation.
+    identity_2d_batch = torch.tensor([[1.,0.,0.],[0.,1.,0.]], device=device).unsqueeze(0)
+    # coords_2d will have shape (N,H,W,2).. which is also what grid_sample needs.
+    coords_2d = torch.nn.functional.affine_grid(identity_2d_batch, [1,1,h,w], align_corners=False)
+    offset_coords_2d = coords_2d - torch.reshape(offset_xy, (h,w,2)).unsqueeze(0)
+
+    image_tensor = torchvision.transforms.functional.to_tensor(Image.fromarray(prev_img_cv2)).to(device)
+    new_image = torch.nn.functional.grid_sample(
+        image_tensor.add(1/512 - 0.0001).unsqueeze(0), 
+        offset_coords_2d, 
+        mode=anim_args.sampling_mode, 
+        padding_mode=anim_args.padding_mode, 
+        align_corners=False
+    )
+
+    # convert back to cv2 style numpy array 0->255 uint8
+    result = rearrange(
+        new_image.squeeze().clamp(0,1) * 255.0, 
+        'c h w -> h w c'
+    ).cpu().numpy().astype(np.uint8)
+    return result
 
 def generate(args, return_latent=False, return_sample=False, return_c=False):
     seed_everything(args.seed)
@@ -240,22 +518,45 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
         init_latent = args.init_latent
     elif args.init_sample is not None:
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(args.init_sample))
-    elif args.init_image != None and args.init_image != '':
+    elif args.use_init and args.init_image != None and args.init_image != '':
         init_image = load_img(args.init_image, shape=(args.W, args.H)).to(device)
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space        
 
-    sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.ddim_eta, verbose=False)
+    if not args.use_init and args.strength > 0:
+        print("\nNo init image, but strength > 0. This may give you some strange results.\n")
 
+    # Mask functions
+    mask = None
+    if args.use_mask:
+        assert args.mask_file is not None, "use_mask==True: An mask image is required for a mask"
+        assert args.use_init, "use_mask==True: use_init is required for a mask"
+        assert init_latent is not None, "use_mask==True: An latent init image is required for a mask"
+
+        mask = prepare_mask(args.mask_file, 
+                            init_latent.shape, 
+                            args.mask_contrast_adjust, 
+                            args.mask_brightness_adjust)
+        
+        mask = mask.to(device)
+        mask = repeat(mask, '1 ... -> b ...', b=batch_size)
+        
     t_enc = int((1.0-args.strength) * args.steps)
 
-    start_code = None
-    if args.fixed_code and init_latent == None:
-        start_code = torch.randn([args.n_samples, args.C, args.H // args.f, args.W // args.f], device=device)
+    # Noise schedule for the k-diffusion samplers (used for masking)
+    k_sigmas = model_wrap.get_sigmas(args.steps)
+    k_sigmas = k_sigmas[len(k_sigmas)-t_enc-1:]
 
-    callback = make_callback(sampler=args.sampler,
+    if args.sampler in ['plms','ddim']:
+        sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.ddim_eta, ddim_discretize='fill', verbose=False)
+
+    callback = make_callback(sampler_name=args.sampler,
                             dynamic_threshold=args.dynamic_threshold, 
-                            static_threshold=args.static_threshold)
+                            static_threshold=args.static_threshold,
+                            mask=mask, 
+                            init_latent=init_latent,
+                            sigmas=k_sigmas,
+                            sampler=sampler)    
 
     results = []
     precision_scope = autocast if args.precision == "autocast" else nullcontext
@@ -284,24 +585,32 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
                             device=device, 
                             cb=callback)
                     else:
-
-                        if init_latent != None:
+                        # args.sampler == 'plms' or args.sampler == 'ddim':
+                        if init_latent is not None and args.strength > 0:
                             z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
-                            samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=args.scale,
-                                                    unconditional_conditioning=uc,)
                         else:
-                            if args.sampler == 'plms' or args.sampler == 'ddim':
-                                shape = [args.C, args.H // args.f, args.W // args.f]
-                                samples, _ = sampler.sample(S=args.steps,
-                                                                conditioning=c,
-                                                                batch_size=args.n_samples,
-                                                                shape=shape,
-                                                                verbose=False,
-                                                                unconditional_guidance_scale=args.scale,
-                                                                unconditional_conditioning=uc,
-                                                                eta=args.ddim_eta,
-                                                                x_T=start_code,
-                                                                img_callback=callback)
+                            z_enc = torch.randn([args.n_samples, args.C, args.H // args.f, args.W // args.f], device=device)
+                        if args.sampler == 'ddim':
+                            samples = sampler.decode(z_enc, 
+                                                     c, 
+                                                     t_enc, 
+                                                     unconditional_guidance_scale=args.scale,
+                                                     unconditional_conditioning=uc,
+                                                     img_callback=callback)
+                        elif args.sampler == 'plms': # no "decode" function in plms, so use "sample"
+                            shape = [args.C, args.H // args.f, args.W // args.f]
+                            samples, _ = sampler.sample(S=args.steps,
+                                                            conditioning=c,
+                                                            batch_size=args.n_samples,
+                                                            shape=shape,
+                                                            verbose=False,
+                                                            unconditional_guidance_scale=args.scale,
+                                                            unconditional_conditioning=uc,
+                                                            eta=args.ddim_eta,
+                                                            x_T=z_enc,
+                                                            img_callback=callback)
+                        else:
+                            raise Exception(f"Sampler {args.sampler} not recognised.")
 
                     if return_latent:
                         results.append(samples.clone())
@@ -321,18 +630,6 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
                         results.append(image)
     return results
 
-def sample_from_cv2(sample: np.ndarray) -> torch.Tensor:
-    sample = ((sample.astype(float) / 255.0) * 2) - 1
-    sample = sample[None].transpose(0, 3, 1, 2).astype(np.float16)
-    sample = torch.from_numpy(sample)
-    return sample
-
-def sample_to_cv2(sample: torch.Tensor) -> np.ndarray:
-    sample_f32 = rearrange(sample.squeeze().cpu().numpy(), "c h w -> h w c").astype(np.float32)
-    sample_f32 = ((sample_f32 * 0.5) + 0.5).clip(0, 1)
-    sample_int8 = (sample_f32 * 255).astype(np.uint8)
-    return sample_int8
-
 # %%
 # !! {"metadata":{
 # !!   "cellView": "form",
@@ -345,10 +642,9 @@ model_checkpoint =  "sd-v1-4.ckpt" #@param ["custom","sd-v1-4-full-ema.ckpt","sd
 custom_config_path = "" #@param {type:"string"}
 custom_checkpoint_path = "" #@param {type:"string"}
 
-check_sha256 = True #@param {type:"boolean"}
-
 load_on_run_all = True #@param {type: 'boolean'}
-half_precision = True # needs to be fixed
+half_precision = True # check
+check_sha256 = True #@param {type:"boolean"}
 
 model_map = {
     "sd-v1-4-full-ema.ckpt": {'sha256': '14749efc0ae8ef0329391ad4436feb781b402f4fece4883c7ad8d10556d8a36a'},
@@ -423,7 +719,6 @@ if load_on_run_all and ckpt_valid:
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
 
-
 # %%
 # !! {"metadata":{
 # !!   "id": "ov3r4RD1tzsT"
@@ -449,23 +744,34 @@ if load_on_run_all and ckpt_valid:
 def DeforumAnimArgs():
 
     #@markdown ####**Animation:**
-    animation_mode = 'None' #@param ['None', '2D', 'Video Input', 'Interpolation'] {type:'string'}
-    max_frames = 1000#@param {type:"number"}
+    animation_mode = 'None' #@param ['None', '2D', '3D', 'Video Input', 'Interpolation'] {type:'string'}
+    max_frames = 1000 #@param {type:"number"}
     border = 'wrap' #@param ['wrap', 'replicate'] {type:'string'}
 
     #@markdown ####**Motion Parameters:**
-    key_frames = True #@param {type:"boolean"}
-    interp_spline = 'Linear' #Do not change, currently will not look good. param ['Linear','Quadratic','Cubic']{type:"string"}
     angle = "0:(0)"#@param {type:"string"}
-    zoom = "0: (1.04)"#@param {type:"string"}
-    translation_x = "0: (0)"#@param {type:"string"}
-    translation_y = "0: (0)"#@param {type:"string"}
+    zoom = "0:(1.04)"#@param {type:"string"}
+    translation_x = "0:(0)"#@param {type:"string"}
+    translation_y = "0:(0)"#@param {type:"string"}
+    translation_z = "0:(10)"#@param {type:"string"}
+    rotation_3d_x = "0:(0)"#@param {type:"string"}
+    rotation_3d_y = "0:(0)"#@param {type:"string"}
+    rotation_3d_z = "0:(0)"#@param {type:"string"}
     noise_schedule = "0: (0.02)"#@param {type:"string"}
     strength_schedule = "0: (0.65)"#@param {type:"string"}
     contrast_schedule = "0: (1.0)"#@param {type:"string"}
 
     #@markdown ####**Coherence:**
     color_coherence = 'Match Frame 0 LAB' #@param ['None', 'Match Frame 0 HSV', 'Match Frame 0 LAB', 'Match Frame 0 RGB'] {type:'string'}
+
+    #@markdown #### Depth Warping
+    use_depth_warping = True #@param {type:"boolean"}
+    midas_weight = 0.3#@param {type:"number"}
+    near_plane = 200
+    far_plane = 10000
+    fov = 40#@param {type:"number"}
+    padding_mode = 'border'#@param ['border', 'reflection', 'zeros'] {type:'string'}
+    sampling_mode = 'bicubic'#@param ['bicubic', 'bilinear', 'nearest'] {type:'string'}
 
     #@markdown ####**Video Input:**
     video_init_path ='/content/video_in.mp4'#@param {type:"string"}
@@ -481,15 +787,39 @@ def DeforumAnimArgs():
 
     return locals()
 
-anim_args = SimpleNamespace(**DeforumAnimArgs())
+class DeformAnimKeys():
+    def __init__(self, anim_args):
+        self.angle_series = get_inbetweens(parse_key_frames(anim_args.angle))
+        self.zoom_series = get_inbetweens(parse_key_frames(anim_args.zoom))
+        self.translation_x_series = get_inbetweens(parse_key_frames(anim_args.translation_x))
+        self.translation_y_series = get_inbetweens(parse_key_frames(anim_args.translation_y))
+        self.translation_z_series = get_inbetweens(parse_key_frames(anim_args.translation_z))
+        self.rotation_3d_x_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_x))
+        self.rotation_3d_y_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_y))
+        self.rotation_3d_z_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_z))
+        self.noise_schedule_series = get_inbetweens(parse_key_frames(anim_args.noise_schedule))
+        self.strength_schedule_series = get_inbetweens(parse_key_frames(anim_args.strength_schedule))
+        self.contrast_schedule_series = get_inbetweens(parse_key_frames(anim_args.contrast_schedule))
 
-def make_xform_2d(width, height, translation_x, translation_y, angle, scale):
-    center = (width // 2, height // 2)
-    trans_mat = np.float32([[1, 0, translation_x], [0, 1, translation_y]])
-    rot_mat = cv2.getRotationMatrix2D(center, angle, scale)
-    trans_mat = np.vstack([trans_mat, [0,0,1]])
-    rot_mat = np.vstack([rot_mat, [0,0,1]])
-    return np.matmul(rot_mat, trans_mat)
+
+def get_inbetweens(key_frames, integer=False, interp_method='Linear'):
+    key_frame_series = pd.Series([np.nan for a in range(anim_args.max_frames)])
+
+    for i, value in key_frames.items():
+        key_frame_series[i] = value
+    key_frame_series = key_frame_series.astype(float)
+    
+    if interp_method == 'Cubic' and len(key_frames.items()) <= 3:
+      interp_method = 'Quadratic'    
+    if interp_method == 'Quadratic' and len(key_frames.items()) <= 2:
+      interp_method = 'Linear'
+          
+    key_frame_series[0] = key_frame_series[key_frame_series.first_valid_index()]
+    key_frame_series[anim_args.max_frames-1] = key_frame_series[key_frame_series.last_valid_index()]
+    key_frame_series = key_frame_series.interpolate(method=interp_method.lower(),limit_direction='both')
+    if integer:
+        return key_frame_series.astype(int)
+    return key_frame_series
 
 def parse_key_frames(string, prompt_parser=None):
     import re
@@ -506,38 +836,6 @@ def parse_key_frames(string, prompt_parser=None):
         raise RuntimeError('Key Frame string not correctly formatted')
     return frames
 
-def get_inbetweens(key_frames, integer=False):
-    key_frame_series = pd.Series([np.nan for a in range(anim_args.max_frames)])
-
-    for i, value in key_frames.items():
-        key_frame_series[i] = value
-    key_frame_series = key_frame_series.astype(float)
-    
-    interp_method = anim_args.interp_spline
-    if interp_method == 'Cubic' and len(key_frames.items()) <=3:
-      interp_method = 'Quadratic'    
-    if interp_method == 'Quadratic' and len(key_frames.items()) <= 2:
-      interp_method = 'Linear'
-          
-    key_frame_series[0] = key_frame_series[key_frame_series.first_valid_index()]
-    key_frame_series[anim_args.max_frames-1] = key_frame_series[key_frame_series.last_valid_index()]
-    key_frame_series = key_frame_series.interpolate(method=interp_method.lower(),limit_direction='both')
-    if integer:
-        return key_frame_series.astype(int)
-    return key_frame_series
-
-
-if anim_args.animation_mode == 'None':
-    anim_args.max_frames = 1
-
-if anim_args.key_frames:
-    angle_series = get_inbetweens(parse_key_frames(anim_args.angle))
-    zoom_series = get_inbetweens(parse_key_frames(anim_args.zoom))
-    translation_x_series = get_inbetweens(parse_key_frames(anim_args.translation_x))
-    translation_y_series = get_inbetweens(parse_key_frames(anim_args.translation_y))
-    noise_schedule_series = get_inbetweens(parse_key_frames(anim_args.noise_schedule))
-    strength_schedule_series = get_inbetweens(parse_key_frames(anim_args.strength_schedule))
-    contrast_schedule_series = get_inbetweens(parse_key_frames(anim_args.contrast_schedule))
 
 # %%
 # !! {"metadata":{
@@ -580,23 +878,11 @@ animation_prompts = {
 # !!   "cellView": "form"
 # !! }}
 def DeforumArgs():
-    #@markdown **Save & Display Settings**
-    batch_name = "StableFun" #@param {type:"string"}
-    outdir = get_output_folder(output_path, batch_name)
-    save_settings = True #@param {type:"boolean"}
-    save_samples = True #@param {type:"boolean"}
-    display_samples = True #@param {type:"boolean"}
-
+    
     #@markdown **Image Settings**
-    n_samples = 1 # hidden
     W = 512 #@param
     H = 512 #@param
     W, H = map(lambda x: x - x % 64, (W, H))  # resize to integer multiple of 64
-
-    #@markdown **Init Settings**
-    use_init = False #@param {type:"boolean"}
-    strength = 0.5 #@param {type:"number"}
-    init_image = "https://cdn.pixabay.com/photo/2022/07/30/13/10/green-longhorn-beetle-7353749_1280.jpg" #@param {type:"string"}
 
     #@markdown **Sampling Settings**
     seed = -1 #@param
@@ -607,16 +893,34 @@ def DeforumArgs():
     dynamic_threshold = None
     static_threshold = None   
 
-    #@markdown **Batch Settings**
-    n_batch = 4 #@param
-    seed_behavior = "iter" #@param ["iter","fixed","random"]
+    #@markdown **Save & Display Settings**
+    save_samples = True #@param {type:"boolean"}
+    save_settings = True #@param {type:"boolean"}
+    display_samples = True #@param {type:"boolean"}
 
-    #@markdown **Grid Settings**
+    #@markdown **Batch Settings**
+    n_batch = 1 #@param
+    batch_name = "StableFun" #@param {type:"string"}
+    filename_format = "{timestring}_{index}_{prompt}.png" #@param ["{timestring}_{index}_{seed}.png","{timestring}_{index}_{prompt}.png"]
+    seed_behavior = "iter" #@param ["iter","fixed","random"]
     make_grid = False #@param {type:"boolean"}
     grid_rows = 2 #@param 
+    outdir = get_output_folder(output_path, batch_name)
+    
+    #@markdown **Init Settings**
+    use_init = False #@param {type:"boolean"}
+    strength = 0.0 #@param {type:"number"}
+    init_image = "https://cdn.pixabay.com/photo/2022/07/30/13/10/green-longhorn-beetle-7353749_1280.jpg" #@param {type:"string"}
+    # Whiter areas of the mask are areas that change more
+    use_mask = False #@param {type:"boolean"}
+    mask_file = "https://www.filterforge.com/wiki/images/archive/b/b7/20080927223728%21Polygonal_gradient_thumb.jpg" #@param {type:"string"}
+    invert_mask = False #@param {type:"boolean"}
+    # Adjust mask image, 1.0 is no adjustment. Should be positive numbers.
+    mask_brightness_adjust = 1.0  #@param {type:"number"}
+    mask_contrast_adjust = 1.0  #@param {type:"number"}
 
+    n_samples = 1 # doesnt do anything
     precision = 'autocast' 
-    fixed_code = True
     C = 4
     f = 8
 
@@ -629,24 +933,6 @@ def DeforumArgs():
     return locals()
 
 
-args = SimpleNamespace(**DeforumArgs())
-args.timestring = time.strftime('%Y%m%d%H%M%S')
-args.strength = max(0.0, min(1.0, args.strength))
-
-
-if args.seed == -1:
-    args.seed = random.randint(0, 2**32)
-if anim_args.animation_mode == 'Video Input':
-    args.use_init = True
-if not args.use_init:
-    args.init_image = None
-    args.strength = 0
-if args.sampler == 'plms' and (args.use_init or anim_args.animation_mode != 'None'):
-    print(f"Init images aren't supported with PLMS yet, switching to KLMS")
-    args.sampler = 'klms'
-if args.sampler != 'ddim':
-    args.ddim_eta = 0
-
 
 def next_seed(args):
     if args.seed_behavior == 'iter':
@@ -658,7 +944,7 @@ def next_seed(args):
     return args.seed
 
 def render_image_batch(args):
-    args.prompts = prompts
+    args.prompts = {k: f"{v:05d}" for v, k in enumerate(prompts)}
     
     # create output folder for the batch
     os.makedirs(args.outdir, exist_ok=True)
@@ -696,11 +982,13 @@ def render_image_batch(args):
 
     for iprompt, prompt in enumerate(prompts):  
         args.prompt = prompt
-
+        print(f"Prompt {iprompt+1} of {len(prompts)}")
+        print(f"{args.prompt}")
+      
         all_images = []
 
         for batch_index in range(args.n_batch):
-            if clear_between_batches: 
+            if clear_between_batches and batch_index % 32 == 0: 
                 display.clear_output(wait=True)            
             print(f"Batch {batch_index+1} of {args.n_batch}")
             
@@ -711,7 +999,10 @@ def render_image_batch(args):
                     if args.make_grid:
                         all_images.append(T.functional.pil_to_tensor(image))
                     if args.save_samples:
-                        filename = f"{args.timestring}_{index:05}_{args.seed}.png"
+                        if args.filename_format == "{timestring}_{index}_{prompt}.png":
+                            filename = f"{args.timestring}_{index:05}_{sanitize(prompt)[:160]}.png"
+                        else:
+                            filename = f"{args.timestring}_{index:05}_{args.seed}.png"
                         image.save(os.path.join(args.outdir, filename))
                     if args.display_samples:
                         display.display(image)
@@ -732,7 +1023,10 @@ def render_image_batch(args):
 def render_animation(args, anim_args):
     # animations use key framed prompts
     args.prompts = animation_prompts
-    
+
+    # expand key frame strings to values
+    keys = DeformAnimKeys(anim_args)
+
     # resume animation
     start_frame = 0
     if anim_args.resume_from_timestring:
@@ -764,11 +1058,22 @@ def render_animation(args, anim_args):
     # check for video inits
     using_vid_init = anim_args.animation_mode == 'Video Input'
 
+    # load depth model for 3D
+    if anim_args.animation_mode == '3D' and anim_args.use_depth_warping:
+        download_depth_models()
+        adabins_helper = InferenceHelper(dataset='nyu', device=device)
+        midas_model, midas_transform = load_depth_model()
+    else:
+        adabins_helper, midas_model, midas_transform = None, None, None
+
     args.n_samples = 1
     prev_sample = None
     color_match_sample = None
     for frame_idx in range(start_frame,anim_args.max_frames):
         print(f"Rendering animation frame {frame_idx} of {anim_args.max_frames}")
+        noise = keys.noise_schedule_series[frame_idx]
+        strength = keys.strength_schedule_series[frame_idx]
+        contrast = keys.contrast_schedule_series[frame_idx]
         
         # resume animation
         if anim_args.resume_from_timestring:
@@ -779,33 +1084,11 @@ def render_animation(args, anim_args):
 
         # apply transforms to previous frame
         if prev_sample is not None:
-            if anim_args.key_frames:
-                angle = angle_series[frame_idx]
-                zoom = zoom_series[frame_idx]
-                translation_x = translation_x_series[frame_idx]
-                translation_y = translation_y_series[frame_idx]
-                noise = noise_schedule_series[frame_idx]
-                strength = strength_schedule_series[frame_idx]
-                contrast = contrast_schedule_series[frame_idx]
-                print(
-                    f'angle: {angle}',
-                    f'zoom: {zoom}',
-                    f'translation_x: {translation_x}',
-                    f'translation_y: {translation_y}',
-                    f'noise: {noise}',
-                    f'strength: {strength}',
-                    f'contrast: {contrast}',
-                )
-            xform = make_xform_2d(args.W, args.H, translation_x, translation_y, angle, zoom)
 
-            # transform previous frame
-            prev_img = sample_to_cv2(prev_sample)
-            prev_img = cv2.warpPerspective(
-                prev_img,
-                xform,
-                (prev_img.shape[1], prev_img.shape[0]),
-                borderMode=cv2.BORDER_WRAP if anim_args.border == 'wrap' else cv2.BORDER_REPLICATE
-            )
+            if anim_args.animation_mode == '2D':
+                prev_img = anim_frame_warp_2d(sample_to_cv2(prev_sample), args, anim_args, keys, frame_idx)
+            else: # '3D'
+                prev_img = anim_frame_warp_3d(sample_to_cv2(prev_sample), anim_args, keys, frame_idx, adabins_helper, midas_model, midas_transform)
 
             # apply color matching
             if anim_args.color_coherence != 'None':
@@ -821,7 +1104,11 @@ def render_animation(args, anim_args):
 
             # use transformed previous frame as init for current
             args.use_init = True
-            args.init_sample = noised_sample.half().to(device)
+            #args.init_sample = noised_sample.half().to(device)
+            if half_precision:
+                args.init_sample = noised_sample.half().to(device)
+            else:
+                args.init_sample = noised_sample.to(device)
             args.strength = max(0.0, min(1.0, strength))
 
         # grab prompt for current frame
@@ -975,7 +1262,30 @@ def render_interpolation(args, anim_args):
     #clear init_c
     args.init_c = None
 
-if anim_args.animation_mode == '2D':
+
+args = SimpleNamespace(**DeforumArgs())
+anim_args = SimpleNamespace(**DeforumAnimArgs())
+
+args.timestring = time.strftime('%Y%m%d%H%M%S')
+args.strength = max(0.0, min(1.0, args.strength))
+
+if args.seed == -1:
+    args.seed = random.randint(0, 2**32)
+if not args.use_init:
+    args.init_image = None
+if args.sampler == 'plms' and (args.use_init or anim_args.animation_mode != 'None'):
+    print(f"Init images aren't supported with PLMS yet, switching to KLMS")
+    args.sampler = 'klms'
+if args.sampler != 'ddim':
+    args.ddim_eta = 0
+
+if anim_args.animation_mode == 'None':
+    anim_args.max_frames = 1
+elif anim_args.animation_mode == 'Video Input':
+    args.use_init = True
+
+# dispatch to appropriate renderer
+if anim_args.animation_mode == '2D' or anim_args.animation_mode == '3D':
     render_animation(args, anim_args)
 elif anim_args.animation_mode == 'Video Input':
     render_input_video(args, anim_args)
@@ -997,19 +1307,29 @@ else:
 # !!   "cellView": "form",
 # !!   "id": "no2jP8HTMBM0"
 # !! }}
-skip_video_for_run_all = True #@param {type: 'boolean'}
-fps = 12#@param {type:"number"}
+skip_video_for_run_all = False #@param {type: 'boolean'}
+fps = 12 #@param {type:"number"}
+#@markdown **Manual Settings**
+use_manual_settings = True #@param {type:"boolean"}
+image_path = "/content/drive/MyDrive/AI/StableDiffusion/2022-09/20220903000939_%05d.png" #@param {type:"string"}
+mp4_path = "/content/drive/MyDrive/AI/StableDiffusion/2022-09/20220903000939.mp4" #@param {type:"string"}
+
 
 if skip_video_for_run_all == True:
     print('Skipping video creation, uncheck skip_video_for_run_all if you want to run it')
 else:
+    import os
     import subprocess
     from base64 import b64encode
 
-    image_path = os.path.join(args.outdir, f"{args.timestring}_%05d.png")
-    mp4_path = os.path.join(args.outdir, f"{args.timestring}.mp4")
-
     print(f"{image_path} -> {mp4_path}")
+
+    if use_manual_settings:
+        max_frames = "200" #@param {type:"string"}
+    else:
+        image_path = os.path.join(args.outdir, f"{args.timestring}_%05d.png")
+        mp4_path = os.path.join(args.outdir, f"{args.timestring}.mp4")
+        max_frames = str(anim_args.max_frames)
 
     # make video
     cmd = [
@@ -1019,7 +1339,7 @@ else:
         '-r', str(fps),
         '-start_number', str(0),
         '-i', image_path,
-        '-frames:v', str(anim_args.max_frames),
+        '-frames:v', max_frames,
         '-c:v', 'libx264',
         '-vf',
         f'fps={fps}',
@@ -1043,7 +1363,6 @@ else:
 # !!   "accelerator": "GPU",
 # !!   "colab": {
 # !!     "collapsed_sections": [],
-# !!     "name": "Deforum_Stable_Diffusion.ipynb",
 # !!     "provenance": [],
 # !!     "private_outputs": true
 # !!   },
