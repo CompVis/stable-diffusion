@@ -133,7 +133,7 @@ variants.
 
 ## Seamless Tiling
 
-The seamless tiling mode causes generated images to be seamlessly tile with itself. To use it, add the --seamless option when starting the script which will result in all generated images to tile, or for each dream> prompt as shown here:
+The seamless tiling mode causes generated images to seamlessly tile with itself. To use it, add the --seamless option when starting the script which will result in all generated images to tile, or for each dream> prompt as shown here:
 ```
 dream> "pond garden with lotus by claude monet" --seamless -s100 -n4
 ```
