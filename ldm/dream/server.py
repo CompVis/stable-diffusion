@@ -151,6 +151,7 @@ class DreamServer(BaseHTTPRequestHandler):
                 {'event': 'step', 'step': step + 1, 'url': path}
             ) + '\n',"utf-8"))
 
+        config['initimg'] = config.pop('initimg_name','')
         try:
             if initimg is None:
                 # Run txt2img

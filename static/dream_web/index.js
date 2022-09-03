@@ -59,7 +59,8 @@ async function generateSubmit(form) {
 
     // Convert file data to base64
     let formData = Object.fromEntries(new FormData(form));
-    formData.initimg = formData.initimg.name !== '' ? await toBase64(formData.initimg) : null;
+    formData.initimg_name  = formData.initimg.name
+    formData.initimg       = formData.initimg.name !== '' ? await toBase64(formData.initimg) : null;
 
     let strength = formData.strength;
     let totalSteps = formData.initimg ? Math.floor(strength * formData.steps) : formData.steps;
