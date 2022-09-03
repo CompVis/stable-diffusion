@@ -153,6 +153,11 @@ from ldm.models.diffusion.plms import PLMSSampler
 from midas.dpt_depth import DPTDepthModel
 from midas.transforms import Resize, NormalizeImage, PrepareForNet
 
+def sanitize(prompt):
+    whitelist = set('abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+    tmp = ''.join(filter(whitelist.__contains__, prompt))
+    return '_'.join(prompt.split(" "))
+
 def anim_frame_warp_2d(prev_img_cv2, args, anim_args, keys, frame_idx):
     angle = keys.angle_series[frame_idx]
     zoom = keys.zoom_series[frame_idx]
@@ -637,10 +642,9 @@ model_checkpoint =  "sd-v1-4.ckpt" #@param ["custom","sd-v1-4-full-ema.ckpt","sd
 custom_config_path = "" #@param {type:"string"}
 custom_checkpoint_path = "" #@param {type:"string"}
 
-check_sha256 = True #@param {type:"boolean"}
-
 load_on_run_all = True #@param {type: 'boolean'}
-half_precision = True # needs to be fixed
+half_precision = True # check
+check_sha256 = True #@param {type:"boolean"}
 
 model_map = {
     "sd-v1-4-full-ema.ckpt": {'sha256': '14749efc0ae8ef0329391ad4436feb781b402f4fece4883c7ad8d10556d8a36a'},
@@ -714,7 +718,6 @@ if load_on_run_all and ckpt_valid:
     model = load_model_from_config(local_config, f"{ckpt_path}",half_precision=half_precision)
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
-
 
 # %%
 # !! {"metadata":{
@@ -834,7 +837,6 @@ def parse_key_frames(string, prompt_parser=None):
     return frames
 
 
-
 # %%
 # !! {"metadata":{
 # !!   "id": "63UOJvU3xdPS"
@@ -876,19 +878,35 @@ animation_prompts = {
 # !!   "cellView": "form"
 # !! }}
 def DeforumArgs():
-    #@markdown **Save & Display Settings**
-    batch_name = "StableFun" #@param {type:"string"}
-    outdir = get_output_folder(output_path, batch_name)
-    save_settings = True #@param {type:"boolean"}
-    save_samples = True #@param {type:"boolean"}
-    display_samples = True #@param {type:"boolean"}
-
+    
     #@markdown **Image Settings**
-    n_samples = 1 # hidden
     W = 512 #@param
     H = 512 #@param
     W, H = map(lambda x: x - x % 64, (W, H))  # resize to integer multiple of 64
 
+    #@markdown **Sampling Settings**
+    seed = -1 #@param
+    sampler = 'klms' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
+    steps = 50 #@param
+    scale = 7 #@param
+    ddim_eta = 0.0 #@param
+    dynamic_threshold = None
+    static_threshold = None   
+
+    #@markdown **Save & Display Settings**
+    save_samples = True #@param {type:"boolean"}
+    save_settings = True #@param {type:"boolean"}
+    display_samples = True #@param {type:"boolean"}
+
+    #@markdown **Batch Settings**
+    n_batch = 1 #@param
+    batch_name = "StableFun" #@param {type:"string"}
+    filename_format = "{timestring}_{index}_{prompt}.png" #@param ["{timestring}_{index}_{seed}.png","{timestring}_{index}_{prompt}.png"]
+    seed_behavior = "iter" #@param ["iter","fixed","random"]
+    make_grid = False #@param {type:"boolean"}
+    grid_rows = 2 #@param 
+    outdir = get_output_folder(output_path, batch_name)
+    
     #@markdown **Init Settings**
     use_init = False #@param {type:"boolean"}
     strength = 0.0 #@param {type:"number"}
@@ -901,23 +919,7 @@ def DeforumArgs():
     mask_brightness_adjust = 1.0  #@param {type:"number"}
     mask_contrast_adjust = 1.0  #@param {type:"number"}
 
-    #@markdown **Sampling Settings**
-    seed = -1 #@param
-    sampler = 'klms' #@param ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
-    steps = 50 #@param
-    scale = 7 #@param
-    ddim_eta = 0.0 #@param
-    dynamic_threshold = None
-    static_threshold = None   
-
-    #@markdown **Batch Settings**
-    n_batch = 4 #@param
-    seed_behavior = "iter" #@param ["iter","fixed","random"]
-
-    #@markdown **Grid Settings**
-    make_grid = False #@param {type:"boolean"}
-    grid_rows = 2 #@param 
-
+    n_samples = 1 # doesnt do anything
     precision = 'autocast' 
     C = 4
     f = 8
@@ -942,7 +944,7 @@ def next_seed(args):
     return args.seed
 
 def render_image_batch(args):
-    args.prompts = prompts
+    args.prompts = {k: f"{v:05d}" for v, k in enumerate(prompts)}
     
     # create output folder for the batch
     os.makedirs(args.outdir, exist_ok=True)
@@ -980,9 +982,9 @@ def render_image_batch(args):
 
     for iprompt, prompt in enumerate(prompts):  
         args.prompt = prompt
-        print(f"{args.prompt}")
         print(f"Prompt {iprompt+1} of {len(prompts)}")
-
+        print(f"{args.prompt}")
+      
         all_images = []
 
         for batch_index in range(args.n_batch):
@@ -997,7 +999,10 @@ def render_image_batch(args):
                     if args.make_grid:
                         all_images.append(T.functional.pil_to_tensor(image))
                     if args.save_samples:
-                        filename = f"{args.timestring}_{index:05}_{args.seed}.png"
+                        if args.filename_format == "{timestring}_{index}_{prompt}.png":
+                            filename = f"{args.timestring}_{index:05}_{sanitize(prompt)[:160]}.png"
+                        else:
+                            filename = f"{args.timestring}_{index:05}_{args.seed}.png"
                         image.save(os.path.join(args.outdir, filename))
                     if args.display_samples:
                         display.display(image)
@@ -1099,7 +1104,11 @@ def render_animation(args, anim_args):
 
             # use transformed previous frame as init for current
             args.use_init = True
-            args.init_sample = noised_sample.half().to(device)
+            #args.init_sample = noised_sample.half().to(device)
+            if half_precision:
+                args.init_sample = noised_sample.half().to(device)
+            else:
+                args.init_sample = noised_sample.to(device)
             args.strength = max(0.0, min(1.0, strength))
 
         # grab prompt for current frame
@@ -1298,19 +1307,29 @@ else:
 # !!   "cellView": "form",
 # !!   "id": "no2jP8HTMBM0"
 # !! }}
-skip_video_for_run_all = True #@param {type: 'boolean'}
-fps = 12#@param {type:"number"}
+skip_video_for_run_all = False #@param {type: 'boolean'}
+fps = 12 #@param {type:"number"}
+#@markdown **Manual Settings**
+use_manual_settings = True #@param {type:"boolean"}
+image_path = "/content/drive/MyDrive/AI/StableDiffusion/2022-09/20220903000939_%05d.png" #@param {type:"string"}
+mp4_path = "/content/drive/MyDrive/AI/StableDiffusion/2022-09/20220903000939.mp4" #@param {type:"string"}
+
 
 if skip_video_for_run_all == True:
     print('Skipping video creation, uncheck skip_video_for_run_all if you want to run it')
 else:
+    import os
     import subprocess
     from base64 import b64encode
 
-    image_path = os.path.join(args.outdir, f"{args.timestring}_%05d.png")
-    mp4_path = os.path.join(args.outdir, f"{args.timestring}.mp4")
-
     print(f"{image_path} -> {mp4_path}")
+
+    if use_manual_settings:
+        max_frames = "200" #@param {type:"string"}
+    else:
+        image_path = os.path.join(args.outdir, f"{args.timestring}_%05d.png")
+        mp4_path = os.path.join(args.outdir, f"{args.timestring}.mp4")
+        max_frames = str(anim_args.max_frames)
 
     # make video
     cmd = [
@@ -1320,7 +1339,7 @@ else:
         '-r', str(fps),
         '-start_number', str(0),
         '-i', image_path,
-        '-frames:v', str(anim_args.max_frames),
+        '-frames:v', max_frames,
         '-c:v', 'libx264',
         '-vf',
         f'fps={fps}',
@@ -1344,7 +1363,6 @@ else:
 # !!   "accelerator": "GPU",
 # !!   "colab": {
 # !!     "collapsed_sections": [],
-# !!     "name": "Deforum_Stable_Diffusion.ipynb",
 # !!     "provenance": [],
 # !!     "private_outputs": true
 # !!   },
