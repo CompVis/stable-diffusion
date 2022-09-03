@@ -11,7 +11,7 @@ model:
     cond_stage_key: caption
     image_size: 64
     channels: 4
-    cond_stage_trainable: false   # Note: different from the one we trained before
+    cond_stage_trainable: true   # Note: different from the one we trained before
     conditioning_key: crossattn
     monitor: val/loss_simple_ema
     scale_factor: 0.18215
@@ -40,7 +40,6 @@ model:
         transformer_depth: 1
         context_dim: 768
         use_checkpoint: True
-        use_fp16: True
         legacy: False
 
     first_stage_config:
