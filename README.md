@@ -739,8 +739,13 @@ be fast because all the dependencies are already loaded.
 Anyone who wishes to contribute to this project, whether
 documentation, features, bug fixes, code cleanup, testing, or code
 reviews, is very much encouraged to do so. If you are unfamiliar with
+<<<<<<< HEAD
 how to contribute to GitHub projects, here is a [Getting Started
 Guide](https://opensource.com/article/19/7/create-pull-request-github).
+=======
+how to contribute to GitHub projects, here is a (Getting Started
+Guide)[https://opensource.com/article/19/7/create-pull-request-github].
+>>>>>>> maddavid123-main
 
 A full set of contribution guidelines, along with templates, are in
 progress, but for now the most important thing is to **make your pull
