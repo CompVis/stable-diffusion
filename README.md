@@ -407,7 +407,11 @@ repository and associated paper for details and limitations.
 
 # Latest Changes
 
-- v1.13 (3 September 2022)
+- v1.14 (In progress)
+
+  - Add "seamless mode" for circular tiling of image. Generates beautiful effects. ([prixt](https://github.com/prixt))
+
+- v1.13 (3 September 2022
 
   - Support image variations (see [VARIATIONS](VARIATIONS.md) ([Kevin Gibbons](https://github.com/bakkot) and many contributors and reviewers)
   - Supports a Google Colab notebook for a standalone server running on Google hardware [Arturo Mendivil](https://github.com/artmen1516)
