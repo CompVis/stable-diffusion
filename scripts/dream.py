@@ -6,6 +6,7 @@ import shlex
 import os
 import re
 import sys
+import shlex
 import copy
 import warnings
 import time
@@ -13,6 +14,7 @@ import ldm.dream.readline
 from ldm.dream.pngwriter import PngWriter, PromptFormatter
 from ldm.dream.server import DreamServer, ThreadingDreamServer
 from ldm.dream.image_util import make_grid
+from PIL import Image
 from omegaconf import OmegaConf
 
 # Placeholder to be replaced with proper class that tracks the
@@ -162,6 +164,22 @@ def main_loop(gen, outdir, prompt_as_dir, parser, infile):
         except SystemExit:
             parser.print_help()
             continue
+
+        if opt.init_img:
+            try:
+                im = Image.open(opt.init_img)
+                # '-F' argument appears (M1) in the dream prompt even though
+                # it's not a main loop argument
+                oldprompt = im.text['Dream'].replace(" -F", "")
+                oldargs = parser.parse_args(shlex.split(oldprompt))
+                if len(opt.prompt) == 0:
+                    opt.prompt = oldargs.prompt
+
+            except AttributeError:
+                pass
+            except KeyError:
+                pass
+
         if len(opt.prompt) == 0:
             print('Try again with a prompt!')
             continue
@@ -185,6 +203,8 @@ def main_loop(gen, outdir, prompt_as_dir, parser, infile):
                 print(f'>> No previous seed at position {opt.seed} found')
                 opt.seed = None
                 continue
+
+        opt.strength = 0.83 if opt.out_direction and opt.strength is None else opt.strength
 
         if opt.with_variations is not None:
             # shotgun parsing, woo
@@ -577,6 +597,14 @@ def create_cmd_parser():
         type=str,
         help='Path to input image for img2img mode (supersedes width and height)',
     )
+    parser.add_argument(
+        '-D',
+        '--out_direction',
+        nargs='+',
+        type=str,
+        metavar=('direction', 'pixels'),
+        help='Direction to extend the given image (left|right|top|bottom). If a distance pixel value is not specified it defaults to half the image size'
+    )    
     parser.add_argument(
         '-M',
         '--init_mask',

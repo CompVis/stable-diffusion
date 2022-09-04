@@ -141,6 +141,24 @@ For older changelogs, please visit **[CHANGELOGS](docs/CHANGELOG.md)**.
 
 Please check out our **[Q&A](docs/help/TROUBLESHOOT.md)** to get solutions for common installation problems and other issues.
 
+# Continous outpainting
+
+This extension uses the new inpainting code to extend an existing image to any direction
+of "top", "right", "bottom" or "left". To use it you need to provide an initial image with
+-I and an extension direction with -D (direction). When extending using outpainting a higher
+img2img strength value of 0.83 is the default. 
+
+~~~~
+dream> man with cat on shoulder -I./images/man.png -D bottom
+~~~~
+
+Or even shorter (the prompt is read from the metadata of the old image)
+
+~~~~
+dream> -I./images/man.png -D bottom
+~~~~
+
+
 # Contributing
 
 Anyone who wishes to contribute to this project, whether documentation, features, bug fixes, code cleanup, testing, or code reviews, is very much encouraged to do so. If you are unfamiliar with

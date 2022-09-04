@@ -203,6 +203,7 @@ class Generate:
             # these are specific to embiggen (which also relies on img2img args)
             embiggen       =    None,
             embiggen_tiles =    None,
+            out_direction  =    None,
             # these are specific to GFPGAN/ESRGAN
             gfpgan_strength  = 0,
             save_original    = False,
@@ -309,7 +310,7 @@ class Generate:
                 log_tokens    =self.log_tokenization
             )
 
-            (init_image,mask_image) = self._make_images(init_img,init_mask, width, height, fit)
+            (init_image,mask_image) = self._make_images(init_img, init_mask, out_direction, width, height, fit)
             
             if (init_image is not None) and (mask_image is not None):
                 generator = self._make_inpaint()
@@ -380,13 +381,15 @@ class Generate:
             )
         return results
 
-    def _make_images(self, img_path, mask_path, width, height, fit=False):
+    def _make_images(self, img_path, mask_path, out_direction, width, height, fit=False):
         init_image      = None
         init_mask       = None
         if not img_path:
             return None,None
 
         image        = self._load_img(img_path, width, height, fit=fit) # this returns an Image
+        if out_direction:
+            image    = self._create_outpaint_image(image, out_direction)
         init_image   = self._create_init_image(image)                   # this returns a torch tensor
 
         if self._has_transparency(image) and not mask_path:      # if image has a transparent area and no mask was provided, then try to generate mask
@@ -608,6 +611,64 @@ class Generate:
         image = 2.0 * image - 1.0 
         return image.to(self.device)
 
+    def _create_outpaint_image(self, image, direction_args):
+        assert len(direction_args) in [1, 2], 'Direction (-D) must have exactly one or two arguments.'
+
+        if len(direction_args) == 1:
+            direction = direction_args[0]
+            pixels = None
+        elif len(direction_args) == 2:
+            direction = direction_args[0]
+            pixels = int(direction_args[1])            
+
+        assert direction in ['top', 'left', 'bottom', 'right'], 'Direction (-D) must be one of "top", "left", "bottom", "right"'
+
+        image = image.convert("RGBA")
+        # we always extend top, but rotate to extend along the requested side
+        if direction == 'left':
+            image = image.transpose(Image.Transpose.ROTATE_270)
+        elif direction == 'bottom':
+            image = image.transpose(Image.Transpose.ROTATE_180)
+        elif direction == 'right':
+            image = image.transpose(Image.Transpose.ROTATE_90)
+
+        pixels = image.height//2 if pixels == None else int(pixels)
+        assert 0 < pixels < image.height, 'Direction (-D) pixels length must be in the range 0 - image.size'
+
+        # the top part of the image is taken from the source image mirrored
+        # coordinates (0,0) are the upper left corner of an image
+        top = image.transpose(Image.Transpose.FLIP_TOP_BOTTOM).convert("RGBA")
+        top = top.crop((0, top.height - pixels, top.width, top.height))
+
+        # setting all alpha of the top part to 0
+        alpha = top.getchannel("A")
+        alpha.paste(0, (0, 0, top.width, top.height))
+        top.putalpha(alpha)
+
+        # taking the bottom from the original image
+        bottom = image.crop((0, 0, image.width, image.height - pixels))
+            
+        new_img = image.copy()
+        new_img.paste(top, (0, 0))
+        new_img.paste(bottom, (0, pixels))
+
+        # create a 10% dither in the middle
+        dither = min(image.height//10, pixels)
+        for x in range(0, image.width, 2):
+            for y in range(pixels - dither, pixels + dither):
+                (r, g, b, a) = new_img.getpixel((x, y))
+                new_img.putpixel((x, y), (r, g, b, 0))
+
+        # let's rotate back again
+        if direction == 'left':
+            new_img = new_img.transpose(Image.Transpose.ROTATE_90)
+        elif direction == 'bottom':
+            new_img = new_img.transpose(Image.Transpose.ROTATE_180)
+        elif direction == 'right':
+            new_img = new_img.transpose(Image.Transpose.ROTATE_270)
+
+        return new_img
+
     def _create_init_mask(self, image):
         # convert into a black/white mask
         image = self._image_to_mask(image)
@@ -710,3 +771,4 @@ class Generate:
 
     def _has_cuda(self):
         return self.device.type == 'cuda'
+
