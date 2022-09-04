@@ -388,7 +388,6 @@ class T2I:
                         if self.device.type == 'mps':
                             x_T = self._get_noise(init_latent,width,height)
                         # make_image will do the equivalent of get_noise itself
-                    print(f' DEBUG: seed at make_image() invocation time ={seed}')
                     image = make_image(x_T)
                     results.append([image, seed])
                     if image_callback is not None:
