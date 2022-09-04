@@ -422,10 +422,7 @@ class T2I:
                                 f'>> Error running RealESRGAN - Your image was not upscaled.\n{e}'
                             )
                         if image_callback is not None:
-                            if save_original:
-                                image_callback(image, seed)
-                            else:
-                                image_callback(image, seed, upscaled=True)
+                            image_callback(image, seed, upscaled=True)
                         else:  # no callback passed, so we simply replace old image with rescaled one
                             result[0] = image
 
