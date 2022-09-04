@@ -253,7 +253,7 @@ def main():
     init_image1 = load_img(opt.init_img).to(device)
     init_image1 = repeat(init_image1, '1 ... -> b ...', b=batch_size)
 
-    if init_image2:
+    if opt.init_img2:
         init_image2 = load_img(opt.init_img2).to(device)
         init_image2 = repeat(init_image2, '1 ... -> b ...', b=batch_size)
     else:
@@ -270,8 +270,6 @@ def main():
 
     if not opt.prompt2:
         opt.prompt2 = opt.prompt1
-    else:
-        assert False
 
     assert 0. <= opt.strength <= 1., 'can only work with strength in [0.0, 1.0]'
     t_enc = int(opt.strength * opt.ddim_steps)
@@ -296,8 +294,12 @@ def main():
                     print(f'Theta is {theta}')
 
                     # https://www.inference.vc/high-dimensional-gaussian-distributions-are-soap-bubble/
-                    #noise = torch.tensor((theta**.5) * noise1 + ((1 - theta)**.5) * noise2).to(device).half()
-                    noise = torch.tensor(noise1).to(device).half()
+                    noise = torch.tensor((theta**.5) * noise1 + ((1 - theta)**.5) * noise2).to(device).half()
+                    #noise = torch.clamp(torch.tensor((theta**.5) * noise1 + ((1 - theta)**.5) * noise2), -1, 1).to(device).half()
+                    # Bug: noise iterpolation from the same seed?
+                    if opt.seed1 == opt.seed2:
+                        print('BUG FIX for same seed drift')
+                        noise = torch.tensor(noise1).to(device).half()
 
                     uc = None
                     if opt.scale != 1.0:
