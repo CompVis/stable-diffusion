@@ -1,4 +1,4 @@
-name: ldm
+name: my-ldm
 channels:
   - pytorch
   - defaults
