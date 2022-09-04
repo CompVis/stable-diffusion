@@ -19,7 +19,8 @@ function appendOutput(src, seed, config) {
     outputNode.addEventListener('click', () => {
         let form = document.querySelector("#generate-form");
         for (const [k, v] of new FormData(form)) {
-            form.querySelector(`*[name=${k}]`).value = config[k];
+	    if (k == 'initimg') { continue; }
+	    form.querySelector(`*[name=${k}]`).value = config[k];
         }
         document.querySelector("#seed").value = seed;
 
@@ -59,6 +60,7 @@ async function generateSubmit(form) {
 
     // Convert file data to base64
     let formData = Object.fromEntries(new FormData(form));
+    formData.initimg_name = formData.initimg.name
     formData.initimg = formData.initimg.name !== '' ? await toBase64(formData.initimg) : null;
 
     let strength = formData.strength;

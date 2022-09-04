@@ -14,6 +14,7 @@ from PIL import Image
 from tqdm import tqdm, trange
 from itertools import islice
 from einops import rearrange, repeat
+from torch import nn
 from torchvision.utils import make_grid
 from pytorch_lightning import seed_everything
 from torch import autocast
@@ -109,6 +110,7 @@ class T2I:
         downsampling_factor
         precision
         strength
+        seamless
         embedding_path
 
     The vast majority of these arguments default to reasonable values.
@@ -132,6 +134,7 @@ class T2I:
             precision='autocast',
             full_precision=False,
             strength=0.75,  # default in scripts/img2img.py
+            seamless=False,
             embedding_path=None,
             device_type = 'cuda',
             # just to keep track of this parameter when regenerating prompt
@@ -153,6 +156,7 @@ class T2I:
         self.precision                = precision
         self.full_precision           = True if choose_torch_device() == 'mps' else full_precision
         self.strength                 = strength
+        self.seamless                 = seamless
         self.embedding_path           = embedding_path
         self.device_type              = device_type
         self.model                    = None     # empty for now
@@ -217,6 +221,7 @@ class T2I:
             step_callback  =    None,
             width          =    None,
             height         =    None,
+            seamless       =    False,
             # these are specific to img2img
             init_img       =    None,
             fit            =    False,
@@ -240,6 +245,7 @@ class T2I:
            width                           // width of image, in multiples of 64 (512)
            height                          // height of image, in multiples of 64 (512)
            cfg_scale                       // how strongly the prompt influences the image (7.5) (must be >1)
+           seamless                        // whether the generated image should tile
            init_img                        // path to an initial image - its dimensions override width and height
            strength                        // strength for noising/unnoising init_img. 0.0 preserves image exactly, 1.0 replaces it completely
            gfpgan_strength                 // strength for GFPGAN. 0.0 preserves image exactly, 1.0 replaces it completely
@@ -268,6 +274,7 @@ class T2I:
         steps                 = steps      or self.steps
         width                 = width      or self.width
         height                = height     or self.height
+        seamless              = seamless   or self.seamless
         cfg_scale             = cfg_scale  or self.cfg_scale
         ddim_eta              = ddim_eta   or self.ddim_eta
         iterations            = iterations or self.iterations
@@ -278,6 +285,10 @@ class T2I:
         model = (
             self.load_model()
         )  # will instantiate the model or return it from cache
+        for m in model.modules():
+            if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
+                m.padding_mode = 'circular' if seamless else m._orig_padding_mode
+        
         assert cfg_scale > 1.0, 'CFG_Scale (-C) must be >1.0'
         assert (
             0.0 <= strength <= 1.0
@@ -324,7 +335,6 @@ class T2I:
                         self.model.encode_first_stage(init_image)
                     ) # move to latent space
 
-                print(f' DEBUG: seed at make_image time ={seed}')
                 make_image = self._img2img(
                     prompt,
                     steps=steps,
@@ -413,10 +423,7 @@ class T2I:
                                 f'>> Error running RealESRGAN - Your image was not upscaled.\n{e}'
                             )
                         if image_callback is not None:
-                            if save_original:
-                                image_callback(image, seed)
-                            else:
-                                image_callback(image, seed, upscaled=True)
+                            image_callback(image, seed, upscaled=True)
                         else:  # no callback passed, so we simply replace old image with rescaled one
                             result[0] = image
 
@@ -603,6 +610,10 @@ class T2I:
                 raise SystemExit from e
 
             self._set_sampler()
+
+            for m in self.model.modules():
+                if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
+                    m._orig_padding_mode = m.padding_mode
 
         return self.model
 

@@ -108,6 +108,6 @@ the chosen two images. Here's the one I like best:
 
 <img src="static/variation_walkthru/000004.3747154981.png">
 
-As you can see, this is a very powerful too, which when combined with
+As you can see, this is a very powerful tool, which when combined with
 subprompt weighting, gives you great control over the content and
 quality of your generated images.

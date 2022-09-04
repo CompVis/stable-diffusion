@@ -320,3 +320,20 @@ something that depends on it-- Rosetta can translate some Intel instructions but
 not the specialized ones here. To avoid this, make sure to use the environment
 variable `CONDA_SUBDIR=osx-arm64`, which restricts the Conda environment to only
 use ARM packages, and use `nomkl` as described above.
+
+### input types 'tensor<2x1280xf32>' and 'tensor<*xf16>' are not broadcast compatible
+
+May appear when just starting to generate, e.g.:
+
+```
+dream> clouds
+Generating:   0%|                                                              | 0/1 [00:00<?, ?it/s]/Users/[...]/dev/stable-diffusion/ldm/modules/embedding_manager.py:152: UserWarning: The operator 'aten::nonzero' is not currently supported on the MPS backend and will fall back to run on the CPU. This may have performance implications. (Triggered internally at /Users/runner/work/_temp/anaconda/conda-bld/pytorch_1662016319283/work/aten/src/ATen/mps/MPSFallback.mm:11.)
+  placeholder_idx = torch.where(
+                                                                                                    loc("mps_add"("(mpsFileLoc): /AppleInternal/Library/BuildRoots/20d6c351-ee94-11ec-bcaf-7247572f23b4/Library/Caches/com.apple.xbs/Sources/MetalPerformanceShadersGraph/mpsgraph/MetalPerformanceShadersGraph/Core/Files/MPSGraphUtilities.mm":219:0)): error: input types 'tensor<2x1280xf32>' and 'tensor<*xf16>' are not broadcast compatible
+LLVM ERROR: Failed to infer result type(s).
+Abort trap: 6
+/Users/[...]/opt/anaconda3/envs/ldm/lib/python3.9/multiprocessing/resource_tracker.py:216: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+  ```
+
+Macs do not support autocast/mixed-precision. Supply `--full_precision` to use float32 everywhere.
