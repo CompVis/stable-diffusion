@@ -29,3 +29,6 @@ dependencies:
     - -e git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
     - -e git+https://github.com/openai/CLIP.git@main#egg=clip
     - -e .
+    - flask==2.1.3
+    - python-datauri==1.1.0
+    - python-dotenv==0.21.0
