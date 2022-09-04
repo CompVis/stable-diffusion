@@ -23,6 +23,7 @@
     "gobig_overlap": 64, // number of pixels to blend against other areas in go_big
     "gobig_realesrgan": false, // optionally use RealESRGAN to handle initial resize
     "gobig_keep_slices": false, // optionally keep the individual slice images
+    "esrgan_model": "realesrgan-x4plus", // the model to use for esrgan upscaling
     // Generally, you can ignore most of the rest of this
     "method" : "k_lms", // sampling method to use. Options: "k_lms", "k_dpm_2_ancestral", "k_dpm_2", "k_heun", "k_euler_ancestral", "k_euler", "ddim"
     "eta" : 0.0, // currently does not seem to do anything

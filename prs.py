@@ -1,5 +1,6 @@
 import argparse, os, sys, glob
 import random
+import shutil
 import torch
 from torch import nn
 import numpy as np
@@ -144,8 +145,10 @@ def do_run(device, model, opt):
     data = [batch_size * [opt.prompt]]
     # data = opt.prompt
 
+    # grid is a leftover from stable, but we use it to give our output file a unique name
     grid_count = thats_numberwang(outpath, opt.batch_name)
 
+    progress_image = "progress.jpg" if opt.filetype == ".jpg" else "progress.png" 
     sampler = DDIMSampler(model, device)
 
     if opt.init_image is not None:
@@ -261,7 +264,8 @@ def do_run(device, model, opt):
                             x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                             output_filename = os.path.join(outpath, f'{opt.batch_name}{opt.device_id}-{grid_count:04}{opt.filetype}')
                             output_image = Image.fromarray(x_sample.astype(np.uint8))
-                            output_image.save(output_filename, pnginfo=metadata, quality = opt.quality)
+                            output_image.save(progress_image, pnginfo=metadata, quality = opt.quality)
+                            shutil.copy2(progress_image, output_filename)
                             output_image.close()
                             print(f'\nOutput saved as "{output_filename}"\n')
                             grid_count += 1
@@ -563,6 +567,7 @@ class Settings:
     gobig_overlap = 64
     gobig_realesrgan = False
     gobig_keep_slices = False
+    esrgan_model = "realesrgan-x4plus"
     cool_down = 0.0
     checkpoint = "./models/sd-v1-4.ckpt"
     use_jpg = False
@@ -616,6 +621,8 @@ class Settings:
             self.gobig_overlap = (settings_file["gobig_overlap"])
         if is_json_key_present(settings_file, 'gobig_realesrgan'):
             self.gobig_realesrgan = (settings_file["gobig_realesrgan"])
+        if is_json_key_present(settings_file, 'esrgan_model'):
+            self.esrgan_model = (settings_file["esrgan_model"])
         if is_json_key_present(settings_file, 'gobig_keep_slices'):
             self.gobig_keep_slices = (settings_file["gobig_keep_slices"])
         if is_json_key_present(settings_file, 'cool_down'):
@@ -651,6 +658,7 @@ def save_settings(options, prompt, filenum):
         'gobig_overlap' : options.gobig_overlap,
         'gobig_realesrgan' : options.gobig_realesrgan,
         'gobig_keep_slices' : options.gobig_keep_slices,
+        'esrgan_model': options.esrgan_model,
         'use_jpg' : "true" if options.filetype == ".jpg" else "false",
         'hide_metadata' : options.hide_metadata,
         'method' : options.method
@@ -658,12 +666,12 @@ def save_settings(options, prompt, filenum):
     with open(f"{options.outdir}/{options.batch_name}-{filenum:04}.json",  "w+", encoding="utf-8") as f:
         json.dump(setting_list, f, ensure_ascii=False, indent=4)
 
-def esrgan_resize(input, id):
+def esrgan_resize(input, id, esrgan_model='realesrgan-x4plus'):
     input.save(f'_esrgan_orig{id}.png')
     input.close()
     try:
         subprocess.run(
-            ['realesrgan-ncnn-vulkan', '-i', '_esrgan_orig.png', '-o', '_esrgan_.png'],
+            ['realesrgan-ncnn-vulkan', '-n', esrgan_model, '-i', '_esrgan_orig.png', '-o', '_esrgan_.png'],
             stdout=subprocess.PIPE
         ).stdout.decode('utf-8')
         output = Image.open('_esrgan_.png').convert('RGBA')
@@ -682,7 +690,7 @@ def do_gobig(gobig_init, device, model, opt):
     target_W = opt.W * opt.gobig_scale
     target_H = opt.H * opt.gobig_scale
     if opt.gobig_realesrgan:
-        input_image = esrgan_resize(input_image, opt.device_id)
+        input_image = esrgan_resize(input_image, opt.device_id, opt.esrgan_model)
     target_image = input_image.resize((target_W, target_H), get_resampling_mode())
     slices, new_canvas_size = grid_slice(target_image, overlap, (opt.W, opt.H))
     if opt.gobig_maximize == True:
@@ -734,7 +742,7 @@ def do_gobig(gobig_init, device, model, opt):
     result_split = result.rsplit('-', 1)
     result_split[0] = result_split[0] + '_gobig-'
     result = result_split[0] + result_split[1]
-    print(f'Gobig output saving as {result}{opt.filetype}')
+    print(f'Gobig output saved as {result}{opt.filetype}')
     final_output.save(f'{result}{opt.filetype}', quality = opt.quality)
     final_output.close()
 
@@ -893,6 +901,7 @@ def main():
                     "gobig_overlap": settings.gobig_overlap,
                     "gobig_realesrgan": settings.gobig_realesrgan,
                     "gobig_keep_slices": settings.gobig_keep_slices,
+                    "esrgan_model": settings.esrgan_model,
                     "config": config,
                     "filetype": filetype,
                     "hide_metadata": settings.hide_metadata,
