@@ -1,0 +1,6 @@
+samples/
+__pycache__/
+grid-*.png
+models/ldm/stable-diffusion-v1/model.ckpt
+latent_diffusion.egg-info/
+.env
