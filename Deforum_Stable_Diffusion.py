@@ -1005,7 +1005,7 @@ def render_image_batch(args):
                         if args.filename_format == "{timestring}_{index}_{prompt}.png":
                             filename = f"{args.timestring}_{index:05}_{sanitize(prompt)[:160]}.png"
                         else:
-                        filename = f"{args.timestring}_{index:05}_{args.seed}.png"
+                            filename = f"{args.timestring}_{index:05}_{args.seed}.png"
                         image.save(os.path.join(args.outdir, filename))
                     if args.display_samples:
                         display.display(image)
@@ -1070,7 +1070,7 @@ def render_animation(args, anim_args):
         adabins_helper, midas_model, midas_transform = None, None, None
 
     # state for interpolating between diffusion steps
-    turbo_steps = int(anim_args.diffusion_cadence)
+    turbo_steps = 1 if using_vid_init else int(anim_args.diffusion_cadence)
     turbo_prev_image, turbo_prev_frame_idx = None, 0
     turbo_next_image, turbo_next_frame_idx = None, 0
 
@@ -1078,18 +1078,19 @@ def render_animation(args, anim_args):
     prev_sample = None
     color_match_sample = None
     if anim_args.resume_from_timestring:
+        last_frame = start_frame-1
         if turbo_steps > 1:
-            start_frame = max(0, start_frame - turbo_steps)
-            start_frame -= start_frame%turbo_steps
-        path = os.path.join(args.outdir,f"{args.timestring}_{start_frame-1:05}.png")
+            last_frame -= last_frame%turbo_steps
+        path = os.path.join(args.outdir,f"{args.timestring}_{last_frame:05}.png")
         img = cv2.imread(path)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         prev_sample = sample_from_cv2(img)
         if anim_args.color_coherence != 'None':
             color_match_sample = img
         if turbo_steps > 1:
-            # TODO: load both past frames and carry forward to start point
-            turbo_next_image, turbo_next_frame_idx = sample_to_cv2(prev_sample, type=np.float32), start_frame-1
+            turbo_next_image, turbo_next_frame_idx = sample_to_cv2(prev_sample, type=np.float32), last_frame
+            turbo_prev_image, turbo_prev_frame_idx = turbo_next_image, turbo_next_frame_idx
+            start_frame = last_frame+turbo_steps
 
     args.n_samples = 1
     frame_idx = start_frame
@@ -1105,15 +1106,19 @@ def render_animation(args, anim_args):
             for tween_frame_idx in range(tween_frame_start_idx, frame_idx):
                 tween = float(tween_frame_idx - tween_frame_start_idx + 1) / float(frame_idx - tween_frame_start_idx)
                 print(f"  creating in between frame {tween_frame_idx} tween:{tween:0.2f}")
-                if turbo_prev_image is not None and tween_frame_idx > turbo_prev_frame_idx:
-                    prev_depth = predict_depth(turbo_prev_image, adabins_helper, midas_model, midas_transform, anim_args)
-                    turbo_prev_image = anim_frame_warp_3d(turbo_prev_image, prev_depth, anim_args, keys, tween_frame_idx)
-                    turbo_prev_frame_idx = tween_frame_idx
-
-                if tween_frame_idx > turbo_next_frame_idx:
-                    next_depth = predict_depth(turbo_next_image, adabins_helper, midas_model, midas_transform, anim_args)
-                    turbo_next_image = anim_frame_warp_3d(turbo_next_image, next_depth, anim_args, keys, tween_frame_idx)
-                    turbo_next_frame_idx = tween_frame_idx
+                if anim_args.animation_mode == '2D':
+                    if turbo_prev_image is not None and tween_frame_idx > turbo_prev_frame_idx:
+                        turbo_prev_image = anim_frame_warp_2d(turbo_prev_image, args, anim_args, keys, tween_frame_idx)
+                    if tween_frame_idx > turbo_next_frame_idx:
+                        turbo_next_image = anim_frame_warp_2d(turbo_next_image, args, anim_args, keys, tween_frame_idx)
+                else: # '3D'
+                    if turbo_prev_image is not None and tween_frame_idx > turbo_prev_frame_idx:
+                        prev_depth = predict_depth(turbo_prev_image, adabins_helper, midas_model, midas_transform, anim_args)
+                        turbo_prev_image = anim_frame_warp_3d(turbo_prev_image, prev_depth, anim_args, keys, tween_frame_idx)
+                    if tween_frame_idx > turbo_next_frame_idx:
+                        next_depth = predict_depth(turbo_next_image, adabins_helper, midas_model, midas_transform, anim_args)
+                        turbo_next_image = anim_frame_warp_3d(turbo_next_image, next_depth, anim_args, keys, tween_frame_idx)
+                turbo_prev_frame_idx = turbo_next_frame_idx = tween_frame_idx
 
                 if turbo_prev_image is not None and tween < 1.0:
                     img = turbo_prev_image*(1.0-tween) + turbo_next_image*tween
@@ -1355,10 +1360,10 @@ else:
 # !!   "cellView": "form",
 # !!   "id": "no2jP8HTMBM0"
 # !! }}
-skip_video_for_run_all = False #@param {type: 'boolean'}
+skip_video_for_run_all = True #@param {type: 'boolean'}
 fps = 12 #@param {type:"number"}
 #@markdown **Manual Settings**
-use_manual_settings = True #@param {type:"boolean"}
+use_manual_settings = False #@param {type:"boolean"}
 image_path = "/content/drive/MyDrive/AI/StableDiffusion/2022-09/20220903000939_%05d.png" #@param {type:"string"}
 mp4_path = "/content/drive/MyDrive/AI/StableDiffusion/2022-09/20220903000939.mp4" #@param {type:"string"}
 
