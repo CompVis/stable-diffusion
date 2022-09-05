@@ -170,13 +170,14 @@ class CrossAttention(nn.Module):
     def forward(self, x, context=None, mask=None):
         h = self.heads
 
-        q = self.to_q(x)
+        q_in = self.to_q(x)
         context = default(context, x)
-        k = self.to_k(context)
-        v = self.to_v(context)
+        k_in = self.to_k(context)
+        v_in = self.to_v(context)
         del context, x
 
-        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (q, k, v))
+        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (q_in, k_in, v_in))
+        del q_in, k_in, v_in
 
         r1 = torch.zeros(q.shape[0], q.shape[1], v.shape[2], device=q.device)
 
@@ -203,12 +204,12 @@ class CrossAttention(nn.Module):
             r1[:, i:end] = einsum('b i j, b j d -> b i d', s2, v)
             del s2
 
+        del q, k, v
 
         r2 = rearrange(r1, '(b h) n d -> b n (h d)', h=h)
         del r1
 
         return self.to_out(r2)
-
 
 
 class BasicTransformerBlock(nn.Module):
