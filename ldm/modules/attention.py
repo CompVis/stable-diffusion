@@ -176,22 +176,24 @@ class CrossAttention(nn.Module):
         k = self.to_k(context)
         v = self.to_v(context)
         del context, x
+
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (q, k, v))
 
-        sim = einsum('b i d, b j d -> b i j', q, k) * self.scale
+        sim = einsum('b i d, b j d -> b i j', q, k) * self.scale  # (8, 4096, 40)
+        del q, k
 
         if exists(mask):
             mask = rearrange(mask, 'b ... -> b (...)')
             max_neg_value = -torch.finfo(sim.dtype).max
             mask = repeat(mask, 'b j -> (b h) () j', h=h)
             sim.masked_fill_(~mask, max_neg_value)
+            del mask
 
-        # attention, what we cannot get enough of, by halves
+        # attention, what we cannot get enough of, by chunks
         att_step = self.att_step
         limit = sim.shape[0]
         for i in range (0, limit, att_step):
             sim[i:i+att_step] = sim[i:i+att_step].softmax(dim=-1)
-
 
         sim = einsum('b i j, b j d -> b i d', sim, v)
         sim = rearrange(sim, '(b h) n d -> b n (h d)', h=h)
