@@ -474,6 +474,7 @@ class T2I:
 
         sampler = self.sampler
 
+        @torch.no_grad()
         def make_image(x_T):
             uc, c = self._get_uc_and_c(prompt, skip_normalize)
             shape = [
@@ -528,6 +529,7 @@ class T2I:
 
         t_enc = int(strength * steps)
 
+        @torch.no_grad()
         def make_image(x_T):
             uc, c = self._get_uc_and_c(prompt, skip_normalize)
 
