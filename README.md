@@ -1,13 +1,21 @@
-### Any questions? Come hop on by to our Discord server!
 
-[![Discord Server](https://discordapp.com/api/guilds/930499730843250783/widget.png?style=banner2)](https://discord.gg/Sx6Spmsgx7)
 
-Finetuned Model: https://huggingface.co/hakurei/waifu-diffusion
+# Waifu Diffusion
 
-![image](https://user-images.githubusercontent.com/26317155/188367207-ad9b9c5f-3c3e-4107-bfdb-59c8b78e1df7.png)
+Waifu Diffusion is the name for this project of finetuning Stable Diffusion on Danbooru images.
+
+<img src=https://cdn.discordapp.com/attachments/872361510133981234/1016022078635388979/unknown.png?3867929 width=40% height=40%>
+
+<sub>Prompt: touhou 1girl komeiji_koishi portrait</sub>
 
 
 All thanks goes to CompVis and Stability AI for releasing this codebase!
+
+Model Link: https://huggingface.co/hakurei/waifu-diffusion
+
+### Any questions? Come hop on by to our Discord server!
+
+[![Discord Server](https://discordapp.com/api/guilds/930499730843250783/widget.png?style=banner2)](https://discord.gg/Sx6Spmsgx7)
 
 # Stable Diffusion
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
