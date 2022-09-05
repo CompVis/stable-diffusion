@@ -149,6 +149,9 @@ window.onload = () => {
     document.querySelector("#reset-all").addEventListener('click', (e) => {
         clearFields(e.target.form);
     });
+    document.querySelector("#remove-image").addEventListener('click', (e) => {
+        initimg.value=null;
+    });
     loadFields(document.querySelector("#generate-form"));
 
     document.querySelector('#cancel-button').addEventListener('click', () => {

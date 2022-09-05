@@ -39,7 +39,7 @@ div {
     padding: 5px 10px 5px 10px;
     border: 1px solid black;
 }
-#reset-all {
+#reset-all, #remove-image {
     background-color: pink;
 }
 #results {
