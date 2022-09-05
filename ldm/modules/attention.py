@@ -182,7 +182,7 @@ class CrossAttention(nn.Module):
 
         # valid values for steps = 2,4,8,16,32,64
         # higher steps is slower but less memory usage
-        # at 16 can run 1920x1536 on a 3090, at 64 can run over 1920x1920
+        # at 16 can run 1920x1536 on a 3090, at 32 can run over 1920x1920
         # speed seems to be impacted more on 30x series cards
         steps = 16
         slice_size = q.shape[1] // steps if q.shape[1] % steps == 0 else q.shape[1]
