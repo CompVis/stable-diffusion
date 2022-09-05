@@ -8,15 +8,21 @@ function toBase64(file) {
 }
 
 function appendOutput(src, seed, config) {
-    let outputNode = document.createElement("img");
-    outputNode.src = src;
-
+    let outputNode = document.createElement("figure");
     let altText = seed.toString() + " | " + config.prompt;
-    outputNode.alt = altText;
-    outputNode.title = altText;
+
+    const figureContents = `
+        <a href="${src}" target="_blank">
+            <img src="${src}" alt="${altText}" title="${altText}">
+        </a>
+        <figcaption>${seed}</figcaption>
+    `;
+
+    outputNode.innerHTML = figureContents;
+    let figcaption = outputNode.querySelector('figcaption')
 
     // Reload image config
-    outputNode.addEventListener('click', () => {
+    figcaption.addEventListener('click', () => {
         let form = document.querySelector("#generate-form");
         for (const [k, v] of new FormData(form)) {
 	    if (k == 'initimg') { continue; }
