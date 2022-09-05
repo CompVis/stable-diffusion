@@ -7,7 +7,7 @@ load_dotenv('../.env')
 
 app = Flask(__name__)
 
-def verifyApiKey():
+def verify_api_key():
     """Verify that the API key is valid"""
     if request.headers.get('X-API-KEY') == os.environ.get('API_KEY'):
         return True
@@ -21,8 +21,8 @@ def generate():
     args = request.json
     prompt = args.get('prompt', None)
 
-    if prompt is not None and verifyApiKey():
-        results = generateImage(
+    if prompt is not None and verify_api_key():
+        results, time = generateImage(
             prompt = prompt,
             seed = args.get('seed', 0),
             width = args.get('width', 512),
@@ -33,7 +33,10 @@ def generate():
         )
 
         return jsonify(
-            data=results
+            data=results,
+            meta={
+                'total_time': round(time, 2),
+            }
         )
     else:
         return jsonify({'error': 'No prompt provided.'}), 406

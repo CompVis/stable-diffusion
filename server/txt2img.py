@@ -1,6 +1,7 @@
 import argparse, os, sys, glob
 import cv2
 import torch
+import boto3
 import numpy as np
 from omegaconf import OmegaConf
 from PIL import Image
@@ -8,7 +9,6 @@ from tqdm import tqdm, trange
 from imwatermark import WatermarkEncoder
 from itertools import islice
 from einops import rearrange
-from torchvision.utils import make_grid
 import time
 from pytorch_lightning import seed_everything
 from torch import autocast
@@ -16,6 +16,8 @@ from contextlib import contextmanager, nullcontext
 from random import randint
 from uuid import uuid4
 from datauri import DataURI
+import base64
+from io import BytesIO
 
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
@@ -46,6 +48,27 @@ def numpy_to_pil(images):
     pil_images = [Image.fromarray(image) for image in images]
 
     return pil_images
+
+def upload_to_s3(filepath, filename, folder):
+    """Uploads image to s3 bucket"""
+    bucket = f"{os.environ.get('S3_BUCKET')}"
+
+    s3 = boto3.client(
+        service_name= 's3',
+        aws_access_key_id= os.environ.get('AWS_ACCESS_KEY_ID'),
+        aws_secret_access_key= os.environ.get('AWS_SECRET_ACCESS_KEY'),
+    )
+
+    s3.upload_file(
+        Filename=filepath,
+        Bucket=f"{os.environ.get('S3_BUCKET')}",
+        Key=filename, 
+        ExtraArgs={
+            'ContentType': 'image/png',
+        }
+    )
+
+    return f"https://{bucket}.s3.us-east-2.amazonaws.com/{filename}"
 
 
 def load_model_from_config(config, ckpt, verbose=False):
@@ -104,6 +127,7 @@ def generate(prompt, **kwargs):
     n_rows = 0
     fixed_code = False
     ddim_eta = 0.0
+    timer = time.time()
 
     results = []
 
@@ -123,21 +147,20 @@ def generate(prompt, **kwargs):
     wm_encoder = WatermarkEncoder()
     wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
 
-    batch_size = iterations
+    batch_size = 1
     n_rows = n_rows if n_rows > 0 else batch_size
 
-    prompt = prompt
     assert prompt is not None
     data = [batch_size * [prompt]]
 
     sample_path = os.path.join(outpath, "samples")
     os.makedirs(sample_path, exist_ok=True)
     base_count = len(os.listdir(sample_path))
-    grid_count = len(os.listdir(outpath)) - 1
 
     start_code = None
     if fixed_code:
-        start_code = torch.randn([iterations, channels, height // factor, width // factor], device=device)
+        start_code = torch.randn([batch_size, channels, height // factor, width // factor], device=device)
+
 
     precision_scope = autocast if precision=="autocast" else nullcontext
     with torch.no_grad():
@@ -156,7 +179,7 @@ def generate(prompt, **kwargs):
                         shape = [channels, height // factor, width // factor]
                         samples_ddim, _ = sampler.sample(S=steps,
                                                          conditioning=c,
-                                                         batch_size=iterations,
+                                                         batch_size=batch_size,
                                                          shape=shape,
                                                          verbose=False,
                                                          unconditional_guidance_scale=scale,
@@ -172,13 +195,17 @@ def generate(prompt, **kwargs):
 
                         for x_sample in x_image_torch:
                             x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                            filepath = os.path.join(sample_path, f"{base_count}_{seed}_{uuid4().hex}.png") 
+                            filename = f"{base_count}_{seed}_{uuid4().hex}.png"
+                            filepath = os.path.join(sample_path, filename) 
                             img = Image.fromarray(x_sample.astype(np.uint8))
                             img = put_watermark(img, wm_encoder)
                             img.save(filepath)
+
+                            file_url = upload_to_s3(filepath, filename, 'samples')
+
                             result = {
                                 'seed': seed,
-                                'image': DataURI.from_file(filename=filepath),
+                                'image': file_url,
                             }
 
                             results.append(result)
@@ -186,4 +213,4 @@ def generate(prompt, **kwargs):
                             seed += 1
 
                 toc = time.time()
-    return results
+    return results, time.time() - timer

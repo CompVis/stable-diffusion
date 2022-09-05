@@ -32,3 +32,4 @@ dependencies:
     - flask==2.1.3
     - python-datauri==1.1.0
     - python-dotenv==0.21.0
+    - boto3==1.24.66
