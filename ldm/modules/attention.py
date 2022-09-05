@@ -180,12 +180,18 @@ class CrossAttention(nn.Module):
 
         r1 = torch.zeros(q.shape[0], q.shape[1], v.shape[2], device=q.device)
 
-        # valid values for steps = 2,4,8,16,32,64
-        # higher steps is slower but less memory usage
-        # at 16 can run 1920x1536 on a 3090, at 32 can run over 1920x1920
-        # speed seems to be impacted more on 30x series cards
-        steps = 16
-        slice_size = q.shape[1] // steps if q.shape[1] % steps == 0 else q.shape[1]
+        stats = torch.cuda.memory_stats(q.device)
+        mem_total = torch.cuda.get_device_properties(0).total_memory
+        mem_active = stats['active_bytes.all.current']
+        mem_free = mem_total - mem_active
+
+        mem_required = q.shape[0] * q.shape[1] * k.shape[1] * 4 * 2.5
+        steps = 1
+
+        if mem_required > mem_free:
+            steps = 2**(math.ceil(math.log(mem_required / mem_free, 2)))
+
+        slice_size = q.shape[1] // steps if (q.shape[1] % steps) == 0 else q.shape[1]
         for i in range(0, q.shape[1], slice_size):
             end = i + slice_size
             s1 = einsum('b i d, b j d -> b i j', q[:, i:end], k)
@@ -202,6 +208,7 @@ class CrossAttention(nn.Module):
         del r1
 
         return self.to_out(r2)
+
 
 
 class BasicTransformerBlock(nn.Module):
