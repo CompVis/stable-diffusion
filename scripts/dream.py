@@ -443,7 +443,7 @@ def create_argv_parser():
         '--gfpgan_bg_upsampler',
         type=str,
         default='realesrgan',
-        help='Background upsampler. Default: realesrgan. Options: realesrgan, none. Only used if --gfpgan is specified',
+        help='Background upsampler. Default: realesrgan. Options: realesrgan, none.',
 
     )
     parser.add_argument(

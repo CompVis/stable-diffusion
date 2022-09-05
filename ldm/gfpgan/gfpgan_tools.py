@@ -46,7 +46,7 @@ def _run_gfpgan(image, strength, prompt, seed, upsampler_scale=4):
 
     if gfpgan is None:
         print(
-            f'>> GFPGAN not initialized, it must be loaded via the --gfpgan argument'
+            f'>> GFPGAN not initialized. Their packages must be installed as siblings to the "stable-diffusion" folder, or set explicitly using the --gfpgan_dir option.'
         )
         return image
 
