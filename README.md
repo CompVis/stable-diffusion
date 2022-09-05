@@ -2,7 +2,12 @@
 
 [![Discord Server](https://discordapp.com/api/guilds/930499730843250783/widget.png?style=banner2)](https://discord.gg/Sx6Spmsgx7)
 
-All thanks goes to CompVis and Stability AI for releasing this codebase! Pretrained models coming soon...
+Finetuned Model: https://huggingface.co/hakurei/waifu-diffusion
+
+![image](https://user-images.githubusercontent.com/26317155/188367207-ad9b9c5f-3c3e-4107-bfdb-59c8b78e1df7.png)
+
+
+All thanks goes to CompVis and Stability AI for releasing this codebase!
 
 # Stable Diffusion
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
