@@ -33,3 +33,4 @@ dependencies:
     - python-datauri==1.1.0
     - python-dotenv==0.21.0
     - boto3==1.24.66
+    - redis==4.3.4

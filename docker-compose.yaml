@@ -1,0 +1,8 @@
+version: '3.8'
+services:
+  queue:
+    image: redis:alpine
+    container_name: queue
+    restart: unless-stopped
+    ports:
+      - 6379:6379
