@@ -199,7 +199,8 @@ class CrossAttention(nn.Module):
             #       f"torch free:{mem_free_torch/gb:0.1f} total:{mem_free_total/gb:0.1f} steps:{steps}")
 
         if steps > 64:
-            raise RuntimeError(f'Not enough memory, use lower resolution. '
+            max_res = math.floor(math.sqrt(math.sqrt(mem_free_total / 2.5)) / 8) * 64
+            raise RuntimeError(f'Not enough memory, use lower resolution (max approx. {max_res}x{max_res}). '
                                f'Need: {mem_required/64/gb:0.1f}GB free, Have:{mem_free_total/gb:0.1f}GB free')
 
         slice_size = q.shape[1] // steps if (q.shape[1] % steps) == 0 else q.shape[1]
