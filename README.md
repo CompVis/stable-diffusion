@@ -18,11 +18,11 @@ text-to-image generator. This fork supports:
 1. An interactive command-line interface that accepts the same prompt
    and switches as the Discord bot.
 
-2. Support for img2img in which you provide a seed image to build on
-   top of.
-
-3. A basic Web interface that allows you to run a local web server for
+2. A basic Web interface that allows you to run a local web server for
    generating images in your browser.
+
+3. Support for img2img in which you provide a seed image to guide the
+      image creation. (inpainting & masking coming soon)
 
 4. A notebook for running the code on Google Colab.
 
@@ -46,10 +46,14 @@ improvements and bug fixes.
 # Table of Contents
 
 1. [Major Features](#features)
-2. [Changelog](#latest)
+2. [Changelog](#latest-changes)
 3. [Installation](#installation)
+   1. [Linux](#linux)
+   1. [Windows](#windows)
+   1. [MacOS](README-Mac-MPS.md)
 4. [Troubleshooting](#troubleshooting)
-5. [Support](#support)
+5. [Contributing](#contributing)
+6. [Support](#support)
 
 # Features
 
@@ -133,6 +137,13 @@ completely). The default is 0.75, and ranges from 0.25-0.75 give interesting res
 You may also pass a -v<count> option to generate count variants on the original image. This is done by
 passing the first generated image back into img2img the requested number of times. It generates interesting
 variants.
+
+## Seamless Tiling
+
+The seamless tiling mode causes generated images to seamlessly tile with itself. To use it, add the --seamless option when starting the script which will result in all generated images to tile, or for each dream> prompt as shown here:
+```
+dream> "pond garden with lotus by claude monet" --seamless -s100 -n4
+```
 
 ## GFPGAN and Real-ESRGAN Support
 
@@ -396,15 +407,22 @@ repository and associated paper for details and limitations.
 
 # Latest Changes
 
-- v1.13 (in process)
+- v1.14 (In progress)
 
+  - Add "seamless mode" for circular tiling of image. Generates beautiful effects. ([prixt](https://github.com/prixt))
+
+- v1.13 (3 September 2022
+
+  - Support image variations (see [VARIATIONS](VARIATIONS.md) ([Kevin Gibbons](https://github.com/bakkot) and many contributors and reviewers)
   - Supports a Google Colab notebook for a standalone server running on Google hardware [Arturo Mendivil](https://github.com/artmen1516)
   - WebUI supports GFPGAN/ESRGAN facial reconstruction and upscaling [Kevin Gibbons](https://github.com/bakkot)
   - WebUI supports incremental display of in-progress images during generation [Kevin Gibbons](https://github.com/bakkot)
-  - Output directory can be specified on the dream> command line.
-  - The grid was displaying duplicated images when not enough images to fill the final row [Muhammad Usama](https://github.com/SMUsamaShah)
+  - A new configuration file scheme that allows new models (including upcoming stable-diffusion-v1.5)
+  to be added without altering the code. ([David Wager](https://github.com/maddavid12))
   - Can specify --grid on dream.py command line as the default.
   - Miscellaneous internal bug and stability fixes.
+  - Works on M1 Apple hardware.
+  - Multiple bug fixes.
 
 For older changelogs, please visit **[CHANGELOGS](CHANGELOG.md)**.
 
@@ -420,10 +438,12 @@ There are separate installation walkthroughs for [Linux](#linux), [Windows](#win
 - Python (version 3.8.5 recommended; higher may work)
 - git
 
-2. Install the Python Anaconda environment manager using pip3.
+2. Install the Python Anaconda environment manager.
 
 ```
-~$ pip3 install anaconda
+~$  wget https://repo.anaconda.com/archive/Anaconda3-2022.05-Linux-x86_64.sh
+~$  chmod +x Anaconda3-2022.05-Linux-x86_64.sh 
+~$  ./Anaconda3-2022.05-Linux-x86_64.sh  
 ```
 
 After installing anaconda, you should log out of your system and log back in. If the installation
@@ -509,6 +529,30 @@ This distribution is changing rapidly. If you used the "git clone" method (step 
 This will bring your local copy into sync with the remote one.
 
 ## Windows
+
+### Notebook install (semi-automated)
+
+We have a
+[Jupyter notebook](https://github.com/lstein/stable-diffusion/blob/main/Stable-Diffusion-local-Windows.ipynb)
+with cell-by-cell installation steps. It will download the code in this repo as
+one of the steps, so instead of cloning this repo, simply download the notebook
+from the link above and load it up in VSCode (with the
+appropriate extensions installed)/Jupyter/JupyterLab and start running the cells one-by-one.
+
+Note that you will need NVIDIA drivers, Python 3.10, and Git installed
+beforehand - simplified
+[step-by-step instructions](https://github.com/lstein/stable-diffusion/wiki/Easy-peasy-Windows-install)
+are available in the wiki (you'll only need steps 1, 2, & 3 ).
+
+### Manual installs
+
+#### pip
+
+See
+[Easy-peasy Windows install](https://github.com/lstein/stable-diffusion/wiki/Easy-peasy-Windows-install)
+in the wiki
+
+#### Conda
 
 1. Install Anaconda3 (miniconda3 version) from here: https://docs.anaconda.com/anaconda/install/windows/
 
@@ -730,6 +774,20 @@ of branch>
 You will need to go through the install procedure again, but it should
 be fast because all the dependencies are already loaded.
 
+# Contributing
+
+Anyone who wishes to contribute to this project, whether
+documentation, features, bug fixes, code cleanup, testing, or code
+reviews, is very much encouraged to do so. If you are unfamiliar with
+how to contribute to GitHub projects, here is a [Getting Started
+Guide](https://opensource.com/article/19/7/create-pull-request-github).
+
+A full set of contribution guidelines, along with templates, are in
+progress, but for now the most important thing is to **make your pull
+request against the "development" branch**, and not against
+"main". This will help keep public breakage to a minimum and will
+allow you to propose more radical changes.
+
 # Support
 
 For support,
@@ -742,8 +800,12 @@ _Contributions by:_
 [Peter Kowalczyk](https://github.com/slix), [Henry Harrison](https://github.com/hwharrison),
 [xraxra](https://github.com/xraxra), [bmaltais](https://github.com/bmaltais), [Sean McLellan](https://github.com/Oceanswave),
 [nicolai256](https://github.com/nicolai256), [Benjamin Warner](https://github.com/warner-benjamin),
-[tildebyte](https://github.com/tildebyte),[yunsaki](https://github.com/yunsaki)
-and [Tesseract Cat](https://github.com/TesseractCat)
+[tildebyte](https://github.com/tildebyte),[yunsaki](https://github.com/yunsaki), [James Reynolds][https://github.com/magnusviri],
+[Tesseract Cat](https://github.com/TesseractCat), and many more!
+
+(If you have contributed and don't see your name on the list of
+contributors, please let lstein know about the omission, or make a
+pull request)
 
 Original portions of the software are Copyright (c) 2020 Lincoln D. Stein (https://github.com/lstein)
 

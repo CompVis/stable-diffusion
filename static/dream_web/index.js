@@ -8,18 +8,25 @@ function toBase64(file) {
 }
 
 function appendOutput(src, seed, config) {
-    let outputNode = document.createElement("img");
-    outputNode.src = src;
-
+    let outputNode = document.createElement("figure");
     let altText = seed.toString() + " | " + config.prompt;
-    outputNode.alt = altText;
-    outputNode.title = altText;
+
+    const figureContents = `
+        <a href="${src}" target="_blank">
+            <img src="${src}" alt="${altText}" title="${altText}">
+        </a>
+        <figcaption>${seed}</figcaption>
+    `;
+
+    outputNode.innerHTML = figureContents;
+    let figcaption = outputNode.querySelector('figcaption')
 
     // Reload image config
-    outputNode.addEventListener('click', () => {
+    figcaption.addEventListener('click', () => {
         let form = document.querySelector("#generate-form");
         for (const [k, v] of new FormData(form)) {
-            form.querySelector(`*[name=${k}]`).value = config[k];
+	    if (k == 'initimg') { continue; }
+	    form.querySelector(`*[name=${k}]`).value = config[k];
         }
         document.querySelector("#seed").value = seed;
 
@@ -59,6 +66,7 @@ async function generateSubmit(form) {
 
     // Convert file data to base64
     let formData = Object.fromEntries(new FormData(form));
+    formData.initimg_name = formData.initimg.name
     formData.initimg = formData.initimg.name !== '' ? await toBase64(formData.initimg) : null;
 
     let strength = formData.strength;
@@ -146,6 +154,9 @@ window.onload = () => {
     });
     document.querySelector("#reset-all").addEventListener('click', (e) => {
         clearFields(e.target.form);
+    });
+    document.querySelector("#remove-image").addEventListener('click', (e) => {
+        initimg.value=null;
     });
     loadFields(document.querySelector("#generate-form"));
 

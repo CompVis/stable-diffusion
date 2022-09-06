@@ -21,9 +21,11 @@ How to (this hasn't been 100% tested yet):
 
 First get the weights checkpoint download started - it's big:
 
-Sign up at https://huggingface.co
-Accept the terms and click Access Repository: https://huggingface.co/CompVis/stable-diffusion-v-1-4-original
-Download sd-v1-4.ckpt (4.27 GB) and note where you have saved it (probably the Downloads folder)
+1. Sign up at https://huggingface.co
+2. Go to the [Stable diffusion diffusion model page](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original)
+3. Accept the terms and click Access Repository: 
+4. Download [sd-v1-4.ckpt (4.27 GB)](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/blob/main/sd-v1-4.ckpt) and note where you have saved it (probably the Downloads folder)
+
 While that is downloading, open Terminal and run the following commands one at a time.
 
 ```
@@ -47,7 +49,9 @@ cd stable-diffusion
 
 # create symlink to checkpoint
 mkdir -p models/ldm/stable-diffusion-v1/
+
 PATH_TO_CKPT="$HOME/Downloads"  # or wherever you saved sd-v1-4.ckpt
+
 ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
 
 # install packages
@@ -316,3 +320,20 @@ something that depends on it-- Rosetta can translate some Intel instructions but
 not the specialized ones here. To avoid this, make sure to use the environment
 variable `CONDA_SUBDIR=osx-arm64`, which restricts the Conda environment to only
 use ARM packages, and use `nomkl` as described above.
+
+### input types 'tensor<2x1280xf32>' and 'tensor<*xf16>' are not broadcast compatible
+
+May appear when just starting to generate, e.g.:
+
+```
+dream> clouds
+Generating:   0%|                                                              | 0/1 [00:00<?, ?it/s]/Users/[...]/dev/stable-diffusion/ldm/modules/embedding_manager.py:152: UserWarning: The operator 'aten::nonzero' is not currently supported on the MPS backend and will fall back to run on the CPU. This may have performance implications. (Triggered internally at /Users/runner/work/_temp/anaconda/conda-bld/pytorch_1662016319283/work/aten/src/ATen/mps/MPSFallback.mm:11.)
+  placeholder_idx = torch.where(
+                                                                                                    loc("mps_add"("(mpsFileLoc): /AppleInternal/Library/BuildRoots/20d6c351-ee94-11ec-bcaf-7247572f23b4/Library/Caches/com.apple.xbs/Sources/MetalPerformanceShadersGraph/mpsgraph/MetalPerformanceShadersGraph/Core/Files/MPSGraphUtilities.mm":219:0)): error: input types 'tensor<2x1280xf32>' and 'tensor<*xf16>' are not broadcast compatible
+LLVM ERROR: Failed to infer result type(s).
+Abort trap: 6
+/Users/[...]/opt/anaconda3/envs/ldm/lib/python3.9/multiprocessing/resource_tracker.py:216: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+  ```
+
+Macs do not support autocast/mixed-precision. Supply `--full_precision` to use float32 everywhere.
