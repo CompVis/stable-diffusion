@@ -23,7 +23,7 @@
           <div id="search-box">
             <textarea rows="3" id="prompt" name="prompt"></textarea>
             <input type="submit" id="submit" value="Generate">
-          </div>
+	  </div>
         </fieldset>
         <fieldset id="fieldset-config">
           <label for="iterations">Images to generate:</label>
@@ -40,7 +40,7 @@
             <option value="k_dpm_2">KDPM_2</option>
             <option value="k_dpm_2_a">KDPM_2A</option>
             <option value="k_euler">KEULER</option>
-            <option value="k_euler_a">KEULER_A</option>
+	    <option value="k_euler_a">KEULER_A</option>
             <option value="k_heun">KHEUN</option>
           </select>
           <input type="checkbox" name="seamless" id="seamless">
@@ -68,23 +68,28 @@
             <option value="832">832</option> <option value="896">896</option>
             <option value="960">960</option> <option value="1024">1024</option>
           </select>
-
           <label title="Set to -1 for random seed" for="seed">Seed:</label>
           <input value="-1" type="number" id="seed" name="seed">
           <button type="button" id="reset-seed">&olarr;</button>
           <input type="checkbox" name="progress_images" id="progress_images">
-          <label for="progress_images">Display in-progress images (slower):</label>
-          <button type="button" id="reset-all">Reset to Defaults</button>
-        </fieldset>
-	<fieldset id="img2img">
-	  <label title="Upload an image to use img2img" for="initimg">Initial image:</label>
-	  <input type="file" id="initimg" name="initimg" accept=".jpg, .jpeg, .png">
-	  <button type="button" id="remove-image">Remove Image</button>
-	  <br>
-	  <label for="strength">Img2Img Strength:</label>
-	  <input value="0.75" type="number" id="strength" name="strength" step="0.01" min="0" max="1">
-	  <input type="checkbox" id="fit" name="fit" checked>
-	  <label title="Rescale image to fit within requested width and height" for="fit">Fit to width/height:</label>
+	  <label for="progress_images">Display in-progress images (slower)</label>
+	  <button type="button" id="reset-all">Reset to Defaults</button>
+	  <div id="variations">
+            <label title="If > 0, generates variations on the initial seed instead of random seeds per iteration. Must be between 0 and 1. Higher values will be more different." for="variation_amount">Variation amount (0 to disable):</label>
+            <input value="0" type="number" id="variation_amount" name="variation_amount" step="0.01" min="0" max="1">
+            <label title="list of variations to apply, in the format `seed:weight,seed:weight,..." for="with_variations">With variations (seed:weight,seed:weight,...):</label>
+            <input value="" type="text" id="with_variations" name="with_variations">
+	  </div>
+	  <div id="img2img">
+            <label title="Upload an image to use img2img" for="initimg">Initial image:</label>
+            <input type="file" id="initimg" name="initimg" accept=".jpg, .jpeg, .png">
+            <button type="button" id="remove-image">Remove Image</button>
+	    <br>
+	    <label for="strength">Img2Img Strength:</label>
+	    <input value="0.75" type="number" id="strength" name="strength" step="0.01" min="0" max="1">
+	    <input type="checkbox" id="fit" name="fit" checked>
+	    <label title="Rescale image to fit within requested width and height" for="fit">Fit to width/height:</label>
+	  </div>
 	</fieldset>
         <fieldset id="gfpgan">
           <label title="Strength of the gfpgan (face fixing) algorithm." for="gfpgan_strength">GPFGAN Strength (0 to disable):</label>
@@ -105,7 +110,7 @@
           <progress id="progress-bar" value="0" max="1"></progress>
           <span id="cancel-button" title="Cancel">&#10006;</span>
           <br>
-          <img id="progress-image" src='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>'></img>
+          <img id="progress-image" src='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>'>
           <div id="scaling-inprocess-message">
             <i><span>Postprocessing...</span><span id="processing_cnt">1/3</span></i>
           </div>
