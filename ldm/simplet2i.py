@@ -9,6 +9,7 @@ import numpy as np
 import random
 import os
 import traceback
+from ldm.modules.diffusionmodules.util import noise_like
 from omegaconf import OmegaConf
 from PIL import Image
 from tqdm import tqdm, trange
@@ -23,7 +24,7 @@ import time
 import re
 import sys
 
-from ldm.util                      import instantiate_from_config
+from ldm.util                      import instantiate_from_config, rand_perlin_2d
 from ldm.models.diffusion.ddim     import DDIMSampler
 from ldm.models.diffusion.plms     import PLMSSampler
 from ldm.models.diffusion.ksampler import KSampler
@@ -352,13 +353,18 @@ class T2I:
 
             def get_noise():
                 if init_img:
-                    return torch.randn_like(init_latent, device=self.device)
+                    x = torch.randn_like(init_latent, device=self.device)
                 else:
-                    return torch.randn([1,
+                    x = torch.randn([1,
                         self.latent_channels,
                         height // self.downsampling_factor,
                         width  // self.downsampling_factor],
                         device=self.device)
+                if perlin > 0.0:
+                    shape = x.shape
+                    perlin_noise = torch.stack([rand_perlin_2d((shape[2], shape[3]), (8, 8)).to(self.device) for _ in range(shape[1])], dim=0)
+                    x = (1 - perlin) * x + perlin * perlin_noise
+                return x
 
             initial_noise = None
             if variation_amount > 0 or len(with_variations) > 0:
@@ -387,7 +393,7 @@ class T2I:
                         x_T = initial_noise
                     else:
                         seed_everything(seed)
-                        # make_image will do the equivalent of get_noise itself
+                        x_T = get_noise()
                     image = make_image(x_T)
                     results.append([image, seed])
                     if image_callback is not None:

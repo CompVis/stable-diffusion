@@ -79,6 +79,8 @@ class DreamServer(BaseHTTPRequestHandler):
         upscale = [int(upscale_level),float(upscale_strength)] if upscale_level != '' else None
         progress_images = 'progress_images' in post_data
         seed = self.model.seed if int(post_data['seed']) == -1 else int(post_data['seed'])
+        threshold = float(post_data['threshold'])
+        perlin = float(post_data['perlin'])
 
         self.canceled.clear()
         print(f">> Request to generate with prompt: {prompt}")
@@ -165,7 +167,9 @@ class DreamServer(BaseHTTPRequestHandler):
                                         upscale         = upscale,
                                         sampler_name    = sampler_name,
                                         step_callback=image_progress,
-                                        image_callback=image_done)
+                                        image_callback=image_done,
+                                        threshold=threshold,
+                                        perlin=perlin)
             else:
                 # Decode initimg as base64 to temp file
                 with open("./img2img-tmp.png", "wb") as f:
@@ -188,7 +192,9 @@ class DreamServer(BaseHTTPRequestHandler):
                                             gfpgan_strength=gfpgan_strength,
                                             upscale         = upscale,
                                             step_callback=image_progress,
-                                            image_callback=image_done)
+                                            image_callback=image_done,
+                                            threshold=threshold,
+                                            perlin=perlin)
                 finally:
                     # Remove the temp file
                     os.remove("./img2img-tmp.png")
