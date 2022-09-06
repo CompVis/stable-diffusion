@@ -32,12 +32,33 @@ While that is downloading, open Terminal and run the following commands one at a
 # install brew (and Xcode command line tools):
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
+#
+# Now there are two different routes to get the Python (miniconda) environment up and running:
+# 1. Alongside pyenv
+# 2. No pyenv
+#
+# If you don't know what we are talking about, choose 2.
+# 
+# NOW EITHER DO
+# 1. Installing alongside pyenv 
+
+brew install pyenv-virtualenv # you might have this from before, no problem
+pyenv install anaconda3-latest
+pyenv virtualenv anaconda3-latest lstein-stable-diffusion
+pyenv activate lstein-stable-diffusion
+
+# OR, 
+# 2. Installing standalone
 # install python 3, git, cmake, protobuf:
 brew install cmake protobuf rust
 
 # install miniconda (M1 arm64 version):
 curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o Miniconda3-latest-MacOSX-arm64.sh
 /bin/bash Miniconda3-latest-MacOSX-arm64.sh
+
+
+# EITHER WAY,
+# continue from here
 
 # clone the repo
 git clone https://github.com/lstein/stable-diffusion.git
