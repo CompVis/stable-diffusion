@@ -200,19 +200,18 @@ def do_run(device, model, opt):
         assert 0. <= opt.strength <= 1., 'can only work with strength in [0.0, 1.0]'
         t_enc = int(opt.strength * opt.ddim_steps)
     else:
-        # model_wrap = K.external.CompVisDenoiser(model)
-        # sigma_min, sigma_max = model_wrap.sigmas[0].item(), model_wrap.sigmas[-1].item()
         init_latent = None
 
     shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
-    start_code = None
-    karras_noise_active = False
-    end_karras_ramp_early_active = False
 
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
     # apple silicon support
     if device.type == 'mps':
         precision_scope = nullcontext
+
+    rand_size = [batch_size, *shape]
+    og_start_code = torch.randn(rand_size, device='cpu').to(device) if device.type == 'mps' else torch.randn(rand_size, device=device)
+    start_code = og_start_code
 
     with torch.no_grad():
         with precision_scope(device.type):
@@ -239,15 +238,11 @@ def do_run(device, model, opt):
 
                         c = model.get_learned_conditioning(prompts)
 
-                        if opt.variance == 0.0 or n == 0:
-                            rand_size = [batch_size, *shape]
-                            start_code = torch.randn(rand_size, device='cpu').to(device) if device.type == 'mps' else torch.randn(rand_size, device=device)
-                        else:
+                        if opt.variance != 0.0 and n != 0:
                             # add a little extra random noise to get varying output with same seed
-                            torch.manual_seed(opt.seed)
-                            base_x = torch.randn([batch_size, *shape], device=device) * sigmas[0]
+                            base_x = og_start_code # torch.randn(rand_size, device=device) * sigmas[0]
                             torch.manual_seed(opt.variance_seed + n)
-                            target_x = torch.randn([batch_size, *shape], device=device) * sigmas[0]
+                            target_x = torch.randn(rand_size, device='cpu').to(device) if device.type == 'mps' else torch.randn(rand_size, device=device)
                             start_code = slerp(device, max(0.0, min(1.0, opt.variance)), base_x, target_x)
 
                         karras_noise = False
@@ -291,6 +286,7 @@ def do_run(device, model, opt):
                             noise_schedule_sampler_args = {}
 
                             if karras_noise:
+                                end_karras_ramp_early = False # this is only needed for really low step counts, not going to bother with it right now
                                 def get_premature_sigma_min(
                                     steps: int,
                                     sigma_max: float,
@@ -314,7 +310,7 @@ def do_run(device, model, opt):
                                 )
                                 sigmas = get_sigmas_karras(
                                     n=opt.ddim_steps,
-                                    sigma_min=premature_sigma_min if opt.end_karras_ramp_early else sigma_min_nominal,
+                                    sigma_min=premature_sigma_min if end_karras_ramp_early else sigma_min_nominal,
                                     sigma_max=sigma_max,
                                     rho=rho,
                                     device=device,
@@ -354,6 +350,7 @@ def do_run(device, model, opt):
                             metadata.add_text("scale", str(opt.scale))
                             metadata.add_text("ETA", str(opt.ddim_eta))
                             metadata.add_text("method", str(opt.method))
+                            metadata.add_text("init_image", str(opt.init_image))
 
                         for x_sample in x_samples_ddim:
                             x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
