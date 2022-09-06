@@ -182,15 +182,21 @@ class CrossAttention(nn.Module):
         r1 = torch.zeros(q.shape[0], q.shape[1], v.shape[2], device=q.device)
 
         stats = torch.cuda.memory_stats(q.device)
-        mem_total = torch.cuda.get_device_properties(0).total_memory
         mem_active = stats['active_bytes.all.current']
-        mem_free = mem_total - mem_active
+        mem_reserved = stats['reserved_bytes.all.current']
+        mem_free_cuda, _ = torch.cuda.mem_get_info(torch.cuda.current_device())
+        mem_free_torch = mem_reserved - mem_active
+        mem_free_total = mem_free_cuda + mem_free_torch
 
-        mem_required = q.shape[0] * q.shape[1] * k.shape[1] * 4 * 2.5
+        tensor_size = q.shape[0] * q.shape[1] * k.shape[1] * 4
+        mem_required = tensor_size * 2.5
         steps = 1
 
-        if mem_required > mem_free:
-            steps = 2**(math.ceil(math.log(mem_required / mem_free, 2)))
+        if mem_required > mem_free_total:
+            steps = 2**(math.ceil(math.log(mem_required / mem_free_total, 2)))
+            gb = 1024**3
+            print(f"Expected tensor size:{tensor_size/gb:0.1f}GB, cuda free:{mem_free_cuda/gb:0.1f}GB "
+                  f"torch free:{mem_free_torch/gb:0.1f} total:{mem_free_total/gb:0.1f} steps:{steps}")
 
         slice_size = q.shape[1] // steps if (q.shape[1] % steps) == 0 else q.shape[1]
         for i in range(0, q.shape[1], slice_size):
