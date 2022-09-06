@@ -9,7 +9,6 @@ import sys
 import copy
 import warnings
 import time
-sys.path.insert(0, '.')
 import ldm.dream.readline
 from ldm.dream.pngwriter import PngWriter, PromptFormatter
 from ldm.dream.server import DreamServer, ThreadingDreamServer
