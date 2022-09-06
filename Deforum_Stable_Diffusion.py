@@ -109,19 +109,18 @@ if setup_environment:
 import json
 from IPython import display
 
-import math, os, pathlib, shutil, subprocess, sys, time
+import math, os, pathlib, subprocess, sys, time
 import cv2
 import numpy as np
 import pandas as pd
 import random
 import requests
-import torch, torchvision
+import torch
 import torch.nn as nn
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
 from contextlib import contextmanager, nullcontext
 from einops import rearrange, repeat
-from itertools import islice
 from omegaconf import OmegaConf
 from PIL import Image
 from pytorch_lightning import seed_everything
@@ -143,9 +142,8 @@ sys.path.extend([
 
 import py3d_tools as p3d
 
-from helpers import save_samples, sampler_fn
+from helpers import sampler_fn
 from infer import InferenceHelper
-from k_diffusion import sampling
 from k_diffusion.external import CompVisDenoiser
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
@@ -156,7 +154,7 @@ from midas.transforms import Resize, NormalizeImage, PrepareForNet
 def sanitize(prompt):
     whitelist = set('abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ')
     tmp = ''.join(filter(whitelist.__contains__, prompt))
-    return '_'.join(prompt.split(" "))
+    return tmp.replace(' ', '_')
 
 def anim_frame_warp_2d(prev_img_cv2, args, anim_args, keys, frame_idx):
     angle = keys.angle_series[frame_idx]
@@ -216,7 +214,7 @@ def get_output_folder(output_path, batch_folder):
     os.makedirs(out_path, exist_ok=True)
     return out_path
 
-def load_depth_model(optimize=True):
+def load_depth_model(half_precision=True):
     midas_model = DPTDepthModel(
         path=f"{models_path}/dpt_large-midas-2f21e586.pt",
         backbone="vitl16_384",
@@ -238,10 +236,9 @@ def load_depth_model(optimize=True):
     ])
 
     midas_model.eval()    
-    if optimize:
-        if device == torch.device("cuda"):
-            midas_model = midas_model.to(memory_format=torch.channels_last)
-            midas_model = midas_model.half()
+    if half_precision and device == torch.device("cuda"):
+        midas_model = midas_model.to(memory_format=torch.channels_last)
+        midas_model = midas_model.half()
     midas_model.to(device)
 
     return midas_model, midas_transform
@@ -382,7 +379,6 @@ def sample_to_cv2(sample: torch.Tensor, type=np.uint8) -> np.ndarray:
     sample_int8 = (sample_f32 * 255)
     return sample_int8.astype(type)
 
-@torch.no_grad()
 def predict_depth(prev_img_cv2, adabins_helper, midas_model, midas_transform, anim_args) -> torch.Tensor:
     w, h = prev_img_cv2.shape[1], prev_img_cv2.shape[0]
 
@@ -410,7 +406,8 @@ def predict_depth(prev_img_cv2, adabins_helper, midas_model, midas_transform, an
 
         # predict depth and resize back to original dimensions
         try:
-            _, adabins_depth = adabins_helper.predict_pil(depth_input)
+            with torch.no_grad():
+                _, adabins_depth = adabins_helper.predict_pil(depth_input)
             if resized:
                 adabins_depth = TF.resize(
                     torch.from_numpy(adabins_depth), 
@@ -433,7 +430,8 @@ def predict_depth(prev_img_cv2, adabins_helper, midas_model, midas_transform, an
         if device == torch.device("cuda"):
             sample = sample.to(memory_format=torch.channels_last)  
             sample = sample.half()
-        midas_depth = midas_model.forward(sample)
+        with torch.no_grad():            
+            midas_depth = midas_model.forward(sample)
         midas_depth = torch.nn.functional.interpolate(
             midas_depth.unsqueeze(1),
             size=img_midas.shape[:2],
@@ -504,26 +502,25 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
     seed_everything(args.seed)
     os.makedirs(args.outdir, exist_ok=True)
 
-    if args.sampler == 'plms':
-        sampler = PLMSSampler(model)
-    else:
-        sampler = DDIMSampler(model)
-
-    model_wrap = CompVisDenoiser(model)       
+    sampler = PLMSSampler(model) if args.sampler == 'plms' else DDIMSampler(model)
+    model_wrap = CompVisDenoiser(model)
     batch_size = args.n_samples
     prompt = args.prompt
     assert prompt is not None
     data = [batch_size * [prompt]]
+    precision_scope = autocast if args.precision == "autocast" else nullcontext
 
     init_latent = None
     if args.init_latent is not None:
         init_latent = args.init_latent
     elif args.init_sample is not None:
-        init_latent = model.get_first_stage_encoding(model.encode_first_stage(args.init_sample))
+        with precision_scope("cuda"):
+            init_latent = model.get_first_stage_encoding(model.encode_first_stage(args.init_sample))
     elif args.use_init and args.init_image != None and args.init_image != '':
         init_image = load_img(args.init_image, shape=(args.W, args.H)).to(device)
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
-        init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space        
+        with precision_scope("cuda"):
+            init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space        
 
     if not args.use_init and args.strength > 0:
         print("\nNo init image, but strength > 0. This may give you some strange results.\n")
@@ -561,7 +558,6 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
                             sampler=sampler)    
 
     results = []
-    precision_scope = autocast if args.precision == "autocast" else nullcontext
     with torch.no_grad():
         with precision_scope("cuda"):
             with model.ema_scope():
@@ -717,7 +713,7 @@ def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_prec
 
 if load_on_run_all and ckpt_valid:
     local_config = OmegaConf.load(f"{ckpt_config_path}")
-    model = load_model_from_config(local_config, f"{ckpt_path}",half_precision=half_precision)
+    model = load_model_from_config(local_config, f"{ckpt_path}", half_precision=half_precision)
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
 
@@ -1065,7 +1061,7 @@ def render_animation(args, anim_args):
     if anim_args.animation_mode == '3D' and anim_args.use_depth_warping:
         download_depth_models()
         adabins_helper = InferenceHelper(dataset='nyu', device=device)
-        midas_model, midas_transform = load_depth_model()
+        midas_model, midas_transform = load_depth_model(half_precision)
     else:
         adabins_helper, midas_model, midas_transform = None, None, None
 
