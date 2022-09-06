@@ -4,6 +4,7 @@ services:
     # TODO: exchange this image with an image of CompVis
     image: guestros/stable-diffusion:latest
     build: .
+    platform: linux/amd64
     volumes:
       - ./weights/:/app/weights/
       - ./outputs/:/app/outputs/
