@@ -15,12 +15,12 @@ class Img2Img(Generator):
     
     @torch.no_grad()
     def get_make_image(self,prompt,sampler,steps,cfg_scale,ddim_eta,
-                       conditioning,init_image,strength,step_callback=None,**kwargs):
+                       conditioning,init_image,strength,step_callback=None,threshold=0.0,perlin=0.0,**kwargs):
         """
         Returns a function returning an image derived from the prompt and the initial image
         Return value depends on the seed at the time you call it.
         """
-
+        self.perlin = perlin
         # PLMS sampler not supported yet, so ignore previous sampler
         if not isinstance(sampler,DDIMSampler):
             print(
@@ -67,6 +67,10 @@ class Img2Img(Generator):
         init_latent = self.init_latent
         assert init_latent is not None,'call to get_noise() when init_latent not set'
         if device.type == 'mps':
-            return torch.randn_like(init_latent, device='cpu').to(device)
+            x = torch.randn_like(init_latent, device='cpu').to(device)
         else:
-            return torch.randn_like(init_latent, device=device)
+            x = torch.randn_like(init_latent, device=device)
+        if self.perlin > 0.0:
+            shape = init_latent.shape
+            x = (1-self.perlin)*x + self.perlin*self.get_perlin_noise(shape[3], shape[2])
+        return x

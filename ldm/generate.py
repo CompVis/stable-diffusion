@@ -193,6 +193,8 @@ class Generate:
             log_tokenization=  False,
             with_variations =   None,
             variation_amount =  0.0,
+            threshold       =   0.0,
+            perlin          =   0.0,
             # these are specific to img2img
             init_img       =    None,
             mask           =    None,
@@ -335,7 +337,9 @@ class Generate:
                 height         = height,
                 init_image     = init_image,   # notice that init_image is different from init_img
                 init_mask      = init_mask_image,
-                strength       = strength
+                strength       = strength,
+                threshold      = threshold,
+                perlin         = perlin,
             )
 
             if upscale is not None or gfpgan_strength > 0:

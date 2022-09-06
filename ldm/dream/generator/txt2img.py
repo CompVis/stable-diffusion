@@ -12,12 +12,13 @@ class Txt2Img(Generator):
     
     @torch.no_grad()
     def get_make_image(self,prompt,sampler,steps,cfg_scale,ddim_eta,
-                       conditioning,width,height,step_callback=None,**kwargs):
+                       conditioning,width,height,step_callback=None,threshold=0.0,perlin=0.0,**kwargs):
         """
         Returns a function returning an image derived from the prompt and the initial image
         Return value depends on the seed at the time you call it
         kwargs are 'width' and 'height'
         """
+        self.perlin = perlin
         uc, c   = conditioning
 
         @torch.no_grad()
@@ -37,7 +38,8 @@ class Txt2Img(Generator):
                 unconditional_guidance_scale = cfg_scale,
                 unconditional_conditioning   = uc,
                 eta                          = ddim_eta,
-                img_callback                 = step_callback
+                img_callback                 = step_callback,
+                threshold                    = threshold,
             )
             return self.sample_to_image(samples)
 
@@ -48,14 +50,18 @@ class Txt2Img(Generator):
     def get_noise(self,width,height):
         device         = self.model.device
         if device.type == 'mps':
-            return torch.randn([1,
+            x = torch.randn([1,
                                 self.latent_channels,
                                 height // self.downsampling_factor,
                                 width  // self.downsampling_factor],
                                device='cpu').to(device)
         else:
-            return torch.randn([1,
+            x = torch.randn([1,
                                 self.latent_channels,
                                 height // self.downsampling_factor,
                                 width  // self.downsampling_factor],
                                device=device)
+        print(self.perlin)
+        if self.perlin > 0.0:
+            x = (1-self.perlin)*x + self.perlin*self.get_perlin_noise(width  // self.downsampling_factor, height // self.downsampling_factor)
+        return x
