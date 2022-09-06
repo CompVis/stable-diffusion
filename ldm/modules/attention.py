@@ -188,15 +188,19 @@ class CrossAttention(nn.Module):
         mem_free_torch = mem_reserved - mem_active
         mem_free_total = mem_free_cuda + mem_free_torch
 
+        gb = 1024 ** 3
         tensor_size = q.shape[0] * q.shape[1] * k.shape[1] * 4
         mem_required = tensor_size * 2.5
         steps = 1
 
         if mem_required > mem_free_total:
             steps = 2**(math.ceil(math.log(mem_required / mem_free_total, 2)))
-            # gb = 1024**3
             # print(f"Expected tensor size:{tensor_size/gb:0.1f}GB, cuda free:{mem_free_cuda/gb:0.1f}GB "
             #       f"torch free:{mem_free_torch/gb:0.1f} total:{mem_free_total/gb:0.1f} steps:{steps}")
+
+        if steps > 64:
+            raise RuntimeError(f'Not enough memory, use lower resolution. '
+                               f'Need: {mem_required/64/gb:0.1f}GB free, Have:{mem_free_total/gb:0.1f}GB free')
 
         slice_size = q.shape[1] // steps if (q.shape[1] % steps) == 0 else q.shape[1]
         for i in range(0, q.shape[1], slice_size):
