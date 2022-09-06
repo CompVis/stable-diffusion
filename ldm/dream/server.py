@@ -11,6 +11,7 @@ class CanceledException(Exception):
 
 class DreamServer(BaseHTTPRequestHandler):
     model = None
+    outdir = None
     canceled = Event()
 
     def do_GET(self):
@@ -91,7 +92,7 @@ class DreamServer(BaseHTTPRequestHandler):
 
         images_generated = 0    # helps keep track of when upscaling is started
         images_upscaled = 0     # helps keep track of when upscaling is completed
-        pngwriter = PngWriter("./outputs/img-samples/")
+        pngwriter = PngWriter(self.outdir)
 
         prefix = pngwriter.unique_prefix()
         # if upscaling is requested, then this will be called twice, once when
@@ -104,7 +105,7 @@ class DreamServer(BaseHTTPRequestHandler):
 
             # Append post_data to log, but only once!
             if not upscaled:
-                with open("./outputs/img-samples/dream_web_log.txt", "a") as log:
+                with open(os.path.join(self.outdir, "dream_web_log.txt"), "a") as log:
                     log.write(f"{path}: {json.dumps(config)}\n")
 
                 self.wfile.write(bytes(json.dumps(
@@ -132,7 +133,7 @@ class DreamServer(BaseHTTPRequestHandler):
                         {'event':action,'processed_file_cnt':f'{x}/{iterations}'}
                     ) + '\n',"utf-8"))
 
-        step_writer = PngWriter('./outputs/intermediates/')
+        step_writer = PngWriter(os.path.join(self.outdir, "intermediates"))
         step_index = 1
         def image_progress(sample, step):
             if self.canceled.is_set():
