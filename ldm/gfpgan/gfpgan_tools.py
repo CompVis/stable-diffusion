@@ -13,8 +13,8 @@ opt = arg_parser.parse_args()
 model_path = os.path.join(opt.gfpgan_dir, opt.gfpgan_model_path)
 gfpgan_model_exists = os.path.isfile(model_path)
 
-def _run_gfpgan(image, strength, prompt, seed, upsampler_scale=4):
-    print(f'>> GFPGAN - Restoring Faces: {prompt} : seed:{seed}')
+def run_gfpgan(image, strength, seed, upsampler_scale=4):
+    print(f'>> GFPGAN - Restoring Faces for image seed:{seed}')
     gfpgan = None
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=DeprecationWarning)
@@ -127,9 +127,9 @@ def _load_gfpgan_bg_upsampler(bg_upsampler, upsampler_scale, bg_tile=400):
     return bg_upsampler
 
 
-def real_esrgan_upscale(image, strength, upsampler_scale, prompt, seed):
+def real_esrgan_upscale(image, strength, upsampler_scale, seed):
     print(
-        f'>> Real-ESRGAN Upscaling: {prompt} : seed:{seed} : scale:{upsampler_scale}x'
+        f'>> Real-ESRGAN Upscaling seed:{seed} : scale:{upsampler_scale}x'
     )
 
     with warnings.catch_warnings():

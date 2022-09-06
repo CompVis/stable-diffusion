@@ -171,6 +171,7 @@ class DDIMSampler(object):
         )
         return samples, intermediates
 
+    # This routine gets called from img2img
     @torch.no_grad()
     def ddim_sampling(
         self,
@@ -270,6 +271,7 @@ class DDIMSampler(object):
 
         return img, intermediates
 
+    # This routine gets called from ddim_sampling() and decode()
     @torch.no_grad()
     def p_sample_ddim(
         self,
@@ -372,14 +374,16 @@ class DDIMSampler(object):
 
     @torch.no_grad()
     def decode(
-        self,
-        x_latent,
-        cond,
-        t_start,
-        img_callback=None,
-        unconditional_guidance_scale=1.0,
-        unconditional_conditioning=None,
-        use_original_steps=False,
+            self,
+            x_latent,
+            cond,
+            t_start,
+            img_callback=None,
+            unconditional_guidance_scale=1.0,
+            unconditional_conditioning=None,
+            use_original_steps=False,
+            init_latent       = None,
+            mask              = None,
     ):
 
         timesteps = (
@@ -395,6 +399,8 @@ class DDIMSampler(object):
 
         iterator = tqdm(time_range, desc='Decoding image', total=total_steps)
         x_dec = x_latent
+        x0    = init_latent
+
         for i, step in enumerate(iterator):
             index = total_steps - i - 1
             ts = torch.full(
@@ -403,6 +409,14 @@ class DDIMSampler(object):
                 device=x_latent.device,
                 dtype=torch.long,
             )
+
+            if mask is not None:
+                assert x0 is not None
+                xdec_orig = self.model.q_sample(
+                    x0, ts
+                )  # TODO: deterministic forward pass?
+                x_dec = xdec_orig * mask + (1.0 - mask) * x_dec
+
             x_dec, _ = self.p_sample_ddim(
                 x_dec,
                 cond,
@@ -412,6 +426,7 @@ class DDIMSampler(object):
                 unconditional_guidance_scale=unconditional_guidance_scale,
                 unconditional_conditioning=unconditional_conditioning,
             )
+
             if img_callback:
                 img_callback(x_dec, i)
 

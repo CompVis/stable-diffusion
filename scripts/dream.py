@@ -40,7 +40,7 @@ def main():
     print('* Initializing, be patient...\n')
     sys.path.append('.')
     from pytorch_lightning import logging
-    from ldm.simplet2i import T2I
+    from ldm.generate import Generate
 
     # these two lines prevent a horrible warning message from appearing
     # when the frozen CLIP tokenizer is imported
@@ -52,19 +52,18 @@ def main():
     # defaults passed on the command line.
     # additional parameters will be added (or overriden) during
     # the user input loop
-    t2i = T2I(
-        width=width,
-        height=height,
-        sampler_name=opt.sampler_name,
-        weights=weights,
-        full_precision=opt.full_precision,
-        config=config,
-        grid  = opt.grid,
+    t2i = Generate(
+        width          = width,
+        height         = height,
+        sampler_name   = opt.sampler_name,
+        weights        = weights,
+        full_precision = opt.full_precision,
+        config         = config,
+        grid           = opt.grid,
         # this is solely for recreating the prompt
-        latent_diffusion_weights=opt.laion400m,
-        seamless=opt.seamless,
-        embedding_path=opt.embedding_path,
-        device_type=opt.device
+        seamless       = opt.seamless,
+        embedding_path = opt.embedding_path,
+        device_type    = opt.device
     )
 
     # make sure the output directory exists
@@ -566,6 +565,17 @@ def create_cmd_parser():
         '--init_img',
         type=str,
         help='Path to input image for img2img mode (supersedes width and height)',
+    )
+    parser.add_argument(
+        '-M',
+        '--mask',
+        type=str,
+        help='Path to inpainting mask; transparent areas will be painted over',
+    )
+    parser.add_argument(
+        '--invert_mask',
+        action='store_true',
+        help='Invert the inpainting mask; opaque areas will be painted over',
     )
     parser.add_argument(
         '-T',

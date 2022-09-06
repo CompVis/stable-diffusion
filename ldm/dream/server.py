@@ -144,7 +144,7 @@ class DreamServer(BaseHTTPRequestHandler):
             # and don't bother with the last one, since it'll render anyway
             nonlocal step_index
             if progress_images and step % 5 == 0 and step < steps - 1:
-                image = self.model._sample_to_image(sample)
+                image = self.model.sample_to_image(sample)
                 name = f'{prefix}.{seed}.{step_index}.png'
                 metadata = f'{prompt} -S{seed} [intermediate]'
                 path = step_writer.save_image_and_prompt_to_png(image, metadata, name)
