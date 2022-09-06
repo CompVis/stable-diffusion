@@ -1,8 +1,10 @@
 import argparse, os, sys, glob
 import random
 import shutil
+from tkinter import E
 import torch
 from torch import nn
+from torch import Tensor
 import numpy as np
 from omegaconf import OmegaConf
 import PIL
@@ -11,6 +13,7 @@ from PIL.PngImagePlugin import PngInfo
 from einops import rearrange, repeat
 from tqdm import tqdm, trange
 from itertools import islice
+from typing import Iterable
 import time
 from pytorch_lightning import seed_everything
 from torch import autocast
@@ -18,10 +21,12 @@ from torch import autocast
 from contextlib import contextmanager, nullcontext
 import subprocess
 
-import k_diffusion as K
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
+
+from k_diffusion.sampling import sample_lms, sample_dpm_2, sample_dpm_2_ancestral, sample_euler, sample_euler_ancestral, sample_heun, get_sigmas_karras, append_zero
+from k_diffusion.external import CompVisDenoiser
 
 from types import SimpleNamespace
 import json5 as json
@@ -33,6 +38,28 @@ try:
     logging.set_verbosity_error()
 except:
     pass
+
+# samplers from the Karras et al paper
+KARRAS_SAMPLERS = { 'k_heun', 'k_euler', 'k_dpm_2' }
+NON_KARRAS_K_DIFF_SAMPLERS = { 'k_lms', 'k_dpm_2_ancestral', 'k_euler_ancestral' }
+K_DIFF_SAMPLERS = { *KARRAS_SAMPLERS, *NON_KARRAS_K_DIFF_SAMPLERS }
+NOT_K_DIFF_SAMPLERS = { 'ddim', 'plms' }
+VALID_SAMPLERS = { *K_DIFF_SAMPLERS, *NOT_K_DIFF_SAMPLERS }
+
+class KCFGDenoiser(nn.Module):
+    inner_model: CompVisDenoiser
+    def __init__(self, model: CompVisDenoiser):
+        super().__init__()
+        self.inner_model = model
+
+    def forward(self, x: Tensor, sigma: Tensor, uncond: Tensor, conditions: Iterable[Tensor], cond_scale: float) -> Tensor:
+        x_in = torch.cat([x] * 2)
+        sigma_in = torch.cat([sigma] * 2)
+        cond_in = torch.cat([uncond, *conditions])
+        conditions_len = len(conditions)
+        uncond, *conditions = self.inner_model(x_in, sigma_in, cond=cond_in).chunk(1 + conditions_len)
+        cond = torch.sum(torch.stack(conditions), dim=0) / conditions_len
+        return uncond + (cond - uncond) * cond_scale
 
 def chunk(it, size):
     it = iter(it)
@@ -90,7 +117,6 @@ def thats_numberwang(dir, wildcard):
                 filenum = int(filenum)
             except:
                 print(f'Improperly named file "{file}" in output directory')
-                print(f'Tried to turn "{filenum}" into numberwang, but "{filenum}" is not numberwang!')
                 print(f'Please make sure output filenames use the name-1234.png format')
                 quit()
             filenums.append(filenum)
@@ -149,36 +175,47 @@ def do_run(device, model, opt):
     grid_count = thats_numberwang(outpath, opt.batch_name)
 
     progress_image = "progress.jpg" if opt.filetype == ".jpg" else "progress.png" 
-    sampler = DDIMSampler(model, device)
+   
+    if opt.method in K_DIFF_SAMPLERS:
+        model_k_wrapped = CompVisDenoiser(model, quantize=True)
+        model_k_guidance = KCFGDenoiser(model_k_wrapped)
+    elif opt.method in NOT_K_DIFF_SAMPLERS:
+        if opt.method == 'plms':
+            sampler = PLMSSampler(model)
+        else:
+            sampler = DDIMSampler(model)
 
+    def img_to_latent(path: str) -> Tensor:
+        assert os.path.isfile(path)
+        if device.type == "cuda":
+            image = load_img(path).to(device).half()
+        else:
+            image = load_img(path).to(device)
+        image = repeat(image, '1 ... -> b ...', b=batch_size)
+        latent: Tensor = model.get_first_stage_encoding(model.encode_first_stage(image))  # move to latent space
+        return latent
+    
     if opt.init_image is not None:
-        assert os.path.isfile(opt.init_image)
-        init_image = load_img(opt.init_image).to(device).half() # potentially needs to not be .half on mps and cpu modes
-        init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
-        init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
-        sampler.make_schedule(ddim_num_steps=opt.ddim_steps, ddim_eta=opt.ddim_eta, verbose=False)
-
-        # strength is like skip_steps I think
+        init_latent = img_to_latent(opt.init_image)
         assert 0. <= opt.strength <= 1., 'can only work with strength in [0.0, 1.0]'
         t_enc = int(opt.strength * opt.ddim_steps)
-        #print(f"target t_enc is {t_enc} steps")
     else:
-        model_wrap = K.external.CompVisDenoiser(model)
-        sigma_min, sigma_max = model_wrap.sigmas[0].item(), model_wrap.sigmas[-1].item()
-        init_image = None
+        init_latent = None
 
-    start_code = None
-    
+    shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
+
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
     # apple silicon support
     if device.type == 'mps':
         precision_scope = nullcontext
 
+    rand_size = [batch_size, *shape]
+    og_start_code = torch.randn(rand_size, device='cpu').to(device) if device.type == 'mps' else torch.randn(rand_size, device=device)
+    start_code = og_start_code
+
     with torch.no_grad():
         with precision_scope(device.type):
             with model.ema_scope():
-                tic = time.time()
-                all_samples = list()
                 for n in trange(opt.n_iter, desc="Sampling"):
                     for prompts in tqdm(data, desc="data"):
                         uc = None
@@ -201,35 +238,17 @@ def do_run(device, model, opt):
 
                         c = model.get_learned_conditioning(prompts)
 
-                        if init_image is None:
-                            shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
-                            if opt.method != "ddim":
-                                sigmas = model_wrap.get_sigmas(opt.ddim_steps)
-                                if opt.variance == 0.0 or n == 0:
-                                    # use regular starting noise
-                                    x = torch.randn([batch_size, *shape], device=device) * sigmas[0]
-                                else:
-                                    # add a little extra random noise to get varying output with same seed
-                                    torch.manual_seed(opt.seed)
-                                    base_x = torch.randn([batch_size, *shape], device=device) * sigmas[0]
-                                    torch.manual_seed(opt.variance_seed + n)
-                                    target_x = torch.randn([batch_size, *shape], device=device) * sigmas[0]
-                                    x = slerp(device, max(0.0, min(1.0, opt.variance)), base_x, target_x)
-                                model_wrap_cfg = CFGDenoiser(model_wrap)
-                                extra_args = {'cond': c, 'uncond': uc, 'cond_scale': opt.scale}
-                                if opt.method == "k_euler":
-                                    samples_ddim = K.sampling.sample_euler(model_wrap_cfg, x, sigmas, extra_args=extra_args)
-                                elif opt.method == "k_euler_ancestral":
-                                    samples_ddim = K.sampling.sample_euler_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args)
-                                elif opt.method == "k_heun":
-                                    samples_ddim = K.sampling.sample_heun(model_wrap_cfg, x, sigmas, extra_args=extra_args)
-                                elif opt.method == "k_dpm_2":
-                                    samples_ddim = K.sampling.sample_dpm_2(model_wrap_cfg, x, sigmas, extra_args=extra_args)
-                                elif opt.method == "k_dpm_2_ancestral":
-                                    samples_ddim = K.sampling.sample_dpm_2_ancestral(model_wrap_cfg, x, sigmas, extra_args=extra_args)
-                                else: # k_lms
-                                    samples_ddim = K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args)
-                            else:
+                        if opt.variance != 0.0 and n != 0:
+                            # add a little extra random noise to get varying output with same seed
+                            base_x = og_start_code # torch.randn(rand_size, device=device) * sigmas[0]
+                            torch.manual_seed(opt.variance_seed + n)
+                            target_x = torch.randn(rand_size, device='cpu').to(device) if device.type == 'mps' else torch.randn(rand_size, device=device)
+                            start_code = slerp(device, max(0.0, min(1.0, opt.variance)), base_x, target_x)
+
+                        karras_noise = False
+
+                        if opt.method in NOT_K_DIFF_SAMPLERS:
+                            if init_latent is None:
                                 samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
                                                                 conditioning=c,
                                                                 batch_size=batch_size,
@@ -239,13 +258,85 @@ def do_run(device, model, opt):
                                                                 unconditional_conditioning=uc,
                                                                 eta=opt.ddim_eta,
                                                                 x_T=start_code)
+                                sigmas = None
+                            else:
+                                # encode (scaled latent)
+                                z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
+                                # decode it
+                                samples_ddim = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
+                                                        unconditional_conditioning=uc,)
 
                         else:
-                            # encode (scaled latent)
-                            z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
-                            # decode it
-                            samples_ddim = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
-                                                    unconditional_conditioning=uc,)
+                            if opt.method == 'k_dpm_2':
+                                sampling_fn = sample_dpm_2
+                                karras_noise = True
+                            elif opt.method == 'k_dpm_2_ancestral':
+                                sampling_fn = sample_dpm_2_ancestral
+                            elif opt.method == 'k_heun':
+                                sampling_fn = sample_heun
+                                karras_noise = True
+                            elif opt.method == 'k_euler':
+                                sampling_fn = sample_euler
+                                karras_noise = True
+                            elif opt.method == 'k_euler_ancestral':
+                                sampling_fn = sample_euler_ancestral
+                            else:
+                                sampling_fn = sample_lms
+
+                            noise_schedule_sampler_args = {}
+
+                            if karras_noise:
+                                end_karras_ramp_early = False # this is only needed for really low step counts, not going to bother with it right now
+                                def get_premature_sigma_min(
+                                    steps: int,
+                                    sigma_max: float,
+                                    sigma_min_nominal: float,
+                                    rho: float
+                                ) -> float:
+                                    min_inv_rho = sigma_min_nominal ** (1 / rho)
+                                    max_inv_rho = sigma_max ** (1 / rho)
+                                    ramp = (steps-2) * 1/(steps-1)
+                                    sigma_min = (max_inv_rho + ramp * (min_inv_rho - max_inv_rho)) ** rho
+                                    return sigma_min
+
+                                rho = 7.
+                                sigma_max=model_k_wrapped.sigmas[-1].item()
+                                sigma_min_nominal=model_k_wrapped.sigmas[0].item()
+                                premature_sigma_min = get_premature_sigma_min(
+                                    steps=opt.ddim_steps+1,
+                                    sigma_max=sigma_max,
+                                    sigma_min_nominal=sigma_min_nominal,
+                                    rho=rho
+                                )
+                                sigmas = get_sigmas_karras(
+                                    n=opt.ddim_steps,
+                                    sigma_min=premature_sigma_min if end_karras_ramp_early else sigma_min_nominal,
+                                    sigma_max=sigma_max,
+                                    rho=rho,
+                                    device=device,
+                                )
+
+                            else:
+                                sigmas = model_k_wrapped.get_sigmas(opt.ddim_steps)
+                            
+                            if init_latent is not None:
+                                sigmas = sigmas[len(sigmas) - t_enc - 1 :]
+
+                            x = start_code * sigmas[0] # for GPU draw
+                            if init_latent is not None:
+                                x = init_latent + x
+
+                            extra_args = {
+                                'conditions': (c,),
+                                'uncond': uc,
+                                'cond_scale': opt.scale,
+                            }
+                            samples_ddim = sampling_fn(
+                                model_k_guidance,
+                                x,
+                                sigmas,
+                                extra_args=extra_args,
+                                **noise_schedule_sampler_args)
 
 
                         x_samples_ddim = model.decode_first_stage(samples_ddim)
@@ -259,6 +350,7 @@ def do_run(device, model, opt):
                             metadata.add_text("scale", str(opt.scale))
                             metadata.add_text("ETA", str(opt.ddim_eta))
                             metadata.add_text("method", str(opt.method))
+                            metadata.add_text("init_image", str(opt.init_image))
 
                         for x_sample in x_samples_ddim:
                             x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
