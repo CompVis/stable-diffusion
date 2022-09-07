@@ -131,7 +131,7 @@ class ResnetBlock(nn.Module):
         del h3
 
         if temb is not None:
-            h4 += self.temb_proj(nonlinearity(temb))[:,:,None,None]
+            h4 = h4 + self.temb_proj(nonlinearity(temb))[:,:,None,None]
 
         h5 = self.norm2(h4)
         del h4
@@ -151,8 +151,7 @@ class ResnetBlock(nn.Module):
             else:
                 x = self.nin_shortcut(x)
 
-        h8 += x
-        return h8
+        return x + h8
 
 
 class LinAttnBlock(LinearAttention):
