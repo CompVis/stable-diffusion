@@ -1,6 +1,6 @@
 # Duckrabbit
 
-Video output for Stable Diffusion
+Experimental video output for Stable Diffusion using interpolation in concept space (between two prompts) or interpolation of random noise (between two noise seeds).
 
 
 # Stable Diffusion
