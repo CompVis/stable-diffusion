@@ -4,7 +4,7 @@
   <img height="300" src="https://github.com/lwneal/duckrabbit/raw/main/assets/duckrabbit.gif">
 </p>
 
-Experimental video output for Stable Diffusion using interpolation in concept space (between two prompts) or interpolation of random noise (between two noise seeds).
+Experimental video output for Stable Diffusion using interpolation in concept space (between two prompts) or interpolation of random noise (between two noise seeds) or both. Replaces `--prompt` with `--prompt1` and `--prompt2` and replaces `--seed` with `--seed1` and `--seed2`.
 
 
 # Stable Diffusion
