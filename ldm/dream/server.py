@@ -129,6 +129,7 @@ class DreamServer(BaseHTTPRequestHandler):
             name = f'{prefix}.{seed}.png'
             path = pngwriter.save_image_and_prompt_to_png(image, f'{prompt} -S{seed}', name)
 
+            config['seed'] = seed
             # Append post_data to log, but only once!
             if not upscaled:
                 with open(os.path.join(self.outdir, "dream_web_log.txt"), "a") as log:
