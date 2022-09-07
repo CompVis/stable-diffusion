@@ -25,7 +25,7 @@ class CFGDenoiser(nn.Module):
         self.inner_model = model
         self.threshold = threshold
         self.warmup_max = warmup
-        self.warmup = 0
+        self.warmup = max(warmup / 10, 1)
 
     def forward(self, x, sigma, uncond, cond, cond_scale):
         x_in = torch.cat([x] * 2)
