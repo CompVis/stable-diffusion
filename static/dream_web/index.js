@@ -154,6 +154,12 @@ async function generateSubmit(form) {
 }
 
 window.onload = () => {
+    document.querySelector("#prompt").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        const form = e.target.form;
+        generateSubmit(form);
+      }
+    });
     document.querySelector("#generate-form").addEventListener('submit', (e) => {
         e.preventDefault();
         const form = e.target;
@@ -178,6 +184,12 @@ window.onload = () => {
     document.querySelector('#cancel-button').addEventListener('click', () => {
         fetch('/cancel').catch(e => {
             console.error(e);
+        });
+    });
+    document.documentElement.addEventListener('keydown', (e) => {
+      if (e.key === "Escape")
+        fetch('/cancel').catch(err => {
+          console.error(err);
         });
     });
 

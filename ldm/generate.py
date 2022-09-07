@@ -505,12 +505,22 @@ class Generate:
 
     def _load_model_from_config(self, config, ckpt):
         print(f'>> Loading model from {ckpt}')
+
+        # for usage statistics
+        device_type = choose_torch_device()
+        if device_type == 'cuda':
+            torch.cuda.reset_peak_memory_stats() 
+        tic = time.time()
+
+        # this does the work
         pl_sd = torch.load(ckpt, map_location='cpu')
         sd = pl_sd['state_dict']
         model = instantiate_from_config(config.model)
         m, u = model.load_state_dict(sd, strict=False)
         model.to(self.device)
         model.eval()
+
+        
         if self.full_precision:
             print(
                 '>> Using slower but more accurate full-precision math (--full_precision)'
@@ -520,6 +530,20 @@ class Generate:
                 '>> Using half precision math. Call with --full_precision to use more accurate but VRAM-intensive full precision.'
             )
             model.half()
+
+        # usage statistics
+        toc = time.time()
+        print(
+            f'>> Model loaded in', '%4.2fs' % (toc - tic)
+        )
+        if device_type == 'cuda':
+            print(
+                '>> Max VRAM used to load the model:',
+                '%4.2fG' % (torch.cuda.max_memory_allocated() / 1e9),
+                '\n>> Current VRAM usage:'
+                '%4.2fG' % (torch.cuda.memory_allocated() / 1e9),
+            )
+
         return model
 
     def _load_img(self, path, width, height, fit=False):

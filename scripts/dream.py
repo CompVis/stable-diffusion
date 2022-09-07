@@ -91,11 +91,7 @@ def main():
         print(">> changed to seamless tiling mode")
 
     # preload the model
-    tic = time.time()
     t2i.load_model()
-    print(
-        f'>> model loaded in', '%4.2fs' % (time.time() - tic)
-    )
 
     if not infile:
         print(
