@@ -188,7 +188,6 @@ class AttnBlock(nn.Module):
                                         stride=1,
                                         padding=0)
 
-
     def forward(self, x):
         h_ = x
         h_ = self.norm(h_)
@@ -229,17 +228,18 @@ class AttnBlock(nn.Module):
             end = i + slice_size
 
             w1 = torch.bmm(q[:, i:end], k)     # b,hw,hw    w[b,i,j]=sum_c q[b,i,c]k[b,c,j]
-            w1 *= (int(c)**(-0.5))
-            w2 = torch.nn.functional.softmax(w1, dim=2)
+            w2 = w1 * (int(c)**(-0.5))
             del w1
+            w3 = torch.nn.functional.softmax(w2, dim=2)
+            del w2
 
             # attend to values
             v1 = v.reshape(b, c, h*w)
-            w3 = w2.permute(0, 2, 1)   # b,hw,hw (first hw of k, second of q)
-            del w2
+            w4 = w3.permute(0, 2, 1)   # b,hw,hw (first hw of k, second of q)
+            del w3
 
-            h_[:, :, i:end] = torch.bmm(v1, w3)     # b, c,hw (hw of q) h_[b,c,j] = sum_i v[b,c,i] w_[b,i,j]
-            del v1, w3
+            h_[:, :, i:end] = torch.bmm(v1, w4)     # b, c,hw (hw of q) h_[b,c,j] = sum_i v[b,c,i] w_[b,i,j]
+            del v1, w4
 
         h2 = h_.reshape(b, c, h, w)
         del h_

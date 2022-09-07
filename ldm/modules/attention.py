@@ -1,3 +1,4 @@
+import gc
 from inspect import isfunction
 import math
 import torch
@@ -206,8 +207,7 @@ class CrossAttention(nn.Module):
         slice_size = q.shape[1] // steps if (q.shape[1] % steps) == 0 else q.shape[1]
         for i in range(0, q.shape[1], slice_size):
             end = i + slice_size
-            s1 = einsum('b i d, b j d -> b i j', q[:, i:end], k)
-            s1 *= self.scale
+            s1 = einsum('b i d, b j d -> b i j', q[:, i:end], k) * self.scale
 
             s2 = s1.softmax(dim=-1)
             del s1
