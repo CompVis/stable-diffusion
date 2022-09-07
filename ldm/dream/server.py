@@ -75,8 +75,8 @@ class DreamServer(BaseHTTPRequestHandler):
         seamless = 'seamless' in post_data
         cfgscale = float(post_data['cfgscale'])
         sampler_name  = post_data['sampler']
-        variation_amount = float(post_data['variation_amount'])
-        with_variations = post_data['with_variations']
+        variation_amount = float(post_data['variation_amount']) if int(post_data['seed']) == -1 else 0.0
+        with_variations = post_data['with_variations'] if int(post_data['seed']) == -1 else ''
         gfpgan_strength = float(post_data['gfpgan_strength']) if gfpgan_model_exists else 0
         upscale_level    = post_data['upscale_level']
         upscale_strength = post_data['upscale_strength']
@@ -129,7 +129,8 @@ class DreamServer(BaseHTTPRequestHandler):
             name = f'{prefix}.{seed}.png'
             path = pngwriter.save_image_and_prompt_to_png(image, f'{prompt} -S{seed}', name)
 
-            config['seed'] = seed
+            if int(config['seed']) == -1:
+                config['seed'] = seed
             # Append post_data to log, but only once!
             if not upscaled:
                 with open(os.path.join(self.outdir, "dream_web_log.txt"), "a") as log:
