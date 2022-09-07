@@ -17,17 +17,23 @@ class LocalBase(Dataset):
                  size=512,
                  interpolation="bicubic",
                  flip_p=0.5,
+                 crop=True,
                  shuffle=False,
+                 mode='train',
+                 val_split=64,
                  ):
         super().__init__()
 
         self.shuffle=shuffle
+        self.crop = crop
 
         print('Fetching data.')
 
         ext = ['png', 'jpg', 'jpeg', 'bmp']
         self.image_files = []
         [self.image_files.extend(glob.glob(f'{data_root}/img/' + '*.' + e)) for e in ext]
+        if mode == 'val':
+            self.image_files = self.image_files[:len(self.image_files)//val_split]
 
         print('Constructing image-caption map.')
 
@@ -93,13 +99,14 @@ class LocalBase(Dataset):
         example_ret['caption'] = caption
 
         # default to score-sde preprocessing
-        img = np.array(image).astype(np.uint8)
-        crop = min(img.shape[0], img.shape[1])
-        h, w, = img.shape[0], img.shape[1]
-        img = img[(h - crop) // 2:(h + crop) // 2,
-              (w - crop) // 2:(w + crop) // 2]
-
-        image = Image.fromarray(img)
+        if self.crop:
+            img = np.array(image).astype(np.uint8)
+            crop = min(img.shape[0], img.shape[1])
+            h, w, = img.shape[0], img.shape[1]
+            img = img[(h - crop) // 2:(h + crop) // 2,
+                (w - crop) // 2:(w + crop) // 2]
+            image = Image.fromarray(img)
+        
         if self.size is not None:
             image = image.resize((self.size, self.size), resample=self.interpolation)
 
@@ -119,20 +126,26 @@ class LocalBase(Dataset):
             return self.skip_sample(i)
 
         # default to score-sde preprocessing
-        img = np.array(image).astype(np.uint8)
-        crop = min(img.shape[0], img.shape[1])
-        h, w, = img.shape[0], img.shape[1]
-        img = img[(h - crop) // 2:(h + crop) // 2,
-              (w - crop) // 2:(w + crop) // 2]
-
-        image = Image.fromarray(img)
+        if self.crop:
+            img = np.array(image).astype(np.uint8)
+            crop = min(img.shape[0], img.shape[1])
+            h, w, = img.shape[0], img.shape[1]
+            img = img[(h - crop) // 2:(h + crop) // 2,
+                (w - crop) // 2:(w + crop) // 2]
+            image = Image.fromarray(img)
+        
         if self.size is not None:
             image = image.resize((self.size, self.size), resample=self.interpolation)
 
         image = self.flip(image)
         return image
+
 """
-    example = dataset.__getitem__(137)
+if __name__ == "__main__":
+    dataset = LocalBase('./danbooru-aesthetic', size=512, crop=False, mode='val')
+    print(dataset.__len__())
+    example = dataset.__getitem__(0)
+    print(dataset.hashes[0])
     print(example['caption'])
     image = example['image']
     image = ((image + 1) * 127.5).astype(np.uint8)
@@ -140,15 +153,8 @@ class LocalBase(Dataset):
     image.save('example.png')
 """
 
-from tqdm import tqdm
-
-# touhou aesthetic
-# lewd aesthetic
-# portrait aesthetic
-# scenery aesthetic
-# touhou lewd aesthetic
-# touhou-portrait-aesthetic
 """
+from tqdm import tqdm
 if __name__ == "__main__":
     dataset = LocalBase('../glide-finetune/touhou-portrait-aesthetic', size=512)
     for i in tqdm(range(dataset.__len__())):
