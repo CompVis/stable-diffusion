@@ -1,6 +1,8 @@
 # Duckrabbit
 
-![a rabbit that looks like a duck that looks like](assets/duckrabbit.gif)
+<p align="center">
+  <img height="300" src="https://github.com/lwneal/duckrabbit/raw/main/assets/duckrabbit.gif">
+</p>
 
 Experimental video output for Stable Diffusion using interpolation in concept space (between two prompts) or interpolation of random noise (between two noise seeds).
 
