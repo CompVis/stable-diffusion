@@ -11,6 +11,7 @@ from ldm.models.diffusion.ddim     import DDIMSampler
 
 class Inpaint(Img2Img):
     def __init__(self,model):
+        self.init_latent = None
         super().__init__(model)
     
     @torch.no_grad()
