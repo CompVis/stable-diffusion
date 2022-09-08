@@ -11,9 +11,15 @@ function appendOutput(src, seed, config) {
     let outputNode = document.createElement("figure");
     let altText = seed.toString() + " | " + config.prompt;
 
+    // img needs width and height for lazy loading to work
     const figureContents = `
         <a href="${src}" target="_blank">
-            <img src="${src}" alt="${altText}" title="${altText}">
+            <img src="${src}"
+                 alt="${altText}"
+                 title="${altText}"
+                 loading="lazy"
+                 width="256"
+                 height="256">
         </a>
         <figcaption>${seed}</figcaption>
     `;
@@ -117,7 +123,6 @@ async function generateSubmit(form) {
 
                 if (data.event === 'result') {
                     noOutputs = false;
-                    document.querySelector("#no-results-message")?.remove();
                     appendOutput(data.url, data.seed, data.config);
                     progressEle.setAttribute('value', 0);
                     progressEle.setAttribute('max', totalSteps);
@@ -153,7 +158,19 @@ async function generateSubmit(form) {
     document.querySelector("#prompt").value = `Generating: "${prompt}"`;
 }
 
-window.onload = () => {
+async function fetchRunLog() {
+    try {
+        let response = await fetch('/run_log.json')
+        const data = await response.json();
+        for(let item of data.run_log) {
+            appendOutput(item.url, item.seed, item);
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+window.onload = async () => {
     document.querySelector("#prompt").addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         const form = e.target.form;
@@ -196,4 +213,5 @@ window.onload = () => {
     if (!config.gfpgan_model_exists) {
         document.querySelector("#gfpgan").style.display = 'none';
     }
+    await fetchRunLog()
 };

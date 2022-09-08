@@ -31,6 +31,23 @@ class DreamServer(BaseHTTPRequestHandler):
                 'gfpgan_model_exists': gfpgan_model_exists
             }
             self.wfile.write(bytes("let config = " + json.dumps(config) + ";\n", "utf-8"))
+        elif self.path == "/run_log.json":
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            output = []
+            
+            log_file = os.path.join(self.outdir, "dream_web_log.txt")
+            if os.path.exists(log_file):
+                with open(log_file, "r") as log:
+                    for line in log:
+                        url, config = line.split(": {", maxsplit=1)
+                        config = json.loads("{" + config)
+                        config["url"] = url.lstrip(".")
+                        if os.path.exists(url):
+                            output.append(config)
+
+            self.wfile.write(bytes(json.dumps({"run_log": output}), "utf-8"))
         elif self.path == "/cancel":
             self.canceled.set()
             self.send_response(200)
@@ -82,9 +99,9 @@ class DreamServer(BaseHTTPRequestHandler):
         upscale_strength = post_data['upscale_strength']
         upscale = [int(upscale_level),float(upscale_strength)] if upscale_level != '' else None
         progress_images = 'progress_images' in post_data
-        seed = self.model.seed if int(post_data['seed']) == -1 else int(post_data['seed'])
         threshold = float(post_data['threshold'])
         perlin = float(post_data['perlin'])
+        seed = None if int(post_data['seed']) == -1 else int(post_data['seed'])
 
         if with_variations != '':
             parts = []

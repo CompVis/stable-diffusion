@@ -86,8 +86,8 @@ header h1 {
     cursor: pointer;
 }
 #results img {
-    height: 30vh;
     border-radius: 5px;
+    object-fit: cover;
 }
 #fieldset-config {
     line-height:2em;
@@ -136,5 +136,9 @@ label {
 }
 #progress-section {
     background-color: #F5F5F5;
+}
+
+#no-results-message:not(:only-child) {
+    display: none;
 }
 
