@@ -24,7 +24,7 @@ def convert_tags_to_humantxt(input):
     tars = tars.replace('6girls', 'six girls')
 
     #Almost forgot about boys tags... I wonder if theres also for other entities?
-    tars = tars.replace('1boy', 'one girl')
+    tars = tars.replace('1boy', 'one boy')
     tars = tars.replace('2boys', 'two boys')
     tars = tars.replace('3boys', 'three boys')
     tars = tars.replace('4boys', 'four boys')
