@@ -324,7 +324,7 @@ class T2I:
                         self.model.encode_first_stage(init_image)
                     ) # move to latent space
 
-                print(f' DEBUG: seed at make_image time ={seed}')
+                #print(f' DEBUG: seed at make_image time ={seed}')
                 make_image = self._img2img(
                     prompt,
                     steps=steps,
@@ -378,7 +378,7 @@ class T2I:
                         if self.device.type == 'mps':
                             x_T = self._get_noise(init_latent,width,height)
                         # make_image will do the equivalent of get_noise itself
-                    print(f' DEBUG: seed at make_image() invocation time ={seed}')
+                    #print(f' DEBUG: seed at make_image() invocation time ={seed}')
                     image = make_image(x_T)
                     results.append([image, seed])
                     if image_callback is not None:
