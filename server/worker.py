@@ -31,7 +31,7 @@ def create_image(prompt, args):
             scale = args.get('scale', 7.5),
         )
 
-        requests.post(webhook, json={ 'images': images, 'time': time })
+        requests.post(webhook, json={ 'images': images, 'time': time, 'job_id': args.get('job_id') })
     except Exception as e:
         print(e)
 
