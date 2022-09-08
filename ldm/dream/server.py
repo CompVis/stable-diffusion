@@ -31,6 +31,23 @@ class DreamServer(BaseHTTPRequestHandler):
                 'gfpgan_model_exists': gfpgan_model_exists
             }
             self.wfile.write(bytes("let config = " + json.dumps(config) + ";\n", "utf-8"))
+        elif self.path == "/run_log.json":
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            output = []
+            
+            log_file = os.path.join(self.outdir, "dream_web_log.txt")
+            if os.path.exists(log_file):
+                with open(log_file, "r") as log:
+                    for line in log:
+                        url, config = line.split(": {", maxsplit=1)
+                        config = json.loads("{" + config)
+                        config["url"] = url.lstrip(".")
+                        if os.path.exists(url):
+                            output.append(config)
+
+            self.wfile.write(bytes(json.dumps({"run_log": output}), "utf-8"))
         elif self.path == "/cancel":
             self.canceled.set()
             self.send_response(200)
