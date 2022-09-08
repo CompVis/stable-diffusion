@@ -564,14 +564,9 @@ def create_cmd_parser():
     )
     parser.add_argument(
         '-M',
-        '--mask',
+        '--init_mask',
         type=str,
-        help='Path to inpainting mask; transparent areas will be painted over',
-    )
-    parser.add_argument(
-        '--invert_mask',
-        action='store_true',
-        help='Invert the inpainting mask; opaque areas will be painted over',
+        help='Path to input mask for inpainting mode (supersedes width and height)',
     )
     parser.add_argument(
         '-T',
