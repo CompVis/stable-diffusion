@@ -99,7 +99,7 @@ class DreamServer(BaseHTTPRequestHandler):
         upscale_strength = post_data['upscale_strength']
         upscale = [int(upscale_level),float(upscale_strength)] if upscale_level != '' else None
         progress_images = 'progress_images' in post_data
-        seed = self.model.seed if int(post_data['seed']) == -1 else int(post_data['seed'])
+        seed = None if int(post_data['seed']) == -1 else int(post_data['seed'])
 
         if with_variations != '':
             parts = []
