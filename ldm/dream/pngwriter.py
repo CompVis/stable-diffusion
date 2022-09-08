@@ -61,14 +61,10 @@ class PromptFormatter:
         switches.append(f'-A{opt.sampler_name or t2i.sampler_name}')
 # to do: put model name into the t2i object
 #        switches.append(f'--model{t2i.model_name}')
-        if opt.invert_mask:
-            switches.append(f'--invert_mask')
         if opt.seamless or t2i.seamless:
             switches.append(f'--seamless')
         if opt.init_img:
             switches.append(f'-I{opt.init_img}')
-        if opt.mask:
-            switches.append(f'-M{opt.mask}')
         if opt.fit:
             switches.append(f'--fit')
         if opt.strength and opt.init_img is not None:

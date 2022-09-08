@@ -193,10 +193,9 @@ class Generate:
             log_tokenization=  False,
             with_variations =   None,
             variation_amount =  0.0,
-            # these are specific to img2img
+            # these are specific to img2img and inpaint
             init_img       =    None,
-            mask           =    None,
-            invert_mask    =    False,
+            init_mask      =    None,
             fit            =    False,
             strength       =    None,
             # these are specific to GFPGAN/ESRGAN
@@ -217,8 +216,6 @@ class Generate:
            cfg_scale                       // how strongly the prompt influences the image (7.5) (must be >1)
            seamless                        // whether the generated image should tile
            init_img                        // path to an initial image
-           mask                            // path to an initial image mask for inpainting
-           invert_mask                     // paint over opaque areas, retain transparent areas
            strength                        // strength for noising/unnoising init_img. 0.0 preserves image exactly, 1.0 replaces it completely
            gfpgan_strength                 // strength for GFPGAN. 0.0 preserves image exactly, 1.0 replaces it completely
            ddim_eta                        // image randomness (eta=0.0 means the same seed always produces the same image)
@@ -293,7 +290,7 @@ class Generate:
 
         results          = list()
         init_image       = None
-        init_mask_image  = None
+        mask_image       = None
 
         try:
             uc, c = get_uc_and_c(
@@ -302,22 +299,14 @@ class Generate:
                 log_tokens=self.log_tokenization
             )
 
-            if mask and not init_img:
-                raise AssertionError('If mask path is provided, initial image path should be provided as well')
-                
-            if mask and init_img:
-                init_image,size1       = self._load_img(init_img, width, height,fit=fit)
-                init_image.to(self.device)
-                init_mask_image,size2  = self._load_img_mask(mask, width, height,fit=fit, invert=invert_mask)
-                init_mask_image.to(self.device)
-                assert size1==size2,f"for inpainting, the initial image and its mask must be identical sizes, instead got {size1} vs {size2}"
-                generator       = self._make_inpaint()
-            elif init_img:        # little bit of repeated code here, but makes logic clearer
-                init_image,_      = self._load_img(init_img, width, height, fit=fit)
-                init_image.to(self.device)
-                generator       = self._make_img2img()
+            (init_image,mask_image) = self._make_images(init_img,init_mask, width, height, fit)
+            
+            if (init_image is not None) and (mask_image is not None):
+                generator = self._make_inpaint()
+            elif init_image is not None:
+                generator = self._make_img2img()
             else:
-                generator       = self._make_txt2img()
+                generator = self._make_txt2img()
 
             generator.set_variation(self.seed, variation_amount, with_variations)
             results = generator.generate(
@@ -333,9 +322,9 @@ class Generate:
                 step_callback  = step_callback,   # called after each intermediate image is generated
                 width          = width,
                 height         = height,
-                init_image     = init_image,   # notice that init_image is different from init_img
-                init_mask      = init_mask_image,
-                strength       = strength
+                init_image     = init_image,      # notice that init_image is different from init_img
+                mask_image     = mask_image,
+                strength       = strength,
             )
 
             if upscale is not None or gfpgan_strength > 0:
@@ -352,7 +341,7 @@ class Generate:
             )
         except RuntimeError as e:
             print(traceback.format_exc(), file=sys.stderr)
-            print('>> Are you sure your system has an adequate GPU?')
+            print('>> Could not generate image.')
 
         toc = time.time()
         print('>> Usage stats:')
@@ -373,6 +362,31 @@ class Generate:
                 '%4.2fG' % (self.session_peakmem / 1e9),
             )
         return results
+
+    def _make_images(self, img_path, mask_path, width, height, fit=False):
+        init_image      = None
+        init_mask       = None
+        if not img_path:
+            return None,None
+
+        image        = self._load_img(img_path, width, height, fit=fit) # this returns an Image
+        init_image   = self._create_init_image(image)                   # this returns a torch tensor
+
+        if self._has_transparency(image) and not mask_path:      # if image has a transparent area and no mask was provided, then try to generate mask
+            print('>> Initial image has transparent areas. Will inpaint in these regions.')
+            if self._check_for_erasure(image):
+                print(
+                    '>> WARNING: Colors underneath the transparent region seem to have been erased.\n',
+                    '>>          Inpainting will be suboptimal. Please preserve the colors when making\n',
+                    '>>          a transparency mask, or provide mask explicitly using --init_mask (-M).'
+                )
+            init_mask = self._create_init_mask(image)                   # this returns a torch tensor
+
+        if mask_path:
+            mask_image  = self._load_img(mask_path, width, height, fit=fit) # this returns an Image
+            init_mask   = self._create_init_mask(mask_image)
+
+        return init_image,init_mask
 
     def _make_img2img(self):
         if not self.generators.get('img2img'):
@@ -545,8 +559,9 @@ class Generate:
     def _load_img(self, path, width, height, fit=False):
         assert os.path.exists(path), f'>> {path}: File not found'
 
-        with Image.open(path) as img:
-            image = img.convert('RGB')
+        #        with Image.open(path) as img:
+        #            image = img.convert('RGBA')
+        image = Image.open(path)
         print(
             f'>> loaded input image of size {image.width}x{image.height} from {path}'
         )
@@ -554,57 +569,47 @@ class Generate:
             image = self._fit_image(image,(width,height))
         else:
             image = self._squeeze_image(image)
+        return image
 
-        size = image.size
+    def _create_init_image(self,image):
+        image = image.convert('RGB')
+        # print(
+        #     f'>> DEBUG: writing the image to img.png'
+        # )
+        # image.save('img.png')
         image = np.array(image).astype(np.float32) / 255.0
         image = image[None].transpose(0, 3, 1, 2)
         image = torch.from_numpy(image)
         image = 2.0 * image - 1.0 
-        return image.to(self.device),size
+        return image.to(self.device)
 
-    def _load_img_mask(self, path, width, height, fit=False, invert=False):
-        assert os.path.exists(path), f'>> {path}: File not found'
-
-        image = Image.open(path)
-        print(
-            f'>> loaded input mask of size {image.width}x{image.height} from {path}'
-        )
-
-        if fit:
-            image = self._fit_image(image,(width,height))
-        else:
-            image = self._squeeze_image(image)
-
+    def _create_init_mask(self, image):
         # convert into a black/white mask
-        image = self._mask_to_image(image,invert)
+        image = self._image_to_mask(image)
         image = image.convert('RGB')
-        size  = image.size
-
-        # not quite sure what's going on here. It is copied from basunjindal's implementation
-        #        image = image.resize((64, 64), resample=Image.Resampling.LANCZOS)
         # BUG: We need to use the model's downsample factor rather than hardcoding "8"
         from ldm.dream.generator.base import downsampling
-        image = image.resize((size[0]//downsampling, size[1]//downsampling), resample=Image.Resampling.LANCZOS)
+        image = image.resize((image.width//downsampling, image.height//downsampling), resample=Image.Resampling.LANCZOS)
+        # print(
+        #     f'>> DEBUG: writing the mask to mask.png'
+        #     )
+        # image.save('mask.png')
         image = np.array(image)
         image = image.astype(np.float32) / 255.0
         image = image[None].transpose(0, 3, 1, 2)
         image = torch.from_numpy(image)
-        return image.to(self.device),size
+        return image.to(self.device)
 
     # The mask is expected to have the region to be inpainted
     # with alpha transparency. It converts it into a black/white
     # image with the transparent part black.
-    def _mask_to_image(self, init_mask, invert=False) -> Image:
-        if self._has_transparency(init_mask):
-            # Obtain the mask from the transparency channel
-            mask = Image.new(mode="L", size=init_mask.size, color=255)
-            mask.putdata(init_mask.getdata(band=3))
-            if invert:
-                mask = ImageOps.invert(mask)
-            return mask
-        else:
-            print(f'>> No transparent pixels in this image. Will paint across entire image.')
-            return Image.new(mode="L", size=mask.size, color=0)
+    def _image_to_mask(self, mask_image, invert=False) -> Image:
+        # Obtain the mask from the transparency channel
+        mask = Image.new(mode="L", size=mask_image.size, color=255)
+        mask.putdata(mask_image.getdata(band=3))
+        if invert:
+            mask = ImageOps.invert(mask)
+        return mask
 
     def _has_transparency(self,image):
         if image.info.get("transparency", None) is not None:
@@ -619,6 +624,20 @@ class Generate:
             if extrema[3][0] < 255:
                 return True
         return False
+
+    
+    def _check_for_erasure(self,image):
+        width, height = image.size
+        pixdata       = image.load()
+        colored       = 0
+        for y in range(height):
+            for x in range(width):
+                if pixdata[x, y][3] == 0:
+                    r, g, b, _ = pixdata[x, y]
+                    if (r, g, b) != (0, 0, 0) and \
+                       (r, g, b) != (255, 255, 255):
+                        colored += 1
+        return colored == 0
 
     def _squeeze_image(self,image):
         x,y,resize_needed = self._resolution_check(image.width,image.height)

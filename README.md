@@ -22,22 +22,24 @@ text-to-image generator. This fork supports:
    generating images in your browser.
 
 3. Support for img2img in which you provide a seed image to guide the
-      image creation. (inpainting & masking coming soon)
+      image creation
 
-4. A notebook for running the code on Google Colab.
+4. Preliminary inpainting support.
 
-5. Upscaling and face fixing using the optional ESRGAN and GFPGAN
+5. A notebook for running the code on Google Colab.
+
+6. Upscaling and face fixing using the optional ESRGAN and GFPGAN
    packages.
 
-6. Weighted subprompts for prompt tuning.
+7. Weighted subprompts for prompt tuning.
 
-7. [Image variations](VARIATIONS.md) which allow you to systematically
+8. [Image variations](VARIATIONS.md) which allow you to systematically
 generate variations of an image you like and combine two or more
 images together to combine the best features of both.
 
-8. Textual inversion for customization of the prompt language and images.
+9. Textual inversion for customization of the prompt language and images.
 
-8. ...and more!
+10. ...and more!
 
 This fork is rapidly evolving, so use the Issues panel to report bugs
 and make feature requests, and check back periodically for
@@ -75,9 +77,10 @@ log file of image names and prompts to the selected output directory.
 In addition, as of version 1.02, it also writes the prompt into the PNG
 file's metadata where it can be retrieved using scripts/images2prompt.py
 
-The script is confirmed to work on Linux and Windows systems. It should
-work on MacOSX as well, but this is not confirmed. Note that this script
-runs from the command-line (CMD or Terminal window), and does not have a GUI.
+The script is confirmed to work on Linux, Windows and Mac
+systems. Note that this script runs from the command-line or can be used
+as a Web application. The Web GUI is currently rudimentary, but a much
+better replacement is on its way.
 
 ```
 (ldm) ~/stable-diffusion$ python3 ./scripts/dream.py
@@ -97,7 +100,7 @@ dream> "there's a fly in my soup" -n6 -g
 dream> q
 
 # this shows how to retrieve the prompt stored in the saved image's metadata
-(ldm) ~/stable-diffusion$ python3 ./scripts/images2prompt.py outputs/img_samples/*.png
+(ldm) ~/stable-diffusion$ python ./scripts/images2prompt.py outputs/img_samples/*.png
 00009.png: "ashley judd riding a camel" -s150 -S 416354203
 00010.png: "ashley judd riding a camel" -s150 -S 1362479620
 00011.png: "there's a fly in my soup" -n6 -g -S 2685670268
@@ -118,29 +121,68 @@ The script itself also recognizes a series of command-line switches
 that will change important global defaults, such as the directory for
 image outputs and the location of the model weight files.
 
+## Hardware Requirements
+
+You will need one of:
+
+1. An NVIDIA-based graphics card with 8 GB or more of VRAM memory*.
+
+2. An Apple computer with an M1 chip.**
+
+3. At least 12 GB of main memory RAM.
+
+4. At least 6 GB of free disk space for the machine learning model,
+python, and all its dependencies.
+
+* If you are have a Nvidia 10xx series card (e.g. the 1080ti), please
+run the dream script in full-precision mode as shown below.
+
+** Similarly, specify full-precision mode on Apple M1 hardware.
+
+To run in full-precision mode, start dream.py with the
+--full_precision flag:
+
+~~~~
+(ldm) ~/stable-diffusion$ python scripts/dream.py --full_precision
+~~~~
+
 ## Image-to-Image
 
 This script also provides an img2img feature that lets you seed your
-creations with a drawing or photo. This is a really cool feature that tells
-stable diffusion to build the prompt on top of the image you provide, preserving
-the original's basic shape and layout. To use it, provide the --init_img
-option as shown here:
+creations with an initial drawing or photo. This is a really cool
+feature that tells stable diffusion to build the prompt on top of the
+image you provide, preserving the original's basic shape and
+layout. To use it, provide the --init_img option as shown here:
 
 ```
 dream> "waterfall and rainbow" --init_img=./init-images/crude_drawing.png --strength=0.5 -s100 -n4
 ```
 
-The --init_img (-I) option gives the path to the seed picture. --strength (-f) controls how much
-the original will be modified, ranging from 0.0 (keep the original intact), to 1.0 (ignore the original
-completely). The default is 0.75, and ranges from 0.25-0.75 give interesting results.
+The --init_img (-I) option gives the path to the seed
+picture. --strength (-f) controls how much the original will be
+modified, ranging from 0.0 (keep the original intact), to 1.0 (ignore
+the original completely). The default is 0.75, and ranges from
+0.25-0.75 give interesting results.
 
-You may also pass a -v<count> option to generate count variants on the original image. This is done by
-passing the first generated image back into img2img the requested number of times. It generates interesting
+You may also pass a -v<count> option to generate count variants on the
+original image. This is done by passing the first generated image back
+into img2img the requested number of times. It generates interesting
 variants.
+
+If the initial image contains transparent regions, then Stable
+Diffusion will only draw within the transparent regions, a process
+called "inpainting". However, for this to work correctly, the color
+information underneath the transparent needs to be preserved, not
+erased. See [Creating Transparent Images for
+Inpainting](#creating-transparent-images-for-inpainting) for details.
 
 ## Seamless Tiling
 
-The seamless tiling mode causes generated images to seamlessly tile with itself. To use it, add the --seamless option when starting the script which will result in all generated images to tile, or for each dream> prompt as shown here:
+The seamless tiling mode causes generated images to seamlessly tile
+with itself. To use it, add the --seamless option when starting the
+script which will result in all generated images to tile, or for each
+dream> prompt as shown here:
+
 ```
 dream> "pond garden with lotus by claude monet" --seamless -s100 -n4
 ```
@@ -773,6 +815,49 @@ of branch>
 
 You will need to go through the install procedure again, but it should
 be fast because all the dependencies are already loaded.
+
+# Creating Transparent Regions for Inpainting
+
+Inpainting is really cool. To do it, you start with an initial image
+and use a photoeditor to make one or more regions transparent
+(i.e. they have a "hole" in them). You then provide the path to this
+image at the dream> command line using the -I switch. Stable Diffusion
+will only paint within the transparent region.
+
+There's a catch. In the current implementation, you have to prepare
+the initial image correctly so that the underlying colors are
+preserved under the transparent area. Many imaging editing
+applications will by default erase the color information under the
+transparent pixels and replace them with white or black, which will
+lead to suboptimal inpainting. You also must take care to export the
+PNG file in such a way that the color information is preserved.
+
+If your photoeditor is erasing the underlying color information,
+dream.py will give you a big fat warning. If you can't find a way to
+coax your photoeditor to retain color values under transparent areas,
+then you can combine the -I and -M switches to provide both the
+original unedited image and the masked (partially transparent) image:
+
+~~~~
+dream> man with cat on shoulder -I./images/man.png -M./images/man-transparent.png
+~~~~
+
+We are hoping to get rid of the need for this workaround in an
+upcoming release.
+
+## Recipe for GIMP
+
+GIMP is a popular Linux photoediting tool.
+
+1. Open image in GIMP.
+2. Layer->Transparency->Add Alpha Channel
+2. Use lasoo tool to select region to mask
+3. Choose Select -> Float to create a floating selection
+4. Open the Layers toolbar (^L) and select "Floating Selection"
+5. Set opacity to 0%
+6. Export as PNG
+7. In the export dialogue, Make sure the "Save colour values from
+transparent pixels" checkbox is selected.
 
 # Contributing
 
