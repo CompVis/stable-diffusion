@@ -1,6 +1,6 @@
 # Update: v0.9
 
-The code can now generate 512x512 unages using under 2.4 GB of GPU VRAM!
+The code can now generate 512x512 images using under 2.4 GB of GPU VRAM!
 (Credits: @neonsecret, @Doggettx, @ryudrigo)
 
 <h1 align="center">Optimized Stable Diffusion</h1>
