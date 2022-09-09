@@ -117,6 +117,7 @@ class Generate:
             seamless              = False,
             embedding_path        = None,
             device_type           = 'cuda',
+            ignore_ctrl_c         = False,
     ):
         self.iterations               = iterations
         self.width                    = width
@@ -134,6 +135,7 @@ class Generate:
         self.seamless                 = seamless
         self.embedding_path           = embedding_path
         self.device_type              = device_type
+        self.ignore_ctrl_c            = ignore_ctrl_c    # note, this logic probably doesn't belong here...
         self.model                    = None     # empty for now
         self.sampler                  = None
         self.device                   = None
@@ -210,7 +212,7 @@ class Generate:
             **args,
     ):   # eat up additional cruft
         """
-        ldm.prompt2image() is the common entry point for txt2img() and img2img()
+        ldm.generate.prompt2image() is the common entry point for txt2img() and img2img()
         It takes the following arguments:
            prompt                          // prompt string (no default)
            iterations                      // iterations (1); image count=iterations
@@ -341,6 +343,8 @@ class Generate:
 
         except KeyboardInterrupt:
             print('*interrupted*')
+            if not self.ignore_ctrl_c:
+                raise KeyboardInterrupt
             print(
                 '>> Partial results will be returned; if --grid was requested, nothing will be returned.'
             )
