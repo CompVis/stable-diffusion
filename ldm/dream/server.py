@@ -25,7 +25,7 @@ def build_opt(post_data, seed, gfpgan_model_exists):
     setattr(opt, 'gfpgan_strength', float(post_data['gfpgan_strength']) if gfpgan_model_exists else 0)
     setattr(opt, 'upscale', [int(post_data['upscale_level']), float(post_data['upscale_strength'])] if post_data['upscale_level'] != '' else None)
     setattr(opt, 'progress_images', 'progress_images' in post_data)
-    setattr(opt, 'seed', seed if int(post_data['seed']) == -1 else int(post_data['seed']))
+    setattr(opt, 'seed', None if int(post_data['seed']) == -1 else int(post_data['seed']))
     setattr(opt, 'variation_amount', float(post_data['variation_amount']) if int(post_data['seed']) != -1 else 0)
     setattr(opt, 'with_variations', [])
 
