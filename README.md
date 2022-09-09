@@ -16,7 +16,7 @@ Waifu Diffusion is the name for this project of finetuning Stable Diffusion on D
 
 [Weights](./docs/en/weights/README.md)
 
-[Training Guide](./docs/en/training/README.md)s
+[Training Guide](./docs/en/training/README.md)
 
 All thanks goes to CompVis and Stability AI for releasing this codebase!
 
