@@ -1,6 +1,5 @@
 import os
 import numpy as np
-import PIL
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
@@ -26,10 +25,10 @@ class LSUNBase(Dataset):
         }
 
         self.size = size
-        self.interpolation = {"linear": PIL.Image.LINEAR,
-                              "bilinear": PIL.Image.BILINEAR,
-                              "bicubic": PIL.Image.BICUBIC,
-                              "lanczos": PIL.Image.LANCZOS,
+        self.interpolation = {"linear": Image.LINEAR,
+                              "bilinear": Image.BILINEAR,
+                              "bicubic": Image.BICUBIC,
+                              "lanczos": Image.Resampling.LANCZOS,
                               }[interpolation]
         self.flip = transforms.RandomHorizontalFlip(p=flip_p)
 
