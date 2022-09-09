@@ -1,16 +1,16 @@
+
 Table of Contents
 =================
 
-Tested on **MacBook Air M2** with **Docker Desktop for Mac with Apple Chip**.
-
-* [Setup](#setup)
-   * [Directly on Apple silicon](#directly-on-apple-silicon)
+* [Installation](#installation)
+   * [Option 1 - Directly on Apple silicon](#option-1---directly-on-apple-silicon)
       * [Prerequisites](#prerequisites)
-      * [Set up](#set-up)
-   * [On a Linux container with Docker for Apple silicon](#on-a-linux-container-with-docker-for-apple-silicon)
+      * [Setup](#setup)
+   * [Option 2 - On a Linux container with Docker for Apple silicon](#option-2---on-a-linux-container-with-docker-for-apple-silicon)
       * [Prerequisites](#prerequisites-1)
-      * [Launch and set up a container](#launch-and-set-up-a-container)
+      * [Setup](#setup-1)
    * [[Optional] Face Restoration and Upscaling](#optional-face-restoration-and-upscaling)
+      * [Setup](#setup-2)
 * [Usage](#usage)
    * [Startup](#startup)
    * [Text to Image](#text-to-image)
@@ -18,10 +18,9 @@ Tested on **MacBook Air M2** with **Docker Desktop for Mac with Apple Chip**.
    * [Web Interface](#web-interface)
    * [Notes](#notes)
 
-# Setup
+# Installation
 
-## Directly on Apple silicon
-  
+## Option 1 - Directly on Apple silicon
 For Mac M1/M2. Read more about [Metal Performance Shaders (MPS) framework](https://developer.apple.com/documentation/metalperformanceshaders).
 
 ### Prerequisites
@@ -33,7 +32,8 @@ brew install --cask miniconda
 conda init zsh && source ~/.zshrc # or bash and .bashrc
 ```
 
-### Set up
+### Setup
+Set it to the fork you want to use.
 ```Shell
 GITHUB_STABLE_DIFFUSION=https://github.com/santisbon/stable-diffusion.git
 
@@ -65,7 +65,7 @@ Only need to do this once:
 python3 scripts/preload_models.py
 ```
 
-## On a Linux container with Docker for Apple silicon
+## Option 2 - On a Linux container with Docker for Apple silicon
 You [can't access the Macbook M1/M2 GPU cores from the Docker containers](https://github.com/pytorch/pytorch/issues/81224) so performance is reduced but for development purposes it's fine.
 
 ### Prerequisites
@@ -87,7 +87,7 @@ cd ~/Downloads # or wherever you saved sd-v1-4.ckpt
 docker cp sd-v1-4.ckpt dummy:/data
 ```
 
-### Launch and set up a container
+### Setup
 Start a container for Stable Diffusion
 ```Shell
 docker run -it \
@@ -99,15 +99,15 @@ debian
 # or arm64v8/debian
 ```
 
-You're now on the container. Set it up:
+You're now on the container. Set the fork you want to use and set up the container:
 ```Shell
+GITHUB_STABLE_DIFFUSION="-b docker-apple-silicon https://github.com/santisbon/stable-diffusion.git"
+
 apt update && apt upgrade -y && apt install -y \
 git \
 pip3 \
 python3 \
 wget
-
-GITHUB_STABLE_DIFFUSION="-b docker-apple-silicon https://github.com/santisbon/stable-diffusion.git"
 
 # you won't need to close and reopen your terminal after this because we'll source our .<shell>rc file
 cd /data && wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O anaconda.sh \
@@ -135,13 +135,15 @@ mkdir -p models/ldm/stable-diffusion-v1 \
 ```
 
 ## [Optional] Face Restoration and Upscaling 
-```Shell
-cd .. # by default expected in a sibling directory
-git clone https://github.com/TencentARC/GFPGAN.git
-cd GFPGAN
+Whether you're directly on macOS or a Linux container.
 
-pip3 install basicsr # used for training and inference
-pip3 install facexlib # face detection and face restoration helper
+### Setup
+```Shell
+# by default expected in a sibling directory to stable-diffusion
+cd .. && git clone https://github.com/TencentARC/GFPGAN.git && cd GFPGAN
+
+# basicsr: used for training and inference. facexlib: face detection / face restoration helper.
+pip3 install basicsr facexlib 
 pip3 install -r requirements.txt
 
 python3 setup.py develop
@@ -149,8 +151,7 @@ pip3 install realesrgan # to enhance the background (non-face) regions and do up
 # pre-trained model needed for face restoration
 wget https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth -P experiments/pretrained_models
 
-cd ..
-cd stable-diffusion
+cd ../stable-diffusion
 python3 scripts/preload_models.py # if not, it will download model files from the Internet the first time you run dream.py with GFPGAN and Real-ESRGAN turned on.
 ```
 
@@ -222,7 +223,7 @@ and point your browser to http://127.0.0.1:9090
 
 Some text you can add at the end of the prompt to make it very pretty:
 ```Shell
-cinematic photo, highly detailed, cinematic lighting, ultra-detailed, ultrarealistic, photorealism, Octane Rendering, cyberpunk lights, Hyper Detail, 8K, HD, Unreal Engine, V-Ray, full hd, cyberpunk, abstract, 3d octane render + 4k UHD + immense detail + dramatic lighting + well lit + black, purple, blue, pink, cerulean, teal, metallic colours, + fine details, ultra photoreal, photographic, concept art, cinematic composition, rule of thirds, mysterious, eerie, photorealism, breathtaking detailed concept art painting art deco pattern, by hsiao, ron cheng, john james audubon, bizarre compositions, exquisite detail, extremely moody lighting, painted by greg rutkowski makoto shinkai takashi takeuchi studio ghibli, akihiko yoshida
+cinematic photo, highly detailed, cinematic lighting, ultra-detailed, ultrarealistic, photorealism, Octane Rendering, cyberpunk lights, Hyper Detail, 8K, HD, Unreal Engine, V-Ray, full hd, cyberpunk, abstract, 3d octane render + 4k UHD + immense detail + dramatic lighting + well lit + black, purple, blue, pink, cerulean, teal, metallic colours, + fine details, ultra photoreal, photographic, concept art, cinematic composition, rule of thirds, mysterious, eerie, photorealism, breathtaking detailed, painting art deco pattern, by hsiao, ron cheng, john james audubon, bizarre compositions, exquisite detail, extremely moody lighting, painted by greg rutkowski makoto shinkai takashi takeuchi studio ghibli, akihiko yoshida
 ```
 
 The original scripts should work as well.
