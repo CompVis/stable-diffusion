@@ -8,8 +8,6 @@ Waifu Diffusion is the name for this project of finetuning Stable Diffusion on D
 
 <sub>Prompt: touhou 1girl komeiji_koishi portrait</sub>
 
-[![Discord Server](https://discordapp.com/api/guilds/930499730843250783/widget.png?style=banner2)](https://discord.gg/Sx6Spmsgx7)
-
 ## Documentation
 
 [Index](./docs/en/README.md)
