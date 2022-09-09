@@ -9,7 +9,13 @@ function toBase64(file) {
 
 function appendOutput(src, seed, config) {
     let outputNode = document.createElement("figure");
-    let altText = seed.toString() + " | " + config.prompt;
+    
+    let variations = config.with_variations;
+    if (config.variation_amount > 0) {
+        variations = (variations ? variations + ',' : '') + seed + ':' + config.variation_amount;
+    }
+    let baseseed = (config.with_variations || config.variation_amount > 0) ? config.seed : seed;
+    let altText = baseseed + ' | ' + (variations ? variations + ' | ' : '') + config.prompt;
 
     // img needs width and height for lazy loading to work
     const figureContents = `
@@ -25,7 +31,7 @@ function appendOutput(src, seed, config) {
     `;
 
     outputNode.innerHTML = figureContents;
-    let figcaption = outputNode.querySelector('figcaption')
+    let figcaption = outputNode.querySelector('figcaption');
 
     // Reload image config
     figcaption.addEventListener('click', () => {
@@ -34,21 +40,11 @@ function appendOutput(src, seed, config) {
             if (k == 'initimg') { continue; }
             form.querySelector(`*[name=${k}]`).value = config[k];
         }
-        if (config.variation_amount > 0 || config.with_variations != '') {
-            document.querySelector("#seed").value = config.seed;
-        } else {
-            document.querySelector("#seed").value = seed;
-        }
 
-        if (config.variation_amount > 0) {
-            let oldVarAmt = document.querySelector("#variation_amount").value
-            let oldVariations = document.querySelector("#with_variations").value
-            let varSep = ''
-            document.querySelector("#variation_amount").value = 0;
-            if (document.querySelector("#with_variations").value != '') {
-                varSep = ","
-            }
-            document.querySelector("#with_variations").value = oldVariations + varSep + seed + ':' + config.variation_amount
+        document.querySelector("#seed").value = baseseed;
+        document.querySelector("#with_variations").value = variations || '';
+        if (document.querySelector("#variation_amount").value <= 0) {
+            document.querySelector("#variation_amount").value = 0.2;
         }
 
         saveFields(document.querySelector("#generate-form"));
