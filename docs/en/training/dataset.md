@@ -9,9 +9,13 @@ In this guide we are going to use the Danbooru2021 dataset by Gwern.net. You are
 4. Packaging the dataset
 
 ## Dataset requirements
+
 The dataset needs to be in the following format
+
 /dataset/ : Root dataset folder, can be any name
+
 /dataset/img/ : Folder for images
+
 /dataset/txt/ : Folder for text files
 
 It is recommended to have the images in 512x512 resolution and in JPG format. While the text files need to have the same name as the images it refers to.
@@ -38,23 +42,35 @@ apt install rsync
 ````
 #### Windows
 On Windows, you are going to need to install Cygwin, a posix runtime for Windows which allows the usage of many linux-only programs inside windows.
+
 [Cygwin Installer for x86](https://www.cygwin.com/setup-x86_64.exe)
+
 On the installer, select mirrors.kernel.org for Download Site:
-![[cygwin-mirrors.png]]
+
+![cygwin-mirrors.png](./res/cygwin-mirrors.png)
+
 Next, search for "rsync" on the search bar, change "View: Pending" to "View: Full", and select on the "New" tab the latest version. Do the same for "zip".
-![[cygwin-packages.png]]
+
+![cygwin-packages.png](./res/cygwin-packages.png)
+
 GIF explaining the entire process:
-![[cygwin-gif.gif]]
+
+![cygwin-gif.gif](./res/cygwin-gif.gif)
+
 Once the installation is finished, you should see "Cygwin64 Terminal" on your Start Menu. Launch it and you should be greated by the following window:
-![[cygwin-idle.png]]
+
+![cygwin-idle.png](./res/cygwin-idle.png)
+
 You may now follow the intructions
 
 ### Downloading the dataset
 Remember that instructions here apply universally, both on Linux and Windows (If you are using Cygwin that is).
 
 The entire dataset weights about 5TB. You are not going to download everything, instead, you are only going to download two kinds of files:
+
 1. The images
 2. The JSON files (metadata)
+
 If you want to see the entire file list, you can refer to the [Danbooru2021 information site](https://www.gwern.net/Danbooru2021).
 
 We are going to extract the images from the 512px folder for convinience, since this folder already has the images resized to 512x512 resolution in JPG format. It only has safe rated images, for NSFW refer to [gwern.net](https://www.gwern.net/Danbooru2021#samples). 
@@ -85,7 +101,8 @@ Change "/waifu-diffusion" to the path of the cloned waifu-diffusion repository.
 This script will also change some tags such as "1girl" to "one girl", "2boys" to "two boys", and so on. It will also add "upoaded on Danbooru".
 
 Once the script has finished, you should have a "labeled_data" folder, whose insides look like this:
-![[labeled_data-insides.png]]
+
+![labeled_data-insides.png](./res/labeled_data-insides.png)
 
 ## Packaging the dataset
 In order to reduce size, zip the contents of labeled_data:
