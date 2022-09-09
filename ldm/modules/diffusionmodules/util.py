@@ -81,7 +81,9 @@ def make_ddim_timesteps(
 
     # assert ddim_timesteps.shape[0] == num_ddim_timesteps
     # add one to get the final alpha values right (the ones from first scale to data during sampling)
-    steps_out = ddim_timesteps + 1
+#    steps_out = ddim_timesteps + 1
+    steps_out = ddim_timesteps
+
     if verbose:
         print(f'Selected timesteps for ddim sampler: {steps_out}')
     return steps_out

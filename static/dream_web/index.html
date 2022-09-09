@@ -2,9 +2,8 @@
   <head>
     <title>Stable Diffusion Dream Server</title>
     <meta charset="utf-8">
-    <link rel="icon" href="data:,">
+    <link rel="icon" type="image/x-icon" href="static/dream_web/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <link rel="stylesheet" href="static/dream_web/index.css">
     <script src="config.js"></script>
     <script src="static/dream_web/index.js"></script>
@@ -30,21 +29,21 @@
           <input value="1" type="number" id="iterations" name="iterations" size="4">
           <label for="steps">Steps:</label>
           <input value="50" type="number" id="steps" name="steps">
-          <label for="cfgscale">Cfg Scale:</label>
-          <input value="7.5" type="number" id="cfgscale" name="cfgscale" step="any">
-          <label for="sampler">Sampler:</label>
-          <select id="sampler" name="sampler" value="k_lms">
+          <label for="cfg_scale">Cfg Scale:</label>
+          <input value="7.5" type="number" id="cfg_scale" name="cfg_scale" step="any">
+          <label for="sampler_name">Sampler:</label>
+          <select id="sampler_name" name="sampler_name" value="k_lms">
             <option value="ddim">DDIM</option>
             <option value="plms">PLMS</option>
             <option value="k_lms" selected>KLMS</option>
             <option value="k_dpm_2">KDPM_2</option>
             <option value="k_dpm_2_a">KDPM_2A</option>
             <option value="k_euler">KEULER</option>
-	    <option value="k_euler_a">KEULER_A</option>
+	          <option value="k_euler_a">KEULER_A</option>
             <option value="k_heun">KHEUN</option>
           </select>
           <input type="checkbox" name="seamless" id="seamless">
-	  <label for="seamless">Seamless circular tiling</label>
+	        <label for="seamless">Seamless circular tiling</label>
           <br>
           <label title="Set to multiple of 64" for="width">Width:</label>
           <select id="width" name="width" value="512">
