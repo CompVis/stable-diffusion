@@ -670,7 +670,7 @@ if __name__ == "__main__":
         for k in data.datasets:
             print(f"{k}, {data.datasets[k].__class__.__name__}, {len(data.datasets[k])}")
 
-        # configure learning rate
+        # configure learning rate. 
         bs, base_lr = config.data.params.batch_size, config.model.base_learning_rate
         if not cpu:
             ngpu = len(lightning_config.trainer.gpus.strip(",").split(','))
@@ -693,7 +693,7 @@ if __name__ == "__main__":
             print(f"Setting learning rate to {model.learning_rate:.2e}")
 
 
-        # allow checkpointing via USR1
+        # allow checkpointing via USR1. 
         def melk(*args, **kwargs):
             # run all checkpoint hooks
             if trainer.global_rank == 0:
