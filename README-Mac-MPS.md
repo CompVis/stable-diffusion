@@ -28,7 +28,7 @@ First get the weights checkpoint download started - it's big:
 
 While that is downloading, open Terminal and run the following commands one at a time.
 
-```
+```bash
 # install brew (and Xcode command line tools):
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
@@ -43,9 +43,10 @@ While that is downloading, open Terminal and run the following commands one at a
 # 1. Installing alongside pyenv 
 
 brew install pyenv-virtualenv # you might have this from before, no problem
-pyenv install anaconda3-latest
-pyenv virtualenv anaconda3-latest lstein-stable-diffusion
-pyenv activate lstein-stable-diffusion
+pyenv install anaconda3-2022.05
+pyenv virtualenv anaconda3-2022.05
+eval "$(pyenv init -)"
+pyenv activate anaconda3-2022.05
 
 # OR, 
 # 2. Installing standalone
