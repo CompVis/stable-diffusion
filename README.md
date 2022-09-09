@@ -11,9 +11,12 @@ Waifu Diffusion is the name for this project of finetuning Stable Diffusion on D
 [![Discord Server](https://discordapp.com/api/guilds/930499730843250783/widget.png?style=banner2)](https://discord.gg/Sx6Spmsgx7)
 
 ## Documentation
+
 [Index](./docs/en/README.md)
+
 [Weights](./docs/en/weights/README.md)
-[Training Guide](./docs/en/training/README.md)
+
+[Training Guide](./docs/en/training/README.md)s
 
 All thanks goes to CompVis and Stability AI for releasing this codebase!
 
