@@ -379,65 +379,74 @@ def grid_merge(source, slices):
         source.alpha_composite(slice, (posx, posy))
     return source
 
-def grid_coords(target, original, overlap):
+def grid_coords(target, original, overlap, maxed):
     #generate a list of coordinate tuples for our sections, in order of how they'll be rendered
     #target should be the size for the gobig result, original is the size of each chunk being rendered
-    center = []
     target_x, target_y = target
-    center_x = int(target_x / 2)
-    center_y = int(target_y / 2)
     original_x, original_y = original
-    x = center_x - int(original_x / 2)
-    y = center_y - int(original_y / 2)
-    center.append((x,y)) #center chunk
-    uy = y #up
-    uy_list = []
-    dy = y #down
-    dy_list = []
-    lx = x #left
-    lx_list = []
-    rx = x #right
-    rx_list = []
-    while uy > 0: #center row vertical up
-        uy = uy - original_y + overlap
-        uy_list.append((lx, uy))
-    while (dy + original_y) <= target_y: #center row vertical down
-        dy = dy + original_y - overlap
-        dy_list.append((rx, dy))
-    while lx > 0:
-        lx = lx - original_x + overlap
-        lx_list.append((lx, y))
-        uy = y
-        while uy > 0:
+    do_calc = True
+    while do_calc:
+        print(f'Target size is {target_x} x {target_y}')
+        center = []
+        center_x = int(target_x / 2)
+        center_y = int(target_y / 2)
+        x = center_x - int(original_x / 2)
+        y = center_y - int(original_y / 2)
+        center.append((x,y)) #center chunk
+        uy = y #up
+        uy_list = []
+        dy = y #down
+        dy_list = []
+        lx = x #left
+        lx_list = []
+        rx = x #right
+        rx_list = []
+        while uy > 0: #center row vertical up
             uy = uy - original_y + overlap
             uy_list.append((lx, uy))
-        dy = y
-        while (dy + original_y) <= target_y:
-            dy = dy + original_y - overlap
-            dy_list.append((lx, dy))
-    while (rx + original_x) <= target_x:
-        rx = rx + original_x - overlap
-        rx_list.append((rx, y))
-        uy = y
-        while uy > 0:
-            uy = uy - original_y + overlap
-            uy_list.append((rx, uy))
-        dy = y
-        while (dy + original_y) <= target_y:
+        while (dy + original_y) <= target_y: #center row vertical down
             dy = dy + original_y - overlap
             dy_list.append((rx, dy))
-    # calculate a new size that will fill the canvas, which will be optionally used in grid_slice and go_big
-    last_coordx, last_coordy = dy_list[-1:][0]
-    render_edgey = last_coordy + original_y # outer bottom edge of the render canvas
-    render_edgex = last_coordx + original_x # outer side edge of the render canvas
-    scalarx = render_edgex / target_x
-    scalary = render_edgey / target_y
-    if scalarx <= scalary:
-        new_edgex = int(target_x * scalarx)
-        new_edgey = int(target_y * scalarx)
-    else:
-        new_edgex = int(target_x * scalary)
-        new_edgey = int(target_y * scalary)
+        while lx > 0:
+            lx = lx - original_x + overlap
+            lx_list.append((lx, y))
+            uy = y
+            while uy > 0:
+                uy = uy - original_y + overlap
+                uy_list.append((lx, uy))
+            dy = y
+            while (dy + original_y) <= target_y:
+                dy = dy + original_y - overlap
+                dy_list.append((lx, dy))
+        while (rx + original_x) <= target_x:
+            rx = rx + original_x - overlap
+            rx_list.append((rx, y))
+            uy = y
+            while uy > 0:
+                uy = uy - original_y + overlap
+                uy_list.append((rx, uy))
+            dy = y
+            while (dy + original_y) <= target_y:
+                dy = dy + original_y - overlap
+                dy_list.append((rx, dy))
+        if maxed:
+            # calculate a new size that will fill the canvas, which will be optionally used in grid_slice and go_big
+            last_coordx, last_coordy = dy_list[-1:][0]
+            render_edgey = last_coordy + original_y # outer bottom edge of the render canvas
+            render_edgex = last_coordx + original_x # outer side edge of the render canvas
+            render_edgex += (render_edgex - target_x) # we have to extend the "negative" side as well, so we do it twice
+            render_edgey += (render_edgey - target_y)
+            scalarx = render_edgex / target_x
+            scalary = render_edgey / target_y
+            if scalarx <= scalary:
+                target_x = int(target_x * scalarx)
+                target_y = int(target_y * scalarx)
+            else:
+                target_x = int(target_x * scalary)
+                target_y = int(target_y * scalary)
+            maxed = False
+        else:
+            do_calc = False
     # now put all the chunks into one master list of coordinates (essentially reverse of how we calculated them so that the central slices will be on top)
     result = []
     for coords in dy_list[::-1]:
@@ -449,19 +458,21 @@ def grid_coords(target, original, overlap):
     for coords in lx_list[::-1]:
         result.append(coords)
     result.append(center[0])
-    return result, (new_edgex, new_edgey)
+    return result, (target_x, target_y)
 
 # Chop our source into a grid of images that each equal the size of the original render
-def grid_slice(source, overlap, og_size): 
+def grid_slice(source, overlap, og_size, maxed=False): 
     width, height = og_size # size of the slices to be rendered
-    coordinates, new_size = grid_coords(source.size, og_size, overlap)
+    coordinates, new_size = grid_coords(source.size, og_size, overlap, maxed)
+    if source.size != new_size:
+        source = source.resize(new_size, get_resampling_mode())
     slices = []
     for coordinate in coordinates:
         x, y = coordinate
         slices.append(((source.crop((x, y, x+width, y+height))), x, y))
     global slices_todo
     slices_todo = len(slices) - 1
-    return slices, new_size
+    return slices, source
 
 def parse_args():
     my_parser = argparse.ArgumentParser(
@@ -551,6 +562,12 @@ def parse_args():
         default = 2,
         required=False,
         help='What scale to multiply your original image by. 2 is a good value. 3 is insane. Anything more and I wish you luck.'
+    )
+    my_parser.add_argument(
+        '--gobig_prescaled',
+        action='store_true',
+        required=False,
+        help='Add this option if you have already upscaled the image you want to gobig on. The image and its resolution will be used.'
     )
     my_parser.add_argument(
         '--device',
@@ -655,6 +672,8 @@ class Settings:
     init_image = None
     init_strength = 0.5
     gobig = False
+    gobig_init = None
+    gobig_prescaled = False
     gobig_maximize = True
     gobig_overlap = 64
     gobig_realesrgan = False
@@ -707,6 +726,12 @@ class Settings:
             self.init_image = (settings_file["init_image"])
         if is_json_key_present(settings_file, 'gobig'):
             self.gobig = (settings_file["gobig"])
+        if is_json_key_present(settings_file, 'gobig_init'):
+            self.gobig_init = (settings_file["gobig_init"])
+        if is_json_key_present(settings_file, 'gobig_scale'):
+            self.gobig_scale = (settings_file["gobig_scale"])
+        if is_json_key_present(settings_file, 'gobig_prescaled'):
+            self.gobig_prescaled = (settings_file["gobig_prescaled"])
         if is_json_key_present(settings_file, 'gobig_maximize'):
             self.gobig_maximize = (settings_file["gobig_maximize"])
         if is_json_key_present(settings_file, 'gobig_overlap'):
@@ -746,6 +771,9 @@ def save_settings(options, prompt, filenum):
         'init_image' : options.init_image,
         'init_strength' : 1.0 - options.strength,
         'gobig' : options.gobig,
+        'gobig_init' : options.gobig_init,
+        'gobig_scale' : options.gobig_scale,
+        'gobig_prescaled' : options.gobig_prescaled,
         'gobig_maximize' : options.gobig_maximize,
         'gobig_overlap' : options.gobig_overlap,
         'gobig_realesrgan' : options.gobig_realesrgan,
@@ -778,22 +806,20 @@ def do_gobig(gobig_init, device, model, opt):
     outpath = opt.outdir
     # get our render size for each slice, and our target size
     input_image = Image.open(gobig_init).convert('RGBA')
-    opt.W, opt.H = input_image.size
-    target_W = opt.W * opt.gobig_scale
-    target_H = opt.H * opt.gobig_scale
-    if opt.gobig_realesrgan:
-        input_image = esrgan_resize(input_image, opt.device_id, opt.esrgan_model)
-    target_image = input_image.resize((target_W, target_H), get_resampling_mode())
-    slices, new_canvas_size = grid_slice(target_image, overlap, (opt.W, opt.H))
-    if opt.gobig_maximize == True:
-        # increase our final image size to use up blank space
-        target_image = input_image.resize(new_canvas_size, get_resampling_mode())
-        slices, new_canvas_size = grid_slice(target_image, overlap, (opt.W, opt.H))
-    input_image.close()
+    if opt.gobig_prescaled == False:
+        opt.W, opt.H = input_image.size
+        target_W = opt.W * opt.gobig_scale
+        target_H = opt.H * opt.gobig_scale
+        if opt.gobig_realesrgan:
+            input_image = esrgan_resize(input_image, opt.device_id, opt.esrgan_model)
+        target_image = input_image.resize((target_W, target_H), get_resampling_mode()) #esrgan resizes 4x by default, so this brings us in line with our actual scale target
+    else:
+        #target_W, target_H = input_image.size
+        target_image = input_image
+    slices, target_image = grid_slice(target_image, overlap, (opt.W, opt.H), opt.gobig_maximize)
     # now we trigger a do_run for each slice
     betterslices = []
     slice_image = f'slice{opt.device_id}.png'
-    opt.seed = opt.seed + 1
     for count, chunk_w_coords in enumerate(slices):
         chunk, coord_x, coord_y = chunk_w_coords
         chunk.save(slice_image)
@@ -801,6 +827,7 @@ def do_gobig(gobig_init, device, model, opt):
         opt.init_image = slice_image
         opt.save_settings = False # we don't need to keep settings for each slice, just the main image.
         opt.n_iter = 1 # no point doing multiple iterations since only one will be used
+        opt.seed = opt.seed + 1
         result = do_run(device, model, opt)
         resultslice = Image.open(result).convert('RGBA')
         betterslices.append((resultslice.copy(), coord_x, coord_y))
@@ -812,7 +839,7 @@ def do_gobig(gobig_init, device, model, opt):
     alpha_gradient = ImageDraw.Draw(alpha)
     a = 0
     i = 0
-    a_overlap = overlap # int(overlap / 2) # we want the alpha gradient to be half the size of the overlap, otherwise we always see some of the original background underneath
+    a_overlap = int(overlap / 2) # we want the alpha gradient to be half the size of the overlap, otherwise we always see some of the original background underneath
     shape = ((opt.W, opt.H), (0,0))
     while i < overlap:
         alpha_gradient.rectangle(shape, fill = a)
@@ -837,6 +864,7 @@ def do_gobig(gobig_init, device, model, opt):
     print(f'Gobig output saved as {result}{opt.filetype}')
     final_output.save(f'{result}{opt.filetype}', quality = opt.quality)
     final_output.close()
+    input_image.close()
 
 def main():
     print('\nPROG ROCK STABLE')
@@ -883,6 +911,15 @@ def main():
 
     if cl_args.seed:
         settings.seed = cl_args.seed
+
+    if cl_args.gobig:
+        settings.gobig = cl_args.gobig
+
+    if cl_args.gobig_init:
+        settings.gobig_init = cl_args.gobig_init
+
+    if cl_args.gobig_prescaled:
+        settings.gobig_prescaled = cl_args.gobig_prescaled
 
     valid_methods = ['k_lms', 'k_dpm_2_ancestral', 'k_dpm_2', 'k_heun', 'k_euler_ancestral', 'k_euler', 'ddim']
     if any(settings.method in s for s in valid_methods):
@@ -987,8 +1024,10 @@ def main():
                     "precision": "autocast",
                     "init_image": settings.init_image,
                     "strength": 1.0 - settings.init_strength,
-                    "gobig": cl_args.gobig,
-                    "gobig_scale": cl_args.gobig_scale,
+                    "gobig": settings.gobig,
+                    "gobig_init": settings.gobig_init,
+                    "gobig_scale": settings.gobig_scale,
+                    "gobig_prescaled": settings.gobig_prescaled,
                     "gobig_maximize": settings.gobig_maximize,
                     "gobig_overlap": settings.gobig_overlap,
                     "gobig_realesrgan": settings.gobig_realesrgan,
@@ -1005,12 +1044,12 @@ def main():
                 opt = SimpleNamespace(**opt)
 
                 # render the image(s)!
-                if cl_args.gobig_init == None:
+                if settings.gobig_init == None:
                     # either just a regular render, or a regular render that will next go_big
                     gobig_init = do_run(device, model, opt)
                 else:
-                    gobig_init = cl_args.gobig_init
-                if cl_args.gobig or settings.gobig:
+                    gobig_init = settings.gobig_init
+                if settings.gobig:
                     do_gobig(gobig_init, device, model, opt)
                 if settings.cool_down > 0 and ((i < (settings.n_batches - 1)) or p < (len(prompts) - 1)):
                     print(f'Pausing {settings.cool_down} seconds to give your poor GPU a rest...')
