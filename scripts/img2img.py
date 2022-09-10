@@ -196,6 +196,9 @@ def main():
     opt = parser.parse_args()
     seed_everything(opt.seed)
 
+    # needed when model is in half mode, remove if not using half mode
+    torch.set_default_tensor_type(torch.HalfTensor)
+    
     config = OmegaConf.load(f"{opt.config}")
     model = load_model_from_config(config, f"{opt.ckpt}")
     model = model.half()
