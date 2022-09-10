@@ -11,7 +11,7 @@ from einops import rearrange
 from contextlib import  nullcontext
 
 # import txt2img functions from stable diffusion
-from scripts.txt2img import check_safety
+from scripts.txt2img import check_safety, put_watermark
 from scripts.txt2img import make_grid
 
 
@@ -207,7 +207,7 @@ class Txt2Img(BaseModel):
                                 for x_sample in x_checked_image_torch:
                                     x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                                     img = Image.fromarray(x_sample.astype(np.uint8))
-                                    img = self.put_watermark(img, self.wm_encoder)
+                                    img = put_watermark(img, self.wm_encoder)
                                     img.save(os.path.join(sample_path, f"{base_count:05}.png"))
                                     base_count += 1
 
