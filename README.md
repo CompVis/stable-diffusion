@@ -516,6 +516,12 @@ This will create stable-diffusion folder where you will follow the rest of the s
 
 After these steps, your command prompt will be prefixed by "(ldm)" as shown above.
 
+   Note: If necessary, you can update the environment via this command:
+
+   ```sh
+   (ldm) ~/stable-diffusion$ conda env update --file environment.yaml
+   ```
+
 6. Load a couple of small machine-learning models required by stable diffusion:
 
 ```
