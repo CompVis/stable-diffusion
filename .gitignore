@@ -2,6 +2,9 @@
 outputs/
 models/ldm/stable-diffusion-v1/model.ckpt
 
+# ignore the Anaconda/Miniconda installer used while building Docker image
+anaconda.sh
+
 # ignore a directory which serves as a place for initial images
 inputs/
 
