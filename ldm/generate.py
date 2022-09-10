@@ -536,9 +536,6 @@ class Generate:
         sd = pl_sd['state_dict']
         model = instantiate_from_config(config.model)
         m, u = model.load_state_dict(sd, strict=False)
-        model.to(self.device)
-        model.eval()
-
         
         if self.full_precision:
             print(
@@ -549,6 +546,8 @@ class Generate:
                 '>> Using half precision math. Call with --full_precision to use more accurate but VRAM-intensive full precision.'
             )
             model.half()
+        model.to(self.device)
+        model.eval()
 
         # usage statistics
         toc = time.time()
