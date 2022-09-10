@@ -78,6 +78,4 @@ class PromptFormatter:
         if opt.with_variations:
             formatted_variations = ','.join(f'{seed}:{weight}' for seed, weight in opt.with_variations)
             switches.append(f'-V{formatted_variations}')
-        if t2i.full_precision:
-            switches.append('-F')
         return ' '.join(switches)
