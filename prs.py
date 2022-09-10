@@ -181,9 +181,9 @@ def do_run(device, model, opt):
         model_k_guidance = KCFGDenoiser(model_k_wrapped)
     elif opt.method in NOT_K_DIFF_SAMPLERS:
         if opt.method == 'plms':
-            sampler = PLMSSampler(model)
+            sampler = PLMSSampler(model, device)
         else:
-            sampler = DDIMSampler(model)
+            sampler = DDIMSampler(model, device)
 
     def img_to_latent(path: str) -> Tensor:
         assert os.path.isfile(path)
