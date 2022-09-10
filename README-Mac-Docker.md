@@ -27,7 +27,7 @@ You'll need to create an account but it's quick and free.
 You [can't access the Macbook M1/M2 GPU cores from the Docker containers](https://github.com/pytorch/pytorch/issues/81224) so performance is reduced but for development purposes it's fine.
 
 ### Prerequisites
-[Install Docker](https://gist.github.com/santisbon/2165fd1c9aaa1f7974f424535d3756f7#install-2)  
+[Install Docker](https://gist.github.com/santisbon/2165fd1c9aaa1f7974f424535d3756f7#docker)  
 On the Docker Desktop app, go to Preferences, Resources, Advanced. Increase the CPUs and Memory to avoid this [Issue](https://github.com/lstein/stable-diffusion/issues/342). You may need to increase Swap and Disk image size too.  
 
 Create a Docker volume for the downloaded model file
