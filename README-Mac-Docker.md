@@ -49,6 +49,7 @@ docker cp sd-v1-4.ckpt dummy:/data
 # Set the fork you want to use.
 GITHUB_STABLE_DIFFUSION="https://github.com/santisbon/stable-diffusion.git"
 
+cd ~
 git clone $GITHUB_STABLE_DIFFUSION
 cd stable-diffusion
 chmod +x entrypoint.sh
