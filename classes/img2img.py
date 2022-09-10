@@ -206,8 +206,8 @@ class Img2Img(BaseModel):
                             if not opt.skip_save:
                                 for x_sample in x_samples:
                                     x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                                    img = self.put_watermark(Image.fromarray(x_sample.astype(np.uint8)))
-                                    img.save(os.path.join(sample_path, f"{seed:05}_{base_count}.png"))
+                                    Image.fromarray(x_sample.astype(np.uint8)).save(
+                                        os.path.join(sample_path, f"{base_count:05}.png"))
                                     base_count += 1
 
                             all_samples.append(x_samples)
