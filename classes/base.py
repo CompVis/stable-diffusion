@@ -152,7 +152,6 @@ class BaseModel:
         os.makedirs(self.opt.outdir, exist_ok=True)
         self.outpath = self.opt.outdir
 
-    # TODO
     def initialize_watermark(self):
         """
         Initialize the watermark encoder
