@@ -3,7 +3,7 @@
 # !!   "id": "c442uQJ_gUgy"
 # !! }}
 """
-# **Deforum Stable Diffusion v0.3**
+# **Deforum Stable Diffusion v0.4**
 [Stable Diffusion](https://github.com/CompVis/stable-diffusion) by Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer and the [Stability.ai](https://stability.ai/) Team. [K Diffusion](https://github.com/crowsonkb/k-diffusion) by [Katherine Crowson](https://twitter.com/RiversHaveWings). You need to get the ckpt file and put it on your Google Drive first to use this. It can be downloaded from [HuggingFace](https://huggingface.co/CompVis/stable-diffusion).
 
 Notebook by [deforum](https://discord.gg/upmXXsrwZc)
@@ -937,14 +937,15 @@ def render_animation(args, anim_args):
     using_vid_init = anim_args.animation_mode == 'Video Input'
 
     # load depth model for 3D
-    depth_model = None
-    if anim_args.animation_mode == '3D' and anim_args.use_depth_warping:
+    predict_depths = (anim_args.animation_mode == '3D' and anim_args.use_depth_warping) or anim_args.save_depth_maps
+    if predict_depths:
         depth_model = DepthModel(device)
         depth_model.load_midas(models_path)
         if anim_args.midas_weight < 1.0:
             depth_model.load_adabins()
     else:
         depth_model = None
+        anim_args.save_depth_maps = False
 
     # state for interpolating between diffusion steps
     turbo_steps = 1 if using_vid_init else int(anim_args.diffusion_cadence)
@@ -976,6 +977,7 @@ def render_animation(args, anim_args):
         noise = keys.noise_schedule_series[frame_idx]
         strength = keys.strength_schedule_series[frame_idx]
         contrast = keys.contrast_schedule_series[frame_idx]
+        depth = None
         
         # emit in-between frames
         if turbo_steps > 1:
@@ -987,19 +989,20 @@ def render_animation(args, anim_args):
                 advance_prev = turbo_prev_image is not None and tween_frame_idx > turbo_prev_frame_idx
                 advance_next = tween_frame_idx > turbo_next_frame_idx
 
+                if depth_model is not None:
+                    assert(turbo_next_image is not None)
+                    depth = depth_model.predict(turbo_next_image, anim_args)
+
                 if anim_args.animation_mode == '2D':
                     if advance_prev:
                         turbo_prev_image = anim_frame_warp_2d(turbo_prev_image, args, anim_args, keys, tween_frame_idx)
                     if advance_next:
                         turbo_next_image = anim_frame_warp_2d(turbo_next_image, args, anim_args, keys, tween_frame_idx)
                 else: # '3D'
-                    next_depth = depth_model.predict(turbo_next_image, anim_args)
                     if advance_prev:
-                        turbo_prev_image = anim_frame_warp_3d(turbo_prev_image, next_depth, anim_args, keys, tween_frame_idx)
+                        turbo_prev_image = anim_frame_warp_3d(turbo_prev_image, depth, anim_args, keys, tween_frame_idx)
                     if advance_next:
-                        turbo_next_image = anim_frame_warp_3d(turbo_next_image, next_depth, anim_args, keys, tween_frame_idx)
-                        if anim_args.save_depth_maps:
-                            depth_model.save(os.path.join(args.outdir, f"{args.timestring}_depth_{tween_frame_idx:05}.png"), next_depth)
+                        turbo_next_image = anim_frame_warp_3d(turbo_next_image, depth, anim_args, keys, tween_frame_idx)
                 turbo_prev_frame_idx = turbo_next_frame_idx = tween_frame_idx
 
                 if turbo_prev_image is not None and tween < 1.0:
@@ -1009,6 +1012,8 @@ def render_animation(args, anim_args):
 
                 filename = f"{args.timestring}_{tween_frame_idx:05}.png"
                 cv2.imwrite(os.path.join(args.outdir, filename), cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_RGB2BGR))
+                if anim_args.save_depth_maps:
+                    depth_model.save(os.path.join(args.outdir, f"{args.timestring}_depth_{tween_frame_idx:05}.png"), depth)
             if turbo_next_image is not None:
                 prev_sample = sample_from_cv2(turbo_next_image)
 
@@ -1018,10 +1023,8 @@ def render_animation(args, anim_args):
                 prev_img = anim_frame_warp_2d(sample_to_cv2(prev_sample), args, anim_args, keys, frame_idx)
             else: # '3D'
                 prev_img_cv2 = sample_to_cv2(prev_sample)
-                depth = depth_model.predict(prev_img_cv2, anim_args)
+                depth = depth_model.predict(prev_img_cv2, anim_args) if depth_model else None
                 prev_img = anim_frame_warp_3d(prev_img_cv2, depth, anim_args, keys, frame_idx)
-                if anim_args.save_depth_maps:
-                    depth_model.save(os.path.join(args.outdir, f"{args.timestring}_depth_{frame_idx:05}.png"), depth)
 
             # apply color matching
             if anim_args.color_coherence != 'None':
@@ -1065,6 +1068,10 @@ def render_animation(args, anim_args):
         else:    
             filename = f"{args.timestring}_{frame_idx:05}.png"
             image.save(os.path.join(args.outdir, filename))
+            if anim_args.save_depth_maps:
+                if depth is None:
+                    depth = depth_model.predict(sample_to_cv2(prev_sample), anim_args)
+                depth_model.save(os.path.join(args.outdir, f"{args.timestring}_depth_{frame_idx:05}.png"), depth)
             frame_idx += 1
 
         display.clear_output(wait=True)
