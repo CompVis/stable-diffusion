@@ -169,7 +169,7 @@ class Img2Img(BaseModel):
         seed = opt.seed
 
         assert os.path.isfile(opt.init_img)
-        init_image = load_img(opt.init_img).to(device).half()
+        init_image = load_img(opt.init_img).to(device)
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
 
@@ -195,8 +195,7 @@ class Img2Img(BaseModel):
                             c = model.get_learned_conditioning(prompts)
 
                             # encode (scaled latent)
-                            z_enc = sampler.stochastic_encode(init_latent,
-                                                              torch.tensor([t_enc] * batch_size).to(device))
+                            z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc] * batch_size).to(device))
                             # decode it
                             samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
                                                      unconditional_conditioning=uc, )
@@ -207,11 +206,10 @@ class Img2Img(BaseModel):
                             if not opt.skip_save:
                                 for x_sample in x_samples:
                                     x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                                    Image.fromarray(x_sample.astype(np.uint8)).save(
-                                        os.path.join(sample_path, f"{seed:05}_{base_count}.png"))
+                                    img = self.put_watermark(Image.fromarray(x_sample.astype(np.uint8)))
+                                    img.save(os.path.join(sample_path, f"{seed:05}_{base_count}.png"))
                                     base_count += 1
-                                    seed += 1
-                                    seed_everything(seed)
+
                             all_samples.append(x_samples)
 
                     if not opt.skip_grid:

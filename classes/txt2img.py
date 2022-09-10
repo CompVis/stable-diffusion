@@ -207,11 +207,9 @@ class Txt2Img(BaseModel):
                                 for x_sample in x_checked_image_torch:
                                     x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                                     img = Image.fromarray(x_sample.astype(np.uint8))
-                                    #img = put_watermark(img, wm_encoder)
-                                    img.save(os.path.join(sample_path, f"{base_count}_{opt.seed:05}_{n}.png"))
+                                    img = self.put_watermark(img, self.wm_encoder)
+                                    img.save(os.path.join(sample_path, f"{base_count:05}.png"))
                                     base_count += 1
-                                    opt.seed+=1
-                                    seed_everything(opt.seed)
 
                             if not opt.skip_grid:
                                 all_samples.append(x_checked_image_torch)
@@ -224,9 +222,7 @@ class Txt2Img(BaseModel):
 
                         # to image
                         grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-                        img = Image.fromarray(grid.astype(np.uint8))
-                        #img = put_watermark(img, wm_encoder)
-                        img.save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
+                        Image.fromarray(grid.astype(np.uint8)).save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
                         grid_count += 1
 
                     toc = time.time()
