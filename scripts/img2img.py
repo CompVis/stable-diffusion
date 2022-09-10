@@ -23,6 +23,20 @@ from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 
+try:
+    # this silences the annoying "Some weights of the model checkpoint were not used when initializing..." message at start.
+
+    from transformers import logging
+    logging.set_verbosity_error()
+except:
+    pass
+
+def patch_conv(**patch):
+    cls = torch.nn.Conv2d
+    init = cls.__init__
+    def __init__(self, *args, **kwargs):
+        return init(self, *args, **kwargs, **patch)
+    cls.__init__ = __init__
 
 def chunk(it, size):
     it = iter(it)
@@ -115,6 +129,13 @@ def main():
     )
 
     parser.add_argument(
+        "--tiling",
+        type=str,
+        default="false",
+        help="Tiles the generated image",
+    )
+
+    parser.add_argument(
         "--fixed_code",
         action='store_true',
         help="if enabled, uses the same starting code across all samples ",
@@ -201,6 +222,10 @@ def main():
     )
 
     opt = parser.parse_args()
+
+    if opt.tiling == "true":
+        patch_conv(padding_mode='circular')
+        print("patched for tiling")
     
     accelerator = accelerate.Accelerator()
     device = accelerator.device

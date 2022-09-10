@@ -21,6 +21,21 @@ from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 
 
+try:
+    # this silences the annoying "Some weights of the model checkpoint were not used when initializing..." message at start.
+
+    from transformers import logging
+    logging.set_verbosity_error()
+except:
+    pass
+
+def patch_conv(**patch):
+    cls = torch.nn.Conv2d
+    init = cls.__init__
+    def __init__(self, *args, **kwargs):
+        return init(self, *args, **kwargs, **patch)
+    cls.__init__ = __init__
+
 def chunk(it, size):
     it = iter(it)
     return iter(lambda: tuple(islice(it, size)), ())
@@ -100,6 +115,12 @@ def main():
         "--fixed_code",
         action='store_true',
         help="if enabled, uses the same starting code across samples ",
+    )
+    parser.add_argument(
+        "--tiling",
+        type=str,
+        default="false",
+        help="Tiles the generated image",
     )
     parser.add_argument(
         "--ddim_eta",
@@ -205,6 +226,10 @@ def main():
         opt.outdir = "outputs/txt2img-samples-laion400m"
 
     # seed_everything(opt.seed)
+
+    if opt.tiling == "true":
+        patch_conv(padding_mode='circular')
+        print("patched for tiling")
 
     config = OmegaConf.load(f"{opt.config}")
     model = load_model_from_config(config, f"{opt.ckpt}")
