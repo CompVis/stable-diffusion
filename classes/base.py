@@ -1,6 +1,7 @@
 import argparse
 import os
 import torch
+from imwatermark import WatermarkEncoder
 from torch import autocast
 from pytorch_lightning import seed_everything
 from omegaconf import OmegaConf
@@ -11,7 +12,7 @@ from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 
 # import txt2img functions from stable diffusion
-from scripts.txt2img import load_model_from_config
+from scripts.txt2img import load_model_from_config, put_watermark
 from scripts.txt2img import chunk
 
 
@@ -158,9 +159,9 @@ class BaseModel:
         :return:
         """
         print("Creating invisible watermark encoder (see https://github.com/ShieldMnt/invisible-watermark)...")
-        # wm = "StableDiffusionV1"
-        # wm_encoder = WatermarkEncoder()
-        # wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
+        wm = "StableDiffusionV1"
+        self.wm_encoder = WatermarkEncoder()
+        self.wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
 
     def prepare_data(self):
         """
