@@ -18,7 +18,7 @@ RUN         apt update && apt upgrade -y \
             python3 \
             wget \
             # install Anaconda or Miniconda
-            && chmod +x anaconda.sh && bash anaconda.sh -b -u -p /anaconda && /anaconda/bin/conda init bash && source ~/.bashrc \
+            && bash anaconda.sh -b -u -p /anaconda && /anaconda/bin/conda init bash && source ~/.bashrc \
             && git clone $GITHUB_STABLE_DIFFUSION && cd stable-diffusion \
             # When path exists, pip3 will (w)ipe. 
             && PIP_EXISTS_ACTION="w" \
