@@ -17,6 +17,7 @@ dependencies:
     - imageio-ffmpeg==0.4.2
     - pytorch-lightning==1.4.2
     - omegaconf==2.1.1
+    - realesrgan==0.2.5.0
     - test-tube>=0.7.5
     - streamlit==1.12.0
     - pillow==9.2.0
