@@ -56,13 +56,13 @@ git clone $GITHUB_STABLE_DIFFUSION
 
 cd stable-diffusion/docker-build
 chmod +x entrypoint.sh
-# download the Miniconda installer. We'll need it at build time.
+# Download the Miniconda installer. We'll need it at build time. 
+# Replace the URL with the version matching your system.
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O anaconda.sh && chmod +x anaconda.sh
 ```
 
 Build the Docker image. Give it any tag ```-t``` that you want.  
 Tip: Check that your shell session has the env variable set (above) with ```echo $GITHUB_STABLE_DIFFUSION```.  
-Base image will be arm64v8/debian on a macOS host.  
 ```condaarch``` will restrict the conda environment to the right architecture when installing packages. It can take on: ```linux-64```, ```osx-64```, ```osx-arm64```. On macOS you could also conda install ```nomkl``` but setting the environment appropriately is cleaner.
 ```Shell
 docker build -t santisbon/stable-diffusion \
