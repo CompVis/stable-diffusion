@@ -130,8 +130,11 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
             command = get_next_command(infile)
         except EOFError:
             done = True
-            break
-
+            continue
+        except KeyboardInterrupt:
+            done = True
+            continue
+        
         # skip empty lines
         if not command.strip():
             continue
