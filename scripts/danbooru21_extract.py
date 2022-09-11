@@ -1,6 +1,8 @@
 ## This script WAS NOT USED on the weights released by ProjectAI Touhou on 8th of september, 2022.
 ## This script CAN convert tags to human-readable-text BUT IT IS NOT REQUIRED.
+
 import argparse
+import string
 #Stolen code from https://stackoverflow.com/a/43357954
 def str2bool(v):
     if isinstance(v, bool):
@@ -12,13 +14,38 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
+def ratingparsing(input):
+    v = input.lower()
+    ratingsSelected = " "
+    if "a" in v:
+        ratingsSelected = "e g q s"
+    if "e" in v:
+        ratingsSelected = ratingsSelected + "e "
+    if "g" in v:
+        ratingsSelected = ratingsSelected + "g "
+    if "q" in v:
+        ratingsSelected = ratingsSelected + "q "
+    if "s" in v:
+        ratingsSelected = ratingsSelected + "s "
+    if ratingsSelected == " ":
+        raise Exception('a/e/g/q/s expected')
+    print("Ratings selected: " + ratingsSelected)
+    return(ratingsSelected)
 ## In the future someone might want to access this via import. Consider adding support for that
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--jsonpath', '-J', type=str, help='Path to JSONL file with the metadata', required = True)
 parser.add_argument('--extractpath', '-E', type=str, help='Path to the folder where to extract the images and text files', required = True)
 parser.add_argument('--imagespath', '-I', type=str, help='Path to the folder with the images', required = False, default="512px")
-parser.add_argument('--convtohuman', '-H', type=str2bool, help='Convert to human-readable-text', required = False, default=True)
+parser.add_argument('--convtohuman', '-H', type=str2bool, help='Convert to human-readable-text', required = False, default=False)
+parser.add_argument('--rating', '-R', type=ratingparsing, help='Extract specific rating/s [a/e/g/q/s]', required = False, default='a')
 args = parser.parse_args()
+if args.convtohuman == True:
+    print("tag conversion to human is currently somewhat broken. If you still want to use it remove line 25")
+    #Q: What is broken?
+    #A: tag_separator sometimes appears at to_write without anything behind it. It should be an easy fix where tag_separator simply does not appear if the variable behind it is blank
+    #but right now its not important, plus many tokens are lost when converting to human text. its more effective doing tag based inputs rather than human-readable text
+    exit()
 print("Arguments: " + str(args))
 
 import json
@@ -41,6 +68,7 @@ def ConvCommaAndUnderscoreToHuman(convtohuman, input):
         tars = tars.replace('_', ' ')
     elif convtohuman == False:
         print("CommaAndUnderscoreToHuman: convtohuman is false hence not doing anything")
+    return tars
 
 def ConvTagsToHuman(convtohuman, input):
     tars = input
@@ -62,6 +90,7 @@ def ConvTagsToHuman(convtohuman, input):
         tars = tars.replace('6boys', 'six boys')
     elif convtohuman == False:
         print("ConvTagsToHuman: convtohuman is false hence not doing anything")
+        print("TARS is: " + tars)
     return tars
 
 #Converts ratings to X content
@@ -93,6 +122,7 @@ def ConvCharacterToHuman(convtohuman, input):
         tars = tars.replace(')', '')
     elif convtohuman == False:
         print("ConvCharacterToHuman: convtohuman is false hence not doing anything")
+    return tars
 
 # unrecog_ans = True
 # while unrecog_ans:
@@ -108,6 +138,7 @@ def ConvCharacterToHuman(convtohuman, input):
 #         unrecog_ans = True
 
 convtohuman = args.convtohuman
+acceptedRatings = args.rating
 
 ##Open the file
 json_file_path = args.jsonpath ##Name of the JSON file to use, converted into parser arg
@@ -184,16 +215,28 @@ for json_str in json_list:
     try:
         img_ext = result['file_ext']
     except Exception:
-        file_ext = None
-        print("failed to get img_ext")
+        img_ext = None
+        print("img_ext RETRIVAL FAILED. VAR IS ESSENTIAL SO SKIPPING ENTRY.")
         continue
 
     try:
         img_rating = result['rating']
     except Exception:
         img_rating = None
-        print("failed to get img_rating")
+        print("img_rating RETRIVAL FAILED. VAR IS ESSENTIAL SO SKIPPING ENTRY.")
         continue
+
+    baru = img_rating in acceptedRatings
+
+    # print("HEYYYYYYYYYYYYYYYY " + str(baru))
+
+    if str(baru) == "False":
+        print("Entry rating' is not in acceptedRatings, skipping entry.")
+        continue
+    elif str(baru) == "True":
+        print("Entry rating matches!")
+
+
 
     file_path =  str(args.imagespath) + "/0" + img_id_last3 + "/" + img_id + "." + img_ext
     if os.path.exists(file_path):
@@ -201,7 +244,6 @@ for json_str in json_list:
 
         ##Essential
         FinalTagStringGeneral = ConvCommaAndUnderscoreToHuman(convtohuman, img_tag_string_general)
-        print(FinalTagStringGeneral)
         FinalTagStringGeneral = ConvTagsToHuman(convtohuman, FinalTagStringGeneral)
 
         ##Not essential
@@ -227,6 +269,8 @@ for json_str in json_list:
         else:
             print("CE 3NE")
 
+        print("IMAGE RATING IS: " + img_rating)
+
         if img_rating != None:
              FinalTagStringRating = ConvRatingToHuman(convtohuman, img_rating)
         elif img_rating == None:
@@ -240,10 +284,18 @@ for json_str in json_list:
         elif convtohuman == False:
             dan_iden = 'danbooru'
             tag_separator = ' '
+        # print('FinalTagStringCharacter is: ' + FinalTagStringCharacter)
+        # print('tag_separator is: ' + tag_separator)
+        # print('FinalTagStringArtist is: ' + FinalTagStringArtist)
+        # print('FinalTagStringRating is: ' + FinalTagStringRating)
+        # print('FinalTagStringGeneral is: ' + FinalTagStringGeneral)
+        # print('FinalTagStringCopyright is: ' + FinalTagStringCopyright)
         to_write = FinalTagStringCharacter + tag_separator + FinalTagStringArtist + tag_separator + FinalTagStringRating + tag_separator + FinalTagStringGeneral + tag_separator + FinalTagStringCopyright
         txt_name = args.extractpath +  "/" + img_id + '.txt'
         writefile(txt_name, to_write)
         current_saved_file_count = current_saved_file_count + 1
+    elif os.path.exists(file_path) == False:
+        print("Failed to find path.")
 
-print("finished process. Your extracted data should be in " + args.extractpath + " !")
+print("finished process. Your extracted data should be in " + str(args.extractpath) + " !")
         
