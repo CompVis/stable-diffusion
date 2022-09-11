@@ -6,7 +6,6 @@ import time
 import numpy as np
 import torch
 from torch import autocast
-from pytorch_lightning import seed_everything
 from PIL import Image
 from contextlib import  nullcontext
 from tqdm import tqdm, trange
