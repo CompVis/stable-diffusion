@@ -3,21 +3,28 @@
 The script also provides the ability to do face restoration and
 upscaling with the help of GFPGAN and Real-ESRGAN respectively.
 
-To use the ability, clone the **[GFPGAN
-repository](https://github.com/TencentARC/GFPGAN)** and follow their
-installation instructions. By default, we expect GFPGAN to be
-installed in a 'GFPGAN' sibling directory. Be sure that the `"ldm"`
-conda environment is active as you install GFPGAN.
+As of version 1.14, environment.yaml will install the Real-ESRGAN package into the
+standard install location for python packages, and will put GFPGAN into a subdirectory of "src" 
+in the stable-diffusion directory.
+(The reason for this is that the standard GFPGAN distribution has a minor bug that adversely affects image
+color.) Upscaling with Real-ESRGAN should "just work" without further intervention. Simply pass the --upscale (-U)
+option on the dream> command line, or indicate the desired scale on the popup in the Web GUI.
 
-You can use the `--gfpgan_dir` argument with `dream.py` to set a
+For **GFPGAN** to work, there is one additional step needed. You will need to download and 
+copy the GFPGAN [models file](https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth) 
+into **src/gfpgan/experiments/pretrained_models**. On Mac and Linux systems, here's how you'd do it using
+**wget**:
+~~~~
+> wget https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth src/gfpgan/experiments/pretrained_models/
+~~~~
+
+Make sure that you're in the stable-diffusion directory when you do this.
+
+Alternatively, if you have GFPGAN installed elsewhere, or if you are using
+an earlier version of this package which asked you to install GFPGAN in a
+sibling directory, you may use the `--gfpgan_dir` argument with `dream.py` to set a
 custom path to your GFPGAN directory. _There are other GFPGAN related
 boot arguments if you wish to customize further._
-
-You can install **Real-ESRGAN** by typing the following command.
-
-```
-pip install realesrgan
-```
 
 **Note: Internet connection needed:**
 Users whose GPU machines are isolated from the Internet (e.g. on a
