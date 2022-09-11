@@ -183,7 +183,7 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
         if len(opt.prompt) == 0:
             print('Try again with a prompt!')
             continue
-        if opt.init_img is not None and re.match('^-\d+$',opt.init_img): # retrieve previous value!
+        if opt.init_img is not None and re.match('^-\\d+$',opt.init_img): # retrieve previous value!
             try:
                 opt.init_img = last_results[int(opt.init_img)][0]
                 print(f'>> Reusing previous image {opt.init_img}')
@@ -478,7 +478,7 @@ def create_argv_parser():
     parser.add_argument(
         '--gfpgan_dir',
         type=str,
-        default='../GFPGAN',
+        default='./src/gfpgan',
         help='Indicates the directory containing the GFPGAN code.',
     )
     parser.add_argument(

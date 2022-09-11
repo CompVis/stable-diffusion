@@ -8,10 +8,7 @@ from PIL import Image
 from scripts.dream import create_argv_parser
 
 arg_parser = create_argv_parser()
-opt = arg_parser.parse_args()
-
-model_path = os.path.join(opt.gfpgan_dir, opt.gfpgan_model_path)
-gfpgan_model_exists = os.path.isfile(model_path)
+opt        = arg_parser.parse_args()
 
 def run_gfpgan(image, strength, seed, upsampler_scale=4):
     print(f'>> GFPGAN - Restoring Faces for image seed:{seed}')
@@ -19,6 +16,9 @@ def run_gfpgan(image, strength, seed, upsampler_scale=4):
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=DeprecationWarning)
         warnings.filterwarnings('ignore', category=UserWarning)
+        
+        model_path          = os.path.join(opt.gfpgan_dir, opt.gfpgan_model_path)
+        gfpgan_model_exists = os.path.isfile(model_path)
 
         try:
             if not gfpgan_model_exists:
@@ -46,7 +46,10 @@ def run_gfpgan(image, strength, seed, upsampler_scale=4):
 
     if gfpgan is None:
         print(
-            f'>> GFPGAN not initialized. Their packages must be installed as siblings to the "stable-diffusion" folder, or set explicitly using the --gfpgan_dir option.'
+            f'>> WARNING: GFPGAN not initialized.'
+        )
+        print(
+            f'>> Download https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth to {model_path}, \nor change GFPGAN directory with --gfpgan_dir.'
         )
         return image
 
