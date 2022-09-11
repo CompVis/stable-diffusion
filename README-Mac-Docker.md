@@ -51,7 +51,8 @@ GITHUB_STABLE_DIFFUSION="https://github.com/santisbon/stable-diffusion.git"
 
 cd ~
 git clone $GITHUB_STABLE_DIFFUSION
-cd stable-diffusion
+
+cd stable-diffusion/docker-build
 chmod +x entrypoint.sh
 # download the Miniconda installer. We'll need it at build time.
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O anaconda.sh && chmod +x anaconda.sh
@@ -137,7 +138,7 @@ wget https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pt
 cd ../stable-diffusion
 ```
 
-Only need to do this once. If we don't preload models it will download model files from the Internet when you run ```dream.py```.
+Only need to do this once. If we don't preload models it will download model files from the Internet when you run ```dream.py```. Used by the core functionality and by GFPGAN/Real-ESRGAN.
 ```Shell
 python3 scripts/preload_models.py
 ```
