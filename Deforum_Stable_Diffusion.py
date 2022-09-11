@@ -3,7 +3,7 @@
 # !!   "id": "c442uQJ_gUgy"
 # !! }}
 """
-# **Deforum Stable Diffusion v0.3**
+# **Deforum Stable Diffusion v0.4**
 [Stable Diffusion](https://github.com/CompVis/stable-diffusion) by Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer and the [Stability.ai](https://stability.ai/) Team. [K Diffusion](https://github.com/crowsonkb/k-diffusion) by [Katherine Crowson](https://twitter.com/RiversHaveWings). You need to get the ckpt file and put it on your Google Drive first to use this. It can be downloaded from [HuggingFace](https://huggingface.co/CompVis/stable-diffusion).
 
 Notebook by [deforum](https://discord.gg/upmXXsrwZc)
@@ -109,19 +109,18 @@ if setup_environment:
 import json
 from IPython import display
 
-import math, os, pathlib, shutil, subprocess, sys, time
+import math, os, pathlib, subprocess, sys, time
 import cv2
 import numpy as np
 import pandas as pd
 import random
 import requests
-import torch, torchvision
+import torch
 import torch.nn as nn
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
 from contextlib import contextmanager, nullcontext
 from einops import rearrange, repeat
-from itertools import islice
 from omegaconf import OmegaConf
 from PIL import Image
 from pytorch_lightning import seed_everything
@@ -143,20 +142,16 @@ sys.path.extend([
 
 import py3d_tools as p3d
 
-from helpers import save_samples, sampler_fn
-from infer import InferenceHelper
-from k_diffusion import sampling
+from helpers import DepthModel, sampler_fn
 from k_diffusion.external import CompVisDenoiser
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
-from midas.dpt_depth import DPTDepthModel
-from midas.transforms import Resize, NormalizeImage, PrepareForNet
 
 def sanitize(prompt):
     whitelist = set('abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ')
     tmp = ''.join(filter(whitelist.__contains__, prompt))
-    return '_'.join(prompt.split(" "))
+    return tmp.replace(' ', '_')
 
 def anim_frame_warp_2d(prev_img_cv2, args, anim_args, keys, frame_idx):
     angle = keys.angle_series[frame_idx]
@@ -195,19 +190,8 @@ def anim_frame_warp_3d(prev_img_cv2, depth, anim_args, keys, frame_idx):
     torch.cuda.empty_cache()
     return result
 
-def add_noise(sample: torch.Tensor, noise_amt: float):
+def add_noise(sample: torch.Tensor, noise_amt: float) -> torch.Tensor:
     return sample + torch.randn(sample.shape, device=sample.device) * noise_amt
-
-def download_depth_models():
-    def wget(url, outputdir):
-        print(subprocess.run(['wget', url, '-P', outputdir], stdout=subprocess.PIPE).stdout.decode('utf-8'))
-    if not os.path.exists(os.path.join(models_path, 'dpt_large-midas-2f21e586.pt')):
-        print("Downloading dpt_large-midas-2f21e586.pt...")
-        wget("https://github.com/intel-isl/DPT/releases/download/1_0/dpt_large-midas-2f21e586.pt", models_path)
-    if not os.path.exists('pretrained/AdaBins_nyu.pt'):
-        print("Downloading AdaBins_nyu.pt...")
-        os.makedirs('pretrained', exist_ok=True)
-        wget("https://cloudflare-ipfs.com/ipfs/Qmd2mMnDLWePKmgfS8m6ntAg4nhV5VkUyAydYBp8cWWeB7/AdaBins_nyu.pt", 'pretrained')
 
 def get_output_folder(output_path, batch_folder):
     out_path = os.path.join(output_path,time.strftime('%Y-%m'))
@@ -215,36 +199,6 @@ def get_output_folder(output_path, batch_folder):
         out_path = os.path.join(out_path, batch_folder)
     os.makedirs(out_path, exist_ok=True)
     return out_path
-
-def load_depth_model(optimize=True):
-    midas_model = DPTDepthModel(
-        path=f"{models_path}/dpt_large-midas-2f21e586.pt",
-        backbone="vitl16_384",
-        non_negative=True,
-    )
-    normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-
-    midas_transform = T.Compose([
-        Resize(
-            384, 384,
-            resize_target=None,
-            keep_aspect_ratio=True,
-            ensure_multiple_of=32,
-            resize_method="minimal",
-            image_interpolation_method=cv2.INTER_CUBIC,
-        ),
-        normalization,
-        PrepareForNet()
-    ])
-
-    midas_model.eval()    
-    if optimize:
-        if device == torch.device("cuda"):
-            midas_model = midas_model.to(memory_format=torch.channels_last)
-            midas_model = midas_model.half()
-    midas_model.to(device)
-
-    return midas_model, midas_transform
 
 def load_img(path, shape, use_alpha_as_mask=False):
     # use_alpha_as_mask: Read the alpha channel of the image as the mask image
@@ -404,92 +358,14 @@ def sample_to_cv2(sample: torch.Tensor, type=np.uint8) -> np.ndarray:
     sample_int8 = (sample_f32 * 255)
     return sample_int8.astype(type)
 
-@torch.no_grad()
-def predict_depth(prev_img_cv2, adabins_helper, midas_model, midas_transform, anim_args) -> torch.Tensor:
-    w, h = prev_img_cv2.shape[1], prev_img_cv2.shape[0]
-
-    # predict depth with AdaBins    
-    use_adabins = anim_args.midas_weight < 1.0 and adabins_helper is not None
-    if use_adabins:
-        MAX_ADABINS_AREA = 500000
-        MIN_ADABINS_AREA = 448*448
-
-        # resize image if too large or too small
-        img_pil = Image.fromarray(cv2.cvtColor(prev_img_cv2.astype(np.uint8), cv2.COLOR_RGB2BGR))
-        image_pil_area = w*h
-        resized = True
-        if image_pil_area > MAX_ADABINS_AREA:
-            scale = math.sqrt(MAX_ADABINS_AREA) / math.sqrt(image_pil_area)
-            depth_input = img_pil.resize((int(w*scale), int(h*scale)), Image.LANCZOS) # LANCZOS is good for downsampling
-            print(f"  resized to {depth_input.width}x{depth_input.height}")
-        elif image_pil_area < MIN_ADABINS_AREA:
-            scale = math.sqrt(MIN_ADABINS_AREA) / math.sqrt(image_pil_area)
-            depth_input = img_pil.resize((int(w*scale), int(h*scale)), Image.BICUBIC)
-            print(f"  resized to {depth_input.width}x{depth_input.height}")
-        else:
-            depth_input = img_pil
-            resized = False
-
-        # predict depth and resize back to original dimensions
-        try:
-            _, adabins_depth = adabins_helper.predict_pil(depth_input)
-            if resized:
-                adabins_depth = TF.resize(
-                    torch.from_numpy(adabins_depth), 
-                    torch.Size([h, w]),
-                    interpolation=TF.InterpolationMode.BICUBIC
-                )
-            adabins_depth = adabins_depth.squeeze()
-        except:
-            print(f"  exception encountered, falling back to pure MiDaS")
-            use_adabins = False
-        torch.cuda.empty_cache()
-
-    if midas_model is not None:
-        # convert image from 0->255 uint8 to 0->1 float for feeding to MiDaS
-        img_midas = prev_img_cv2.astype(np.float32) / 255.0
-        img_midas_input = midas_transform({"image": img_midas})["image"]
-
-        # MiDaS depth estimation implementation
-        sample = torch.from_numpy(img_midas_input).float().to(device).unsqueeze(0)
-        if device == torch.device("cuda"):
-            sample = sample.to(memory_format=torch.channels_last)  
-            sample = sample.half()
-        midas_depth = midas_model.forward(sample)
-        midas_depth = torch.nn.functional.interpolate(
-            midas_depth.unsqueeze(1),
-            size=img_midas.shape[:2],
-            mode="bicubic",
-            align_corners=False,
-        ).squeeze()
-        midas_depth = midas_depth.cpu().numpy()
-        torch.cuda.empty_cache()
-
-        # MiDaS makes the near values greater, and the far values lesser. Let's reverse that and try to align with AdaBins a bit better.
-        midas_depth = np.subtract(50.0, midas_depth)
-        midas_depth = midas_depth / 19.0
-
-        # blend between MiDaS and AdaBins predictions
-        if use_adabins:
-            depth_map = midas_depth*anim_args.midas_weight + adabins_depth*(1.0-anim_args.midas_weight)
-        else:
-            depth_map = midas_depth
-
-        depth_map = np.expand_dims(depth_map, axis=0)
-        depth_tensor = torch.from_numpy(depth_map).squeeze().to(device)
-    else:
-        depth_tensor = torch.ones((h, w), device=device)
-    
-    return depth_tensor
-
 def transform_image_3d(prev_img_cv2, depth_tensor, rot_mat, translate, anim_args):
     # adapted and optimized version of transform_image_3d from Disco Diffusion https://github.com/alembics/disco-diffusion 
     w, h = prev_img_cv2.shape[1], prev_img_cv2.shape[0]
 
-    pixel_aspect = 1.0 # aspect of an individual pixel (so usually 1.0)
+    aspect_ratio = float(w)/float(h)
     near, far, fov_deg = anim_args.near_plane, anim_args.far_plane, anim_args.fov
-    persp_cam_old = p3d.FoVPerspectiveCameras(near, far, pixel_aspect, fov=fov_deg, degrees=True, device=device)
-    persp_cam_new = p3d.FoVPerspectiveCameras(near, far, pixel_aspect, fov=fov_deg, degrees=True, R=rot_mat, T=torch.tensor([translate]), device=device)
+    persp_cam_old = p3d.FoVPerspectiveCameras(near, far, aspect_ratio, fov=fov_deg, degrees=True, device=device)
+    persp_cam_new = p3d.FoVPerspectiveCameras(near, far, aspect_ratio, fov=fov_deg, degrees=True, R=rot_mat, T=torch.tensor([translate]), device=device)
 
     # range of [-1,1] is important to torch grid_sample's padding handling
     y,x = torch.meshgrid(torch.linspace(-1.,1.,h,dtype=torch.float32,device=device),torch.linspace(-1.,1.,w,dtype=torch.float32,device=device))
@@ -526,16 +402,13 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
     seed_everything(args.seed)
     os.makedirs(args.outdir, exist_ok=True)
 
-    if args.sampler == 'plms':
-        sampler = PLMSSampler(model)
-    else:
-        sampler = DDIMSampler(model)
-
-    model_wrap = CompVisDenoiser(model)       
+    sampler = PLMSSampler(model) if args.sampler == 'plms' else DDIMSampler(model)
+    model_wrap = CompVisDenoiser(model)
     batch_size = args.n_samples
     prompt = args.prompt
     assert prompt is not None
     data = [batch_size * [prompt]]
+    precision_scope = autocast if args.precision == "autocast" else nullcontext
 
     init_latent = None
     mask_image = None
@@ -543,14 +416,16 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
     if args.init_latent is not None:
         init_latent = args.init_latent
     elif args.init_sample is not None:
-        init_latent = model.get_first_stage_encoding(model.encode_first_stage(args.init_sample))
+        with precision_scope("cuda"):
+            init_latent = model.get_first_stage_encoding(model.encode_first_stage(args.init_sample))
     elif args.use_init and args.init_image != None and args.init_image != '':
         init_image, mask_image = load_img(args.init_image, 
                                           shape=(args.W, args.H),  
                                           use_alpha_as_mask=args.use_alpha_as_mask)
         init_image = init_image.to(device)
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
-        init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space        
+        with precision_scope("cuda"):
+            init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space        
 
     if not args.use_init and args.strength > 0:
         print("\nNo init image, but strength > 0. This may give you some strange results.\n")
@@ -592,7 +467,6 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
                             sampler=sampler)    
 
     results = []
-    precision_scope = autocast if args.precision == "autocast" else nullcontext
     with torch.no_grad():
         with precision_scope("cuda"):
             with model.ema_scope():
@@ -748,7 +622,7 @@ def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_prec
 
 if load_on_run_all and ckpt_valid:
     local_config = OmegaConf.load(f"{ckpt_config_path}")
-    model = load_model_from_config(local_config, f"{ckpt_path}",half_precision=half_precision)
+    model = load_model_from_config(local_config, f"{ckpt_path}", half_precision=half_precision)
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
 
@@ -796,7 +670,7 @@ def DeforumAnimArgs():
 
     #@markdown ####**Coherence:**
     color_coherence = 'Match Frame 0 LAB' #@param ['None', 'Match Frame 0 HSV', 'Match Frame 0 LAB', 'Match Frame 0 RGB'] {type:'string'}
-    diffusion_cadence = '3' #@param ['1','2','3','4','5','6','7','8'] {type:'string'}
+    diffusion_cadence = '1' #@param ['1','2','3','4','5','6','7','8'] {type:'string'}
 
     #@markdown ####**3D Depth Warping:**
     use_depth_warping = True #@param {type:"boolean"}
@@ -806,6 +680,7 @@ def DeforumAnimArgs():
     fov = 40#@param {type:"number"}
     padding_mode = 'border'#@param ['border', 'reflection', 'zeros'] {type:'string'}
     sampling_mode = 'bicubic'#@param ['bicubic', 'bilinear', 'nearest'] {type:'string'}
+    save_depth_maps = False #@param {type:"boolean"}
 
     #@markdown ####**Video Input:**
     video_init_path ='/content/video_in.mp4'#@param {type:"string"}
@@ -823,21 +698,21 @@ def DeforumAnimArgs():
 
 class DeformAnimKeys():
     def __init__(self, anim_args):
-        self.angle_series = get_inbetweens(parse_key_frames(anim_args.angle))
-        self.zoom_series = get_inbetweens(parse_key_frames(anim_args.zoom))
-        self.translation_x_series = get_inbetweens(parse_key_frames(anim_args.translation_x))
-        self.translation_y_series = get_inbetweens(parse_key_frames(anim_args.translation_y))
-        self.translation_z_series = get_inbetweens(parse_key_frames(anim_args.translation_z))
-        self.rotation_3d_x_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_x))
-        self.rotation_3d_y_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_y))
-        self.rotation_3d_z_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_z))
-        self.noise_schedule_series = get_inbetweens(parse_key_frames(anim_args.noise_schedule))
-        self.strength_schedule_series = get_inbetweens(parse_key_frames(anim_args.strength_schedule))
-        self.contrast_schedule_series = get_inbetweens(parse_key_frames(anim_args.contrast_schedule))
+        self.angle_series = get_inbetweens(parse_key_frames(anim_args.angle), anim_args.max_frames)
+        self.zoom_series = get_inbetweens(parse_key_frames(anim_args.zoom), anim_args.max_frames)
+        self.translation_x_series = get_inbetweens(parse_key_frames(anim_args.translation_x), anim_args.max_frames)
+        self.translation_y_series = get_inbetweens(parse_key_frames(anim_args.translation_y), anim_args.max_frames)
+        self.translation_z_series = get_inbetweens(parse_key_frames(anim_args.translation_z), anim_args.max_frames)
+        self.rotation_3d_x_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_x), anim_args.max_frames)
+        self.rotation_3d_y_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_y), anim_args.max_frames)
+        self.rotation_3d_z_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_z), anim_args.max_frames)
+        self.noise_schedule_series = get_inbetweens(parse_key_frames(anim_args.noise_schedule), anim_args.max_frames)
+        self.strength_schedule_series = get_inbetweens(parse_key_frames(anim_args.strength_schedule), anim_args.max_frames)
+        self.contrast_schedule_series = get_inbetweens(parse_key_frames(anim_args.contrast_schedule), anim_args.max_frames)
 
 
-def get_inbetweens(key_frames, integer=False, interp_method='Linear'):
-    key_frame_series = pd.Series([np.nan for a in range(anim_args.max_frames)])
+def get_inbetweens(key_frames, max_frames, integer=False, interp_method='Linear'):
+    key_frame_series = pd.Series([np.nan for a in range(max_frames)])
 
     for i, value in key_frames.items():
         key_frame_series[i] = value
@@ -849,8 +724,8 @@ def get_inbetweens(key_frames, integer=False, interp_method='Linear'):
       interp_method = 'Linear'
           
     key_frame_series[0] = key_frame_series[key_frame_series.first_valid_index()]
-    key_frame_series[anim_args.max_frames-1] = key_frame_series[key_frame_series.last_valid_index()]
-    key_frame_series = key_frame_series.interpolate(method=interp_method.lower(),limit_direction='both')
+    key_frame_series[max_frames-1] = key_frame_series[key_frame_series.last_valid_index()]
+    key_frame_series = key_frame_series.interpolate(method=interp_method.lower(), limit_direction='both')
     if integer:
         return key_frame_series.astype(int)
     return key_frame_series
@@ -1094,12 +969,15 @@ def render_animation(args, anim_args):
     using_vid_init = anim_args.animation_mode == 'Video Input'
 
     # load depth model for 3D
-    if anim_args.animation_mode == '3D' and anim_args.use_depth_warping:
-        download_depth_models()
-        adabins_helper = InferenceHelper(dataset='nyu', device=device)
-        midas_model, midas_transform = load_depth_model()
+    predict_depths = (anim_args.animation_mode == '3D' and anim_args.use_depth_warping) or anim_args.save_depth_maps
+    if predict_depths:
+        depth_model = DepthModel(device)
+        depth_model.load_midas(models_path)
+        if anim_args.midas_weight < 1.0:
+            depth_model.load_adabins()
     else:
-        adabins_helper, midas_model, midas_transform = None, None, None
+        depth_model = None
+        anim_args.save_depth_maps = False
 
     # state for interpolating between diffusion steps
     turbo_steps = 1 if using_vid_init else int(anim_args.diffusion_cadence)
@@ -1131,6 +1009,7 @@ def render_animation(args, anim_args):
         noise = keys.noise_schedule_series[frame_idx]
         strength = keys.strength_schedule_series[frame_idx]
         contrast = keys.contrast_schedule_series[frame_idx]
+        depth = None
         
         # emit in-between frames
         if turbo_steps > 1:
@@ -1138,18 +1017,24 @@ def render_animation(args, anim_args):
             for tween_frame_idx in range(tween_frame_start_idx, frame_idx):
                 tween = float(tween_frame_idx - tween_frame_start_idx + 1) / float(frame_idx - tween_frame_start_idx)
                 print(f"  creating in between frame {tween_frame_idx} tween:{tween:0.2f}")
+
+                advance_prev = turbo_prev_image is not None and tween_frame_idx > turbo_prev_frame_idx
+                advance_next = tween_frame_idx > turbo_next_frame_idx
+
+                if depth_model is not None:
+                    assert(turbo_next_image is not None)
+                    depth = depth_model.predict(turbo_next_image, anim_args)
+
                 if anim_args.animation_mode == '2D':
-                    if turbo_prev_image is not None and tween_frame_idx > turbo_prev_frame_idx:
+                    if advance_prev:
                         turbo_prev_image = anim_frame_warp_2d(turbo_prev_image, args, anim_args, keys, tween_frame_idx)
-                    if tween_frame_idx > turbo_next_frame_idx:
+                    if advance_next:
                         turbo_next_image = anim_frame_warp_2d(turbo_next_image, args, anim_args, keys, tween_frame_idx)
                 else: # '3D'
-                    if turbo_prev_image is not None and tween_frame_idx > turbo_prev_frame_idx:
-                        prev_depth = predict_depth(turbo_prev_image, adabins_helper, midas_model, midas_transform, anim_args)
-                        turbo_prev_image = anim_frame_warp_3d(turbo_prev_image, prev_depth, anim_args, keys, tween_frame_idx)
-                    if tween_frame_idx > turbo_next_frame_idx:
-                        next_depth = predict_depth(turbo_next_image, adabins_helper, midas_model, midas_transform, anim_args)
-                        turbo_next_image = anim_frame_warp_3d(turbo_next_image, next_depth, anim_args, keys, tween_frame_idx)
+                    if advance_prev:
+                        turbo_prev_image = anim_frame_warp_3d(turbo_prev_image, depth, anim_args, keys, tween_frame_idx)
+                    if advance_next:
+                        turbo_next_image = anim_frame_warp_3d(turbo_next_image, depth, anim_args, keys, tween_frame_idx)
                 turbo_prev_frame_idx = turbo_next_frame_idx = tween_frame_idx
 
                 if turbo_prev_image is not None and tween < 1.0:
@@ -1159,6 +1044,8 @@ def render_animation(args, anim_args):
 
                 filename = f"{args.timestring}_{tween_frame_idx:05}.png"
                 cv2.imwrite(os.path.join(args.outdir, filename), cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_RGB2BGR))
+                if anim_args.save_depth_maps:
+                    depth_model.save(os.path.join(args.outdir, f"{args.timestring}_depth_{tween_frame_idx:05}.png"), depth)
             if turbo_next_image is not None:
                 prev_sample = sample_from_cv2(turbo_next_image)
 
@@ -1168,7 +1055,7 @@ def render_animation(args, anim_args):
                 prev_img = anim_frame_warp_2d(sample_to_cv2(prev_sample), args, anim_args, keys, frame_idx)
             else: # '3D'
                 prev_img_cv2 = sample_to_cv2(prev_sample)
-                depth = predict_depth(prev_img_cv2, adabins_helper, midas_model, midas_transform, anim_args)
+                depth = depth_model.predict(prev_img_cv2, anim_args) if depth_model else None
                 prev_img = anim_frame_warp_3d(prev_img_cv2, depth, anim_args, keys, frame_idx)
 
             # apply color matching
@@ -1213,6 +1100,10 @@ def render_animation(args, anim_args):
         else:    
             filename = f"{args.timestring}_{frame_idx:05}.png"
             image.save(os.path.join(args.outdir, filename))
+            if anim_args.save_depth_maps:
+                if depth is None:
+                    depth = depth_model.predict(sample_to_cv2(prev_sample), anim_args)
+                depth_model.save(os.path.join(args.outdir, f"{args.timestring}_depth_{frame_idx:05}.png"), depth)
             frame_idx += 1
 
         display.clear_output(wait=True)
@@ -1223,7 +1114,7 @@ def render_animation(args, anim_args):
 def render_input_video(args, anim_args):
     # create a folder for the video input frames to live in
     video_in_frame_path = os.path.join(args.outdir, 'inputframes') 
-    os.makedirs(os.path.join(args.outdir, video_in_frame_path), exist_ok=True)
+    os.makedirs(video_in_frame_path, exist_ok=True)
     
     # save the video frames from input video
     print(f"Exporting Video Frames (1 every {anim_args.extract_nth_frame}) frames to {video_in_frame_path}...")
