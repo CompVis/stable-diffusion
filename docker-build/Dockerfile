@@ -1,9 +1,13 @@
-FROM        arm64v8/debian 
+FROM        debian 
 
 ARG         gsd
 ENV         GITHUB_STABLE_DIFFUSION $gsd
+
 ARG         sdreq="requirements-linux-arm64.txt"
 ENV         SD_REQ $sdreq
+
+ARG         condaarch
+ENV         ARCH $condaarch
 
 WORKDIR     /
 
@@ -30,10 +34,9 @@ WORKDIR     /stable-diffusion
 
 # SD env 2.3 GB !!!
 RUN         PIP_EXISTS_ACTION="w" \
-            # restrict the Conda environment to only use ARM packages. M1/M2 is ARM-based. You could also conda install nomkl.
-            && CONDA_SUBDIR="osx-arm64" \
-            # Create the environment, activate it, install requirements.
+            && CONDA_SUBDIR=$ARCH \
             && source ~/.bashrc && conda create -y --name ldm && conda activate ldm \
+            && conda config --env --set subdir $ARCH \
             && pip3 install -r $SD_REQ \                     
             && mkdir models/ldm/stable-diffusion-v1 
 

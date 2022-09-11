@@ -4,7 +4,7 @@ Table of Contents
 
 * [Step 1 - Get the Model](#step-1---get-the-model)
 * [Step 2 - Installation](#step-2---installation)
-   * [Option A - On a Linux container with Docker for Apple silicon](#option-a---on-a-linux-container-with-docker-for-apple-silicon)
+   * [Option A - On a Linux container with Docker](#option-a---on-a-linux-container-with-docker-for-apple-silicon)
       * [Prerequisites](#prerequisites)
       * [Setup](#setup)
    * [Option B - Directly on Apple silicon](#option-b---directly-on-apple-silicon)
@@ -23,7 +23,8 @@ You'll need to create an account but it's quick and free.
 
 # Step 2 - Installation
 
-## Option A - On a Linux container with Docker for Apple silicon
+## Option A - On a Linux container 
+This example uses a Mac M2 but you can specify the platform and architecture as parameters when building the image and running the container.  
 You [can't access the Macbook M1/M2 GPU cores from the Docker containers](https://github.com/pytorch/pytorch/issues/81224) so performance is reduced but for development purposes it's fine.
 
 ### Prerequisites
@@ -59,9 +60,13 @@ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O a
 ```
 
 Build the Docker image. Give it any tag ```-t``` that you want.  
-Tip: Make sure your shell session has the env variable set (above) with ```echo $GITHUB_STABLE_DIFFUSION```.
+Tip: Check that your shell session has the env variable set (above) with ```echo $GITHUB_STABLE_DIFFUSION```.  
+Base image will be arm64v8/debian on a macOS host.  
+```condaarch``` will restrict the conda environment to the right architecture when installing packages. It can take on: ```linux-64```, ```osx-64```, ```osx-arm64```. M1/M2 is ARM-based. On macOS you could also conda install ```nomkl``` but setting the environment appropriately is cleaner.
 ```Shell
 docker build -t santisbon/stable-diffusion \
+--platform linux/arm64 \
+--build-arg condaarch="osx-arm64" \
 --build-arg gsd=$GITHUB_STABLE_DIFFUSION \
 --build-arg sdreq="requirements-linux-arm64.txt" \
 .
