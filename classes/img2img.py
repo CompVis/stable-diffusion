@@ -153,7 +153,7 @@ class Img2Img(BaseModel):
         opt = parser.parse_args()
         self.opt = opt
 
-    def sample(self, options):
+    def sample(self, options=None):
         super().sample(options)
         opt = self.opt
         batch_size = self.batch_size

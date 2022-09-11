@@ -154,7 +154,7 @@ class Txt2Img(BaseModel):
         },
     ]
 
-    def sample(self, options):
+    def sample(self, options=None):
         super().sample(options)
         opt = self.opt
         model = self.model
