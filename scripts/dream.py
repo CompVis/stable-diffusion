@@ -185,7 +185,6 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
             continue
         if opt.seed is not None and opt.seed < 0:   # retrieve previous value!
             try:
-                print(f'last seeds = {last_seeds}, opt.seed={opt.seed}')
                 opt.seed = last_seeds[opt.seed]
                 print(f'reusing previous seed {opt.seed}')
             except IndexError:
