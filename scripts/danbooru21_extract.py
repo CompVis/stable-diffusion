@@ -2,7 +2,7 @@
 ## This script CAN convert tags to human-readable-text BUT IT IS NOT REQUIRED.
 
 import argparse
-import string
+
 #Stolen code from https://stackoverflow.com/a/43357954
 def str2bool(v):
     if isinstance(v, bool):
