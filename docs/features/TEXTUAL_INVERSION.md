@@ -1,6 +1,8 @@
 # **Personalizing Text-to-Image Generation**
 
-You may personalize the generated images to provide your own styles or objects by training a new LDM checkpoint and introducing a new vocabulary to the fixed model.
+You may personalize the generated images to provide your own styles or objects by training a new LDM checkpoint and introducing a new vocabulary to the fixed model as a (.pt) embeddings file. Alternatively, you may use or train HuggingFace Concepts embeddings files (.bin) from https://huggingface.co/sd-concepts-library and its associated notebooks.
+
+**Training**
 
 To train, prepare a folder that contains images sized at 512x512 and execute the following:
 
@@ -26,9 +28,11 @@ On a RTX3090, the process for SD will take ~1h @1.6 iterations/sec.
 
 _Note_: According to the associated paper, the optimal number of images is 3-5. Your model may not converge if you use more images than that.
 
-Training will run indefinately, but you may wish to stop it before the heat death of the universe, when you find a low loss epoch or around ~5000 iterations.
+Training will run indefinitely, but you may wish to stop it before the heat death of the universe, when you find a low loss epoch or around ~5000 iterations.
 
-Once the model is trained, specify the trained .pt file when starting dream using
+**Running**
+
+Once the model is trained, specify the trained .pt or .bin file when starting dream using
 
 ```
 (ldm) ~/stable-diffusion$ python3 ./scripts/dream.py --embedding_path /path/to/embedding.pt --full_precision
@@ -46,7 +50,7 @@ This also works with image2image
 dream> "waterfall and rainbow in the style of *" --init_img=./init-images/crude_drawing.png --strength=0.5 -s100 -n4
 ```
 
-It's also possible to train multiple token (modify the placeholder string in `configs/stable-diffusion/v1-finetune.yaml`) and combine LDM checkpoints using:
+For .pt files it's also possible to train multiple tokens (modify the placeholder string in `configs/stable-diffusion/v1-finetune.yaml`) and combine LDM checkpoints using:
 
 ```
 (ldm) ~/stable-diffusion$ python3 ./scripts/merge_embeddings.py \
