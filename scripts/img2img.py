@@ -18,7 +18,6 @@ import random
 from pytorch_lightning import seed_everything
 import accelerate
 
-import k_diffusion as K
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
@@ -63,24 +62,11 @@ def load_model_from_config(config, ckpt, verbose=False):
     return model
 
 
-class CFGDenoiser(nn.Module):
-    def __init__(self, model):
-        super().__init__()
-        self.inner_model = model
-
-    def forward(self, x, sigma, uncond, cond, cond_scale):
-        x_in = torch.cat([x] * 2)
-        sigma_in = torch.cat([sigma] * 2)
-        cond_in = torch.cat([uncond, cond])
-        uncond, cond = self.inner_model(x_in, sigma_in, cond=cond_in).chunk(2)
-        return uncond + (cond - uncond) * cond_scale
-
-
 def load_img(path):
     image = Image.open(path).convert("RGB")
     w, h = image.size
     print(f"loaded input image of size ({w}, {h}) from {path}")
-    w, h = map(lambda x: x - x % 64, (w, h))  # lmao, it's 64 not 32
+    w, h = map(lambda x: x - x % 64, (w, h))
     image = image.resize((w, h), resample=Image.Resampling.LANCZOS)
     image = np.array(image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
@@ -235,16 +221,14 @@ def main():
 
     config = OmegaConf.load(f"{opt.config}")
     model = load_model_from_config(config, f"{opt.ckpt}")
-    # model = model.half()
-    
-    model_wrap = K.external.CompVisDenoiser(model)
-    sigma_min, sigma_max = model_wrap.sigmas[0].item(), model_wrap.sigmas[-1].item()
+    model = model.half()
+
+    sampler = DDIMSampler(model)
 
     os.makedirs(opt.outdir, exist_ok=True)
     outpath = opt.outdir
 
     batch_size = opt.n_samples
-    n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
     if not opt.from_file:
         prompt = opt.prompt
         assert prompt is not None
@@ -258,9 +242,11 @@ def main():
 
     assert os.path.isfile(opt.init_img)
     init_image = load_img(opt.init_img).to(device)
+    init_image = init_image.half()
     init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
-    init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
-    x0 = init_latent
+    init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))
+
+    sampler.make_schedule(ddim_num_steps=opt.ddim_steps, ddim_eta=opt.ddim_eta, verbose=False)
 
     assert 0. <= opt.strength <= 1., 'can only work with strength in [0.0, 1.0]'
     t_enc = int(opt.strength * opt.ddim_steps)
@@ -271,7 +257,6 @@ def main():
         with precision_scope("cuda"):
             with model.ema_scope():
                 tic = time.time()
-                all_samples = list()
                 for n in trange(opt.n_iter, desc="Sampling", disable=not accelerator.is_main_process):
                     for prompts in tqdm(data, desc="data", disable=not accelerator.is_main_process):
                         uc = None
@@ -281,16 +266,10 @@ def main():
                             prompts = list(prompts)
                         c = model.get_learned_conditioning(prompts)
 
-                        sigmas = model_wrap.get_sigmas(opt.ddim_steps)
-                        torch.manual_seed(opt.seed) # changes manual seeding procedure
-                        # sigmas = K.sampling.get_sigmas_karras(opt.ddim_steps, sigma_min, sigma_max, device=device)
-                        noise = torch.randn_like(x0) * sigmas[opt.ddim_steps - t_enc - 1] # for GPU draw
-                        xi = x0 + noise
-                        sigma_sched = sigmas[opt.ddim_steps - t_enc - 1:]
-                        # x = torch.randn([opt.n_samples, *shape]).to(device) * sigmas[0] # for CPU draw
-                        model_wrap_cfg = CFGDenoiser(model_wrap)
-                        extra_args = {'cond': c, 'uncond': uc, 'cond_scale': opt.scale}
-                        samples_ddim = K.sampling.sample_lms(model_wrap_cfg, xi, sigma_sched, extra_args=extra_args, disable=not accelerator.is_main_process)
+                        z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
+                        samples_ddim = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
+                                                 unconditional_conditioning=uc,)
+
                         x_samples_ddim = model.decode_first_stage(samples_ddim)
                         x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
                         x_samples_ddim = accelerator.gather(x_samples_ddim)

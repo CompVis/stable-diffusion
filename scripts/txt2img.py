@@ -15,7 +15,6 @@ from torch import autocast
 from contextlib import contextmanager, nullcontext
 import accelerate
 
-import k_diffusion as K
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
@@ -60,18 +59,6 @@ def load_model_from_config(config, ckpt, verbose=False):
     model.eval()
     return model
 
-class CFGDenoiser(nn.Module):
-    def __init__(self, model):
-        super().__init__()
-        self.inner_model = model
-
-    def forward(self, x, sigma, uncond, cond, cond_scale):
-        x_in = torch.cat([x] * 2)
-        sigma_in = torch.cat([sigma] * 2)
-        cond_in = torch.cat([uncond, cond])
-        uncond, cond = self.inner_model(x_in, sigma_in, cond=cond_in).chunk(2)
-        return uncond + (cond - uncond) * cond_scale
-
 
 def main():
     parser = argparse.ArgumentParser()
@@ -105,11 +92,6 @@ def main():
         "--plms",
         action='store_true',
         help="use plms sampling",
-    )
-    parser.add_argument(
-        "--laion400m",
-        action='store_true',
-        help="uses the LAION400M model",
     )
     parser.add_argument(
         "--fixed_code",
@@ -165,12 +147,6 @@ def main():
         help="how many samples to produce for each given prompt. A.k.a. batch size",
     )
     parser.add_argument(
-        "--n_rows",
-        type=int,
-        default=0,
-        help="rows in the grid (default: n_samples)",
-    )
-    parser.add_argument(
         "--scale",
         type=float,
         default=10,
@@ -218,14 +194,6 @@ def main():
     seed_everything(opt.seed)
     seeds = torch.randint(-2 ** 63, 2 ** 63 - 1, [accelerator.num_processes])
     torch.manual_seed(seeds[accelerator.process_index].item())
-    
-    if opt.laion400m:
-        print("Falling back to LAION 400M model...")
-        opt.config = "configs/latent-diffusion/txt2img-1p4B-eval.yaml"
-        opt.ckpt = "models/ldm/text2img-large/model.ckpt"
-        opt.outdir = "outputs/txt2img-samples-laion400m"
-
-    # seed_everything(opt.seed)
 
     if opt.tiling == "true":
         patch_conv(padding_mode='circular')
@@ -235,22 +203,18 @@ def main():
     model = load_model_from_config(config, f"{opt.ckpt}")
     model = model.half()
 
-    # device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    # model = model.to(device)
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    model = model.to(device)
 
     if opt.plms:
         sampler = PLMSSampler(model)
     else:
         sampler = DDIMSampler(model)
-        
-    model_wrap = K.external.CompVisDenoiser(model)
-    sigma_min, sigma_max = model_wrap.sigmas[0].item(), model_wrap.sigmas[-1].item()
 
     os.makedirs(opt.outdir, exist_ok=True)
     outpath = opt.outdir
 
     batch_size = opt.n_samples
-    n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
     if not opt.from_file:
         prompt = opt.prompt
         assert prompt is not None
@@ -271,7 +235,6 @@ def main():
         with precision_scope("cuda"):
             with model.ema_scope():
                 tic = time.time()
-                all_samples = list()
                 for n in trange(opt.n_iter, desc="Sampling", disable =not accelerator.is_main_process):
                     for prompts in tqdm(data, desc="data", disable=not accelerator.is_main_process):
                         uc = None
@@ -281,25 +244,17 @@ def main():
                             prompts = list(prompts)
                         c = model.get_learned_conditioning(prompts)
                         shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
-                        # samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
-                         #                                conditioning=c,
-                          #                               batch_size=opt.n_samples,
-                           #                              shape=shape,
-                            #                             verbose=False,
-                             #                            unconditional_guidance_scale=opt.scale,
-                              #                           unconditional_conditioning=uc,
-                               #                          eta=opt.ddim_eta,
-                                #                         x_T=start_code,
-                                 #                        dynamic_threshold=opt.dyn)
-
-                        sigmas = model_wrap.get_sigmas(opt.ddim_steps)
-                        torch.manual_seed(opt.seed) # changes manual seeding procedure
-                        # sigmas = K.sampling.get_sigmas_karras(opt.ddim_steps, sigma_min, sigma_max, device=device)
-                        x = torch.randn([opt.n_samples, *shape], device=device) * sigmas[0] # for GPU draw
-                        # x = torch.randn([opt.n_samples, *shape]).to(device) * sigmas[0] # for CPU draw
-                        model_wrap_cfg = CFGDenoiser(model_wrap)
-                        extra_args = {'cond': c, 'uncond': uc, 'cond_scale': opt.scale}
-                        samples_ddim = K.sampling.sample_lms(model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=not accelerator.is_main_process)
+                        samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
+                                                        conditioning=c,
+                                                        batch_size=opt.n_samples,
+                                                        shape=shape,
+                                                        verbose=False,
+                                                        unconditional_guidance_scale=opt.scale,
+                                                        unconditional_conditioning=uc,
+                                                        eta=opt.ddim_eta,
+                                                        x_T=start_code,
+                                                        dynamic_threshold=opt.dyn)
+                        torch.manual_seed(opt.seed)
                         x_samples_ddim = model.decode_first_stage(samples_ddim)
                         x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
                         x_samples_ddim = accelerator.gather(x_samples_ddim)                        
