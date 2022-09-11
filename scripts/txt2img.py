@@ -19,6 +19,8 @@ from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 
+from prompt_parser import PromptParser
+
 
 try:
     # this silences the annoying "Some weights of the model checkpoint were not used when initializing..." message at start.
@@ -230,6 +232,7 @@ def main():
     if opt.fixed_code:
         start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
 
+    prompt_parser = PromptParser(model)
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
     with torch.no_grad():
         with precision_scope("cuda"):
@@ -242,7 +245,11 @@ def main():
                             uc = model.get_learned_conditioning(batch_size * [""])
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
-                        c = model.get_learned_conditioning(prompts)
+
+                        prompt_guidance = prompt_parser.get_prompt_guidance(prompts[0], opt.ddim_steps, batch_size)
+
+                        c = prompt_guidance[0]
+
                         shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
                         samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
                                                         conditioning=c,
@@ -253,6 +260,7 @@ def main():
                                                         unconditional_conditioning=uc,
                                                         eta=opt.ddim_eta,
                                                         x_T=start_code,
+                                                        prompt_guidance=prompt_guidance,
                                                         dynamic_threshold=opt.dyn)
                         torch.manual_seed(opt.seed)
                         x_samples_ddim = model.decode_first_stage(samples_ddim)
