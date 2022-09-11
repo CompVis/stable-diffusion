@@ -109,7 +109,7 @@ if setup_environment:
 import json
 from IPython import display
 
-import math, os, pathlib, subprocess, sys, time
+import gc, math, os, pathlib, subprocess, sys, time
 import cv2
 import numpy as np
 import pandas as pd
@@ -1105,7 +1105,7 @@ def render_animation(args, anim_args):
             image.save(os.path.join(args.outdir, filename))
             if anim_args.save_depth_maps:
                 if depth is None:
-                    depth = depth_model.predict(sample_to_cv2(prev_sample), anim_args)
+                    depth = depth_model.predict(sample_to_cv2(sample), anim_args)
                 depth_model.save(os.path.join(args.outdir, f"{args.timestring}_depth_{frame_idx:05}.png"), depth)
             frame_idx += 1
 
@@ -1262,6 +1262,10 @@ if anim_args.animation_mode == 'None':
     anim_args.max_frames = 1
 elif anim_args.animation_mode == 'Video Input':
     args.use_init = True
+
+# clean up unused memory
+gc.collect()
+torch.cuda.empty_cache()
 
 # dispatch to appropriate renderer
 if anim_args.animation_mode == '2D' or anim_args.animation_mode == '3D':
