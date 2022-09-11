@@ -18,21 +18,30 @@ To train, prepare a folder that contains images sized at 512x512 and execute the
                                             --init_word 'cat'
 ```
 
-During the training process, files will be created in /logs/[project][time][project]/
-where you can see the process.
+During the training process, files will be created in
+/logs/[project][time][project]/ where you can see the process.
 
-Conditioning contains the training prompts
-inputs, reconstruction the input images for the training epoch samples, samples scaled for a sample of the prompt and one with the init word provided.
+Conditioning contains the training prompts inputs, reconstruction the
+input images for the training epoch samples, samples scaled for a
+sample of the prompt and one with the init word provided.
 
 On a RTX3090, the process for SD will take ~1h @1.6 iterations/sec.
 
-_Note_: According to the associated paper, the optimal number of images is 3-5. Your model may not converge if you use more images than that.
+_Note_: According to the associated paper, the optimal number of
+images is 3-5. Your model may not converge if you use more images than
+that.
 
-Training will run indefinitely, but you may wish to stop it before the heat death of the universe, when you find a low loss epoch or around ~5000 iterations.
+Training will run indefinitely, but you may wish to stop it (with
+ctrl-c) before the heat death of the universe, when you find a low
+loss epoch or around ~5000 iterations. Note that you can set a fixed
+limit on the number of training steps by decreasing the "max_steps"
+option in configs/stable_diffusion/v1-finetune.yaml (currently set to
+4000000)
 
 **Running**
 
-Once the model is trained, specify the trained .pt or .bin file when starting dream using
+Once the model is trained, specify the trained .pt or .bin file when
+starting dream using
 
 ```
 (ldm) ~/stable-diffusion$ python3 ./scripts/dream.py --embedding_path /path/to/embedding.pt --full_precision
