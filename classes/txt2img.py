@@ -229,5 +229,3 @@ class Txt2Img(BaseModel):
 
         print(f"Your samples are ready and waiting for you here: \n{outpath} \n"
               f" \nEnjoy.")
-
-
