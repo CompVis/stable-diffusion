@@ -129,7 +129,7 @@ Here are the dream> command that apply to txt2img:
 | --outdir <path>    |  -o<path> | outputs/img_samples  | Temporarily change the location of these images |
 | --seamless         |           | False               | Activate seamless tiling for interesting effects |
 | --log_tokenization | -t        | False               | Display a color-coded list of the parsed tokens derived from the prompt |
-| --skip_normalization| -x       | False               | Weighted subprompts will not be normalized. See [Weighted Prompts](./OTHER.md#**Weighted Prompts**) |
+| --skip_normalization| -x       | False               | Weighted subprompts will not be normalized. See [Weighted Prompts](./OTHER.md#weighted-prompts) |
 | --upscale <int> <float> | -U <int> <float> | -U 1 0.75| Upscale image by magnification factor (2, 4), and set strength of upscaling (0.0-1.0). If strength not set, will default to 0.75. |
 | --gfpgan_strength <float>  | -G <float> | -G0        | Fix faces using the GFPGAN algorithm; argument indicates how hard the algorithm should try (0.0-1.0) |
 | --save_original    | -save_orig| False               | When upscaling or fixing faces, this will cause the original image to be saved rather than replaced. |
