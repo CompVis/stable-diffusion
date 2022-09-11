@@ -246,28 +246,79 @@ def load_depth_model(optimize=True):
 
     return midas_model, midas_transform
 
-def load_img(path, shape):
+def load_img(path, shape, use_alpha_as_mask=False):
+    # use_alpha_as_mask: Read the alpha channel of the image as the mask image
     if path.startswith('http://') or path.startswith('https://'):
-        image = Image.open(requests.get(path, stream=True).raw).convert('RGB')
+        image = Image.open(requests.get(path, stream=True).raw)
     else:
-        image = Image.open(path).convert('RGB')
+        image = Image.open(path)
+
+    if use_alpha_as_mask:
+        image = image.convert('RGBA')
+    else:
+        image = image.convert('RGB')
 
     image = image.resize(shape, resample=Image.LANCZOS)
+
+    mask_image = None
+    if use_alpha_as_mask:
+      # Split alpha channel into a mask_image
+      red, green, blue, alpha = Image.Image.split(image)
+      mask_image = alpha.convert('L')
+      image = image.convert('RGB')
+
     image = np.array(image).astype(np.float16) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
     image = torch.from_numpy(image)
-    return 2.*image - 1.
+    image = 2.*image - 1.
 
-def load_mask_img(path, shape):
-    # path (str): Path to the mask image
+    return image, mask_image
+
+def load_mask_latent(mask_input, shape):
+    # mask_input (str or PIL Image.Image): Path to the mask image or a PIL Image object
     # shape (list-like len(4)): shape of the image to match, usually latent_image.shape
-    mask_w_h = (shape[-1], shape[-2])
-    if path.startswith('http://') or path.startswith('https://'):
-        mask_image = Image.open(requests.get(path, stream=True).raw).convert('RGBA')
+    
+    if isinstance(mask_input, str): # mask input is probably a file name
+        if mask_input.startswith('http://') or mask_input.startswith('https://'):
+            mask_image = Image.open(requests.get(mask_input, stream=True).raw).convert('RGBA')
+        else:
+            mask_image = Image.open(mask_input).convert('RGBA')
+    elif isinstance(mask_input, Image.Image):
+        mask_image = mask_input
     else:
-        mask_image = Image.open(path).convert('RGBA')
+        raise Exception("mask_input must be a PIL image or a file name")
+
+    mask_w_h = (shape[-1], shape[-2])
     mask = mask_image.resize(mask_w_h, resample=Image.LANCZOS)
     mask = mask.convert("L")
+    return mask
+
+def prepare_mask(mask_input, mask_shape, mask_brightness_adjust=1.0, mask_contrast_adjust=1.0):
+    # mask_input (str or PIL Image.Image): Path to the mask image or a PIL Image object
+    # shape (list-like len(4)): shape of the image to match, usually latent_image.shape
+    # mask_brightness_adjust (non-negative float): amount to adjust brightness of the iamge, 
+    #     0 is black, 1 is no adjustment, >1 is brighter
+    # mask_contrast_adjust (non-negative float): amount to adjust contrast of the image, 
+    #     0 is a flat grey image, 1 is no adjustment, >1 is more contrast
+    
+    mask = load_mask_latent(mask_input, mask_shape)
+
+    # Mask brightness/contrast adjustments
+    if mask_brightness_adjust != 1:
+        mask = TF.adjust_brightness(mask, mask_brightness_adjust)
+    if mask_contrast_adjust != 1:
+        mask = TF.adjust_contrast(mask, mask_contrast_adjust)
+
+    # Mask image to array
+    mask = np.array(mask).astype(np.float32) / 255.0
+    mask = np.tile(mask,(4,1,1))
+    mask = np.expand_dims(mask,axis=0)
+    mask = torch.from_numpy(mask)
+
+    if args.invert_mask:
+        mask = ( (mask - 0.5) * -1) + 0.5
+    
+    mask = np.clip(mask,0,1)
     return mask
 
 def maintain_colors(prev_img, color_match_sample, mode):
@@ -321,7 +372,6 @@ def make_callback(sampler_name, dynamic_threshold=None, static_threshold=None, m
             is_masked = torch.logical_and(mask >= mask_schedule[i], mask != 0 )
             new_img = init_noise * torch.where(is_masked,1,0) + img * torch.where(is_masked,0,1)
             img.copy_(new_img)
-            
               
     if init_latent is not None:
         noise = torch.randn_like(init_latent, device=device) * masked_noise_modifier
@@ -341,34 +391,6 @@ def make_callback(sampler_name, dynamic_threshold=None, static_threshold=None, m
         callback = k_callback_
 
     return callback
-
-def prepare_mask(mask_file, mask_shape, mask_brightness_adjust=1.0, mask_contrast_adjust=1.0):
-    # path (str): Path to the mask image
-    # shape (list-like len(4)): shape of the image to match, usually latent_image.shape
-    # mask_brightness_adjust (non-negative float): amount to adjust brightness of the iamge, 
-    #     0 is black, 1 is no adjustment, >1 is brighter
-    # mask_contrast_adjust (non-negative float): amount to adjust contrast of the image, 
-    #     0 is a flat grey image, 1 is no adjustment, >1 is more contrast
-                            
-    mask = load_mask_img(mask_file, mask_shape)
-
-    # Mask brightness/contrast adjustments
-    if mask_brightness_adjust != 1:
-        mask = TF.adjust_brightness(mask, mask_brightness_adjust)
-    if mask_contrast_adjust != 1:
-        mask = TF.adjust_contrast(mask, mask_contrast_adjust)
-
-    # Mask image to array
-    mask = np.array(mask).astype(np.float32) / 255.0
-    mask = np.tile(mask,(4,1,1))
-    mask = np.expand_dims(mask,axis=0)
-    mask = torch.from_numpy(mask)
-
-    if args.invert_mask:
-        mask = ( (mask - 0.5) * -1) + 0.5
-    
-    mask = np.clip(mask,0,1)
-    return mask
 
 def sample_from_cv2(sample: np.ndarray) -> torch.Tensor:
     sample = ((sample.astype(float) / 255.0) * 2) - 1
@@ -516,12 +538,17 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
     data = [batch_size * [prompt]]
 
     init_latent = None
+    mask_image = None
+    init_image = None
     if args.init_latent is not None:
         init_latent = args.init_latent
     elif args.init_sample is not None:
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(args.init_sample))
     elif args.use_init and args.init_image != None and args.init_image != '':
-        init_image = load_img(args.init_image, shape=(args.W, args.H)).to(device)
+        init_image, mask_image = load_img(args.init_image, 
+                                          shape=(args.W, args.H),  
+                                          use_alpha_as_mask=args.use_alpha_as_mask)
+        init_image = init_image.to(device)
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space        
 
@@ -529,19 +556,23 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
         print("\nNo init image, but strength > 0. This may give you some strange results.\n")
 
     # Mask functions
-    mask = None
     if args.use_mask:
-        assert args.mask_file is not None, "use_mask==True: An mask image is required for a mask"
+        assert args.mask_file is not None or mask_image is not None, "use_mask==True: An mask image is required for a mask. Please enter a mask_file or use an init image with an alpha channel"
         assert args.use_init, "use_mask==True: use_init is required for a mask"
         assert init_latent is not None, "use_mask==True: An latent init image is required for a mask"
 
-        mask = prepare_mask(args.mask_file, 
+        mask = prepare_mask(args.mask_file if mask_image is None else mask_image, 
                             init_latent.shape, 
                             args.mask_contrast_adjust, 
                             args.mask_brightness_adjust)
         
+        if (torch.all(mask == 0) or torch.all(mask == 1)) and args.use_alpha_as_mask:
+            raise Warning("use_alpha_as_mask==True: Using the alpha channel from the init image as a mask, but the alpha channel is blank.")
+        
         mask = mask.to(device)
         mask = repeat(mask, '1 ... -> b ...', b=batch_size)
+    else:
+        mask = None
         
     t_enc = int((1.0-args.strength) * args.steps)
 
@@ -916,6 +947,7 @@ def DeforumArgs():
     init_image = "https://cdn.pixabay.com/photo/2022/07/30/13/10/green-longhorn-beetle-7353749_1280.jpg" #@param {type:"string"}
     # Whiter areas of the mask are areas that change more
     use_mask = False #@param {type:"boolean"}
+    use_alpha_as_mask = False # use the alpha channel of the init image as the mask
     mask_file = "https://www.filterforge.com/wiki/images/archive/b/b7/20080927223728%21Polygonal_gradient_thumb.jpg" #@param {type:"string"}
     invert_mask = False #@param {type:"boolean"}
     # Adjust mask image, 1.0 is no adjustment. Should be positive numbers.
