@@ -54,7 +54,7 @@ git clone $GITHUB_STABLE_DIFFUSION
 cd stable-diffusion
 chmod +x entrypoint.sh
 # download the Miniconda installer. We'll need it at build time.
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O anaconda.sh \
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O anaconda.sh 
 ```
 
 Build the Docker image. Give it any tag ```-t``` that you want.  
