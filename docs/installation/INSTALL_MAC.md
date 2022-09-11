@@ -9,9 +9,12 @@ Requirements
 
 \*I haven't tested any of this on Intel Macs but I have read that one person got it to work, so Apple Silicon might not be requried.
 
-Things have moved really fast and so these instructions change often and are often out-of-date. One of the problems is that there are so many different ways to run this.
+Things have moved really fast and so these instructions change often
+and are often out-of-date. One of the problems is that there are so
+many different ways to run this.
 
-We are trying to build a testing setup so that when we make changes it doesn't always break.
+We are trying to build a testing setup so that when we make changes it
+doesn't always break.
 
 How to (this hasn't been 100% tested yet):
 
@@ -88,7 +91,9 @@ The original scripts should work as well.
 python scripts/orig_scripts/txt2img.py --prompt "a photograph of an astronaut riding a horse" --plms
 ```
 
-Note, `export PIP_EXISTS_ACTION=w` is a precaution to fix `conda env create -f environment-mac.yaml` never finishing in some situations. So it isn't required but wont hurt.
+Note, `export PIP_EXISTS_ACTION=w` is a precaution to fix `conda env
+create -f environment-mac.yaml` never finishing in some situations. So
+it isn't required but wont hurt.
 
 After you follow all the instructions and run dream.py you might get several errors. Here's the errors I've seen and found solutions for.
 

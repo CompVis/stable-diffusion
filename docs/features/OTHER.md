@@ -1,7 +1,11 @@
 ## **Google Colab**
 
-Stable Diffusion AI Notebook: <a href="https://colab.research.google.com/github/lstein/stable-diffusion/blob/main/Stable_Diffusion_AI_Notebook.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> <br>
-Open and follow instructions to use an isolated environment running Dream.<br>
+Stable Diffusion AI Notebook: <a
+href="https://colab.research.google.com/github/lstein/stable-diffusion/blob/main/notebooks/Stable_Diffusion_AI_Notebook.ipynb"
+target="_parent"><img
+src="https://colab.research.google.com/assets/colab-badge.svg"
+alt="Open In Colab"/></a> <br> Open and follow instructions to use an
+isolated environment running Dream.<br>
 
 Output Example:
 ![Colab Notebook](../assets/colab_notebook.png)
@@ -10,8 +14,10 @@ Output Example:
 
 ## **Seamless Tiling**
 
-The seamless tiling mode causes generated images to seamlessly tile with itself. To use it, add the `--seamless` option when starting the
-script which will result in all generated images to tile, or for each `dream>` prompt as shown here:
+The seamless tiling mode causes generated images to seamlessly tile
+with itself. To use it, add the `--seamless` option when starting the
+script which will result in all generated images to tile, or for each
+`dream>` prompt as shown here:
 
 ```
 dream> "pond garden with lotus by claude monet" --seamless -s100 -n4
@@ -21,7 +27,10 @@ dream> "pond garden with lotus by claude monet" --seamless -s100 -n4
 
 ## **Reading Prompts from a File**
 
-You can automate `dream.py` by providing a text file with the prompts you want to run, one line per prompt. The text file must be composed with a text editor (e.g. Notepad) and not a word processor. Each line should look like what you would type at the dream> prompt:
+You can automate `dream.py` by providing a text file with the prompts
+you want to run, one line per prompt. The text file must be composed
+with a text editor (e.g. Notepad) and not a word processor. Each line
+should look like what you would type at the dream> prompt:
 
 ```
 a beautiful sunny day in the park, children playing -n4 -C10

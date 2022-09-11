@@ -2,10 +2,18 @@
 
 ## **Notebook install (semi-automated)**
 
-We have a [Jupyter notebook](https://github.com/lstein/stable-diffusion/blob/main/Stable-Diffusion-local-Windows.ipynb) with cell-by-cell installation steps. It will download the code in this repo as one of the steps, so instead of cloning this repo, simply download the notebook from the link above and load it up in VSCode (with the appropriate extensions installed)/Jupyter/JupyterLab and start running the cells one-by-one.
+We have a [Jupyter
+notebook](https://github.com/lstein/stable-diffusion/blob/main/notebooks/Stable-Diffusion-local-Windows.ipynb)
+with cell-by-cell installation steps. It will download the code in
+this repo as one of the steps, so instead of cloning this repo, simply
+download the notebook from the link above and load it up in VSCode
+(with the appropriate extensions installed)/Jupyter/JupyterLab and
+start running the cells one-by-one.
 
-Note that you will need NVIDIA drivers, Python 3.10, and Git installed beforehand - simplified
-[step-by-step instructions](https://github.com/lstein/stable-diffusion/wiki/Easy-peasy-Windows-install) are available in the wiki (you'll only need steps 1, 2, & 3 ).
+Note that you will need NVIDIA drivers, Python 3.10, and Git installed
+beforehand - simplified [step-by-step
+instructions](https://github.com/lstein/stable-diffusion/wiki/Easy-peasy-Windows-install)
+are available in the wiki (you'll only need steps 1, 2, & 3 ).
 
 ## **Manual Install**
 
@@ -43,7 +51,8 @@ conda env create -f environment.yaml    (step 6a)
 conda activate ldm                      (step 6b)
 ```
 
-This will install all python requirements and activate the "ldm" environment which sets PATH and other environment variables properly.
+This will install all python requirements and activate the "ldm"
+environment which sets PATH and other environment variables properly.
 
 7. Run the command:
 
@@ -97,6 +106,7 @@ This distribution is changing rapidly. If you used the `git clone` method (step 
 
 ```
 git pull
+conda env update -f environment.yaml
 ```
 
 This will bring your local copy into sync with the remote one.
