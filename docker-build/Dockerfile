@@ -7,10 +7,12 @@ ENV         SD_REQ $sdreq
 
 WORKDIR     /
 
+# TODO: Optimize image size
+
 COPY        entrypoint.sh anaconda.sh .
 SHELL       ["/bin/bash", "-c"]
 
-# Update and apt
+# Update and apt 446 MB
 RUN         apt update && apt upgrade -y \
             && apt install -y \
             git \
@@ -18,15 +20,15 @@ RUN         apt update && apt upgrade -y \
             python3 \
             wget 
 
-# install Anaconda or Miniconda
+# install Anaconda or Miniconda 610 MB
 RUN         bash anaconda.sh -b -u -p /anaconda && /anaconda/bin/conda init bash
 
-# SD repo
+# SD repo 105 MB
 RUN         git clone $GITHUB_STABLE_DIFFUSION 
 
 WORKDIR     /stable-diffusion 
 
-# SD env
+# SD env 2.3 GB !!!
 RUN         PIP_EXISTS_ACTION="w" \
             # restrict the Conda environment to only use ARM packages. M1/M2 is ARM-based. You could also conda install nomkl.
             && CONDA_SUBDIR="osx-arm64" \
@@ -35,18 +37,18 @@ RUN         PIP_EXISTS_ACTION="w" \
             && pip3 install -r $SD_REQ \                     
             && mkdir models/ldm/stable-diffusion-v1 
 
-# Face restoration prerequisites
+# Face restoration prerequisites 200 MB
 RUN         apt install -y libgl1-mesa-glx libglib2.0-0 
-            # by default expected in a sibling directory to stable-diffusion
 
 WORKDIR     /       
 
-# Face restoreation repo
+# Face restoreation repo 12 MB
+# by default expected in a sibling directory to stable-diffusion
 RUN         git clone https://github.com/TencentARC/GFPGAN.git 
 
 WORKDIR     /GFPGAN 
 
-# Face restoration env
+# Face restoration env 608 MB
 RUN         pip3 install basicsr facexlib \
             && pip3 install -r requirements.txt \
             && python3 setup.py develop \
@@ -57,7 +59,7 @@ RUN         pip3 install basicsr facexlib \
 
 WORKDIR     /stable-diffusion 
 
-# Preload models
+# Preload models 2 GB
 RUN         python3 scripts/preload_models.py         
 
 ENTRYPOINT ["/entrypoint.sh"]
