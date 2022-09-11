@@ -2,7 +2,6 @@ import os
 import argparse
 import random
 import time
-
 import numpy as np
 import torch
 from torch import autocast
@@ -10,8 +9,6 @@ from PIL import Image
 from contextlib import  nullcontext
 from tqdm import tqdm, trange
 from classes.base import BaseModel
-
-# import img2img functions from stable diffusion
 from scripts.txt2img import make_grid
 from einops import rearrange, repeat
 from scripts.img2img import load_img
