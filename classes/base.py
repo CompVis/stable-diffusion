@@ -212,7 +212,7 @@ class BaseModel:
         """
         self.precision_scope = autocast if self.opt.precision=="autocast" else nullcontext
 
-    def sample(self, options):
+    def sample(self, options=None):
         """
         Sample from the model
         :param options:
@@ -221,7 +221,8 @@ class BaseModel:
         print("SAMPLING from model wrapper")
         self.parse_arguments()
         self.initialize_options()
-        self.parse_options(options)
+        if options:
+            self.parse_options(options)
         self.set_seed()
         self.set_precision_scope()
         self.prepare_data()
