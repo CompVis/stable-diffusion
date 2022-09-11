@@ -361,12 +361,14 @@ class Generate:
         print(
             f'>>   {len(results)} image(s) generated in', '%4.2fs' % (toc - tic)
         )
-        print(
-            f'>>   Max VRAM used for this generation:',
-            '%4.2fG' % (torch.cuda.max_memory_allocated() / 1e9),
-        )
+        if torch.cuda.is_available() and self.device.type == 'cuda':
+            print(
+                f'>>   Max VRAM used for this generation:',
+                '%4.2fG.' % (torch.cuda.max_memory_allocated() / 1e9),
+                'Current VRAM utilization:'
+                '%4.2fG' % (torch.cuda.memory_allocated() / 1e9),
+            )
 
-        if self.session_peakmem:
             self.session_peakmem = max(
                 self.session_peakmem, torch.cuda.max_memory_allocated()
             )

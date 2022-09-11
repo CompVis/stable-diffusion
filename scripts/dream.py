@@ -130,8 +130,11 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
             command = get_next_command(infile)
         except EOFError:
             done = True
-            break
-
+            continue
+        except KeyboardInterrupt:
+            done = True
+            continue
+        
         # skip empty lines
         if not command.strip():
             continue
@@ -182,6 +185,7 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
             continue
         if opt.seed is not None and opt.seed < 0:   # retrieve previous value!
             try:
+                print(f'last seeds = {last_seeds}, opt.seed={opt.seed}')
                 opt.seed = last_seeds[opt.seed]
                 print(f'reusing previous seed {opt.seed}')
             except IndexError:
@@ -239,8 +243,8 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
         # Here is where the images are actually generated!
         try:
             file_writer = PngWriter(current_outdir)
-            prefix = file_writer.unique_prefix()
-            seeds = set()
+            prefix  = file_writer.unique_prefix()
+            seeds   = list()
             results = [] # list of filename, prompt pairs
             grid_images = dict() # seed -> Image, only used if `do_grid`
             def image_writer(image, seed, upscaled=False):
@@ -272,7 +276,7 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
                         # only append to results if we didn't overwrite an earlier output
                         results.append([path, metadata_prompt])
 
-                seeds.add(seed)
+                seeds.append(seed)
 
             t2i.prompt2image(image_callback=image_writer, **vars(opt))
 
