@@ -14,9 +14,17 @@
 
 # **Stable Diffusion Dream Script**
 
-This is a fork of [CompVis/stable-diffusion](https://github.com/CompVis/stable-diffusion), the open source text-to-image generator. It provides a streamlined process with various new features and options to aid the image generation process.
+This is a fork of
+[CompVis/stable-diffusion](https://github.com/CompVis/stable-diffusion),
+the open source text-to-image generator. It provides a streamlined
+process with various new features and options to aid the image
+generation process. It runs on Windows, Mac and Linux machines,
+and runs on GPU cards with as little as 4 GB or RAM.
 
-_Note: This fork is rapidly evolving. Please use the [Issues](https://github.com/lstein/stable-diffusion/issues) tab to report bugs and make feature requests. Be sure to use the provided templates. They will help aid diagnose issues faster._
+_Note: This fork is rapidly evolving. Please use the
+[Issues](https://github.com/lstein/stable-diffusion/issues) tab to
+report bugs and make feature requests. Be sure to use the provided
+templates. They will help aid diagnose issues faster._
 
 # **Table of Contents**
 
@@ -41,7 +49,7 @@ This fork is supported across multiple platforms. You can find individual instal
 
 You wil need one of the following:
 
-- An NVIDIA-based graphics card with 8 GB or more VRAM memory.
+- An NVIDIA-based graphics card with 4 GB or more VRAM memory.
 - An Apple computer with an M1 chip.
 
 **Memory**
@@ -54,11 +62,13 @@ You wil need one of the following:
 
 **Note**
 
-If you are have a Nvidia 10xx series card (e.g. the 1080ti), please run the dream script in full-precision mode as shown below.
+If you are have a Nvidia 10xx series card (e.g. the 1080ti), please
+run the dream script in full-precision mode as shown below.
 
 Similarly, specify full-precision mode on Apple M1 hardware.
 
-To run in full-precision mode, start `dream.py` with the `--full_precision` flag:
+To run in full-precision mode, start `dream.py` with the
+`--full_precision` flag:
 
 ```
 (ldm) ~/stable-diffusion$ python scripts/dream.py --full_precision
@@ -71,6 +81,8 @@ To run in full-precision mode, start `dream.py` with the `--full_precision` flag
 - ## [Interactive Command Line Interface](docs/features/CLI.md)
 
 - ## [Image To Image](docs/features/IMG2IMG.md)
+
+- ## [Inpainting Support](docs/features/INPAINTING.md)
 
 - ## [GFPGAN and Real-ESRGAN Support](docs/features/UPSCALE.md)
 
@@ -100,9 +112,14 @@ To run in full-precision mode, start `dream.py` with the `--full_precision` flag
 
 # Latest Changes
 
-- v1.14 (In progress)
+- v1.14 (11 September 2022)
 
-  - Add "seamless mode" for circular tiling of image. Generates beautiful effects. ([prixt](https://github.com/prixt))
+  - Memory optimizations for small-RAM cards. 512x512 now possible on 4 GB GPUs.
+  - Full support for Apple hardware with M1 or M2 chips.
+  - Add "seamless mode" for circular tiling of image. Generates beautiful effects. ([prixt](https://github.com/prixt)).
+  - Inpainting support.
+  - Improved web server GUI.
+  - Lots of code and documentation cleanups.
 
 - v1.13 (3 September 2022
 
