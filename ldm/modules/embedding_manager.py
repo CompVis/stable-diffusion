@@ -24,9 +24,9 @@ def get_clip_token_for_string(tokenizer, string):
         return_tensors='pt',
     )
     tokens = batch_encoding['input_ids']
-    assert (
+    """ assert (
         torch.count_nonzero(tokens - 49407) == 2
-    ), f"String '{string}' maps to more than a single token. Please use another string"
+    ), f"String '{string}' maps to more than a single token. Please use another string" """
 
     return tokens[0, 1]
 
@@ -57,8 +57,9 @@ class EmbeddingManager(nn.Module):
     ):
         super().__init__()
 
-        self.string_to_token_dict = {}
+        self.embedder = embedder
 
+        self.string_to_token_dict = {}
         self.string_to_param_dict = nn.ParameterDict()
 
         self.initial_embeddings = (
@@ -217,11 +218,27 @@ class EmbeddingManager(nn.Module):
 
     def load(self, ckpt_path, full=True):
         ckpt = torch.load(ckpt_path, map_location='cpu')
-        self.string_to_token_dict = ckpt["string_to_token"]
-        self.string_to_param_dict = ckpt["string_to_param"]
+
+        # Handle .pt textual inversion files
+        if 'string_to_token' in ckpt and 'string_to_param' in ckpt:
+            self.string_to_token_dict = ckpt["string_to_token"]
+            self.string_to_param_dict = ckpt["string_to_param"]
+
+        # Handle .bin textual inversion files from Huggingface Concepts
+        # https://huggingface.co/sd-concepts-library
+        else:
+            for token_str in list(ckpt.keys()):
+                token = get_clip_token_for_string(self.embedder.tokenizer, token_str)
+                self.string_to_token_dict[token_str] = token
+                ckpt[token_str] = torch.nn.Parameter(ckpt[token_str])
+                
+            self.string_to_param_dict.update(ckpt)
+
         if not full:
             for key, value in self.string_to_param_dict.items():
                 self.string_to_param_dict[key] = torch.nn.Parameter(value.half())
+
+        print(f'Added terms: {", ".join(self.string_to_param_dict.keys())}')
 
     def get_embedding_norms_squared(self):
         all_params = torch.cat(
