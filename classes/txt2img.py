@@ -4,13 +4,10 @@ import numpy as np
 import time
 import torch
 from torch import autocast
-from pytorch_lightning import seed_everything
 from PIL import Image
 from tqdm import tqdm, trange
 from einops import rearrange
 from contextlib import  nullcontext
-
-# import txt2img functions from stable diffusion
 from scripts.txt2img import check_safety, put_watermark
 from scripts.txt2img import make_grid
 
