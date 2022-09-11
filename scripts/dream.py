@@ -321,6 +321,7 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
         print('Outputs:')
         log_path = os.path.join(current_outdir, 'dream_log.txt')
         write_log_message(results, log_path)
+        print()
 
     print('goodbye!')
 
@@ -371,7 +372,8 @@ def write_log_message(results, log_path):
     log_lines = [f'{path}: {prompt}\n' for path, prompt in results]
     for l in log_lines:
         output_cntr += 1
-        print(output_cntr)
+        print(f'[{output_cntr}] {l}',end='')
+
 
     with open(log_path, 'a', encoding='utf-8') as file:
         file.writelines(log_lines)
