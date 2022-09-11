@@ -179,7 +179,6 @@ class Img2Img(BaseModel):
         with torch.no_grad():
             with precision_scope("cuda"):
                 with model.ema_scope():
-                    tic = time.time()
                     all_samples = list()
                     for n in trange(opt.n_iter, desc="Sampling"):
                         for prompts in tqdm(data, desc="data"):
