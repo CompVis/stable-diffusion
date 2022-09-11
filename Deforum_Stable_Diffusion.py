@@ -427,8 +427,10 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
         with precision_scope("cuda"):
             init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space        
 
-    if not args.use_init and args.strength > 0:
-        print("\nNo init image, but strength > 0. This may give you some strange results.\n")
+    if not args.use_init and args.strength > 0 and args.strength_0_no_init:
+        print("\nNo init image, but strength > 0. Strength has been auto set to 0, since use_init is False.")
+        print("If you want to force strength > 0 with no init, please set strength_0_no_init to False.\n")
+        args.strength = 0
 
     # Mask functions
     if args.use_mask:
@@ -819,6 +821,7 @@ def DeforumArgs():
     #@markdown **Init Settings**
     use_init = False #@param {type:"boolean"}
     strength = 0.0 #@param {type:"number"}
+    strength_0_no_init = True # Set the strength to 0 automatically when no init image is used
     init_image = "https://cdn.pixabay.com/photo/2022/07/30/13/10/green-longhorn-beetle-7353749_1280.jpg" #@param {type:"string"}
     # Whiter areas of the mask are areas that change more
     use_mask = False #@param {type:"boolean"}
