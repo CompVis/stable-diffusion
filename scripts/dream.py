@@ -113,9 +113,9 @@ def main():
 
 def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
     """prompt/read/execute loop"""
-    done = False
-    last_seeds = []
-    path_filter = re.compile(r'[<>:"/\\|?*]')
+    done         = False
+    path_filter  = re.compile(r'[<>:"/\\|?*]')
+    last_results = list()
 
     # os.pathconf is not available on Windows
     if hasattr(os, 'pathconf'):
@@ -183,13 +183,23 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
         if len(opt.prompt) == 0:
             print('Try again with a prompt!')
             continue
+        if opt.init_img is not None and re.match('^-\d+$',opt.init_img): # retrieve previous value!
+            try:
+                opt.init_img = last_results[int(opt.init_img)][0]
+                print(f'>> Reusing previous image {opt.init_img}')
+            except IndexError:
+                print(f'>> No previous initial image at position {opt.init_img} found')
+                opt.init_img = None
+                continue
+                
         if opt.seed is not None and opt.seed < 0:   # retrieve previous value!
             try:
-                opt.seed = last_seeds[opt.seed]
-                print(f'reusing previous seed {opt.seed}')
+                opt.seed = last_results[opt.seed][1]
+                print(f'>> Reusing previous seed {opt.seed}')
             except IndexError:
-                print(f'No previous seed at position {opt.seed} found')
+                print(f'>> No previous seed at position {opt.seed} found')
                 opt.seed = None
+                continue
 
         do_grid           = opt.grid or t2i.grid
 
@@ -240,10 +250,10 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
             current_outdir = outdir
 
         # Here is where the images are actually generated!
+        last_results = []
         try:
             file_writer = PngWriter(current_outdir)
             prefix  = file_writer.unique_prefix()
-            seeds   = list()
             results = [] # list of filename, prompt pairs
             grid_images = dict() # seed -> Image, only used if `do_grid`
             def image_writer(image, seed, upscaled=False):
@@ -274,15 +284,14 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
                     if (not upscaled) or opt.save_original:
                         # only append to results if we didn't overwrite an earlier output
                         results.append([path, metadata_prompt])
-
-                seeds.append(seed)
+                last_results.append([path,seed])
 
             t2i.prompt2image(image_callback=image_writer, **vars(opt))
 
             if do_grid and len(grid_images) > 0:
-                grid_img = make_grid(list(grid_images.values()))
-                first_seed = next(iter(seeds))
-                filename = f'{prefix}.{first_seed}.png'
+                grid_img   = make_grid(list(grid_images.values()))
+                first_seed = last_results[0][1]
+                filename   = f'{prefix}.{first_seed}.png'
                 # TODO better metadata for grid images
                 normalized_prompt = PromptFormatter(t2i, opt).normalize_prompt()
                 metadata_prompt = f'{normalized_prompt} -S{first_seed} --grid -N{len(grid_images)}'
@@ -290,8 +299,6 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
                     grid_img, metadata_prompt, filename
                 )
                 results = [[path, metadata_prompt]]
-
-            last_seeds = list(seeds)
 
         except AssertionError as e:
             print(e)
