@@ -98,6 +98,8 @@ To run in full-precision mode, start `dream.py` with the
 
 - ## [Weighted Prompts](docs/features/OTHER.md#weighted-prompts)
 
+- ## [Thresholding and Perlin Noise Initialization Options](/docs/features/OTHER.md#thresholding-and-perlin-noise-initialization-options)
+
 - ## [Variations](docs/features/VARIATIONS.md)
 
 - ## [Personalizing Text-to-Image Generation](docs/features/TEXTUAL_INVERSION.md)
