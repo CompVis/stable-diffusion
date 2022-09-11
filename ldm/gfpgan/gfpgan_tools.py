@@ -9,6 +9,8 @@ from scripts.dream import create_argv_parser
 
 arg_parser = create_argv_parser()
 opt        = arg_parser.parse_args()
+model_path          = os.path.join(opt.gfpgan_dir, opt.gfpgan_model_path)
+gfpgan_model_exists = os.path.isfile(model_path)
 
 def run_gfpgan(image, strength, seed, upsampler_scale=4):
     print(f'>> GFPGAN - Restoring Faces for image seed:{seed}')
@@ -17,9 +19,6 @@ def run_gfpgan(image, strength, seed, upsampler_scale=4):
         warnings.filterwarnings('ignore', category=DeprecationWarning)
         warnings.filterwarnings('ignore', category=UserWarning)
         
-        model_path          = os.path.join(opt.gfpgan_dir, opt.gfpgan_model_path)
-        gfpgan_model_exists = os.path.isfile(model_path)
-
         try:
             if not gfpgan_model_exists:
                 raise Exception('GFPGAN model not found at path ' + model_path)
