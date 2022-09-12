@@ -168,6 +168,96 @@ class CrossAttention(nn.Module):
             nn.Dropout(dropout)
         )
 
+        if not torch.cuda.is_available():
+            mem_av = psutil.virtual_memory().available / (1024**3)
+            if mem_av > 32:
+                self.einsum_op = self.einsum_op_v1
+            elif mem_av > 12:
+                self.einsum_op = self.einsum_op_v2
+            else:
+                self.einsum_op = self.einsum_op_v3   
+            del mem_av 
+        else:
+            self.einsum_op = self.einsum_op_v4
+
+    # mps 64-128 GB
+    def einsum_op_v1(self, q, k, v, r1):
+        if q.shape[1] <= 4096: # for 512x512: the max q.shape[1] is 4096
+            s1 = einsum('b i d, b j d -> b i j', q, k) * self.scale # aggressive/faster: operation in one go
+            s2 = s1.softmax(dim=-1, dtype=q.dtype)
+            del s1
+            r1 = einsum('b i j, b j d -> b i d', s2, v)
+            del s2
+        else:
+            # q.shape[0] * q.shape[1] * slice_size >= 2**31 throws err
+            # needs around half of that slice_size to not generate noise
+            slice_size = math.floor(2**30 / (q.shape[0] * q.shape[1]))
+            for i in range(0, q.shape[1], slice_size):
+                end = i + slice_size
+                s1 = einsum('b i d, b j d -> b i j', q[:, i:end], k) * self.scale
+                s2 = s1.softmax(dim=-1, dtype=r1.dtype)
+                del s1  
+                r1[:, i:end] = einsum('b i j, b j d -> b i d', s2, v)
+                del s2
+        return r1
+
+    # mps 16-32 GB (can be optimized)
+    def einsum_op_v2(self, q, k, v, r1):
+        slice_size = math.floor(2**30 / (q.shape[0] * q.shape[1]))
+        for i in range(0, q.shape[1], slice_size): # conservative/less mem: operation in steps
+            end = i + slice_size
+            s1 = einsum('b i d, b j d -> b i j', q[:, i:end], k) * self.scale
+            s2 = s1.softmax(dim=-1, dtype=r1.dtype)
+            del s1  
+            r1[:, i:end] = einsum('b i j, b j d -> b i d', s2, v)
+            del s2
+        return r1
+
+    # mps 8 GB
+    def einsum_op_v3(self, q, k, v, r1):
+        slice_size = 1
+        for i in range(0, q.shape[0], slice_size): # iterate over q.shape[0]
+            end = min(q.shape[0], i + slice_size)
+            s1 = einsum('b i d, b j d -> b i j', q[i:end], k[i:end]) # adapted einsum for mem
+            s1 *= self.scale
+            s2 = s1.softmax(dim=-1, dtype=r1.dtype)
+            del s1
+            r1[i:end] = einsum('b i j, b j d -> b i d', s2, v[i:end]) # adapted einsum for mem
+            del s2
+        return r1
+
+    # cuda
+    def einsum_op_v4(self, q, k, v, r1):
+        stats = torch.cuda.memory_stats(q.device)
+        mem_active = stats['active_bytes.all.current']
+        mem_reserved = stats['reserved_bytes.all.current']
+        mem_free_cuda, _ = torch.cuda.mem_get_info(torch.cuda.current_device())
+        mem_free_torch = mem_reserved - mem_active
+        mem_free_total = mem_free_cuda + mem_free_torch
+
+        gb = 1024 ** 3
+        tensor_size = q.shape[0] * q.shape[1] * k.shape[1] * 4
+        mem_required = tensor_size * 2.5
+        steps = 1
+
+        if mem_required > mem_free_total:
+            steps = 2**(math.ceil(math.log(mem_required / mem_free_total, 2)))
+
+        if steps > 64:
+            max_res = math.floor(math.sqrt(math.sqrt(mem_free_total / 2.5)) / 8) * 64
+            raise RuntimeError(f'Not enough memory, use lower resolution (max approx. {max_res}x{max_res}). '
+                            f'Need: {mem_required/64/gb:0.1f}GB free, Have:{mem_free_total/gb:0.1f}GB free')
+        
+        slice_size = q.shape[1] // steps if (q.shape[1] % steps) == 0 else q.shape[1]  
+        for i in range(0, q.shape[1], slice_size):
+            end = min(q.shape[1], i + slice_size)
+            s1 = einsum('b i d, b j d -> b i j', q[:, i:end], k) * self.scale
+            s2 = s1.softmax(dim=-1, dtype=r1.dtype)
+            del s1
+            r1[:, i:end] = einsum('b i j, b j d -> b i d', s2, v)
+            del s2 
+        return r1
+
     def forward(self, x, context=None, mask=None):
         h = self.heads
 
@@ -180,45 +270,8 @@ class CrossAttention(nn.Module):
 
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (q_in, k_in, v_in))
         del q_in, k_in, v_in
-
         r1 = torch.zeros(q.shape[0], q.shape[1], v.shape[2], device=q.device, dtype=q.dtype)
-
-        if device_type == 'mps':
-            mem_free_total = psutil.virtual_memory().available
-        else:
-            stats = torch.cuda.memory_stats(q.device)
-            mem_active = stats['active_bytes.all.current']
-            mem_reserved = stats['reserved_bytes.all.current']
-            mem_free_cuda, _ = torch.cuda.mem_get_info(torch.cuda.current_device())
-            mem_free_torch = mem_reserved - mem_active
-            mem_free_total = mem_free_cuda + mem_free_torch
-
-        gb = 1024 ** 3
-        tensor_size = q.shape[0] * q.shape[1] * k.shape[1] * 4
-        mem_required = tensor_size * 2.5
-        steps = 1
-
-        if mem_required > mem_free_total:
-            steps = 2**(math.ceil(math.log(mem_required / mem_free_total, 2)))
-            # print(f"Expected tensor size:{tensor_size/gb:0.1f}GB, cuda free:{mem_free_cuda/gb:0.1f}GB "
-            #       f"torch free:{mem_free_torch/gb:0.1f} total:{mem_free_total/gb:0.1f} steps:{steps}")
-
-        if steps > 64:
-            max_res = math.floor(math.sqrt(math.sqrt(mem_free_total / 2.5)) / 8) * 64
-            raise RuntimeError(f'Not enough memory, use lower resolution (max approx. {max_res}x{max_res}). '
-                               f'Need: {mem_required/64/gb:0.1f}GB free, Have:{mem_free_total/gb:0.1f}GB free')
-
-        slice_size = q.shape[1] // steps if (q.shape[1] % steps) == 0 else q.shape[1]
-        for i in range(0, q.shape[1], slice_size):
-            end = i + slice_size
-            s1 = einsum('b i d, b j d -> b i j', q[:, i:end], k) * self.scale
-
-            s2 = s1.softmax(dim=-1, dtype=r1.dtype)
-            del s1
-
-            r1[:, i:end] = einsum('b i j, b j d -> b i d', s2, v)
-            del s2
-
+        r1 = self.einsum_op(q, k, v, r1)
         del q, k, v
 
         r2 = rearrange(r1, '(b h) n d -> b n (h d)', h=h)
