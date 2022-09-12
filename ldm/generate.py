@@ -111,7 +111,6 @@ class Generate:
             height                = 512,
             sampler_name          = 'k_lms',
             ddim_eta              = 0.0,  # deterministic
-            precision             = 'autocast',
             full_precision        = False,
             strength              = 0.75,  # default in scripts/img2img.py
             seamless              = False,
@@ -129,7 +128,6 @@ class Generate:
         self.sampler_name             = sampler_name
         self.grid                     = grid
         self.ddim_eta                 = ddim_eta
-        self.precision                = precision
         self.full_precision           = True if choose_torch_device() == 'mps' else full_precision
         self.strength                 = strength
         self.seamless                 = seamless

@@ -13,8 +13,9 @@ def choose_torch_device() -> str:
 def choose_autocast_device(device):
     '''Returns an autocast compatible device from a torch device'''
     device_type = device.type # this returns 'mps' on M1
-    # autocast only supports cuda or cpu
-    if device_type in ('cuda','cpu'):
+    if device_type == 'cuda':
         return device_type,autocast
+    elif device_type == 'cpu':
+        return device_type,nullcontext
     else:
         return 'cpu',nullcontext

@@ -1,17 +1,30 @@
 # **Interactive Command-Line Interface**
 
-The `dream.py` script, located in `scripts/dream.py`, provides an interactive interface to image generation similar to the "dream mothership" bot that Stable AI provided on its Discord server.
+The `dream.py` script, located in `scripts/dream.py`, provides an
+interactive interface to image generation similar to the "dream
+mothership" bot that Stable AI provided on its Discord server.
 
-Unlike the txt2img.py and img2img.py scripts provided in the original CompViz/stable-diffusion source code repository, the time-consuming initialization of the AI model initialization only happens once. After that image generation
-from the command-line interface is very fast.
+Unlike the txt2img.py and img2img.py scripts provided in the original
+CompViz/stable-diffusion source code repository, the time-consuming
+initialization of the AI model initialization only happens once. After
+that image generation from the command-line interface is very fast.
 
-The script uses the readline library to allow for in-line editing, command history (up and down arrows), autocompletion, and more. To help keep track of which prompts generated which images, the script writes a log file of image names and prompts to the selected output directory.
+The script uses the readline library to allow for in-line editing,
+command history (up and down arrows), autocompletion, and more. To
+help keep track of which prompts generated which images, the script
+writes a log file of image names and prompts to the selected output
+directory.
 
-In addition, as of version 1.02, it also writes the prompt into the PNG file's metadata where it can be retrieved using scripts/images2prompt.py
+In addition, as of version 1.02, it also writes the prompt into the
+PNG file's metadata where it can be retrieved using
+scripts/images2prompt.py
 
 The script is confirmed to work on Linux, Windows and Mac systems.
 
-_Note:_ This script runs from the command-line or can be used as a Web application. The Web GUI is currently rudimentary, but a much better replacement is on its way.
+_Note:_ This script runs from the command-line or can be used as a Web
+application. The Web GUI is currently rudimentary, but a much better
+replacement is on its way.
+
 
 ```
 (ldm) ~/stable-diffusion$ python3 ./scripts/dream.py
@@ -182,6 +195,56 @@ well as the --mask (-M) argument:
 |--------------------|------------|---------------------|--------------|
 | --init_mask <path> | -M<path>   | None                |Path to an image the same size as the initial_image, with areas for inpainting made transparent.|
 
+
+# Shortcuts
+
+Since one so frequently refers back to a previously-generated seed or
+image, dream.py provides an easy shortcut that avoids having to cut
+and paste these values.
+
+Here's how it works. Say you generated 6 images of a man-eating snail:
+
+~~~~
+dream> man-eating snail -n6
+...
+>> Usage stats:
+>>   6 image(s) generated in 79.85s
+>>   Max VRAM used for this generation: 3.36G. Current VRAM utilization:2.21G
+>>   Max VRAM used since script start:  3.36G
+Outputs:
+[1] outputs/img-samples/000210.1414805682.png: "man-eating snail" -s50 -W512 -H512 -C7.5 -Ak_lms -S1414805682
+[2] outputs/img-samples/000210.3312885013.png: "man-eating snail" -s50 -W512 -H512 -C7.5 -Ak_lms -S3312885013
+[3] outputs/img-samples/000210.1398528919.png: "man-eating snail" -s50 -W512 -H512 -C7.5 -Ak_lms -S1398528919
+[4] outputs/img-samples/000210.92626031.png: "man-eating snail" -s50 -W512 -H512 -C7.5 -Ak_lms -S92626031
+[5] outputs/img-samples/000210.1733666373.png: "man-eating snail" -s50 -W512 -H512 -C7.5 -Ak_lms -S1733666373
+[6] outputs/img-samples/000210.2453524229.png: "man-eating snail" -s50 -W512 -H512 -C7.5 -Ak_lms -S2453524229
+~~~~
+
+The last image generated (with seed 2453524229) looks really good. So let's
+pick that one for variation generation. Instead of cutting and pasting
+the argument -S2453524229, we can simply refer to the most recent seed as
+-1, and write:
+
+~~~~
+dream> man-eating snail -v0.1 -n10 -S-1
+>> Reusing previous seed 2453524229
+...etc...
+~~~~
+
+You can use -2 to refer to the second to last seed, -3 to the third to
+last, etc. It works with both individual images and grids. However,
+the numbering system only extends across the last group of images
+generated and doesn't reach back to earlier commands.
+
+The initial image (-I or --init_img) argument works in a similar
+way. To use the second-to-most-recent snail image as the initial
+image for an img2img render, you could refer to it as -I-2:
+
+~~~~
+dream> glowing science-fiction snail -I -2 -n4
+>> Reusing previous image outputs/img-samples/000213.2150458613.png
+...etc...
+~~~~
 
 # Command-line editing and completion
 
