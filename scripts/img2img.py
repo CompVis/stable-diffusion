@@ -40,7 +40,7 @@ def load_model_from_config(config, ckpt, verbose=False):
         print("unexpected keys:")
         print(u)
 
-    model.cuda()
+    model.cuda().half()
     model.eval()
     return model
 
@@ -53,7 +53,7 @@ def load_img(path):
     image = image.resize((w, h), resample=PIL.Image.LANCZOS)
     image = np.array(image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
-    image = torch.from_numpy(image)
+    image = torch.from_numpy(image).cuda().half()
     return 2.*image - 1.
 
 

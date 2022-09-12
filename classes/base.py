@@ -1,6 +1,9 @@
 import argparse
 import os
 import torch
+import numpy as np
+from PIL import Image
+from einops import rearrange
 from imwatermark import WatermarkEncoder
 from torch import autocast
 from pytorch_lightning import seed_everything
@@ -12,7 +15,7 @@ from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 
 # import txt2img functions from stable diffusion
-from scripts.txt2img import load_model_from_config, put_watermark
+from scripts.txt2img import load_model_from_config, put_watermark, check_safety
 from scripts.txt2img import chunk
 
 
@@ -42,15 +45,16 @@ class BaseModel:
 
     def __init__(self, *args, **kwargs):
         self.opt = {}
+        self.do_nsfw_filter = kwargs.get("do_nsfw_filter", False)
+        self.do_watermark = kwargs.get("do_watermark", False)
         self.parser = None
         self.config = None
         self.data = None
         self.batch_size = None
         self.n_rows = None
         self.outpath = None
-        self.sampler = None
-        self.device = None
-        self.model = None
+        self.device = kwargs.get("device", None)
+        self.model = kwargs.get("model", None)
         self.wm_encoder = None
         self.base_count = None
         self.grid_count = None
@@ -58,6 +62,15 @@ class BaseModel:
         self.start_code = None
         self.precision_scope = None
         self.initialized = False
+        self.init_model(kwargs.get("options", {}))
+
+    @property
+    def plms_sampler(self):
+        return PLMSSampler(self.model)
+
+    @property
+    def ddim_sampler(self):
+        return DDIMSampler(self.model)
 
     def initialize(self):
         """
@@ -68,8 +81,8 @@ class BaseModel:
             return
         self.initialized = True
         self.load_config()
-        self.load_model()
-        self.initialize_sampler()
+        if not self.model or not self.device:
+            self.load_model()
         self.initialize_outdir()
         self.initialize_watermark()
         self.create_sample_path()
@@ -104,7 +117,7 @@ class BaseModel:
         Initialize options, by default check for laion400m and set the corresponding options
         :return:
         """
-        if self.opt.laion400m:
+        if self.opt.__contains__("laion400m") and self.opt.laion400m:
             print("Falling back to LAION 400M model...")
             self.opt.config = "configs/latent-diffusion/txt2img-1p4B-eval.yaml"
             self.opt.ckpt = "models/ldm/text2img-large/model.ckpt"
@@ -134,16 +147,6 @@ class BaseModel:
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.model = self.model.to(self.device)
 
-    def initialize_sampler(self):
-        """
-        Initialize the sampler choosing between DDIMSampler and PLMSSampler
-        :return:
-        """
-        if self.opt.plms:
-            self.sampler = PLMSSampler(self.model)
-        else:
-            self.sampler = DDIMSampler(self.model)
-
     def initialize_outdir(self):
         """"
         Initialize the output directory
@@ -162,21 +165,43 @@ class BaseModel:
         self.wm_encoder = WatermarkEncoder()
         self.wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
 
+    def filter_nsfw_content(self, x_samples_ddim):
+        """
+        Check if the samples are safe for work, replace them with a placeholder if not
+        :param x_samples_ddim:
+        :return:
+        """
+        if self.do_nsfw_filter:
+            x_samples_ddim, has_nsfw = check_safety(x_samples_ddim)
+            return x_samples_ddim
+        return x_samples_ddim
+
+    def add_watermark(self, img):
+        """
+        Adds digital watermark to image
+        :param img:
+        :return:
+        """
+        if self.do_watermark:
+            img = put_watermark(img, self.wm_encoder)
+        return img
+
     def prepare_data(self):
         """
         Prepare data for sampling
         :return:
         """
-        batch_size = self.opt.n_samples
-        n_rows = self.opt.n_rows if self.opt.n_rows > 0 else batch_size
-        if not self.opt.from_file:
-            prompt = self.opt.prompt
-            assert prompt is not None
+        batch_size = self.opt.n_samples if "n_samples" in self.opt else 1
+        n_rows = self.opt.n_rows if (
+                "n_rows" in self.opt and self.opt.n_rows > 0) else 0
+        from_file = self.opt.from_file if "from_file" in self.opt else False
+        if not from_file:
+            prompt = self.opt.prompt if "prompt" in self.opt else None
             data = [batch_size * [prompt]]
 
         else:
-            print(f"reading prompts from {self.opt.from_file}")
-            with open(self.opt.from_file, "r") as f:
+            print(f"reading prompts from {from_file}")
+            with open(from_file, "r") as f:
                 data = f.read().splitlines()
                 data = list(chunk(data, batch_size))
         self.n_rows = n_rows
@@ -188,7 +213,7 @@ class BaseModel:
         Create the sample path
         :return:
         """
-        sample_path = os.path.join(self.outpath, os.path.join("samples", self.opt.out_folder))
+        sample_path = os.path.join(self.outpath, os.path.join("samples", self.opt.outdir))
         os.makedirs(sample_path, exist_ok=True)
         self.sample_path = sample_path
 
@@ -212,6 +237,19 @@ class BaseModel:
         """
         self.precision_scope = autocast if self.opt.precision=="autocast" else nullcontext
 
+    def get_first_stage_sample(self, model, samples):
+        samples_ddim = model.decode_first_stage(samples)
+        return torch.clamp((samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
+
+    def init_model(self, options):
+        self.parse_arguments()
+        self.set_seed()
+        self.initialize_options()
+        if options:
+            self.parse_options(options)
+        self.prepare_data()
+        self.initialize()
+
     def sample(self, options=None):
         """
         Sample from the model
@@ -219,13 +257,23 @@ class BaseModel:
         :return:
         """
         print("SAMPLING from model wrapper")
-        self.parse_arguments()
-        self.initialize_options()
-        if options:
-            self.parse_options(options)
-        self.set_seed()
+        self.init_model(options)
         self.set_precision_scope()
-        self.prepare_data()
-        self.initialize()
         self.base_count = len(os.listdir(self.sample_path))
         self.grid_count = len(os.listdir(self.outpath)) - 1
+
+    def save_image(self, samples, sample_path, base_count, watermark=True):
+        """
+        Save the image
+        :param x_checked_image_torch:
+        :param sample_path:
+        :param base_count:
+        :return:
+        """
+        for x_sample in samples:
+            x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
+            img = Image.fromarray(x_sample.astype(np.uint8))
+            img = self.add_watermark(img)
+            file_name = os.path.join(sample_path, f"{base_count:05}.png")
+            img.save(file_name)
+            return file_name
