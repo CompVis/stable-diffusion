@@ -1,7 +1,6 @@
 import argparse, os, sys, glob
 import random
 import shutil
-from tkinter import E
 import torch
 from torch import nn
 from torch import Tensor
