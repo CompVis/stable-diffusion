@@ -1,4 +1,4 @@
-name: sd-ldm
+name: ldm
 channels:
   - pytorch
   - defaults
