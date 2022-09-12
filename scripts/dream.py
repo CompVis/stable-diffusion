@@ -261,6 +261,7 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
             grid_images = dict()  # seed -> Image, only used if `do_grid`
 
             def image_writer(image, seed, upscaled=False):
+                path = None
                 if do_grid:
                     grid_images[seed] = image
                 else:
@@ -298,13 +299,14 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
             t2i.prompt2image(image_callback=image_writer, **vars(opt))
 
             if do_grid and len(grid_images) > 0:
-                grid_img = make_grid(list(grid_images.values()))
+                grid_img   = make_grid(list(grid_images.values()))
+                grid_seeds = list(grid_images.keys())
                 first_seed = last_results[0][1]
                 filename = f'{prefix}.{first_seed}.png'
                 # TODO better metadata for grid images
                 normalized_prompt = PromptFormatter(
                     t2i, opt).normalize_prompt()
-                metadata_prompt = f'{normalized_prompt} -S{first_seed} --grid -N{len(grid_images)}'
+                metadata_prompt = f'{normalized_prompt} -S{first_seed} --grid -n{len(grid_images)} # {grid_seeds}'
                 path = file_writer.save_image_and_prompt_to_png(
                     grid_img, metadata_prompt, filename
                 )
