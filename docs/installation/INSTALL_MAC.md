@@ -1,21 +1,20 @@
-# macOS Instructions
+# **macOS Instructions**
 
 Requirements
 
 - macOS 12.3 Monterey or later
 - Python
 - Patience
-- Apple Silicon*
+- Apple Silicon\*
 
-*I haven't tested any of this on Intel Macs but I have read that one person got
-it to work, so Apple Silicon might not be requried.
+\*I haven't tested any of this on Intel Macs but I have read that one person got it to work, so Apple Silicon might not be requried.
 
-Things have moved really fast and so these instructions change often and are
-often out-of-date. One of the problems is that there are so many different ways to
-run this.
+Things have moved really fast and so these instructions change often
+and are often out-of-date. One of the problems is that there are so
+many different ways to run this.
 
-We are trying to build a testing setup so that when we make changes it doesn't
-always break.
+We are trying to build a testing setup so that when we make changes it
+doesn't always break.
 
 How to (this hasn't been 100% tested yet):
 
@@ -23,7 +22,7 @@ First get the weights checkpoint download started - it's big:
 
 1. Sign up at https://huggingface.co
 2. Go to the [Stable diffusion diffusion model page](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original)
-3. Accept the terms and click Access Repository: 
+3. Accept the terms and click Access Repository:
 4. Download [sd-v1-4.ckpt (4.27 GB)](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/blob/main/sd-v1-4.ckpt) and note where you have saved it (probably the Downloads folder)
 
 While that is downloading, open Terminal and run the following commands one at a time.
@@ -38,9 +37,9 @@ While that is downloading, open Terminal and run the following commands one at a
 # 2. No pyenv
 #
 # If you don't know what we are talking about, choose 2.
-# 
+#
 # NOW EITHER DO
-# 1. Installing alongside pyenv 
+# 1. Installing alongside pyenv
 
 brew install pyenv-virtualenv # you might have this from before, no problem
 pyenv install anaconda3-2022.05
@@ -48,7 +47,7 @@ pyenv virtualenv anaconda3-2022.05
 eval "$(pyenv init -)"
 pyenv activate anaconda3-2022.05
 
-# OR, 
+# OR,
 # 2. Installing standalone
 # install python 3, git, cmake, protobuf:
 brew install cmake protobuf rust
@@ -93,42 +92,37 @@ The original scripts should work as well.
 python scripts/orig_scripts/txt2img.py --prompt "a photograph of an astronaut riding a horse" --plms
 ```
 
-Note, `export PIP_EXISTS_ACTION=w` is a precaution to fix `conda env create -f environment-mac.yaml`
-never finishing in some situations. So it isn't required but wont hurt.
+Note, `export PIP_EXISTS_ACTION=w` is a precaution to fix `conda env
+create -f environment-mac.yaml` never finishing in some situations. So
+it isn't required but wont hurt.
 
-After you follow all the instructions and run dream.py you might get several
-errors. Here's the errors I've seen and found solutions for.
+After you follow all the instructions and run dream.py you might get several errors. Here's the errors I've seen and found solutions for.
 
 ### Is it slow?
 
 Be sure to specify 1 sample and 1 iteration.
 
-	python ./scripts/orig_scripts/txt2img.py --prompt "ocean" --ddim_steps 5 --n_samples 1 --n_iter 1
+    python ./scripts/orig_scripts/txt2img.py --prompt "ocean" --ddim_steps 5 --n_samples 1 --n_iter 1
 
 ### Doesn't work anymore?
 
-PyTorch nightly includes support for MPS. Because of this, this setup is
-inherently unstable. One morning I woke up and it no longer worked no matter
-what I did until I switched to miniforge. However, I have another Mac that works
-just fine with Anaconda. If you can't get it to work, please search a little
-first because many of the errors will get posted and solved. If you can't find
-a solution please [create an issue](https://github.com/lstein/stable-diffusion/issues).
+PyTorch nightly includes support for MPS. Because of this, this setup is inherently unstable. One morning I woke up and it no longer worked no matter what I did until I switched to miniforge. However, I have another Mac that works just fine with Anaconda. If you can't get it to work, please search a little first because many of the errors will get posted and solved. If you can't find a solution please [create an issue](https://github.com/lstein/stable-diffusion/issues).
 
 One debugging step is to update to the latest version of PyTorch nightly.
 
-	conda install pytorch torchvision torchaudio -c pytorch-nightly
+    conda install pytorch torchvision torchaudio -c pytorch-nightly
 
 If `conda env create -f environment-mac.yaml` takes forever run this.
 
-	git clean -f
+    git clean -f
 
 And run this.
 
-	conda clean --yes --all
+    conda clean --yes --all
 
 Or you could reset Anaconda.
 
-	conda update --force-reinstall -y -n base -c defaults conda
+    conda update --force-reinstall -y -n base -c defaults conda
 
 ### "No module named cv2", torch, 'ldm', 'transformers', 'taming', etc.
 
@@ -145,17 +139,14 @@ The cause of this error is long so it's below.
 Third, if it says you're missing taming you need to rebuild your virtual
 environment.
 
-	conda env remove -n ldm
-	conda env create -f environment-mac.yaml
+    conda env remove -n ldm
+    conda env create -f environment-mac.yaml
 
-Fourth, If you have activated the ldm virtual environment and tried rebuilding
-it, maybe the problem could be that I have something installed that
-you don't and you'll just need to manually install it. Make sure you
-activate the virtual environment so it installs there instead of
+Fourth, If you have activated the ldm virtual environment and tried rebuilding it, maybe the problem could be that I have something installed that you don't and you'll just need to manually install it. Make sure you activate the virtual environment so it installs there instead of
 globally.
 
-	conda activate ldm
-	pip install *name*
+    conda activate ldm
+    pip install *name*
 
 You might also need to install Rust (I mention this again below).
 
@@ -167,8 +158,8 @@ picking the wrong one. More specifically, preload_models.py and dream.py says to
 find the first `python3` in the path environment variable. You can see which one
 it is picking with `which python3`. These are the mostly likely paths you'll see.
 
-	% which python3
-	/usr/bin/python3
+    % which python3
+    /usr/bin/python3
 
 The above path is part of the OS. However, that path is a stub that asks you if
 you want to install Xcode. If you have Xcode installed already,
@@ -176,14 +167,14 @@ you want to install Xcode. If you have Xcode installed already,
 /Applications/Xcode.app/Contents/Developer/usr/bin/python3 (depending on which
 Xcode you've selected with `xcode-select`).
 
-	% which python3
-	/opt/homebrew/bin/python3
+    % which python3
+    /opt/homebrew/bin/python3
 
 If you installed python3 with Homebrew and you've modified your path to search
 for Homebrew binaries before system ones, you'll see the above path.
 
-	% which python
-	/opt/anaconda3/bin/python
+    % which python
+    /opt/anaconda3/bin/python
 
 If you drop the "3" you get an entirely different python. Note: starting in
 macOS 12.3, /usr/bin/python no longer exists (it was python 2 anyway).
@@ -191,8 +182,8 @@ macOS 12.3, /usr/bin/python no longer exists (it was python 2 anyway).
 If you have Anaconda installed, this is what you'll see. There is a
 /opt/anaconda3/bin/python3 also.
 
-	(ldm) % which python
-	/Users/name/miniforge3/envs/ldm/bin/python
+    (ldm) % which python
+    /Users/name/miniforge3/envs/ldm/bin/python
 
 This is what you'll see if you have miniforge and you've correctly activated
 the ldm environment. This is the goal.
@@ -216,11 +207,11 @@ Tired of waiting for your renders to finish before you can see if it
 works? Reduce the steps! The image quality will be horrible but at least you'll
 get quick feedback.
 
-	python ./scripts/txt2img.py --prompt "ocean" --ddim_steps 5 --n_samples 1 --n_iter 1
+    python ./scripts/txt2img.py --prompt "ocean" --ddim_steps 5 --n_samples 1 --n_iter 1
 
 ### OSError: Can't load tokenizer for 'openai/clip-vit-large-patch14'...
 
-	python scripts/preload_models.py
+    python scripts/preload_models.py
 
 ### "The operator [name] is not current implemented for the MPS device." (sic)
 
@@ -237,16 +228,16 @@ The lstein branch includes this fix in [environment-mac.yaml](https://github.com
 
 I have not seen this error because I had Rust installed on my computer before I started playing with Stable Diffusion. The fix is to install Rust.
 
-	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 ### How come `--seed` doesn't work?
 
 First this:
 
 > Completely reproducible results are not guaranteed across PyTorch
-releases, individual commits, or different platforms. Furthermore,
-results may not be reproducible between CPU and GPU executions, even
-when using identical seeds.
+> releases, individual commits, or different platforms. Furthermore,
+> results may not be reproducible between CPU and GPU executions, even
+> when using identical seeds.
 
 [PyTorch docs](https://pytorch.org/docs/stable/notes/randomness.html)
 
@@ -255,7 +246,7 @@ still working on it.
 
 ### libiomp5.dylib error?
 
-	OMP: Error #15: Initializing libiomp5.dylib, but found libomp.dylib already initialized.
+    OMP: Error #15: Initializing libiomp5.dylib, but found libomp.dylib already initialized.
 
 You are likely using an Intel package by mistake. Be sure to run conda with
 the environment variable `CONDA_SUBDIR=osx-arm64`, like so:
@@ -267,7 +258,7 @@ a dependency. [nomkl](https://stackoverflow.com/questions/66224879/what-is-the-n
 is a metapackage designed to prevent this, by making it impossible to install
 `mkl`, but if your environment is already broken it may not work.
 
-Do *not* use `os.environ['KMP_DUPLICATE_LIB_OK']='True'` or equivalents as this
+Do _not_ use `os.environ['KMP_DUPLICATE_LIB_OK']='True'` or equivalents as this
 masks the underlying issue of using Intel packages.
 
 ### Not enough memory.
@@ -282,7 +273,7 @@ affect the quality of the images though.
 
 See [this issue](https://github.com/CompVis/stable-diffusion/issues/71).
 
-### "Error: product of dimension sizes > 2**31'"
+### "Error: product of dimension sizes > 2\*\*31'"
 
 This error happens with img2img, which I haven't played with too much
 yet. But I know it's because your image is too big or the resolution
@@ -292,7 +283,7 @@ output size (which is the default). However, if you're using that size
 and you get the above error, try 256 x 256 or 512 x 256 or something
 as the source image.
 
-BTW, 2**31-1 = [2,147,483,647](https://en.wikipedia.org/wiki/2,147,483,647#In_computing), which is also 32-bit signed [LONG_MAX](https://en.wikipedia.org/wiki/C_data_types) in C.
+BTW, 2\*\*31-1 = [2,147,483,647](https://en.wikipedia.org/wiki/2,147,483,647#In_computing), which is also 32-bit signed [LONG_MAX](https://en.wikipedia.org/wiki/C_data_types) in C.
 
 ### I just got Rickrolled! Do I have a virus?
 
@@ -332,13 +323,30 @@ change instead. This is a 32-bit vs 16-bit problem.
 
 What? Intel? On an Apple Silicon?
 
-	Intel MKL FATAL ERROR: This system does not meet the minimum requirements for use of the Intel(R) Math Kernel Library.
-	The processor must support the Intel(R) Supplemental Streaming SIMD Extensions 3 (Intel(R) SSSE3) instructions.
-	The processor must support the Intel(R) Streaming SIMD Extensions 4.2 (Intel(R) SSE4.2) instructions.
-	The processor must support the Intel(R) Advanced Vector Extensions (Intel(R) AVX) instructions.
+    Intel MKL FATAL ERROR: This system does not meet the minimum requirements for use of the Intel(R) Math Kernel Library.
+    The processor must support the Intel(R) Supplemental Streaming SIMD Extensions 3 (Intel(R) SSSE3) instructions.
+    The processor must support the Intel(R) Streaming SIMD Extensions 4.2 (Intel(R) SSE4.2) instructions.
+    The processor must support the Intel(R) Advanced Vector Extensions (Intel(R) AVX) instructions.
 
 This is due to the Intel `mkl` package getting picked up when you try to install
 something that depends on it-- Rosetta can translate some Intel instructions but
 not the specialized ones here. To avoid this, make sure to use the environment
 variable `CONDA_SUBDIR=osx-arm64`, which restricts the Conda environment to only
 use ARM packages, and use `nomkl` as described above.
+
+### input types 'tensor<2x1280xf32>' and 'tensor<\*xf16>' are not broadcast compatible
+
+May appear when just starting to generate, e.g.:
+
+```
+dream> clouds
+Generating:   0%|                                                              | 0/1 [00:00<?, ?it/s]/Users/[...]/dev/stable-diffusion/ldm/modules/embedding_manager.py:152: UserWarning: The operator 'aten::nonzero' is not currently supported on the MPS backend and will fall back to run on the CPU. This may have performance implications. (Triggered internally at /Users/runner/work/_temp/anaconda/conda-bld/pytorch_1662016319283/work/aten/src/ATen/mps/MPSFallback.mm:11.)
+  placeholder_idx = torch.where(
+                                                                                                    loc("mps_add"("(mpsFileLoc): /AppleInternal/Library/BuildRoots/20d6c351-ee94-11ec-bcaf-7247572f23b4/Library/Caches/com.apple.xbs/Sources/MetalPerformanceShadersGraph/mpsgraph/MetalPerformanceShadersGraph/Core/Files/MPSGraphUtilities.mm":219:0)): error: input types 'tensor<2x1280xf32>' and 'tensor<*xf16>' are not broadcast compatible
+LLVM ERROR: Failed to infer result type(s).
+Abort trap: 6
+/Users/[...]/opt/anaconda3/envs/ldm/lib/python3.9/multiprocessing/resource_tracker.py:216: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+```
+
+Macs do not support autocast/mixed-precision. Supply `--full_precision` to use float32 everywhere.

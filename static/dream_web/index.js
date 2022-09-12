@@ -8,20 +8,44 @@ function toBase64(file) {
 }
 
 function appendOutput(src, seed, config) {
-    let outputNode = document.createElement("img");
-    outputNode.src = src;
+    let outputNode = document.createElement("figure");
+    
+    let variations = config.with_variations;
+    if (config.variation_amount > 0) {
+        variations = (variations ? variations + ',' : '') + seed + ':' + config.variation_amount;
+    }
+    let baseseed = (config.with_variations || config.variation_amount > 0) ? config.seed : seed;
+    let altText = baseseed + ' | ' + (variations ? variations + ' | ' : '') + config.prompt;
 
-    let altText = seed.toString() + " | " + config.prompt;
-    outputNode.alt = altText;
-    outputNode.title = altText;
+    // img needs width and height for lazy loading to work
+    const figureContents = `
+        <a href="${src}" target="_blank">
+            <img src="${src}"
+                 alt="${altText}"
+                 title="${altText}"
+                 loading="lazy"
+                 width="256"
+                 height="256">
+        </a>
+        <figcaption>${seed}</figcaption>
+    `;
+
+    outputNode.innerHTML = figureContents;
+    let figcaption = outputNode.querySelector('figcaption');
 
     // Reload image config
-    outputNode.addEventListener('click', () => {
+    figcaption.addEventListener('click', () => {
         let form = document.querySelector("#generate-form");
         for (const [k, v] of new FormData(form)) {
+            if (k == 'initimg') { continue; }
             form.querySelector(`*[name=${k}]`).value = config[k];
         }
-        document.querySelector("#seed").value = seed;
+
+        document.querySelector("#seed").value = baseseed;
+        document.querySelector("#with_variations").value = variations || '';
+        if (document.querySelector("#variation_amount").value <= 0) {
+            document.querySelector("#variation_amount").value = 0.2;
+        }
 
         saveFields(document.querySelector("#generate-form"));
     });
@@ -59,6 +83,7 @@ async function generateSubmit(form) {
 
     // Convert file data to base64
     let formData = Object.fromEntries(new FormData(form));
+    formData.initimg_name = formData.initimg.name
     formData.initimg = formData.initimg.name !== '' ? await toBase64(formData.initimg) : null;
 
     let strength = formData.strength;
@@ -94,7 +119,6 @@ async function generateSubmit(form) {
 
                 if (data.event === 'result') {
                     noOutputs = false;
-                    document.querySelector("#no-results-message")?.remove();
                     appendOutput(data.url, data.seed, data.config);
                     progressEle.setAttribute('value', 0);
                     progressEle.setAttribute('max', totalSteps);
@@ -130,7 +154,25 @@ async function generateSubmit(form) {
     document.querySelector("#prompt").value = `Generating: "${prompt}"`;
 }
 
-window.onload = () => {
+async function fetchRunLog() {
+    try {
+        let response = await fetch('/run_log.json')
+        const data = await response.json();
+        for(let item of data.run_log) {
+            appendOutput(item.url, item.seed, item);
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+window.onload = async () => {
+    document.querySelector("#prompt").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        const form = e.target.form;
+        generateSubmit(form);
+      }
+    });
     document.querySelector("#generate-form").addEventListener('submit', (e) => {
         e.preventDefault();
         const form = e.target;
@@ -147,6 +189,9 @@ window.onload = () => {
     document.querySelector("#reset-all").addEventListener('click', (e) => {
         clearFields(e.target.form);
     });
+    document.querySelector("#remove-image").addEventListener('click', (e) => {
+        initimg.value=null;
+    });
     loadFields(document.querySelector("#generate-form"));
 
     document.querySelector('#cancel-button').addEventListener('click', () => {
@@ -154,8 +199,15 @@ window.onload = () => {
             console.error(e);
         });
     });
+    document.documentElement.addEventListener('keydown', (e) => {
+      if (e.key === "Escape")
+        fetch('/cancel').catch(err => {
+          console.error(err);
+        });
+    });
 
     if (!config.gfpgan_model_exists) {
         document.querySelector("#gfpgan").style.display = 'none';
     }
+    await fetchRunLog()
 };

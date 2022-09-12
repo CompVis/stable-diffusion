@@ -22,7 +22,7 @@ class Completer:
     def complete(self, text, state):
         buffer = readline.get_line_buffer()
 
-        if text.startswith(('-I', '--init_img')):
+        if text.startswith(('-I', '--init_img','-M','--init_mask')):
             return self._path_completions(text, state, ('.png','.jpg','.jpeg'))
 
         if buffer.strip().endswith('cd') or text.startswith(('.', '/')):
@@ -48,10 +48,15 @@ class Completer:
 
     def _path_completions(self, text, state, extensions):
         # get the path so far
+        # TODO: replace this mess with a regular expression match
         if text.startswith('-I'):
             path = text.replace('-I', '', 1).lstrip()
         elif text.startswith('--init_img='):
             path = text.replace('--init_img=', '', 1).lstrip()
+        elif text.startswith('--init_mask='):
+            path = text.replace('--init_mask=', '', 1).lstrip()
+        elif text.startswith('-M'):
+            path = text.replace('-M', '', 1).lstrip()
         else:
             path = text
 
@@ -94,6 +99,7 @@ if readline_available:
                 '--grid','-g',
                 '--individual','-i',
                 '--init_img','-I',
+                '--init_mask','-M',
                 '--strength','-f',
                 '--variants','-v',
                 '--outdir','-o',

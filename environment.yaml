@@ -1,4 +1,4 @@
-name: ldm
+name: sd-ldm
 channels:
   - pytorch
   - defaults
@@ -11,12 +11,13 @@ dependencies:
   - numpy=1.19.2
   - pip:
     - albumentations==0.4.3
-    - opencv-python==4.1.2.30
+    - opencv-python==4.5.5.64
     - pudb==2019.2
     - imageio==2.9.0
     - imageio-ffmpeg==0.4.2
     - pytorch-lightning==1.4.2
     - omegaconf==2.1.1
+    - realesrgan==0.2.5.0
     - test-tube>=0.7.5
     - streamlit==1.12.0
     - pillow==9.2.0
@@ -28,4 +29,5 @@ dependencies:
     - -e git+https://github.com/openai/CLIP.git@main#egg=clip
     - -e git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
     - -e git+https://github.com/lstein/k-diffusion.git@master#egg=k-diffusion
+    - -e git+https://github.com/lstein/GFPGAN@fix-dark-cast-images#egg=gfpgan
     - -e .
