@@ -85,6 +85,8 @@ To run in full-precision mode, start `dream.py` with the
 
 - ## [GFPGAN and Real-ESRGAN Support](docs/features/UPSCALE.md)
 
+- ## [Embiggen upscaling](docs/features/EMBIGGEN.md)
+
 - ## [Seamless Tiling](docs/features/OTHER.md#seamless-tiling)
 
 - ## [Google Colab](docs/features/OTHER.md#google-colab)
