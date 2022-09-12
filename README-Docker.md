@@ -18,7 +18,6 @@ Table of Contents
    * [Web Interface](#web-interface)
    * [Notes](#notes)
 
-
 # Step 1 - Get the Model
 Go to [Hugging Face](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original), and click "Access repository" to Download ```sd-v1-4.ckpt``` (~4 GB) to ```~/Downloads```.  
 You'll need to create an account but it's quick and free.
@@ -43,18 +42,18 @@ Create a Docker volume for the downloaded model file
 docker volume create my-vol
 ```
 
-Populate the volume using a lightweight Linux container. You just need to create the container with the mountpoint; no need to run it.
+Copy the model file (we'll need it at run time) to the Docker volume using a lightweight Linux container. You just need to create the container with the mountpoint; no need to run it.
 ```Shell
-docker create --platform linux/arm64 --name dummy --mount source=my-vol,target=/data alpine # or arm64v8/alpine
+docker create --platform linux/arm64 --name dummy --mount source=my-vol,target=/data alpine 
 
-# Copy the model file to the Docker volume. We'll need it at run time.
 cd ~/Downloads # or wherever you saved sd-v1-4.ckpt
 docker cp sd-v1-4.ckpt dummy:/data
 ```
 
 ### Setup
+Set the fork you want to use.  
+Download the Miniconda installer (we'll need it at build time). Replace the URL with the version matching your system.
 ```Shell
-# Set the fork you want to use.
 GITHUB_STABLE_DIFFUSION="https://github.com/santisbon/stable-diffusion.git"
 
 cd ~
@@ -62,14 +61,13 @@ git clone $GITHUB_STABLE_DIFFUSION
 
 cd stable-diffusion/docker-build
 chmod +x entrypoint.sh
-# Download the Miniconda installer. We'll need it at build time. 
-# Replace the URL with the version matching your system.
+
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O anaconda.sh && chmod +x anaconda.sh
 ```
 
 Build the Docker image. Give it any tag ```-t``` that you want.  
 Tip: Check that your shell session has the env variable set (above) with ```echo $GITHUB_STABLE_DIFFUSION```.  
-```condaarch``` will restrict the conda environment to the right architecture when installing packages. It can take on: ```linux-64```, ```osx-64```, ```osx-arm64```. On macOS you could also conda install ```nomkl``` but setting the environment appropriately is cleaner.
+```condaarch``` will restrict the conda environment to the right architecture when installing packages. It can take on: ```linux-64```, ```osx-64```, ```osx-arm64```.
 ```Shell
 docker build -t santisbon/stable-diffusion \
 --platform linux/arm64 \
@@ -107,8 +105,8 @@ conda init zsh && source ~/.zshrc # or bash and .bashrc
 
 ### Setup
 
+Set the fork you want to use.
 ```Shell
-# Set the fork you want to use.
 GITHUB_STABLE_DIFFUSION="https://github.com/santisbon/stable-diffusion.git"
 
 git clone $GITHUB_STABLE_DIFFUSION
@@ -116,15 +114,19 @@ cd stable-diffusion
 mkdir -p models/ldm/stable-diffusion-v1/
 ```
 
+When the pip3 path exists, it will ```w```ipe.  
+
+The subdir env variable restricts conda to only use ARM packages while creating the env (M1/M2 is ARM-based). You could also ```conda install nomkl``` but setting the environment appropriately is cleaner.  
+
+```conda config``` will write to the active environment's (```ldm```) configuration file and set ```subdir``` to the desired value permanently.
 ```Shell
 PATH_TO_CKPT="$HOME/Downloads"  # or wherever you saved sd-v1-4.ckpt
 ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
 
-# When path exists, pip3 will (w)ipe. 
-# restrict the Conda environment to only use ARM packages. M1/M2 is ARM-based. You could also conda install nomkl.
 PIP_EXISTS_ACTION="w"
 CONDA_SUBDIR="osx-arm64"
 conda env create -f environment-mac.yaml && conda activate ldm
+conda config --env --set subdir "osx-arm64"
 ```
 
 You can verify you're in the virtual environment by looking at which executable you're getting:
@@ -132,19 +134,20 @@ You can verify you're in the virtual environment by looking at which executable 
 type python3
 ```
 
-Face Restoration and Upscaling 
+**Face Restoration and Upscaling**  
+By default this repo is expected in a directory at the same level as stable-diffusion.  
+We'll need ```basicsr``` for training and inference and ```facexlib```, a face detection / face restoration helper.  
+Also ```realesrgan``` to enhance the background (non-face) regions and do upscaling.  
+Lastly, we'll get a pre-trained model needed for face restoration.
 ```Shell
-
-# by default expected in a sibling directory to stable-diffusion
 cd .. && git clone https://github.com/TencentARC/GFPGAN.git && cd GFPGAN
 
-# basicsr: used for training and inference. facexlib: face detection / face restoration helper.
 pip3 install basicsr facexlib \
 && pip3 install -r requirements.txt
 
 python3 setup.py develop
-pip3 install realesrgan # to enhance the background (non-face) regions and do upscaling
-# pre-trained model needed for face restoration
+pip3 install realesrgan 
+
 wget https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth -P experiments/pretrained_models
 
 cd ../stable-diffusion
@@ -158,16 +161,14 @@ python3 scripts/preload_models.py
 # Step 3 - Usage (time to have fun)
 
 ## Startup
-If you're on a Linux container the ```dream``` script is automatically started and the output dir set to the Docker volume you created earlier. 
+If you're on a **Linux container** the ```dream``` script is **automatically started** and the output dir set to the Docker volume you created earlier. 
 
-If you're directly on macOS follow these startup instructions.  
-With the Conda environment activated (```conda activate ldm```), run the interactive interface that combines the functionality of the original scripts txt2img and img2img:
-Use the more accurate but VRAM-intensive full precision math because half-precision requires autocast and won't work.
-
+If you're **directly on macOS follow these startup instructions**.  
+With the Conda environment activated (```conda activate ldm```), run the interactive interface that combines the functionality of the original scripts ```txt2img``` and ```img2img```:  
+Use the more accurate but VRAM-intensive full precision math because half-precision requires autocast and won't work.  
+By default the images are saved in ```outputs/img-samples/```.
 ```Shell
-# If on Macbook
-python3 scripts/dream.py --full_precision
-# By default the images are saved in outputs/img-samples/.  
+python3 scripts/dream.py --full_precision  
 ```
 
 You'll get the script's prompt. You can see available options or quit.
@@ -185,36 +186,41 @@ dream> The hulk fighting with sheldon cooper -s5 -n1
 dream> "woman closeup highly detailed"  -s 150
 # Reuse previous seed and apply face restoration (if you installed GFPGAN)
 dream> "woman closeup highly detailed"  --steps 150 --seed -1 -G 0.75
-# TODO: example for upscaling.
 ```
+
 You'll need to experiment to see if face restoration is making it better or worse for your specific prompt.
-The -U option for upscaling has an [Issue](https://github.com/lstein/stable-diffusion/issues/297).  
+The ```-U``` option for upscaling has an [Issue](https://github.com/lstein/stable-diffusion/issues/297).  
 
 If you're on a container the output is set to the Docker volume. You can copy it wherever you want.  
 You can download it from the Docker Desktop app, Volumes, my-vol, data.  
-Or you can copy it from your Mac terminal. Keep in mind ```docker cp``` can't expand ```*.png``` so you'll need to specify the image file name:
+Or you can copy it from your Mac terminal. Keep in mind ```docker cp``` can't expand ```*.png``` so you'll need to specify the image file name.  
+
+On your host Mac (you can use the name of any container that mounted the volume):
 ```Shell
-# On your host Macbook (you can use the name of any container that mounted the volume)
 docker cp dummy:/data/000001.928403745.png /Users/<your-user>/Pictures 
 ```
 
 ## Image to Image
 You can also do text-guided image-to-image translation. For example, turning a sketch into a detailed drawing.  
-Strength is a value between 0.0 and 1.0, that controls the amount of noise that is added to the input image. Values that approach 1.0 allow for lots of variations but will also produce images that are not semantically consistent with the input. 0.0 preserves image exactly, 1.0 replaces it completely.  
+
+```strength``` is a value between 0.0 and 1.0 that controls the amount of noise that is added to the input image. Values that approach 1.0 allow for lots of variations but will also produce images that are not semantically consistent with the input. 0.0 preserves image exactly, 1.0 replaces it completely.  
+
 Make sure your input image size dimensions are multiples of 64 e.g. 512x512. Otherwise you'll get ```Error: product of dimension sizes > 2**31'```. If you still get the error [try a different size](https://support.apple.com/guide/preview/resize-rotate-or-flip-an-image-prvw2015/mac#:~:text=image's%20file%20size-,In%20the%20Preview%20app%20on%20your%20Mac%2C%20open%20the%20file,is%20shown%20at%20the%20bottom.) like 512x256.  
 
-If you're on a docker container, copy your input image into the Docker volume
+If you're on a Docker container, copy your input image into the Docker volume
 ```Shell
 docker cp /Users/<your-user>/Pictures/sketch-mountains-input.jpg dummy:/data/
 ```
 
-Try it out generating an image (or 4).  
-The ```dream``` script needs absolute paths to find the image so don't use ```~```.
+Try it out generating an image (or more). The ```dream``` script needs absolute paths to find the image so don't use ```~```.  
+
+If you're on your Mac
+```Shell 
+dream> "A fantasy landscape, trending on artstation" -I /Users/<your-user>/Pictures/sketch-mountains-input.jpg --strength 0.75  --steps 100 -n4
+```
+If you're on a Linux container on your Mac
 ```Shell
-# If you're on your Macbook 
-dream> "A fantasy landscape, trending on artstation" -I /Users/<your-user>/Pictures/sketch-mountains-input.jpg --strength 0.8  --steps 100 -n4
-# If you're on a Linux container on your Macbook
-dream> "A fantasy landscape, trending on artstation" -I /data/sketch-mountains-input.jpg --strength 0.75  --steps 100 -n1
+dream> "A fantasy landscape, trending on artstation" -I /data/sketch-mountains-input.jpg --strength 0.75  --steps 50 -n1
 ```
 
 ## Web Interface
