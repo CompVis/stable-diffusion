@@ -11,7 +11,7 @@ opencv-python==4.6.0.66
 pillow==9.2.0
 pudb==2019.2
 torch==1.12.1
-torchvision==0.12.0
+torchvision==0.13.0
 pytorch-lightning==1.4.2
 streamlit==1.12.0
 test-tube>=0.7.5
