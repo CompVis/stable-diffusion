@@ -33,7 +33,11 @@ def get_timestep_embedding(timesteps, embedding_dim):
 
 def nonlinearity(x):
     # swish
-    return x*torch.sigmoid(x)
+    t = torch.sigmoid(x)
+    x *= t
+    del t
+
+    return x
 
 
 def Normalize(in_channels, num_groups=32):
@@ -215,7 +219,7 @@ class AttnBlock(nn.Module):
         mem_free_torch = mem_reserved - mem_active
         mem_free_total = mem_free_cuda + mem_free_torch
 
-        tensor_size = q.shape[0] * q.shape[1] * k.shape[2] * 4
+        tensor_size = q.shape[0] * q.shape[1] * k.shape[2] * q.element_size()
         mem_required = tensor_size * 2.5
         steps = 1
 
@@ -229,7 +233,7 @@ class AttnBlock(nn.Module):
             w1 = torch.bmm(q[:, i:end], k)     # b,hw,hw    w[b,i,j]=sum_c q[b,i,c]k[b,c,j]
             w2 = w1 * (int(c)**(-0.5))
             del w1
-            w3 = torch.nn.functional.softmax(w2, dim=2)
+            w3 = torch.nn.functional.softmax(w2, dim=2, dtype=q.dtype)
             del w2
 
             # attend to values
