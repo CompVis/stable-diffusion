@@ -32,16 +32,16 @@ dependencies:
   - omegaconf==2.1.1
   - onnx==1.12.0
   - onnxruntime==1.12.1
-  - opencv-python==4.5.5.64
   - pudb==2022.1
   - pytorch-lightning==1.6.5
-  - realesrgan==0.2.5.0
   - scipy==1.9.1
   - streamlit==1.12.2
   - sympy==1.10.1
   - tensorboard==2.9.0
   - torchmetrics==0.9.3
   - pip:
+    - opencv-python==4.6.0
+    - realesrgan==0.2.5.0
     - test-tube==0.7.5
     - transformers==4.21.2
     - torch-fidelity==0.3.0
