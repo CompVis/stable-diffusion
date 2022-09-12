@@ -209,8 +209,7 @@ class AttnBlock(nn.Module):
 
         h_ = torch.zeros_like(k, device=q.device)
 
-        device_type = 'mps' if q.device.type == 'mps' else 'cuda'
-        if device_type == 'cuda':
+        if q.device.type == 'cuda':
             stats = torch.cuda.memory_stats(q.device)
             mem_active = stats['active_bytes.all.current']
             mem_reserved = stats['reserved_bytes.all.current']
@@ -612,9 +611,8 @@ class Decoder(nn.Module):
         del h3
 
         # prepare for up sampling
-        device_type = 'mps' if h.device.type == 'mps' else 'cuda'
         gc.collect()
-        if device_type == 'cuda':
+        if h.device.type == 'cuda':
             torch.cuda.empty_cache()
 
         # upsampling
