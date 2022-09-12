@@ -205,6 +205,9 @@ class Generate:
             init_mask      =    None,
             fit            =    False,
             strength       =    None,
+            # these are specific to embiggen (which also relies on img2img args)
+            embiggen       =    None,
+            embiggen_tiles =    None,
             # these are specific to GFPGAN/ESRGAN
             gfpgan_strength=    0,
             save_original  =    False,
@@ -230,6 +233,8 @@ class Generate:
            image_callback                  // a function or method that will be called each time an image is generated
            with_variations                 // a weighted list [(seed_1, weight_1), (seed_2, weight_2), ...] of variations which should be applied before doing any generation
            variation_amount                // optional 0-1 value to slerp from -S noise to random noise (allows variations on an image)
+           embiggen                        // scale factor relative to the size of the --init_img (-I), followed by ESRGAN upscaling strength (0-1.0), followed by minimum amount of overlap between tiles as a decimal ratio (0 - 1.0) or number of pixels
+           embiggen_tiles                  // list of tiles by number in order to process and replace onto the image e.g. `0 2 4`
 
         To use the step callback, define a function that receives two arguments:
         - Image GPU data
@@ -274,6 +279,9 @@ class Generate:
         assert (
                 0.0 <= variation_amount <= 1.0
         ), '-v --variation_amount must be in [0.0, 1.0]'
+        assert (
+            (embiggen == None and embiggen_tiles == None) or ((embiggen != None or embiggen_tiles != None) and init_img != None)
+        ), 'Embiggen requires an init/input image to be specified'
 
         # check this logic - doesn't look right
         if len(with_variations) > 0 or variation_amount > 1.0:
@@ -310,6 +318,8 @@ class Generate:
             
             if (init_image is not None) and (mask_image is not None):
                 generator = self._make_inpaint()
+            elif (embiggen != None or embiggen_tiles != None):
+                generator = self._make_embiggen()
             elif init_image is not None:
                 generator = self._make_img2img()
             else:
@@ -329,9 +339,12 @@ class Generate:
                 step_callback  = step_callback,   # called after each intermediate image is generated
                 width          = width,
                 height         = height,
+                init_img       = init_img,        # embiggen needs to manipulate from the unmodified init_img
                 init_image     = init_image,      # notice that init_image is different from init_img
                 mask_image     = mask_image,
                 strength       = strength,
+                embiggen       = embiggen,
+                embiggen_tiles = embiggen_tiles,
             )
 
             if upscale is not None or gfpgan_strength > 0:
@@ -404,6 +417,12 @@ class Generate:
             from ldm.dream.generator.img2img import Img2Img
             self.generators['img2img'] = Img2Img(self.model)
         return self.generators['img2img']
+    
+    def _make_embiggen(self):
+        if not self.generators.get('embiggen'):
+            from ldm.dream.generator.embiggen import Embiggen
+            self.generators['embiggen'] = Embiggen(self.model)
+        return self.generators['embiggen']
 
     def _make_txt2img(self):
         if not self.generators.get('txt2img'):

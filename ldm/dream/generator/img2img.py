@@ -1,5 +1,5 @@
 '''
-ldm.dream.generator.txt2img descends from ldm.dream.generator
+ldm.dream.generator.img2img descends from ldm.dream.generator
 '''
 
 import torch
