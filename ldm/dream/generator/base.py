@@ -66,7 +66,10 @@ class Generator():
                     x_T = initial_noise
                 else:
                     seed_everything(seed)
-                    x_T = self.get_noise(width,height)
+                    try:
+                        x_T = self.get_noise(width,height)
+                    except:
+                        pass
 
                 image = make_image(x_T)
                 results.append([image, seed])
