@@ -37,6 +37,7 @@ While that is downloading, open Terminal and run the following commands one at a
 # 2. No pyenv
 #
 # If you don't know what we are talking about, choose 2.
+#
 # NOW EITHER DO
 # 1. Installing alongside pyenv
 
