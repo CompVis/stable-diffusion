@@ -104,12 +104,6 @@ def main():
     )
 
     parser.add_argument(
-        "--skip_save",
-        action='store_true',
-        help="do not save indiviual samples. For speed measurements.",
-    )
-
-    parser.add_argument(
         "--ddim_steps",
         type=int,
         default=50,
@@ -190,6 +184,12 @@ def main():
         help="path to config which constructs model",
     )
     parser.add_argument(
+        "--device",
+        type=str,
+        default="cuda",
+        help="CPU or GPU (cuda/cuda:0/cuda:1/...)",
+    )
+    parser.add_argument(
         "--ckpt",
         type=str,
         default="model.ckpt",
@@ -223,7 +223,9 @@ def main():
 
     config = OmegaConf.load(f"{opt.config}")
     model = load_model_from_config(config, f"{opt.ckpt}")
-    model = model.half()
+    if opt.precision == "autocast":
+        model = model.half()
+
 
     sampler = DDIMSampler(model)
 
@@ -244,7 +246,8 @@ def main():
 
     assert os.path.isfile(opt.init_img)
     init_image = load_img(opt.init_img).to(device)
-    init_image = init_image.half()
+    if opt.precision == "autocast":
+        init_image = init_image.half()
     init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
     init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))
 
@@ -281,7 +284,7 @@ def main():
                         x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
                         x_samples_ddim = accelerator.gather(x_samples_ddim)
 
-                        if accelerator.is_main_process and not opt.skip_save:
+                        if accelerator.is_main_process:
                             for x_sample in x_samples_ddim:
                                 x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                                 Image.fromarray(x_sample.astype(np.uint8)).save(
@@ -289,9 +292,6 @@ def main():
                                 
 
                 toc = time.time()
-
-    print(f"Your samples are ready and waiting for you here: \n{outpath} \n"
-          f" \nEnjoy.")
 
 
 if __name__ == "__main__":

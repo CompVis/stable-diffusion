@@ -188,67 +188,94 @@ class AttnBlock(nn.Module):
                                         padding=0)
 
     def forward(self, x):
-        h_ = x
-        h_ = self.norm(h_)
-        q1 = self.q(h_)
-        k1 = self.k(h_)
-        v = self.v(h_)
 
-        # compute attention
-        b, c, h, w = q1.shape
+        try: 
+            h_ = x
+            h_ = self.norm(h_)
+            q1 = self.q(h_)
+            k1 = self.k(h_)
+            v = self.v(h_)
 
-        q2 = q1.reshape(b, c, h*w)
-        del q1
+            # compute attention
+            b, c, h, w = q1.shape
 
-        q = q2.permute(0, 2, 1)   # b,hw,c
-        del q2
+            q2 = q1.reshape(b, c, h*w)
+            del q1
 
-        k = k1.reshape(b, c, h*w) # b,c,hw
-        del k1
+            q = q2.permute(0, 2, 1)   # b,hw,c
+            del q2
 
-        h_ = torch.zeros_like(k, device=q.device)
+            k = k1.reshape(b, c, h*w) # b,c,hw
+            del k1
 
-        stats = torch.cuda.memory_stats(q.device)
-        mem_active = stats['active_bytes.all.current']
-        mem_reserved = stats['reserved_bytes.all.current']
-        mem_free_cuda, _ = torch.cuda.mem_get_info(torch.cuda.current_device())
-        mem_free_torch = mem_reserved - mem_active
-        mem_free_total = mem_free_cuda + mem_free_torch
+            h_ = torch.zeros_like(k, device=q.device)
 
-        tensor_size = q.shape[0] * q.shape[1] * k.shape[2] * 4
-        mem_required = tensor_size * 2.5
-        steps = 1
+            stats = torch.cuda.memory_stats(q.device)
+            mem_active = stats['active_bytes.all.current']
+            mem_reserved = stats['reserved_bytes.all.current']
+            mem_free_cuda, _ = torch.cuda.mem_get_info(torch.cuda.current_device())
+            mem_free_torch = mem_reserved - mem_active
+            mem_free_total = mem_free_cuda + mem_free_torch
 
-        if mem_required > mem_free_total:
-            steps = 2**(math.ceil(math.log(mem_required / mem_free_total, 2)))
+            tensor_size = q.shape[0] * q.shape[1] * k.shape[2] * 4
+            mem_required = tensor_size * 2.5
+            steps = 1
 
-        slice_size = q.shape[1] // steps if (q.shape[1] % steps) == 0 else q.shape[1]
-        for i in range(0, q.shape[1], slice_size):
-            end = i + slice_size
+            if mem_required > mem_free_total:
+                steps = 2**(math.ceil(math.log(mem_required / mem_free_total, 2)))
 
-            w1 = torch.bmm(q[:, i:end], k)     # b,hw,hw    w[b,i,j]=sum_c q[b,i,c]k[b,c,j]
-            w2 = w1 * (int(c)**(-0.5))
-            del w1
-            w3 = torch.nn.functional.softmax(w2, dim=2)
-            del w2
+            slice_size = q.shape[1] // steps if (q.shape[1] % steps) == 0 else q.shape[1]
+            for i in range(0, q.shape[1], slice_size):
+                end = i + slice_size
+
+                w1 = torch.bmm(q[:, i:end], k)     # b,hw,hw    w[b,i,j]=sum_c q[b,i,c]k[b,c,j]
+                w2 = w1 * (int(c)**(-0.5))
+                del w1
+                w3 = torch.nn.functional.softmax(w2, dim=2)
+                del w2
+
+                # attend to values
+                v1 = v.reshape(b, c, h*w)
+                w4 = w3.permute(0, 2, 1)   # b,hw,hw (first hw of k, second of q)
+                del w3
+
+                h_[:, :, i:end] = torch.bmm(v1, w4)     # b, c,hw (hw of q) h_[b,c,j] = sum_i v[b,c,i] w_[b,i,j]
+                del v1, w4
+
+            h2 = h_.reshape(b, c, h, w)
+            del h_
+
+            h3 = self.proj_out(h2)
+            del h2
+
+            h3 += x
+
+            return h3
+        except: 
+            h_ = x
+            h_ = self.norm(h_)
+            q = self.q(h_)
+            k = self.k(h_)
+            v = self.v(h_)
+
+            # compute attention
+            b,c,h,w = q.shape
+            q = q.reshape(b,c,h*w)
+            q = q.permute(0,2,1)   # b,hw,c
+            k = k.reshape(b,c,h*w) # b,c,hw
+            w_ = torch.bmm(q,k)     # b,hw,hw    w[b,i,j]=sum_c q[b,i,c]k[b,c,j]
+            w_ = w_ * (int(c)**(-0.5))
+            w_ = torch.nn.functional.softmax(w_, dim=2)
 
             # attend to values
-            v1 = v.reshape(b, c, h*w)
-            w4 = w3.permute(0, 2, 1)   # b,hw,hw (first hw of k, second of q)
-            del w3
+            v = v.reshape(b,c,h*w)
+            w_ = w_.permute(0,2,1)   # b,hw,hw (first hw of k, second of q)
+            h_ = torch.bmm(v,w_)     # b, c,hw (hw of q) h_[b,c,j] = sum_i v[b,c,i] w_[b,i,j]
+            h_ = h_.reshape(b,c,h,w)
 
-            h_[:, :, i:end] = torch.bmm(v1, w4)     # b, c,hw (hw of q) h_[b,c,j] = sum_i v[b,c,i] w_[b,i,j]
-            del v1, w4
+            h_ = self.proj_out(h_)
 
-        h2 = h_.reshape(b, c, h, w)
-        del h_
-
-        h3 = self.proj_out(h2)
-        del h2
-
-        h3 += x
-
-        return h3
+            return x+h_
 
 
 def make_attn(in_channels, attn_type="vanilla"):
