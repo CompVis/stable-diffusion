@@ -73,9 +73,9 @@ class PromptFormatter:
             switches.append(f'-G{opt.gfpgan_strength}')
         if opt.upscale:
             switches.append(f'-U {" ".join([str(u) for u in opt.upscale])}')
-        if opt.embiggen:
+        if hasattr(opt, 'embiggen') and opt.embiggen:
             switches.append(f'-embiggen {" ".join([str(u) for u in opt.embiggen])}')
-        if opt.embiggen_tiles:
+        if hasattr(opt, 'embiggen_tiles') and opt.embiggen_tiles:
             switches.append(f'-embiggen_tiles {" ".join([str(u) for u in opt.embiggen_tiles])}')
         if opt.variation_amount > 0:
             switches.append(f'-v{opt.variation_amount}')
