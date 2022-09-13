@@ -31,7 +31,7 @@ This example uses a Mac M1/M2 (arm64) but you can specify the platform and archi
 The steps would be the same on an amd64 machine with NVIDIA GPUs as for an arm64 Mac; the platform is configurable. You [can't access the Mac M1/M2 GPU cores from Docker containers](https://github.com/pytorch/pytorch/issues/81224) and performance is reduced compared with running it directly on macOS but for development purposes it's fine. Once you're done with development tasks on your laptop you can build for the target platform and architecture and deploy to an environment with NVIDIA GPUs on-premises or in the cloud.
 
 ### Prerequisites
-[Install Docker](https://gist.github.com/santisbon/2165fd1c9aaa1f7974f424535d3756f7#docker)  
+[Install Docker](https://github.com/santisbon/guides#docker)  
 On the Docker Desktop app, go to Preferences, Resources, Advanced. Increase the CPUs and Memory to avoid this [Issue](https://github.com/lstein/stable-diffusion/issues/342). You may need to increase Swap and Disk image size too.  
 
 Create a Docker volume for the downloaded model file
