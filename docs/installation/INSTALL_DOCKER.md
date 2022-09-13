@@ -4,7 +4,7 @@ Table of Contents
 
 * [Step 1 - Get the Model](#step-1---get-the-model)
 * [Step 2 - Installation](#step-2---installation)
-   * [Option A - On a Linux container](#option-a---on-a-linux-container)
+   * [On a Linux container](#on-a-linux-container)
       * [Why containers?](#why-containers)
       * [Prerequisites](#prerequisites)
       * [Setup](#setup)
@@ -21,12 +21,12 @@ You'll need to create an account but it's quick and free.
 
 # Step 2 - Installation
 
-## Option A - On a Linux container 
+## On a Linux container 
 
 ### Why containers?
 They provide a flexible, reliable way to build and deploy Stable Diffusion. We also use a Docker volume to store the largest model file and image outputs as a first step in decoupling storage and compute. Future enhancements will do this for other model files and assets. See [Processes](https://12factor.net/processes) under the Twelve-Factor App methodology for details on why running applications in such a stateless fashion is important.
 
-This example uses a Mac M1/M2 (arm64) but you can specify the platform and architecture as parameters when building the image and running the container.  
+This example uses a Mac M1/M2 (arm64) but you can specify the platform and architecture as parameters when building the image and running the container. You'll also need to specify the Stable Diffusion requirements file that matches your OS and architecture e.g. Linux on an arm64 chip if running a Linux container on Apple silicon.  
 
 The steps would be the same on an amd64 machine with NVIDIA GPUs as for an arm64 Mac; the platform is configurable. You [can't access the Mac M1/M2 GPU cores from Docker containers](https://github.com/pytorch/pytorch/issues/81224) and performance is reduced compared with running it directly on macOS but for development purposes it's fine. Once you're done with development tasks on your laptop you can build for the target platform and architecture and deploy to an environment with NVIDIA GPUs on-premises or in the cloud.
 
