@@ -143,16 +143,11 @@ class Txt2Img(BaseModel):
             "choices": ["full", "autocast"],
             "default": "autocast"
         },
-        {
-            "arg": "out_folder",
-            "type": str,
-            "help": "where to store pics",
-            "default": ""
-        },
     ]
 
     def sample(self, options=None):
         super().sample(options)
+        torch.cuda.empty_cache()
         opt = self.opt
         model = self.model
         sample_path = self.sample_path
@@ -161,19 +156,19 @@ class Txt2Img(BaseModel):
         grid_count = self.grid_count
         data = self.data
         batch_size = self.batch_size
-        sampler = self.sampler
+        sampler = self.plms_sampler
         start_code = self.start_code
         base_count = self.base_count
-        seed = opt.seed
+        self.set_seed()
 
         precision_scope = autocast if opt.precision=="autocast" else nullcontext
 
+        saved_files = []
         with torch.no_grad():
             with precision_scope("cuda"):
                 with model.ema_scope():
-                    tic = time.time()
                     all_samples = list()
-                    for n in trange(opt.n_iter, desc="Sampling"):
+                    for _n in trange(opt.n_iter, desc="Sampling"):
                         for prompts in tqdm(data, desc="data"):
                             uc = None
                             if opt.scale != 1.0:
@@ -192,21 +187,20 @@ class Txt2Img(BaseModel):
                                                              eta=opt.ddim_eta,
                                                              x_T=start_code)
 
-                            x_samples_ddim = model.decode_first_stage(samples_ddim)
-                            x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
+                            x_samples_ddim = self.get_first_stage_sample(model, samples_ddim)
                             x_samples_ddim = x_samples_ddim.cpu().permute(0, 2, 3, 1).numpy()
 
-                            x_checked_image, has_nsfw_concept = check_safety(x_samples_ddim)
-
+                            x_checked_image = self.filter_nsfw_content(x_samples_ddim)
                             x_checked_image_torch = torch.from_numpy(x_checked_image).permute(0, 3, 1, 2)
 
                             if not opt.skip_save:
-                                for x_sample in x_checked_image_torch:
-                                    x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                                    img = Image.fromarray(x_sample.astype(np.uint8))
-                                    img = put_watermark(img, self.wm_encoder)
-                                    img.save(os.path.join(sample_path, f"{base_count:05}.png"))
-                                    base_count += 1
+                                file_name = self.save_image(
+                                    x_checked_image_torch,
+                                    sample_path,
+                                    base_count
+                                )
+                                saved_files.append(file_name)
+                                base_count += 1
 
                             if not opt.skip_grid:
                                 all_samples.append(x_checked_image_torch)
@@ -224,5 +218,4 @@ class Txt2Img(BaseModel):
 
                     toc = time.time()
 
-        print(f"Your samples are ready and waiting for you here: \n{outpath} \n"
-              f" \nEnjoy.")
+        return saved_files

@@ -75,6 +75,18 @@ class Img2Img(BaseModel):
             "help": "sample this often",
         },
         {
+            "arg": "H",
+            "type": int,
+            "default": 512,
+            "help": "image height, in pixel space",
+        },
+        {
+            "arg": "W",
+            "type": int,
+            "default": 512,
+            "help": "image width, in pixel space",
+        },
+        {
             "arg": "C",
             "type": int,
             "default": 4,
@@ -143,18 +155,13 @@ class Img2Img(BaseModel):
         }
     ]
 
-    def parse_arguments(self):
-        self.parse_arguments()
-        parser = argparse.ArgumentParser()
-        opt = parser.parse_args()
-        self.opt = opt
-
     def sample(self, options=None):
         super().sample(options)
+        torch.cuda.empty_cache()
         opt = self.opt
         batch_size = self.batch_size
         model = self.model
-        sampler = self.sampler
+        sampler = self.ddim_sampler
         data = self.data
         sample_path = self.sample_path
         base_count = self.base_count
@@ -162,7 +169,7 @@ class Img2Img(BaseModel):
         device = self.device
         outpath = self.outpath
         grid_count = self.grid_count
-        seed = opt.seed
+        self.set_seed()
 
         assert os.path.isfile(opt.init_img)
         init_image = load_img(opt.init_img).to(device)
@@ -176,11 +183,13 @@ class Img2Img(BaseModel):
         print(f"target t_enc is {t_enc} steps")
 
         precision_scope = autocast if opt.precision == "autocast" else nullcontext
+
+        saved_files = []
         with torch.no_grad():
             with precision_scope("cuda"):
                 with model.ema_scope():
                     all_samples = list()
-                    for n in trange(opt.n_iter, desc="Sampling"):
+                    for _n in trange(opt.n_iter, desc="Sampling"):
                         for prompts in tqdm(data, desc="data"):
                             uc = None
                             if opt.scale != 1.0:
@@ -192,18 +201,22 @@ class Img2Img(BaseModel):
                             # encode (scaled latent)
                             z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc] * batch_size).to(device))
                             # decode it
-                            samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
-                                                     unconditional_conditioning=uc, )
+                            samples = sampler.decode(z_enc,
+                                                     c,
+                                                     t_enc,
+                                                     unconditional_guidance_scale=opt.scale,
+                                                     unconditional_conditioning=uc)
 
-                            x_samples = model.decode_first_stage(samples)
-                            x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
+                            x_samples = self.get_first_stage_sample(model, samples)
 
                             if not opt.skip_save:
-                                for x_sample in x_samples:
-                                    x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                                    Image.fromarray(x_sample.astype(np.uint8)).save(
-                                        os.path.join(sample_path, f"{base_count:05}.png"))
-                                    base_count += 1
+                                file_name = self.save_image(
+                                    x_samples,
+                                    sample_path,
+                                    base_count
+                                )
+                                saved_files.append(file_name)
+                                base_count += 1
 
                             all_samples.append(x_samples)
 
@@ -220,5 +233,4 @@ class Img2Img(BaseModel):
 
                     toc = time.time()
 
-        print(f"Your samples are ready and waiting for you here: \n{outpath} \n"
-              f" \nEnjoy.")
+        return saved_files
