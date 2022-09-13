@@ -150,7 +150,10 @@ A full set of contribution guidelines, along with templates, are in progress, bu
 
 ## **Contributors**
 
-This fork is a combined effort of various people from across the world. [Check out the list of all these amazing people](docs/CONTRIBUTORS.md). We thank them for their time, hard work and effort.
+This fork is a combined effort of various people from across the
+world. [Check out the list of all these amazing
+people](docs/CONTRIBUTORS.md). We thank them for their time, hard work
+and effort.
 
 # Support
 
