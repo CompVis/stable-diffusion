@@ -2,12 +2,20 @@ import os
 import torch
 import numpy as np
 import warnings
+import sys
 
 pretrained_model_url = 'https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth'
 
 class CodeFormerRestoration():
-    def __init__(self) -> None:
-        pass
+    def __init__(self,
+            codeformer_dir='ldm/restoration/codeformer',
+            codeformer_model_path='weights/codeformer.pth') -> None:
+        self.model_path = os.path.join(codeformer_dir, codeformer_model_path)
+        self.codeformer_model_exists = os.path.isfile(self.model_path)
+
+        if not self.codeformer_model_exists:
+            print('## NOT FOUND: CodeFormer model not found at ' + self.model_path)
+        sys.path.append(os.path.abspath(codeformer_dir))
 
     def process(self, image, strength, device, seed=None, fidelity=0.75):
         if seed is not None:

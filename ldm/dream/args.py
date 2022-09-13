@@ -370,16 +370,19 @@ class Args(object):
             type=str,
             help='Path to a pre-trained embedding manager checkpoint - can only be set on command line',
         )
-        # GFPGAN related args
+        # Restoration related args
         postprocessing_group.add_argument(
-            '--gfpgan_bg_upsampler',
-            type=str,
-            default='realesrgan',
-            help='Background upsampler. Default: realesrgan. Options: realesrgan, none.',
-
+            '--restore',
+            action='store_true',
+            help='Enable Face Restoration',
         )
         postprocessing_group.add_argument(
-            '--gfpgan_bg_tile',
+            '--esrgan',
+            action='store_true',
+            help='Enable Upscaling',
+        )
+        postprocessing_group.add_argument(
+            '--esrgan_bg_tile',
             type=int,
             default=400,
             help='Tile size for background sampler, 0 for no tile during testing. Default: 400.',

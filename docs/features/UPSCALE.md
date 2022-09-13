@@ -4,10 +4,16 @@ title: Upscale
 
 # :material-image-size-select-large: Upscale 
 
+## **Intro**
+
+The script provides the ability to restore faces and upscale.
+
+You can enable these features by passing `--restore` and `--esrgan` to your launch script to enable
+face restoration modules and upscaling modules respectively.
+
 ## **GFPGAN and Real-ESRGAN Support**
 
-The script also provides the ability to do face restoration and upscaling with the help of GFPGAN
-and Real-ESRGAN respectively.
+The default face restoration module is GFPGAN and the default upscaling module is ESRGAN.
 
 As of version 1.14, environment.yaml will install the Real-ESRGAN package into the standard install
 location for python packages, and will put GFPGAN into a subdirectory of "src" in the
