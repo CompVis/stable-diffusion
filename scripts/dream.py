@@ -42,7 +42,25 @@ def main():
     import transformers
     transformers.logging.set_verbosity_error()
 
-    # creating a simple Generate object with a handful of
+    # Loading Face Restoration and ESRGAN Modules
+    try:
+        gfpgan, codeformer, esrgan = None, None, None
+        from ldm.restoration.restoration import Restoration
+        restoration = Restoration(opt.gfpgan_dir, opt.gfpgan_model_path, opt.esrgan_bg_tile)
+        if opt.restore:
+            gfpgan, codeformer = restoration.load_face_restore_models()
+        else:
+            print('>> Face Restoration Disabled')
+        if opt.esrgan:
+            esrgan = restoration.load_ersgan()
+        else:
+            print('>> ESRGAN Disabled')
+    except (ModuleNotFoundError, ImportError):
+        import traceback
+        print(traceback.format_exc(), file=sys.stderr)
+        print('>> You may need to install the ESRGAN and/or GFPGAN modules')
+
+    # creating a simple text2image object with a handful of
     # defaults passed on the command line.
     # additional parameters will be added (or overriden) during
     # the user input loop
@@ -53,6 +71,9 @@ def main():
             sampler_name   = opt.sampler_name,
             embedding_path = opt.embedding_path,
             full_precision = opt.full_precision,
+            gfpgan=gfpgan,
+            codeformer=codeformer,
+            esrgan=esrgan
         )
     except (FileNotFoundError, IOError, KeyError) as e:
         print(f'{e}. Aborting.')
@@ -89,7 +110,7 @@ def main():
 
     # web server loops forever
     if opt.web:
-        dream_server_loop(gen, opt.host, opt.port, opt.outdir)
+        dream_server_loop(gen, opt.host, opt.port, opt.outdir, gfpgan)
         sys.exit(0)
 
     main_loop(gen, opt, infile)
@@ -312,7 +333,7 @@ def get_next_command(infile=None) -> str:  # command string
             print(f'#{command}')
     return command
 
-def dream_server_loop(gen, host, port, outdir):
+def dream_server_loop(gen, host, port, outdir, gfpgan):
     print('\n* --web was specified, starting web server...')
     # Change working directory to the stable-diffusion directory
     os.chdir(
@@ -322,6 +343,10 @@ def dream_server_loop(gen, host, port, outdir):
     # Start server
     DreamServer.model  = gen # misnomer in DreamServer - this is not the model you are looking for
     DreamServer.outdir = outdir
+    DreamServer.gfpgan_model_exists = False
+    if gfpgan is not None:
+        DreamServer.gfpgan_model_exists = gfpgan.gfpgan_model_exists
+
     dream_server = ThreadingDreamServer((host, port))
     print(">> Started Stable Diffusion dream server!")
     if host == '0.0.0.0':
@@ -345,8 +370,7 @@ def write_log_message(results, log_path):
     log_lines = [f'{path}: {prompt}\n' for path, prompt in results]
     for l in log_lines:
         output_cntr += 1
-        print(f'[{output_cntr}] {l}',end='')
-
+        print(f'[{output_cntr}] {l}', end='')
 
     with open(log_path, 'a', encoding='utf-8') as file:
         file.writelines(log_lines)
