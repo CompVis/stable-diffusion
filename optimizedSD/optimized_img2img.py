@@ -253,9 +253,9 @@ init_image = repeat(init_image, "1 ... -> b ...", b=batch_size)
 init_latent = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image))  # move to latent space
 
 if opt.device != "cpu":
-    mem = torch.cuda.memory_allocated() / 1e6
+    mem = torch.cuda.memory_allocated(device=opt.device) / 1e6
     modelFS.to("cpu")
-    while torch.cuda.memory_allocated() / 1e6 >= mem:
+    while torch.cuda.memory_allocated(device=opt.device) / 1e6 >= mem:
         time.sleep(1)
 
 
@@ -302,9 +302,9 @@ with torch.no_grad():
                     c = modelCS.get_learned_conditioning(prompts)
 
                 if opt.device != "cpu":
-                    mem = torch.cuda.memory_allocated() / 1e6
+                    mem = torch.cuda.memory_allocated(device=opt.device) / 1e6
                     modelCS.to("cpu")
-                    while torch.cuda.memory_allocated() / 1e6 >= mem:
+                    while torch.cuda.memory_allocated(device=opt.device) / 1e6 >= mem:
                         time.sleep(1)
 
                 # encode (scaled latent)
@@ -340,13 +340,13 @@ with torch.no_grad():
                     base_count += 1
 
                 if opt.device != "cpu":
-                    mem = torch.cuda.memory_allocated() / 1e6
+                    mem = torch.cuda.memory_allocated(device=opt.device) / 1e6
                     modelFS.to("cpu")
-                    while torch.cuda.memory_allocated() / 1e6 >= mem:
+                    while torch.cuda.memory_allocated(device=opt.device) / 1e6 >= mem:
                         time.sleep(1)
 
                 del samples_ddim
-                print("memory_final = ", torch.cuda.memory_allocated() / 1e6)
+                print("memory_final = ", torch.cuda.memory_allocated(device=opt.device) / 1e6)
 
 toc = time.time()
 
