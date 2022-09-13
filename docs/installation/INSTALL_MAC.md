@@ -152,20 +152,26 @@ You might also need to install Rust (I mention this again below).
 
 ### How many snakes are living in your computer?
 
-Here's the reason why you have to specify which python to use.
-There are several versions of python on macOS and the computer is
-picking the wrong one. More specifically, preload_models.py and dream.py says to
-find the first `python3` in the path environment variable. You can see which one
-it is picking with `which python3`. These are the mostly likely paths you'll see.
+You might have multiple Python installations on your system, in which case it's
+important to be explicit and consistent about which one to use for a given project.
+This is because virtual environments are coupled to the Python that created it (and all
+the associated 'system-level' modules).
+
+When you run `python` or `python3`, your shell searches the colon-delimited locations
+in the `PATH` environment variable (`echo $PATH` to see that list) in that order - first match wins.
+You can ask for the location of the first `python3` found in your `PATH` with the `which` command like this:
 
     % which python3
     /usr/bin/python3
 
-The above path is part of the OS. However, that path is a stub that asks you if
-you want to install Xcode. If you have Xcode installed already,
-/usr/bin/python3 will execute /Library/Developer/CommandLineTools/usr/bin/python3 or
-/Applications/Xcode.app/Contents/Developer/usr/bin/python3 (depending on which
+Anything in `/usr/bin` is [part of the OS](https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/FileSystemOverview/FileSystemOverview.html#//apple_ref/doc/uid/TP40010672-CH2-SW6). However, `/usr/bin/python3` is not actually python3, but 
+rather a stub that offers to install Xcode (which includes python 3). If you have Xcode installed already,
+`/usr/bin/python3` will execute `/Library/Developer/CommandLineTools/usr/bin/python3` or
+`/Applications/Xcode.app/Contents/Developer/usr/bin/python3` (depending on which
 Xcode you've selected with `xcode-select`).
+
+Note that `/usr/bin/python` is an entirely different python - specifically, python 2. Note: starting in
+macOS 12.3, `/usr/bin/python` no longer exists.
 
     % which python3
     /opt/homebrew/bin/python3
@@ -176,17 +182,21 @@ for Homebrew binaries before system ones, you'll see the above path.
     % which python
     /opt/anaconda3/bin/python
 
-If you drop the "3" you get an entirely different python. Note: starting in
-macOS 12.3, /usr/bin/python no longer exists (it was python 2 anyway).
-
-If you have Anaconda installed, this is what you'll see. There is a
-/opt/anaconda3/bin/python3 also.
+If you have Anaconda installed, you will see the above path. There is a
+`/opt/anaconda3/bin/python3` also. We expect that `/opt/anaconda3/bin/python` 
+and `/opt/anaconda3/bin/python3` should actually be the *same python*, which you can
+verify by comparing the output of `python3 -V` and `python -V`.
 
     (ldm) % which python
     /Users/name/miniforge3/envs/ldm/bin/python
 
-This is what you'll see if you have miniforge and you've correctly activated
-the ldm environment. This is the goal.
+The above is what you'll see if you have miniforge and you've correctly activated
+the ldm environment, and you used option 2 in the setup instructions above ("no pyenv").
+
+    (anaconda3-2022.05) % which python
+    /Users/name/.pyenv/shims/python
+    
+... and the above is what you'll see if you used option 1 ("Alongside pyenv").
 
 It's all a mess and you should know [how to modify the path environment variable](https://support.apple.com/guide/terminal/use-environment-variables-apd382cc5fa-4f58-4449-b20a-41c53c006f8f/mac)
 if you want to fix it. Here's a brief hint of all the ways you can modify it
@@ -200,6 +210,13 @@ if you want to fix it. Here's a brief hint of all the ways you can modify it
 
 Which one you use will depend on what you have installed except putting a file
 in /etc/paths.d is what I prefer to do.
+
+Finally, to answer the question posed by this section's title, it may help to list 
+all of the `python` / `python3` things found in `$PATH` instead of just the one that
+will be executed by default. To do that, add the `-a` switch to `which`:
+
+    % which -a python3
+    ...
 
 ### Debugging?
 
