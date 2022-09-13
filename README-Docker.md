@@ -8,9 +8,6 @@ Table of Contents
       * [Why containers?](#why-containers)
       * [Prerequisites](#prerequisites)
       * [Setup](#setup)
-   * [Option B - Directly on Apple silicon](#option-b---directly-on-apple-silicon)
-      * [Prerequisites](#prerequisites-1)
-      * [Setup](#setup-1)
 * [Step 3 - Usage (time to have fun)](#step-3---usage-time-to-have-fun)
    * [Startup](#startup)
    * [Text to Image](#text-to-image)
@@ -91,72 +88,6 @@ santisbon/stable-diffusion
 ```
 Tip: Make sure you've created the Docker volume (above)
 
-## Option B - Directly on Apple silicon
-For Mac M1/M2. Read more about [Metal Performance Shaders (MPS) framework](https://developer.apple.com/documentation/metalperformanceshaders).
-
-### Prerequisites
-Install the latest versions of macOS, [Homebrew](https://brew.sh/), [Python](https://gist.github.com/santisbon/2165fd1c9aaa1f7974f424535d3756f7#python), and [Git](https://gist.github.com/santisbon/2165fd1c9aaa1f7974f424535d3756f7#git).  
-
-```Shell
-brew install cmake protobuf rust
-brew install --cask miniconda
-conda init zsh && source ~/.zshrc # or bash and .bashrc
-```
-
-### Setup
-
-Set the fork you want to use.
-```Shell
-GITHUB_STABLE_DIFFUSION="https://github.com/santisbon/stable-diffusion.git"
-
-git clone $GITHUB_STABLE_DIFFUSION
-cd stable-diffusion
-mkdir -p models/ldm/stable-diffusion-v1/
-```
-
-When the pip3 path exists, it will ```w```ipe.  
-
-The subdir env variable restricts conda to only use ARM packages while creating the env (M1/M2 is ARM-based). You could also ```conda install nomkl``` but setting the environment appropriately is cleaner.  
-
-```conda config``` will write to the active environment's (```ldm```) configuration file and set ```subdir``` to the desired value permanently.
-```Shell
-PATH_TO_CKPT="$HOME/Downloads"  # or wherever you saved sd-v1-4.ckpt
-ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
-
-PIP_EXISTS_ACTION="w"
-CONDA_SUBDIR="osx-arm64"
-conda env create -f environment-mac.yaml && conda activate ldm
-conda config --env --set subdir "osx-arm64"
-```
-
-You can verify you're in the virtual environment by looking at which executable you're getting:
-```Shell
-type python3
-```
-
-**Face Restoration and Upscaling**  
-By default this repo is expected in a directory at the same level as stable-diffusion.  
-We'll need ```basicsr``` for training and inference and ```facexlib```, a face detection / face restoration helper.  
-Also ```realesrgan``` to enhance the background (non-face) regions and do upscaling.  
-Lastly, we'll get a pre-trained model needed for face restoration.
-```Shell
-cd .. && git clone https://github.com/TencentARC/GFPGAN.git && cd GFPGAN
-
-pip3 install basicsr facexlib \
-&& pip3 install -r requirements.txt
-
-python3 setup.py develop
-pip3 install realesrgan 
-
-wget https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth -P experiments/pretrained_models
-
-cd ../stable-diffusion
-```
-
-Only need to do this once. If we don't preload models it will download model files from the Internet when you run ```dream.py```. Used by the core functionality and by GFPGAN/Real-ESRGAN.
-```Shell
-python3 scripts/preload_models.py
-```
 
 # Step 3 - Usage (time to have fun)
 
