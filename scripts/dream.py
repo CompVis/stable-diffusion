@@ -33,52 +33,34 @@ def main():
         print('--weights argument has been deprecated. Please configure ./configs/models.yaml, and call it using --model instead.')
         sys.exit(-1)
 
-    try:
-        models = OmegaConf.load(opt.config)
-        width = models[opt.model].width
-        height = models[opt.model].height
-        config = models[opt.model].config
-        weights = models[opt.model].weights
-    except (FileNotFoundError, IOError, KeyError) as e:
-        print(f'{e}. Aborting.')
-        sys.exit(-1)
-
     print('* Initializing, be patient...\n')
     sys.path.append('.')
-    from pytorch_lightning import logging
     from ldm.generate import Generate
 
     # these two lines prevent a horrible warning message from appearing
     # when the frozen CLIP tokenizer is imported
     import transformers
-
     transformers.logging.set_verbosity_error()
 
-    # creating a simple text2image object with a handful of
+    # creating a simple Generate object with a handful of
     # defaults passed on the command line.
     # additional parameters will be added (or overriden) during
     # the user input loop
-    t2i = Generate(
-        width=width,
-        height=height,
-        sampler_name=opt.sampler_name,
-        weights=weights,
-        full_precision=opt.full_precision,
-        config=config,
-        grid=opt.grid,
-        # this is solely for recreating the prompt
-        seamless=opt.seamless,
-        embedding_path=opt.embedding_path,
-        device_type=opt.device,
-        ignore_ctrl_c=opt.infile is None,
-    )
+    try:
+        gen = Generate(
+            conf           = opt.config,
+            model          = opt.model,
+            sampler_name   = opt.sampler_name,
+            embedding_path = opt.embedding_path,
+            full_precision = opt.full_precision,
+        )
+    except (FileNotFoundError, IOError, KeyError) as e:
+        print(f'{e}. Aborting.')
+        sys.exit(-1)
 
     # make sure the output directory exists
     if not os.path.exists(opt.outdir):
         os.makedirs(opt.outdir)
-
-    # gets rid of annoying messages about random seed
-    logging.getLogger('pytorch_lightning').setLevel(logging.ERROR)
 
     # load the infile as a list of lines
     infile = None
@@ -98,21 +80,23 @@ def main():
         print(">> changed to seamless tiling mode")
 
     # preload the model
-    t2i.load_model()
+    gen.load_model()
 
     if not infile:
         print(
             "\n* Initialization done! Awaiting your command (-h for help, 'q' to quit)"
         )
 
-    cmd_parser = create_cmd_parser()
+    # web server loops forever
     if opt.web:
-        dream_server_loop(t2i, opt.host, opt.port, opt.outdir)
-    else:
-        main_loop(t2i, opt.outdir, opt.prompt_as_dir, cmd_parser, infile)
+        dream_server_loop(gen, opt.host, opt.port, opt.outdir)
+        sys.exit(0)
 
+    cmd_parser = create_cmd_parser()
+    main_loop(gen, opt.outdir, opt.prompt_as_dir, cmd_parser, infile)
 
-def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
+# TODO: main_loop() has gotten busy. Needs to be refactored.
+def main_loop(gen, outdir, prompt_as_dir, parser, infile):
     """prompt/read/execute loop"""
     done = False
     path_filter = re.compile(r'[<>:"/\\|?*]')
@@ -130,9 +114,6 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
         try:
             command = get_next_command(infile)
         except EOFError:
-            done = True
-            continue
-        except KeyboardInterrupt:
             done = True
             continue
 
@@ -184,6 +165,7 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
         if len(opt.prompt) == 0:
             print('Try again with a prompt!')
             continue
+
         # retrieve previous value!
         if opt.init_img is not None and re.match('^-\\d+$', opt.init_img):
             try:
@@ -203,8 +185,6 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
                 print(f'>> No previous seed at position {opt.seed} found')
                 opt.seed = None
                 continue
-
-        do_grid = opt.grid or t2i.grid
 
         if opt.with_variations is not None:
             # shotgun parsing, woo
@@ -258,11 +238,11 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
             file_writer = PngWriter(current_outdir)
             prefix = file_writer.unique_prefix()
             results = []  # list of filename, prompt pairs
-            grid_images = dict()  # seed -> Image, only used if `do_grid`
+            grid_images = dict()  # seed -> Image, only used if `opt.grid`
 
             def image_writer(image, seed, upscaled=False):
                 path = None
-                if do_grid:
+                if opt.grid:
                     grid_images[seed] = image
                 else:
                     if upscaled and opt.save_original:
@@ -278,16 +258,16 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
                             iter_opt.with_variations = opt.with_variations + this_variation
                         iter_opt.variation_amount = 0
                         normalized_prompt = PromptFormatter(
-                            t2i, iter_opt).normalize_prompt()
+                            gen, iter_opt).normalize_prompt()
                         metadata_prompt = f'{normalized_prompt} -S{iter_opt.seed}'
                     elif opt.with_variations is not None:
                         normalized_prompt = PromptFormatter(
-                            t2i, opt).normalize_prompt()
+                            gen, opt).normalize_prompt()
                         # use the original seed - the per-iteration value is the last variation-seed
                         metadata_prompt = f'{normalized_prompt} -S{opt.seed}'
                     else:
                         normalized_prompt = PromptFormatter(
-                            t2i, opt).normalize_prompt()
+                            gen, opt).normalize_prompt()
                         metadata_prompt = f'{normalized_prompt} -S{seed}'
                     path = file_writer.save_image_and_prompt_to_png(
                         image, metadata_prompt, filename)
@@ -296,16 +276,21 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
                         results.append([path, metadata_prompt])
                 last_results.append([path, seed])
 
-            t2i.prompt2image(image_callback=image_writer, **vars(opt))
+            catch_ctrl_c = infile is None # if running interactively, we catch keyboard interrupts
+            gen.prompt2image(
+                image_callback=image_writer,
+                catch_interrupts=catch_ctrl_c,
+                **vars(opt)
+            )
 
-            if do_grid and len(grid_images) > 0:
+            if opt.grid and len(grid_images) > 0:
                 grid_img   = make_grid(list(grid_images.values()))
                 grid_seeds = list(grid_images.keys())
                 first_seed = last_results[0][1]
                 filename = f'{prefix}.{first_seed}.png'
                 # TODO better metadata for grid images
                 normalized_prompt = PromptFormatter(
-                    t2i, opt).normalize_prompt()
+                    gen, opt).normalize_prompt()
                 metadata_prompt = f'{normalized_prompt} -S{first_seed} --grid -n{len(grid_images)} # {grid_seeds}'
                 path = file_writer.save_image_and_prompt_to_png(
                     grid_img, metadata_prompt, filename
@@ -337,11 +322,12 @@ def get_next_command(infile=None) -> str:  # command string
             raise EOFError
         else:
             command = command.strip()
-        print(f'#{command}')
+        if len(command)>0:
+            print(f'#{command}')
     return command
 
 
-def dream_server_loop(t2i, host, port, outdir):
+def dream_server_loop(gen, host, port, outdir):
     print('\n* --web was specified, starting web server...')
     # Change working directory to the stable-diffusion directory
     os.chdir(
@@ -349,7 +335,7 @@ def dream_server_loop(t2i, host, port, outdir):
     )
 
     # Start server
-    DreamServer.model = t2i
+    DreamServer.model  = gen # misnomer in DreamServer - this is not the model you are looking for
     DreamServer.outdir = outdir
     dream_server = ThreadingDreamServer((host, port))
     print(">> Started Stable Diffusion dream server!")
@@ -518,13 +504,6 @@ def create_argv_parser():
         '--weights',
         default='model',
         help='Indicates the Stable Diffusion model to use.',
-    )
-    parser.add_argument(
-        '--device',
-        '-d',
-        type=str,
-        default='cuda',
-        help="device to run stable diffusion on. defaults to cuda `torch.cuda.current_device()` if available"
     )
     parser.add_argument(
         '--model',

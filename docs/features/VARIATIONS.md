@@ -36,7 +36,7 @@ Outputs:
 
 The one with seed 3357757885 looks nice:
 
-<img src="assets/variation_walkthru/000001.3357757885.png"/>
+<img src="../assets/variation_walkthru/000001.3357757885.png"/>
 
 ---
 
@@ -65,8 +65,8 @@ variation amount used to generate it.
 
 This gives us a series of closely-related variations, including the two shown here.
 
-<img src="assets/variation_walkthru/000002.3647897225.png">
-<img src="assets/variation_walkthru/000002.1614299449.png">
+<img src="../assets/variation_walkthru/000002.3647897225.png">
+<img src="../assets/variation_walkthru/000002.1614299449.png">
 
 I like the expression on Xena's face in the first one (subseed 3647897225), and the armor on her shoulder in the second one (subseed 1614299449). Can we combine them to get the best of both worlds?
 
@@ -81,7 +81,7 @@ Outputs:
 
 Here we are providing equal weights (0.1 and 0.1) for both the subseeds. The resulting image is close, but not exactly what I wanted:
 
-<img src="assets/variation_walkthru/000003.1614299449.png">
+<img src="../assets/variation_walkthru/000003.1614299449.png">
 
 We could either try combining the images with different weights, or we can generate more variations around the almost-but-not-quite image. We do the latter, using both the `-V` (combining) and `-v` (variation strength) options. Note that we use `-n6` to generate 6 variations:
 
@@ -98,7 +98,7 @@ Outputs:
 
 This produces six images, all slight variations on the combination of the chosen two images. Here's the one I like best:
 
-<img src="assets/variation_walkthru/000004.3747154981.png">
+<img src="../assets/variation_walkthru/000004.3747154981.png">
 
 As you can see, this is a very powerful tool, which when combined with subprompt weighting, gives you great control over the content and
 quality of your generated images.
