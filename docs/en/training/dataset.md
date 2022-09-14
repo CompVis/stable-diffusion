@@ -95,28 +95,26 @@ Although we have the dataset, the metadata that explains what the image is, is i
 
 Assuming you are in the same directory as metadata and 512px folder:
 ````bash 
-python danbooru_data/local/extractfromjson_danboo21.py -J metadata/posts000000000000.json -E labeled_data
+python danbooru_data/local/extractfromjson_danboo21.py -J metadata/posts000000000000.json -E danbooru-aesthetic
 ````
-Change "/waifu-diffusion" to the path of the cloned waifu-diffusion repository.
-This script will also change some tags such as "1girl" to "one girl", "2boys" to "two boys", and so on. It will also add "upoaded on Danbooru".
 
-Once the script has finished, you should have a "labeled_data" folder, whose insides look like this:
+Once the script has finished, you should have a "danbooru-aesthetic" folder, whose insides look like this:
 
 ![labeled_data-insides.png](./res/labeled_data-insides.png)
 
 ## Packaging the dataset
 Next we need to put the extracted data into the format required in the section "Dataset requirements". Run the following commands:
 ``` shell
-mkdir labeled_data/img labeled_data/txt
-mv labeled_data/*.jpg labeled_data/img
-mv labeled_data/*.txt labeled_data/txt
+mkdir danbooru-aesthetic/img danbooru-aesthetic/txt
+mv danbooru-aesthetic/*.jpg labeled_data/img
+mv danbooru-aesthetic/*.txt labeled_data/txt
 ```
 
 In order to reduce size, zip the contents of labeled_data:
 ``` shell
-zip -r labeled_data.zip labeled_data
+zip -r danbooru-aesthetic.zip danbooru-aesthetic
 ```
-This will package the entire labaled_data folder into a zip file. This command DOES NOT output any information in the terminal, so be patient.
+This will package the entire danbooru-aesthetic folder into a zip file. This command DOES NOT output any information in the terminal, so be patient.
 
 ## Finish
 You can now continue to Configure
