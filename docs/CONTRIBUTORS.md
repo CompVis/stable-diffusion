@@ -45,6 +45,9 @@ _Contributions by:_
 - [Paul Sajna](https://github.com/sajattack)
 - [Samuel Husso](https://github.com/shusso)
 - [nicolai256](https://github.com/nicolai256)
+- [Mihai](https://github.com/mh-dm)
+- [Any Winter](https://github.com/any-winter-4079)
+- [Doggettx](https://github.com/doggettx)
 
 _Original CompVis Authors:_
 
