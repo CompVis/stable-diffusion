@@ -61,7 +61,6 @@ class Txt2Img(Generator):
                                 height // self.downsampling_factor,
                                 width  // self.downsampling_factor],
                                device=device)
-        print(self.perlin)
         if self.perlin > 0.0:
             x = (1-self.perlin)*x + self.perlin*self.get_perlin_noise(width  // self.downsampling_factor, height // self.downsampling_factor)
         return x

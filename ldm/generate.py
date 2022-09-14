@@ -233,7 +233,7 @@ class Generate:
            image_callback                  // a function or method that will be called each time an image is generated
            with_variations                 // a weighted list [(seed_1, weight_1), (seed_2, weight_2), ...] of variations which should be applied before doing any generation
            variation_amount                // optional 0-1 value to slerp from -S noise to random noise (allows variations on an image)
-           threshold                       // optional value to add thresholding to latent values for k-diffusion samplers (0 disables)
+           threshold                       // optional value >=0 to add thresholding to latent values for k-diffusion samplers (0 disables)
            perlin                          // optional 0-1 value to add a percentage of perlin noise to the initial noise
            embiggen                        // scale factor relative to the size of the --init_img (-I), followed by ESRGAN upscaling strength (0-1.0), followed by minimum amount of overlap between tiles as a decimal ratio (0 - 1.0) or number of pixels
            embiggen_tiles                  // list of tiles by number in order to process and replace onto the image e.g. `0 2 4`
@@ -275,12 +275,16 @@ class Generate:
                 m.padding_mode = 'circular' if seamless else m._orig_padding_mode
         
         assert cfg_scale > 1.0, 'CFG_Scale (-C) must be >1.0'
+        assert threshold >= 0.0, '--threshold must be >=0.0'
         assert (
             0.0 < strength < 1.0
         ), 'img2img and inpaint strength can only work with 0.0 < strength < 1.0'
         assert (
                 0.0 <= variation_amount <= 1.0
         ), '-v --variation_amount must be in [0.0, 1.0]'
+        assert (
+                0.0 <= perlin <= 1.0
+        ), '-v --perlin must be in [0.0, 1.0]'
         assert (
             (embiggen == None and embiggen_tiles == None) or ((embiggen != None or embiggen_tiles != None) and init_img != None)
         ), 'Embiggen requires an init/input image to be specified'
