@@ -16,7 +16,7 @@ modified, ranging from `0.0` (keep the original intact), to `1.0`
 (ignore the original completely). The default is `0.75`, and ranges
 from `0.25-0.75` give interesting results.
 
-You may also pass a `-v<count>` option to generate count variants on
+You may also pass a `-v<variation_amount>` option to generate `-n<iterations>` count variants on
 the original image. This is done by passing the first generated image
 back into img2img the requested number of times. It generates
 interesting variants.
