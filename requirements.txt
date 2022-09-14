@@ -1,0 +1,27 @@
+--prefer-binary
+
+albumentations
+einops
+huggingface-hub
+imageio-ffmpeg
+imageio
+kornia
+# pip will resolve the version which matches torch
+numpy
+omegaconf
+opencv-python
+pillow
+pip>=22
+pudb
+pytorch-lightning
+streamlit
+# "CompVis/taming-transformers" IS NOT INSTALLABLE
+# This is a drop-in replacement
+taming-transformers-rom1504
+test-tube
+torch-fidelity
+torchmetrics
+transformers
+git+https://github.com/openai/CLIP.git@main#egg=clip
+git+https://github.com/Birch-san/k-diffusion.git@mps#egg=k-diffusion
+git+https://github.com/lstein/GFPGAN@fix-dark-cast-images#egg=gfpgan
