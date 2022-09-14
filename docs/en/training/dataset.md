@@ -86,7 +86,7 @@ rsync rsync://176.9.41.242:873/danbooru2021/512px/000* ./512px/
 ```
 Download the first batch of metadata, posts000000000000.json (800MB):
 ``` shell
-rsync rsync://176.9.41.242:873/danbooru2021/metadata/posts000000000000.json ./metadata/
+rsync -r rsync://176.9.41.242:873/danbooru2021/metadata/posts000000000000.json ./metadata/
 ```
 You should now have two folders named: 512px and metadata.
 
