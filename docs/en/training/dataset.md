@@ -91,11 +91,11 @@ rsync -r rsync://176.9.41.242:873/danbooru2021/metadata/posts000000000000.json .
 You should now have two folders named: 512px and metadata.
 
 ## Organizing the dataset
-Although we have the dataset, the metadata that explains what the image is, is inside the JSON file. In order to extract the data into individual txt files, we are going to use the script inside `` /waifu-diffusion/scripts/danbooru21_extract.py``
+Although we have the dataset, the metadata that explains what the image is, is inside the JSON file. In order to extract the data into individual txt files, we are going to use the script inside ``danbooru_data/local/extractfromjson_danboo21.py``
 
 Assuming you are in the same directory as metadata and 512px folder:
 ````bash 
-python /waifu-diffusion/scripts/danbooru21_extract.py
+python danbooru_data/local/extractfromjson_danboo21.py -J metadata/posts000000000000.json -E dataset
 ````
 Change "/waifu-diffusion" to the path of the cloned waifu-diffusion repository.
 This script will also change some tags such as "1girl" to "one girl", "2boys" to "two boys", and so on. It will also add "upoaded on Danbooru".
