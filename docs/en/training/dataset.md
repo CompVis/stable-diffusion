@@ -95,7 +95,7 @@ Although we have the dataset, the metadata that explains what the image is, is i
 
 Assuming you are in the same directory as metadata and 512px folder:
 ````bash 
-python danbooru_data/local/extractfromjson_danboo21.py -J metadata/posts000000000000.json -E dataset
+python danbooru_data/local/extractfromjson_danboo21.py -J metadata/posts000000000000.json -E labeled_data
 ````
 Change "/waifu-diffusion" to the path of the cloned waifu-diffusion repository.
 This script will also change some tags such as "1girl" to "one girl", "2boys" to "two boys", and so on. It will also add "upoaded on Danbooru".
@@ -105,6 +105,13 @@ Once the script has finished, you should have a "labeled_data" folder, whose ins
 ![labeled_data-insides.png](./res/labeled_data-insides.png)
 
 ## Packaging the dataset
+Next we need to put the extracted data into the format required in the section "Dataset requirements". Run the following commands:
+``` shell
+mkdir labeled_data/img labeled_data/txt
+mv labeled_data/*.jpg labeled_data/img
+mv labeled_data/*.txt labeled_data/txt
+```
+
 In order to reduce size, zip the contents of labeled_data:
 ``` shell
 zip -r labeled_data.zip labeled_data
