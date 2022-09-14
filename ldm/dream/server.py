@@ -103,10 +103,14 @@ class DreamServer(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(bytes('{}', 'utf8'))
         else:
-            path = "." + self.path
-            cwd = os.path.realpath(os.getcwd())
-            is_in_cwd = os.path.commonprefix((os.path.realpath(path), cwd)) == cwd
-            if not (is_in_cwd and os.path.exists(path)):
+            path_dir = os.path.dirname(self.path)
+            out_dir  = os.path.realpath(self.outdir.rstrip('/'))
+            if self.path.startswith('/static/dream_web/'):
+                path = '.' + self.path
+            elif out_dir.endswith(path_dir):
+                file = os.path.basename(self.path)
+                path = os.path.join(self.outdir,file)
+            else:
                 self.send_response(404)
                 return
             mime_type = mimetypes.guess_type(path)[0]
@@ -114,7 +118,7 @@ class DreamServer(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header("Content-type", mime_type)
                 self.end_headers()
-                with open("." + self.path, "rb") as content:
+                with open(path, "rb") as content:
                     self.wfile.write(content.read())
             else:
                 self.send_response(404)
