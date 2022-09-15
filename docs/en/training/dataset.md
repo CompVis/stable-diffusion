@@ -106,8 +106,8 @@ Once the script has finished, you should have a "danbooru-aesthetic" folder, who
 Next we need to put the extracted data into the format required in the section "Dataset requirements". Run the following commands:
 ``` shell
 mkdir danbooru-aesthetic/img danbooru-aesthetic/txt
-mv danbooru-aesthetic/*.jpg labeled_data/img
-mv danbooru-aesthetic/*.txt labeled_data/txt
+mv danbooru-aesthetic/*.jpg danbooru-aesthetic/img
+mv danbooru-aesthetic/*.txt danbooru-aesthetic/txt
 ```
 
 In order to reduce size, zip the contents of labeled_data:
