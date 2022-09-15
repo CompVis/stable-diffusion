@@ -619,7 +619,7 @@ class Generate:
             pixels = None
         elif len(direction_args) == 2:
             direction = direction_args[0]
-            pixels = int(direction_args[1])            
+            pixels = int(direction_args[1])
 
         assert direction in ['top', 'left', 'bottom', 'right'], 'Direction (-D) must be one of "top", "left", "bottom", "right"'
 
@@ -647,7 +647,7 @@ class Generate:
 
         # taking the bottom from the original image
         bottom = image.crop((0, 0, image.width, image.height - pixels))
-            
+
         new_img = image.copy()
         new_img.paste(top, (0, 0))
         new_img.paste(bottom, (0, pixels))

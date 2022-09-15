@@ -146,7 +146,7 @@ Please check out our **[Q&A](docs/help/TROUBLESHOOT.md)** to get solutions for c
 This extension uses the new inpainting code to extend an existing image to any direction
 of "top", "right", "bottom" or "left". To use it you need to provide an initial image with
 -I and an extension direction with -D (direction). When extending using outpainting a higher
-img2img strength value of 0.83 is the default. 
+img2img strength value of 0.83 is the default.
 
 ~~~~
 dream> man with cat on shoulder -I./images/man.png -D bottom

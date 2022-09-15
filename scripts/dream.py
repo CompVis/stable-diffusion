@@ -604,7 +604,7 @@ def create_cmd_parser():
         type=str,
         metavar=('direction', 'pixels'),
         help='Direction to extend the given image (left|right|top|bottom). If a distance pixel value is not specified it defaults to half the image size'
-    )    
+    )
     parser.add_argument(
         '-M',
         '--init_mask',
