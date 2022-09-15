@@ -205,7 +205,7 @@ def main_loop(gen, outdir, prompt_as_dir, parser, infile):
                 continue
 
         if opt.strength is None:
-            opt.strength = 0.75 if opt.out_direction is None else 0.75
+            opt.strength = 0.75 if opt.out_direction is None else 0.83
 
         if opt.with_variations is not None:
             # shotgun parsing, woo
