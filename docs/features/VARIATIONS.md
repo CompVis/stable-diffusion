@@ -74,7 +74,7 @@ We combine the two variations using `-V` (--with_variations). Again, we must pro
 this to work.
 
 ```
-dream> "prompt"  -S3357757885 -V3647897225,0.1;1614299449,0.1
+dream> "prompt"  -S3357757885 -V3647897225:0.1,1614299449:0.1
 Outputs:
 ./outputs/Xena/000003.1614299449.png: "prompt" -s50 -W512 -H512 -C7.5 -Ak_lms -V 3647897225:0.1,1614299449:0.1 -S3357757885
 ```
@@ -86,7 +86,7 @@ Here we are providing equal weights (0.1 and 0.1) for both the subseeds. The res
 We could either try combining the images with different weights, or we can generate more variations around the almost-but-not-quite image. We do the latter, using both the `-V` (combining) and `-v` (variation strength) options. Note that we use `-n6` to generate 6 variations:
 
 ```
-dream> "prompt" -S3357757885 -V3647897225,0.1;1614299449,0.1 -v0.05 -n6
+dream> "prompt" -S3357757885 -V3647897225:0.1,1614299449:0.1 -v0.05 -n6
 Outputs:
 ./outputs/Xena/000004.3279757577.png: "prompt" -s50 -W512 -H512 -C7.5 -Ak_lms -V 3647897225:0.1,1614299449:0.1,3279757577:0.05 -S3357757885
 ./outputs/Xena/000004.2853129515.png: "prompt" -s50 -W512 -H512 -C7.5 -Ak_lms -V 3647897225:0.1,1614299449:0.1,2853129515:0.05 -S3357757885
