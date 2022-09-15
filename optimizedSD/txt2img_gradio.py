@@ -243,7 +243,7 @@ demo = gr.Interface(
         gr.Radio(["png", "jpg"], value='png'),
         "checkbox",
         "checkbox",
-        gr.Radio(["ddim", "plms"], value="plms"),
+        gr.Radio(["ddim", "plms","heun", "euler", "euler_a", "dpm2", "dpm2_a", "lms"], value="plms"),
     ],
     outputs=["image", "text"],
 )

@@ -1,8 +1,3 @@
-# Update: v0.9
-
-The code can now generate 512x512 images using under 2.4 GB of GPU VRAM!
-(Credits: @neonsecret, @Doggettx, @ryudrigo)
-
 <h1 align="center">Optimized Stable Diffusion</h1>
 <p align="center">
     <img src="https://img.shields.io/github/last-commit/basujindal/stable-diffusion?logo=Python&logoColor=green&style=for-the-badge"/>
@@ -131,8 +126,17 @@ This will launch gradio on port 7860 with txt2img. You can also use `docker comp
 
 - The number followed by the colon represents the weight given to the words before the colon. The weights can be both fractions or integers.
 
+## Troubleshooting
+
+### Green colored output images
+
+- If you have a Nvidia GTX series GPU, the output images maybe entirely green in color. This is because GTX series do not support half precision calculation, which is the default mode of calculation in this repository. To overcome the issue, use the `--precision full` argument. The downside is that it will lead to higher GPU VRAM usage.
+
+###
+
 ## Changelog
 
+- v1.0: Added support for multiple samplers for txt2img. Based on [crowsonkb](https://github.com/crowsonkb/k-diffusion)
 - v0.9: Added support for calculating attention in parts. (Thanks to @neonsecret @Doggettx, @ryudrigo)
 - v0.8: Added gradio interface for inpainting.
 - v0.7: Added support for logging, jpg file format

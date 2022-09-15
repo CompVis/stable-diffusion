@@ -22,7 +22,7 @@ from ldm.util import exists, default, instantiate_from_config
 from ldm.modules.diffusionmodules.util import make_beta_schedule
 from ldm.modules.diffusionmodules.util import make_ddim_sampling_parameters, make_ddim_timesteps, noise_like
 from ldm.modules.diffusionmodules.util import make_beta_schedule, extract_into_tensor, noise_like
-# from samplers import CompVisDenoiser
+from samplers import CompVisDenoiser, get_ancestral_step, to_d, append_dims,linear_multistep_coeff
 
 def disabled_train(self):
     """Overwrite model.train with this function to make sure train/eval mode
@@ -503,12 +503,12 @@ class UNet(DDPM):
                 seed+=1
             noise = torch.cat(tens)
             del tens
-            self.make_schedule(ddim_num_steps=S, ddim_eta=eta, verbose=False)
 
         x_latent = noise if x0 is None else x0
         # sampling
         
         if sampler == "plms":
+            self.make_schedule(ddim_num_steps=S, ddim_eta=eta, verbose=False)
             print(f'Data shape for PLMS sampling is {shape}')
             samples = self.plms_sampling(conditioning, batch_size, x_latent,
                                         callback=callback,
@@ -530,11 +530,30 @@ class UNet(DDPM):
                                          unconditional_conditioning=unconditional_conditioning,
                                          mask = mask,init_latent=x_T,use_original_steps=False)
 
-        # elif sampler == "euler":
-        #     cvd = CompVisDenoiser(self.alphas_cumprod)
-        #     sig = cvd.get_sigmas(S)
-        #     samples = self.heun_sampling(noise, sig, conditioning, unconditional_conditioning=unconditional_conditioning,
-        #                                 unconditional_guidance_scale=unconditional_guidance_scale)
+        elif sampler == "euler":
+            self.make_schedule(ddim_num_steps=S, ddim_eta=eta, verbose=False)
+            samples = self.euler_sampling(self.alphas_cumprod,x_latent, S, conditioning, unconditional_conditioning=unconditional_conditioning,
+                                        unconditional_guidance_scale=unconditional_guidance_scale)
+        elif sampler == "euler_a":
+            self.make_schedule(ddim_num_steps=S, ddim_eta=eta, verbose=False)
+            samples = self.euler_ancestral_sampling(self.alphas_cumprod,x_latent, S, conditioning, unconditional_conditioning=unconditional_conditioning,
+                                        unconditional_guidance_scale=unconditional_guidance_scale)
+
+        elif sampler == "dpm2":
+            samples = self.dpm_2_sampling(self.alphas_cumprod,x_latent, S, conditioning, unconditional_conditioning=unconditional_conditioning,
+                                        unconditional_guidance_scale=unconditional_guidance_scale)
+        elif sampler == "heun":
+            samples = self.heun_sampling(self.alphas_cumprod,x_latent, S, conditioning, unconditional_conditioning=unconditional_conditioning,
+                                        unconditional_guidance_scale=unconditional_guidance_scale)
+
+        elif sampler == "dpm2_a":
+            samples = self.dpm_2_ancestral_sampling(self.alphas_cumprod,x_latent, S, conditioning, unconditional_conditioning=unconditional_conditioning,
+                                        unconditional_guidance_scale=unconditional_guidance_scale)
+
+
+        elif sampler == "lms":
+            samples = self.lms_sampling(self.alphas_cumprod,x_latent, S, conditioning, unconditional_conditioning=unconditional_conditioning,
+                                        unconditional_guidance_scale=unconditional_guidance_scale)
 
         if(self.turbo):
             self.model1.to("cpu")
@@ -759,52 +778,14 @@ class UNet(DDPM):
         return x_prev
 
 
-    def append_zero(self, x):
-        return torch.cat([x, x.new_zeros([1])])
-
-    def get_sigmas_karras(self, n, sigma_min, sigma_max, rho=7., device='cpu'):
-        """Constructs the noise schedule of Karras et al. (2022)."""
-        ramp = torch.linspace(0, 1, n)
-        min_inv_rho = sigma_min ** (1 / rho)
-        max_inv_rho = sigma_max ** (1 / rho)
-        sigmas = (max_inv_rho + ramp * (min_inv_rho - max_inv_rho)) ** rho
-        return self.append_zero(sigmas).to(device)
-
-
-    def get_sigmas_exponential(self,n, sigma_min, sigma_max, device='cpu'):
-        """Constructs an exponential noise schedule."""
-        sigmas = torch.linspace(math.log(sigma_max), math.log(sigma_min), n, device=device).exp()
-        return self.append_zero(sigmas)
-
-
-    def get_sigmas_vp(self,n, beta_d=19.9, beta_min=0.1, eps_s=1e-3, device='cpu'):
-        """Constructs a continuous VP noise schedule."""
-        t = torch.linspace(1, eps_s, n, device=device)
-        sigmas = torch.sqrt(torch.exp(beta_d * t ** 2 / 2 + beta_min * t) - 1)
-        return self.append_zero(sigmas)
-
-    def to_d(self,x, sigma, denoised):
-        """Converts a denoiser output to a Karras ODE derivative."""
-        return (x - denoised) / self.append_dims(sigma, x.ndim)
-
-    def append_dims(self,x, target_dims):
-        """Appends dimensions to the end of a tensor until it has target_dims dimensions."""
-        dims_to_append = target_dims - x.ndim
-        if dims_to_append < 0:
-            raise ValueError(f'input has {x.ndim} dims but target_dims is {target_dims}, which is less')
-        return x[(...,) + (None,) * dims_to_append]
-
-    def get_ancestral_step(self,sigma_from, sigma_to):
-        """Calculates the noise level (sigma_down) to step down to and the amount
-        of noise to add (sigma_up) when doing an ancestral sampling step."""
-        sigma_up = (sigma_to ** 2 * (sigma_from ** 2 - sigma_to ** 2) / sigma_from ** 2) ** 0.5
-        sigma_down = (sigma_to ** 2 - sigma_up ** 2) ** 0.5
-        return sigma_down, sigma_up
-
     @torch.no_grad()
-    def euler_sampling(self, x, sigmas, cond,extra_args=None, callback=None, disable=None, s_churn=0., s_tmin=0., s_tmax=float('inf'), s_noise=1.):
+    def euler_sampling(self, ac, x, S, cond, unconditional_conditioning = None, unconditional_guidance_scale = 1,extra_args=None,callback=None, disable=None, s_churn=0., s_tmin=0., s_tmax=float('inf'), s_noise=1.):
         """Implements Algorithm 2 (Euler steps) from Karras et al. (2022)."""
         extra_args = {} if extra_args is None else extra_args
+        cvd = CompVisDenoiser(ac)
+        sigmas = cvd.get_sigmas(S)
+        x = x*sigmas[0]
+
         s_in = x.new_ones([x.shape[0]]).half()
         for i in trange(len(sigmas) - 1, disable=disable):
             gamma = min(s_churn / (len(sigmas) - 1), 2 ** 0.5 - 1) if s_tmin <= sigmas[i] <= s_tmax else 0.
@@ -812,8 +793,18 @@ class UNet(DDPM):
             sigma_hat = (sigmas[i] * (gamma + 1)).half()
             if gamma > 0:
                 x = x + eps * (sigma_hat ** 2 - sigmas[i] ** 2) ** 0.5
-            denoised = self.apply_model(x, sigma_hat * s_in, cond)
-            d = self.to_d(x, sigma_hat, denoised)
+
+            s_i = sigma_hat * s_in
+            x_in = torch.cat([x] * 2)
+            t_in = torch.cat([s_i] * 2)
+            cond_in = torch.cat([unconditional_conditioning, cond])
+            c_out, c_in = [append_dims(tmp, x_in.ndim) for tmp in cvd.get_scalings(t_in)]
+            eps = self.apply_model(x_in * c_in, cvd.sigma_to_t(t_in), cond_in)
+            e_t_uncond, e_t = (x_in  + eps * c_out).chunk(2)
+            denoised = e_t_uncond + unconditional_guidance_scale * (e_t - e_t_uncond)
+
+
+            d = to_d(x, sigma_hat, denoised)
             if callback is not None:
                 callback({'x': x, 'i': i, 'sigma': sigmas[i], 'sigma_hat': sigma_hat, 'denoised': denoised})
             dt = sigmas[i + 1] - sigma_hat
@@ -822,15 +813,50 @@ class UNet(DDPM):
         return x
 
     @torch.no_grad()
-    def heun_sampling(self, x,sigmas, cond,unconditional_conditioning = None,unconditional_guidance_scale = 1, extra_args=None, callback=None, disable=None, s_churn=0., s_tmin=0., s_tmax=float('inf'), s_noise=1.):
+    def euler_ancestral_sampling(self,ac,x, S, cond, unconditional_conditioning = None, unconditional_guidance_scale = 1,extra_args=None, callback=None, disable=None):
+        """Ancestral sampling with Euler method steps."""
+        extra_args = {} if extra_args is None else extra_args
+
+
+        cvd = CompVisDenoiser(ac)
+        sigmas = cvd.get_sigmas(S)
+        x = x*sigmas[0]
+
+        s_in = x.new_ones([x.shape[0]]).half()
+        for i in trange(len(sigmas) - 1, disable=disable):
+
+            s_i = sigmas[i] * s_in
+            x_in = torch.cat([x] * 2)
+            t_in = torch.cat([s_i] * 2)
+            cond_in = torch.cat([unconditional_conditioning, cond])
+            c_out, c_in = [append_dims(tmp, x_in.ndim) for tmp in cvd.get_scalings(t_in)]
+            eps = self.apply_model(x_in * c_in, cvd.sigma_to_t(t_in), cond_in)
+            e_t_uncond, e_t = (x_in  + eps * c_out).chunk(2)
+            denoised = e_t_uncond + unconditional_guidance_scale * (e_t - e_t_uncond)
+
+            sigma_down, sigma_up = get_ancestral_step(sigmas[i], sigmas[i + 1])
+            if callback is not None:
+                callback({'x': x, 'i': i, 'sigma': sigmas[i], 'sigma_hat': sigmas[i], 'denoised': denoised})
+            d = to_d(x, sigmas[i], denoised)
+            # Euler method
+            dt = sigma_down - sigmas[i]
+            x = x + d * dt
+            x = x + torch.randn_like(x) * sigma_up
+        return x
+
+
+
+    @torch.no_grad()
+    def heun_sampling(self, ac, x, S, cond, unconditional_conditioning = None, unconditional_guidance_scale = 1, extra_args=None, callback=None, disable=None, s_churn=0., s_tmin=0., s_tmax=float('inf'), s_noise=1.):
         """Implements Algorithm 2 (Heun steps) from Karras et al. (2022)."""
         extra_args = {} if extra_args is None else extra_args
-        print(sigmas)
-        # sigmas = self.get_sigmas_karras(steps, 0.01, 80, rho=7., device=x.device)
-        print(x[0])
+
+        cvd = CompVisDenoiser(alphas_cumprod=ac)
+        sigmas = cvd.get_sigmas(S)
         x = x*sigmas[0]
-        print("alu", x[0])
-        s_in = x.new_ones([x.shape[0]])
+
+
+        s_in = x.new_ones([x.shape[0]]).half()
         for i in trange(len(sigmas) - 1, disable=disable):
             gamma = min(s_churn / (len(sigmas) - 1), 2 ** 0.5 - 1) if s_tmin <= sigmas[i] <= s_tmax else 0.
             eps = torch.randn_like(x) * s_noise
@@ -838,27 +864,167 @@ class UNet(DDPM):
             if gamma > 0:
                 x = x + eps * (sigma_hat ** 2 - sigmas[i] ** 2) ** 0.5
 
-            # print(sigma_hat * s_in)
-            # x, sigma_hat * s_in, cond
+            s_i = sigma_hat * s_in
             x_in = torch.cat([x] * 2)
-            t_in = torch.cat([sigma_hat * s_in] * 2)
-            c_in = torch.cat([unconditional_conditioning, cond])
-            e_t_uncond, e_t = self.apply_model(x_in, t_in, c_in).chunk(2)
+            t_in = torch.cat([s_i] * 2)
+            cond_in = torch.cat([unconditional_conditioning, cond])
+            c_out, c_in = [append_dims(tmp, x_in.ndim) for tmp in cvd.get_scalings(t_in)]
+            eps = self.apply_model(x_in * c_in, cvd.sigma_to_t(t_in), cond_in)
+            e_t_uncond, e_t = (x_in  + eps * c_out).chunk(2)
             denoised = e_t_uncond + unconditional_guidance_scale * (e_t - e_t_uncond)
-            # denoised = self.apply_model(x, sigma_hat * s_in, cond)
-            d = self.to_d(x, sigma_hat, denoised)
+
+            d = to_d(x, sigma_hat, denoised)
             if callback is not None:
                 callback({'x': x, 'i': i, 'sigma': sigmas[i], 'sigma_hat': sigma_hat, 'denoised': denoised})
             dt = sigmas[i + 1] - sigma_hat
-            # if sigmas[i + 1] == 0:
-            if 1:
+            if sigmas[i + 1] == 0:
                 # Euler method
                 x = x + d * dt
             else:
                 # Heun's method
                 x_2 = x + d * dt
-                denoised_2 = self.apply_model(x_2, sigmas[i + 1] * s_in,cond)
-                d_2 = self.to_d(x_2, sigmas[i + 1], denoised_2)
+                s_i = sigmas[i + 1] * s_in
+                x_in = torch.cat([x_2] * 2)
+                t_in = torch.cat([s_i] * 2)
+                cond_in = torch.cat([unconditional_conditioning, cond])
+                c_out, c_in = [append_dims(tmp, x_in.ndim) for tmp in cvd.get_scalings(t_in)]
+                eps = self.apply_model(x_in * c_in, cvd.sigma_to_t(t_in), cond_in)
+                e_t_uncond, e_t = (x_in  + eps * c_out).chunk(2)
+                denoised_2 = e_t_uncond + unconditional_guidance_scale * (e_t - e_t_uncond)
+
+                d_2 = to_d(x_2, sigmas[i + 1], denoised_2)
                 d_prime = (d + d_2) / 2
                 x = x + d_prime * dt
+        return x
+
+
+    @torch.no_grad()
+    def dpm_2_sampling(self,ac,x, S, cond, unconditional_conditioning = None, unconditional_guidance_scale = 1,extra_args=None, callback=None, disable=None, s_churn=0., s_tmin=0., s_tmax=float('inf'), s_noise=1.):
+        """A sampler inspired by DPM-Solver-2 and Algorithm 2 from Karras et al. (2022)."""
+        extra_args = {} if extra_args is None else extra_args
+
+        cvd = CompVisDenoiser(ac)
+        sigmas = cvd.get_sigmas(S)
+        x = x*sigmas[0]
+
+        s_in = x.new_ones([x.shape[0]]).half()
+        for i in trange(len(sigmas) - 1, disable=disable):
+            gamma = min(s_churn / (len(sigmas) - 1), 2 ** 0.5 - 1) if s_tmin <= sigmas[i] <= s_tmax else 0.
+            eps = torch.randn_like(x) * s_noise
+            sigma_hat = sigmas[i] * (gamma + 1)
+            if gamma > 0:
+                x = x + eps * (sigma_hat ** 2 - sigmas[i] ** 2) ** 0.5
+
+            s_i = sigma_hat * s_in
+            x_in = torch.cat([x] * 2)
+            t_in = torch.cat([s_i] * 2)
+            cond_in = torch.cat([unconditional_conditioning, cond])
+            c_out, c_in = [append_dims(tmp, x_in.ndim) for tmp in cvd.get_scalings(t_in)]
+            eps = self.apply_model(x_in * c_in, cvd.sigma_to_t(t_in), cond_in)
+            e_t_uncond, e_t = (x_in  + eps * c_out).chunk(2)
+            denoised = e_t_uncond + unconditional_guidance_scale * (e_t - e_t_uncond)
+
+
+            
+            d = to_d(x, sigma_hat, denoised)
+            # Midpoint method, where the midpoint is chosen according to a rho=3 Karras schedule
+            sigma_mid = ((sigma_hat ** (1 / 3) + sigmas[i + 1] ** (1 / 3)) / 2) ** 3
+            dt_1 = sigma_mid - sigma_hat
+            dt_2 = sigmas[i + 1] - sigma_hat
+            x_2 = x + d * dt_1
+
+            s_i = sigma_mid * s_in
+            x_in = torch.cat([x_2] * 2)
+            t_in = torch.cat([s_i] * 2)
+            cond_in = torch.cat([unconditional_conditioning, cond])
+            c_out, c_in = [append_dims(tmp, x_in.ndim) for tmp in cvd.get_scalings(t_in)]
+            eps = self.apply_model(x_in * c_in, cvd.sigma_to_t(t_in), cond_in)
+            e_t_uncond, e_t = (x_in  + eps * c_out).chunk(2)
+            denoised_2 = e_t_uncond + unconditional_guidance_scale * (e_t - e_t_uncond)
+
+
+            d_2 = to_d(x_2, sigma_mid, denoised_2)
+            x = x + d_2 * dt_2
+        return x
+
+
+    @torch.no_grad()
+    def dpm_2_ancestral_sampling(self,ac,x, S, cond, unconditional_conditioning = None, unconditional_guidance_scale = 1, extra_args=None, callback=None, disable=None):
+        """Ancestral sampling with DPM-Solver inspired second-order steps."""
+        extra_args = {} if extra_args is None else extra_args
+
+        cvd = CompVisDenoiser(ac)
+        sigmas = cvd.get_sigmas(S)
+        x = x*sigmas[0]
+
+        s_in = x.new_ones([x.shape[0]]).half()
+        for i in trange(len(sigmas) - 1, disable=disable):
+
+            s_i =  sigmas[i] * s_in
+            x_in = torch.cat([x] * 2)
+            t_in = torch.cat([s_i] * 2)
+            cond_in = torch.cat([unconditional_conditioning, cond])
+            c_out, c_in = [append_dims(tmp, x_in.ndim) for tmp in cvd.get_scalings(t_in)]
+            eps = self.apply_model(x_in * c_in, cvd.sigma_to_t(t_in), cond_in)
+            e_t_uncond, e_t = (x_in  + eps * c_out).chunk(2)
+            denoised = e_t_uncond + unconditional_guidance_scale * (e_t - e_t_uncond)
+
+
+            sigma_down, sigma_up = get_ancestral_step(sigmas[i], sigmas[i + 1])
+            if callback is not None:
+                callback({'x': x, 'i': i, 'sigma': sigmas[i], 'sigma_hat': sigmas[i], 'denoised': denoised})
+            d = to_d(x, sigmas[i], denoised)
+            # Midpoint method, where the midpoint is chosen according to a rho=3 Karras schedule
+            sigma_mid = ((sigmas[i] ** (1 / 3) + sigma_down ** (1 / 3)) / 2) ** 3
+            dt_1 = sigma_mid - sigmas[i]
+            dt_2 = sigma_down - sigmas[i]
+            x_2 = x + d * dt_1
+
+            s_i = sigma_mid * s_in
+            x_in = torch.cat([x_2] * 2)
+            t_in = torch.cat([s_i] * 2)
+            cond_in = torch.cat([unconditional_conditioning, cond])
+            c_out, c_in = [append_dims(tmp, x_in.ndim) for tmp in cvd.get_scalings(t_in)]
+            eps = self.apply_model(x_in * c_in, cvd.sigma_to_t(t_in), cond_in)
+            e_t_uncond, e_t = (x_in  + eps * c_out).chunk(2)
+            denoised_2 = e_t_uncond + unconditional_guidance_scale * (e_t - e_t_uncond)
+
+
+            d_2 = to_d(x_2, sigma_mid, denoised_2)
+            x = x + d_2 * dt_2
+            x = x + torch.randn_like(x) * sigma_up
+        return x
+
+
+    @torch.no_grad()
+    def lms_sampling(self,ac,x, S, cond, unconditional_conditioning = None, unconditional_guidance_scale = 1, extra_args=None, callback=None, disable=None, order=4):
+        extra_args = {} if extra_args is None else extra_args
+        s_in = x.new_ones([x.shape[0]])
+
+        cvd = CompVisDenoiser(ac)
+        sigmas = cvd.get_sigmas(S)
+        x = x*sigmas[0]
+
+        ds = []
+        for i in trange(len(sigmas) - 1, disable=disable):
+
+            s_i =  sigmas[i] * s_in
+            x_in = torch.cat([x] * 2)
+            t_in = torch.cat([s_i] * 2)
+            cond_in = torch.cat([unconditional_conditioning, cond])
+            c_out, c_in = [append_dims(tmp, x_in.ndim) for tmp in cvd.get_scalings(t_in)]
+            eps = self.apply_model(x_in * c_in, cvd.sigma_to_t(t_in), cond_in)
+            e_t_uncond, e_t = (x_in  + eps * c_out).chunk(2)
+            denoised = e_t_uncond + unconditional_guidance_scale * (e_t - e_t_uncond)
+
+
+            d = to_d(x, sigmas[i], denoised)
+            ds.append(d)
+            if len(ds) > order:
+                ds.pop(0)
+            if callback is not None:
+                callback({'x': x, 'i': i, 'sigma': sigmas[i], 'sigma_hat': sigmas[i], 'denoised': denoised})
+            cur_order = min(i + 1, order)
+            coeffs = [linear_multistep_coeff(cur_order, sigmas.cpu(), i, j) for j in range(cur_order)]
+            x = x + sum(coeff * d for coeff, d in zip(coeffs, reversed(ds)))
         return x
