@@ -82,11 +82,11 @@ We are also going to download the only the first JSON batch. If you want to trai
 
 Download the 512px folders from 0000 to 0009 (3.86GB):
 ```bash
-rsync rsync://176.9.41.242:873/danbooru2021/512px/000* ./512px/
+rsync -r rsync://176.9.41.242:873/danbooru2021/512px/000* ./512px/
 ```
 Download the first batch of metadata, posts000000000000.json (800MB):
 ``` shell
-rsync -r rsync://176.9.41.242:873/danbooru2021/metadata/posts000000000000.json ./metadata/
+rsync rsync://176.9.41.242:873/danbooru2021/metadata/posts000000000000.json ./metadata/
 ```
 You should now have two folders named: 512px and metadata.
 
