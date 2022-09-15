@@ -771,4 +771,3 @@ class Generate:
 
     def _has_cuda(self):
         return self.device.type == 'cuda'
-
