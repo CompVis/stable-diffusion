@@ -85,6 +85,7 @@ def load_mask(mask, h0, w0, newH, newW, invert=False):
 
 def generate(
         image,
+        mask_image,
         prompt,
         strength,
         ddim_steps,
@@ -140,8 +141,12 @@ def generate(
 
     init_latent = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image))  # move to latent space
     init_latent = repeat(init_latent, "1 ... -> b ...", b=batch_size)
-
-    mask = load_mask(image['mask'], Height, Width, init_latent.shape[2], init_latent.shape[3], True).to(device)
+    if mask_image is None:
+        mask = load_mask(image['mask'], Height, Width, init_latent.shape[2], init_latent.shape[3], True).to(device)
+    else:
+        image['mask']=mask_image
+        mask = load_mask(mask_image, Height, Width, init_latent.shape[2], init_latent.shape[3], True).to(device)
+    
     mask = mask[0][0].unsqueeze(0).repeat(4, 1, 1).unsqueeze(0)
     mask = repeat(mask, '1 ... -> b ...', b=batch_size)
 
@@ -300,6 +305,7 @@ if __name__ == '__main__':
         fn=generate,
         inputs=[
             gr.Image(tool="sketch", type="pil"),
+            gr.Image(tool="editor", type="pil"),
             "text",
             gr.Slider(0, 0.99, value=0.99, step=0.01),
             gr.Slider(1, 1000, value=50),
