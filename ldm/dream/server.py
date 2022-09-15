@@ -22,6 +22,12 @@ def build_opt(post_data, seed, gfpgan_model_exists):
     setattr(opt, 'invert_mask', 'invert_mask' in post_data)
     setattr(opt, 'cfg_scale', float(post_data['cfg_scale']))
     setattr(opt, 'sampler_name', post_data['sampler_name'])
+
+    # embiggen not practical at this point because we have no way of feeding images back into img2img
+    # however, this code is here against that eventuality
+    setattr(opt, 'embiggen', None)
+    setattr(opt, 'embiggen_tiles', None)
+
     setattr(opt, 'gfpgan_strength', float(post_data['gfpgan_strength']) if gfpgan_model_exists else 0)
     setattr(opt, 'upscale', [int(post_data['upscale_level']), float(post_data['upscale_strength'])] if post_data['upscale_level'] != '' else None)
     setattr(opt, 'progress_images', 'progress_images' in post_data)
@@ -155,6 +161,7 @@ class DreamServer(BaseHTTPRequestHandler):
         def image_done(image, seed, upscaled=False):
             name = f'{prefix}.{seed}.png'
             iter_opt = argparse.Namespace(**vars(opt)) # copy
+            print(f'iter_opt = {iter_opt}')
             if opt.variation_amount > 0:
                 this_variation = [[seed, opt.variation_amount]]
                 if opt.with_variations is None:
