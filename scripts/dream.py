@@ -204,7 +204,8 @@ def main_loop(gen, outdir, prompt_as_dir, parser, infile):
                 opt.seed = None
                 continue
 
-        opt.strength = 0.83 if opt.out_direction and opt.strength is None else opt.strength
+        if opt.strength is None:
+            opt.strength = 0.75 if opt.out_direction is None else 0.75
 
         if opt.with_variations is not None:
             # shotgun parsing, woo
@@ -621,7 +622,6 @@ def create_cmd_parser():
     parser.add_argument(
         '-f',
         '--strength',
-        default=0.75,
         type=float,
         help='Strength for noising/unnoising. 0.0 preserves image exactly, 1.0 replaces it completely',
     )

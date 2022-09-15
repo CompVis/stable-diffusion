@@ -632,7 +632,7 @@ class Generate:
         elif direction == 'right':
             image = image.transpose(Image.Transpose.ROTATE_90)
 
-        pixels = image.height//2 if pixels == None else int(pixels)
+        pixels = image.height//2 if pixels is None else int(pixels)
         assert 0 < pixels < image.height, 'Direction (-D) pixels length must be in the range 0 - image.size'
 
         # the top part of the image is taken from the source image mirrored
