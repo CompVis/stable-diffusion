@@ -20,6 +20,7 @@ from ldm.models.diffusion.plms import PLMSSampler
 
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
+from prompt_parser import PromptGuidanceModelWrapper
 
 
 # load safety model
@@ -151,7 +152,7 @@ def main():
     parser.add_argument(
         "--n_iter",
         type=int,
-        default=2,
+        default=1,
         help="sample this often",
     )
     parser.add_argument(
@@ -181,7 +182,7 @@ def main():
     parser.add_argument(
         "--n_samples",
         type=int,
-        default=3,
+        default=1,
         help="how many samples to produce for each given prompt. A.k.a. batch size",
     )
     parser.add_argument(
@@ -245,6 +246,7 @@ def main():
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
+    model = PromptGuidanceModelWrapper(model)
 
     if opt.plms:
         sampler = PLMSSampler(model)
@@ -290,19 +292,19 @@ def main():
                 for n in trange(opt.n_iter, desc="Sampling"):
                     for prompts in tqdm(data, desc="data"):
                         uc = None
-                        if opt.scale != 1.0:
-                            uc = model.get_learned_conditioning(batch_size * [""])
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
-                        c = model.get_learned_conditioning(prompts)
+
+                        model.prepare_prompts(prompts[0], opt.scale, opt.ddim_steps, opt.n_samples)
+
                         shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
                         samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
-                                                         conditioning=c,
+                                                         conditioning=model.c,
                                                          batch_size=opt.n_samples,
                                                          shape=shape,
                                                          verbose=False,
                                                          unconditional_guidance_scale=opt.scale,
-                                                         unconditional_conditioning=uc,
+                                                         unconditional_conditioning=model.uc,
                                                          eta=opt.ddim_eta,
                                                          x_T=start_code)
 
