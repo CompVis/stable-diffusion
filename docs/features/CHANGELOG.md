@@ -2,7 +2,7 @@
 title: Changelog
 ---
 
-## v1.13 (in process)
+## v1.13 <small>(in process)</small>
 
 - Supports a Google Colab notebook for a standalone server running on Google
   hardware [Arturo Mendivil](https://github.com/artmen1516)
@@ -18,7 +18,7 @@ title: Changelog
 
 ---
 
-## v1.12 (28 August 2022)
+## v1.12 <small>(28 August 2022)</small>
 
 - Improved file handling, including ability to read prompts from standard input.
   (kudos to [Yunsaki](https://github.com/yunsaki)
@@ -34,7 +34,7 @@ title: Changelog
 
 ---
 
-## v1.11 (26 August 2022)
+## v1.11 <small>(26 August 2022)</small>
 
 - NEW FEATURE: Support upscaling and face enhancement using the GFPGAN module.
   (kudos to [Oceanswave](https://github.com/Oceanswave))
@@ -52,14 +52,14 @@ title: Changelog
 
 ---
 
-## v1.10 (25 August 2022)
+## v1.10 <small>(25 August 2022)</small>
 
 - A barebones but fully functional interactive web server for online generation
   of txt2img and img2img.
 
 ---
 
-## v1.09 (24 August 2022)
+## v1.09 <small>(24 August 2022)</small>
 
 - A new -v option allows you to generate multiple variants of an initial image
   in img2img mode. (kudos to [Oceanswave](https://github.com/Oceanswave).
@@ -71,7 +71,7 @@ title: Changelog
 
 ---
 
-## v1.08 (24 August 2022)
+## v1.08 <small>(24 August 2022)</small>
 
 - Escape single quotes on the dream> command before trying to parse. This avoids
   parse errors.
@@ -82,7 +82,7 @@ title: Changelog
 
 ---
 
-## v1.07 (23 August 2022)
+## v1.07 <small>(23 August 2022)</small>
 
 - Image filenames will now never fill gaps in the sequence, but will be assigned
   the next higher name in the chosen directory. This ensures that the alphabetic
@@ -90,7 +90,7 @@ title: Changelog
 
 ---
 
-## v1.06 (23 August 2022)
+## v1.06 <small>(23 August 2022)</small>
 
 - Added weighted prompt support contributed by
   [xraxra](https://github.com/xraxra)
@@ -99,7 +99,7 @@ title: Changelog
 
 ---
 
-## v1.05 (22 August 2022 - after the drop)
+## v1.05 <small>(22 August 2022 - after the drop)</small>
 
 - Filenames now use the following formats: 000010.95183149.png -- Two files
   produced by the same command (e.g. -n2), 000010.26742632.png -- distinguished
@@ -113,18 +113,18 @@ title: Changelog
 - You can use the "cd" and "pwd" commands at the dream> prompt to set and
   retrieve the path of the output directory.
 
-## v1.04 (22 August 2022 - after the drop)
+## v1.04 <small>(22 August 2022 - after the drop)</small>
 
 - Updated README to reflect installation of the released weights.
 - Suppressed very noisy and inconsequential warning when loading the frozen CLIP
   tokenizer.
 
-## v1.03 (22 August 2022)
+## v1.03 <small>(22 August 2022)</small>
 
 - The original txt2img and img2img scripts from the CompViz repository have been
   moved into a subfolder named "orig_scripts", to reduce confusion.
 
-## v1.02 (21 August 2022)
+## v1.02 <small>(21 August 2022)</small>
 
 - A copy of the prompt and all of its switches and options is now stored in the
   corresponding image in a tEXt metadata field named "Dream". You can read the
@@ -132,7 +132,7 @@ title: Changelog
   explore the full metadata. **Please run "conda env update -f environment.yaml"
   to load the k_lms dependencies!!**
 
-## v1.01 (21 August 2022)
+## v1.01 <small>(21 August 2022)</small>
 
 - added k_lms sampling. **Please run "conda env update -f environment.yaml" to
   load the k_lms dependencies!!**

@@ -2,6 +2,15 @@
 title: Home
 ---
 
+<!--
+  The Docs you find here (/docs/*) are built and deployed via mkdocs. If you want to do so from local it is pretty strait forward:
+
+  ```bash
+  pip install -r requirements-mkdocs.txt
+  mkdocs serve -a localhost:8080
+  ```
+-->
+
 <h1 align='center'><b>Stable Diffusion Dream Script</b></h1>
 
 <p align='center'>
@@ -25,47 +34,33 @@ _Note: This fork is rapidly evolving. Please use the
 [Issues](https://github.com/lstein/stable-diffusion/issues) tab to report bugs and make feature
 requests. Be sure to use the provided templates. They will help aid diagnose issues faster._
 
-**Table of Contents**
-
-1. [Installation](#installation)
-2. [Hardware Requirements](#hardware-requirements)
-3. [Features](#features)
-4. [Latest Changes](#latest-changes)
-5. [Troubleshooting](#troubleshooting)
-6. [Contributing](#contributing)
-7. [Contributors](#contributors)
-8. [Support](#support)
-9. [Further Reading](#further-reading)
-
 ## Installation
 
 This fork is supported across multiple platforms. You can find individual installation instructions
 below.
 
-- ### [Linux](installation/INSTALL_LINUX.md)
-
-- ### [Windows](installation/INSTALL_WINDOWS.md)
-
-- ### [Macintosh](installation/INSTALL_MAC.md)
+- [Linux](installation/INSTALL_LINUX.md)
+- [Windows](installation/INSTALL_WINDOWS.md)
+- [Macintosh](installation/INSTALL_MAC.md)
 
 ## Hardware Requirements
 
-**System**
+### System
 
 You wil need one of the following:
 
 - An NVIDIA-based graphics card with 4 GB or more VRAM memory.
 - An Apple computer with an M1 chip.
 
-**Memory**
+### Memory
 
 - At least 12 GB Main Memory RAM.
 
-**Disk**
+### Disk
 
 - At least 6 GB of free disk space for the machine learning model, Python, and all its dependencies.
 
-**Note**
+### Note
 
 If you are have a Nvidia 10xx series card (e.g. the 1080ti), please run the dream script in
 full-precision mode as shown below.
@@ -82,67 +77,53 @@ To run in full-precision mode, start `dream.py` with the `--full_precision` flag
 
 ### Major Features
 
-- #### [Interactive Command Line Interface](features/CLI.md)
-
-- #### [Image To Image](features/IMG2IMG.md)
-
-- #### [Inpainting Support](features/INPAINTING.md)
-
-- #### [GFPGAN and Real-ESRGAN Support](features/UPSCALE.md)
-
-- #### [Seamless Tiling](features/OTHER.md#seamless-tiling)
-
-- #### [Google Colab](features/OTHER.md#google-colab)
-
-- #### [Web Server](features/WEB.md)
-
-- #### [Reading Prompts From File](features/OTHER.md#reading-prompts-from-a-file)
-
-- #### [Shortcut: Reusing Seeds](features/OTHER.md#shortcuts-reusing-seeds)
-
-- #### [Weighted Prompts](features/OTHER.md#weighted-prompts)
-
-- #### [Variations](features/VARIATIONS.md)
-
-- #### [Personalizing Text-to-Image Generation](features/TEXTUAL_INVERSION.md)
-
-- #### [Simplified API for text to image generation](features/OTHER.md#simplified-api)
+- [Interactive Command Line Interface](features/CLI.md)
+- [Image To Image](features/IMG2IMG.md)
+- [Inpainting Support](features/INPAINTING.md)
+- [GFPGAN and Real-ESRGAN Support](features/UPSCALE.md)
+- [Seamless Tiling](features/OTHER.md#seamless-tiling)
+- [Google Colab](features/OTHER.md#google-colab)
+- [Web Server](features/WEB.md)
+- [Reading Prompts From File](features/OTHER.md#reading-prompts-from-a-file)
+- [Shortcut: Reusing Seeds](features/OTHER.md#shortcuts-reusing-seeds)
+- [Weighted Prompts](features/OTHER.md#weighted-prompts)
+- [Variations](features/VARIATIONS.md)
+- [Personalizing Text-to-Image Generation](features/TEXTUAL_INVERSION.md)
+- [Simplified API for text to image generation](features/OTHER.md#simplified-api)
 
 ### Other Features
 
-- #### [Creating Transparent Regions for Inpainting](features/INPAINTING.md#creating-transparent-regions-for-inpainting)
-
-- #### [Preload Models](features/OTHER.md#preload-models)
+- [Creating Transparent Regions for Inpainting](features/INPAINTING.md#creating-transparent-regions-for-inpainting)
+- [Preload Models](features/OTHER.md#preload-models)
 
 ## Latest Changes
 
-- v1.14 (11 September 2022)
+### v1.14 <small>(11 September 2022)</small>
 
-  - Memory optimizations for small-RAM cards. 512x512 now possible on 4 GB GPUs.
-  - Full support for Apple hardware with M1 or M2 chips.
-  - Add "seamless mode" for circular tiling of image. Generates beautiful effects.
-    ([prixt](https://github.com/prixt)).
-  - Inpainting support.
-  - Improved web server GUI.
-  - Lots of code and documentation cleanups.
+- Memory optimizations for small-RAM cards. 512x512 now possible on 4 GB GPUs.
+- Full support for Apple hardware with M1 or M2 chips.
+- Add "seamless mode" for circular tiling of image. Generates beautiful effects.
+  ([prixt](https://github.com/prixt)).
+- Inpainting support.
+- Improved web server GUI.
+- Lots of code and documentation cleanups.
 
-- v1.13 (3 September 2022
+### v1.13 <small>(3 September 2022</small>
 
-  - Support image variations (see [VARIATIONS](features/VARIATIONS.md)
-    ([Kevin Gibbons](https://github.com/bakkot) and many contributors and reviewers)
-  - Supports a Google Colab notebook for a standalone server running on Google hardware
-    [Arturo Mendivil](https://github.com/artmen1516)
-  - WebUI supports GFPGAN/ESRGAN facial reconstruction and upscaling
-    [Kevin Gibbons](https://github.com/bakkot)
-  - WebUI supports incremental display of in-progress images during generation
-    [Kevin Gibbons](https://github.com/bakkot)
-  - A new configuration file scheme that allows new models (including upcoming
-    stable-diffusion-v1.5) to be added without altering the code.
-    ([David Wager](https://github.com/maddavid12))
-  - Can specify --grid on dream.py command line as the default.
-  - Miscellaneous internal bug and stability fixes.
-  - Works on M1 Apple hardware.
-  - Multiple bug fixes.
+- Support image variations (see [VARIATIONS](features/VARIATIONS.md)
+  ([Kevin Gibbons](https://github.com/bakkot) and many contributors and reviewers)
+- Supports a Google Colab notebook for a standalone server running on Google hardware
+  [Arturo Mendivil](https://github.com/artmen1516)
+- WebUI supports GFPGAN/ESRGAN facial reconstruction and upscaling
+  [Kevin Gibbons](https://github.com/bakkot)
+- WebUI supports incremental display of in-progress images during generation
+  [Kevin Gibbons](https://github.com/bakkot)
+- A new configuration file scheme that allows new models (including upcoming stable-diffusion-v1.5)
+  to be added without altering the code. ([David Wager](https://github.com/maddavid12))
+- Can specify --grid on dream.py command line as the default.
+- Miscellaneous internal bug and stability fixes.
+- Works on M1 Apple hardware.
+- Multiple bug fixes.
 
 For older changelogs, please visit the **[CHANGELOG](features/CHANGELOG.md)**.
 

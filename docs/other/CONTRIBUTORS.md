@@ -50,6 +50,7 @@ We thank them for all of their time and hard work.
 - [Mihai](https://github.com/mh-dm)
 - [Any Winter](https://github.com/any-winter-4079)
 - [Doggettx](https://github.com/doggettx)
+- [Matthias Wild](https://github.com/mauwii)
 
 ## __Original CompVis Authors:__
 
