@@ -168,6 +168,17 @@ class Embiggen(Generator):
                     distanceToLR = 255
                 #Place the pixel as invert of distance     
                 agradientC.putpixel((x, y), round(255 - distanceToLR))
+        
+        # Create alternative asymmetric diagonal corner to use on "tailing" intersections to prevent hard edges
+        # Fits for a left-fading gradient on the bottom side and full opacity on the right side.
+        agradientAsymC = Image.new('L', (256, 256))
+        for y in range(256):
+            for x in range(256):
+                value = round(max(0, x-(255-y)) * (255 / max(1,y)))
+                #Clamp values
+                value = max(0, value)
+                value = min(255, value)
+                agradientAsymC.putpixel((x, y), value)
 
         # Create alpha layers default fully white
         alphaLayerL = Image.new("L", (width, height), 255)
@@ -179,6 +190,12 @@ class Embiggen(Generator):
         alphaLayerLTC.paste(agradientL, (0, 0))
         alphaLayerLTC.paste(agradientT, (0, 0))
         alphaLayerLTC.paste(agradientC.resize((overlap_size_x, overlap_size_y)), (0, 0))
+        # make masks with an asymmetric upper-right corner so when the curved transparent corner of the next tile
+        # to its right is placed it doesn't reveal a hard trailing semi-transparent edge in the overlapping space
+        alphaLayerTaC = alphaLayerT.copy()
+        alphaLayerTaC.paste(agradientAsymC.rotate(270).resize((overlap_size_x, overlap_size_y)), (width - overlap_size_x, 0))
+        alphaLayerLTaC = alphaLayerLTC.copy()
+        alphaLayerLTaC.paste(agradientAsymC.rotate(270).resize((overlap_size_x, overlap_size_y)), (width - overlap_size_x, 0))
 
         if embiggen_tiles:
             # Individual unconnected sides
@@ -382,7 +399,7 @@ class Embiggen(Generator):
                             elif emb_row_i == emb_tiles_y - 1:
                                 if emb_column_i == 0:
                                     if (tile+1) in embiggen_tiles: # Look-ahead right
-                                        intileimage.putalpha(alphaLayerT)
+                                        intileimage.putalpha(alphaLayerTaC)
                                     else:
                                         intileimage.putalpha(alphaLayerRTC)
                                 elif emb_column_i == emb_tiles_x - 1:
@@ -390,7 +407,7 @@ class Embiggen(Generator):
                                     intileimage.putalpha(alphaLayerLTC)
                                 else:
                                     if (tile+1) in embiggen_tiles: # Look-ahead right
-                                        intileimage.putalpha(alphaLayerLTC)
+                                        intileimage.putalpha(alphaLayerLTaC)
                                     else:
                                         intileimage.putalpha(alphaLayerABB)
                             # vertical middle of image
@@ -398,7 +415,7 @@ class Embiggen(Generator):
                                 if emb_column_i == 0:
                                     if (tile+1) in embiggen_tiles: # Look-ahead right
                                         if (tile+emb_tiles_x) in embiggen_tiles: # Look-ahead down
-                                            intileimage.putalpha(alphaLayerT)
+                                            intileimage.putalpha(alphaLayerTaC)
                                         else:
                                             intileimage.putalpha(alphaLayerTB)
                                     elif (tile+emb_tiles_x) in embiggen_tiles: # Look-ahead down only
@@ -413,7 +430,7 @@ class Embiggen(Generator):
                                 else:
                                     if (tile+1) in embiggen_tiles: # Look-ahead right
                                         if (tile+emb_tiles_x) in embiggen_tiles: # Look-ahead down
-                                            intileimage.putalpha(alphaLayerLTC)
+                                            intileimage.putalpha(alphaLayerLTaC)
                                         else:
                                             intileimage.putalpha(alphaLayerABR)
                                     elif (tile+emb_tiles_x) in embiggen_tiles: # Look-ahead down only
@@ -425,9 +442,15 @@ class Embiggen(Generator):
                             if emb_row_i == 0 and emb_column_i >= 1:
                                 intileimage.putalpha(alphaLayerL)
                             elif emb_row_i >= 1 and emb_column_i == 0:
-                                intileimage.putalpha(alphaLayerT)
+                                if emb_column_i + 1 == emb_tiles_x: # If we don't have anything that can be placed to the right
+                                    intileimage.putalpha(alphaLayerT)
+                                else:
+                                    intileimage.putalpha(alphaLayerTaC)
                             else:
-                                intileimage.putalpha(alphaLayerLTC)
+                                if emb_column_i + 1 == emb_tiles_x: # If we don't have anything that can be placed to the right
+                                    intileimage.putalpha(alphaLayerLTC)
+                                else:
+                                    intileimage.putalpha(alphaLayerLTaC)
                     # Layer tile onto final image
                     outputsuperimage.alpha_composite(intileimage, (left, top))
             else:
