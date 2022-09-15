@@ -1,7 +1,11 @@
+---
+title: Home
+---
+
 <h1 align='center'><b>Stable Diffusion Dream Script</b></h1>
 
 <p align='center'>
-    <img src="docs/assets/logo.png"/>
+<img src="./assets/logo.png"/>
 </p>
 
 <p align="center">
@@ -38,11 +42,11 @@ requests. Be sure to use the provided templates. They will help aid diagnose iss
 This fork is supported across multiple platforms. You can find individual installation instructions
 below.
 
-- ### [Linux](docs/installation/INSTALL_LINUX.md)
+- ### [Linux](installation/INSTALL_LINUX.md)
 
-- ### [Windows](docs/installation/INSTALL_WINDOWS.md)
+- ### [Windows](installation/INSTALL_WINDOWS.md)
 
-- ### [Macintosh](docs/installation/INSTALL_MAC.md)
+- ### [Macintosh](installation/INSTALL_MAC.md)
 
 ## Hardware Requirements
 
@@ -78,39 +82,37 @@ To run in full-precision mode, start `dream.py` with the `--full_precision` flag
 
 ### Major Features
 
-- #### [Interactive Command Line Interface](docs/features/CLI.md)
+- #### [Interactive Command Line Interface](features/CLI.md)
 
-- #### [Image To Image](docs/features/IMG2IMG.md)
+- #### [Image To Image](features/IMG2IMG.md)
 
-- #### [Inpainting Support](docs/features/INPAINTING.md)
+- #### [Inpainting Support](features/INPAINTING.md)
 
-- #### [GFPGAN and Real-ESRGAN Support](docs/features/UPSCALE.md)
+- #### [GFPGAN and Real-ESRGAN Support](features/UPSCALE.md)
 
-- #### [Seamless Tiling](docs/features/OTHER.md#seamless-tiling)
+- #### [Seamless Tiling](features/OTHER.md#seamless-tiling)
 
-- #### [Google Colab](docs/features/OTHER.md#google-colab)
+- #### [Google Colab](features/OTHER.md#google-colab)
 
-- #### [Web Server](docs/features/WEB.md)
+- #### [Web Server](features/WEB.md)
 
-- #### [Reading Prompts From File](docs/features/OTHER.md#reading-prompts-from-a-file)
+- #### [Reading Prompts From File](features/OTHER.md#reading-prompts-from-a-file)
 
-- #### [Shortcut: Reusing Seeds](docs/features/OTHER.md#shortcuts-reusing-seeds)
+- #### [Shortcut: Reusing Seeds](features/OTHER.md#shortcuts-reusing-seeds)
 
-- #### [Weighted Prompts](docs/features/OTHER.md#weighted-prompts)
+- #### [Weighted Prompts](features/OTHER.md#weighted-prompts)
 
-- #### [Thresholding and Perlin Noise Initialization Options](/docs/features/OTHER.md#thresholding-and-perlin-noise-initialization-options)
+- #### [Variations](features/VARIATIONS.md)
 
-- #### [Variations](docs/features/VARIATIONS.md)
+- #### [Personalizing Text-to-Image Generation](features/TEXTUAL_INVERSION.md)
 
-- #### [Personalizing Text-to-Image Generation](docs/features/TEXTUAL_INVERSION.md)
-
-- #### [Simplified API for text to image generation](docs/features/OTHER.md#simplified-api)
+- #### [Simplified API for text to image generation](features/OTHER.md#simplified-api)
 
 ### Other Features
 
-- #### [Creating Transparent Regions for Inpainting](docs/features/INPAINTING.md#creating-transparent-regions-for-inpainting)
+- #### [Creating Transparent Regions for Inpainting](features/INPAINTING.md#creating-transparent-regions-for-inpainting)
 
-- #### [Preload Models](docs/features/OTHER.md#preload-models)
+- #### [Preload Models](features/OTHER.md#preload-models)
 
 ## Latest Changes
 
@@ -126,7 +128,7 @@ To run in full-precision mode, start `dream.py` with the `--full_precision` flag
 
 - v1.13 (3 September 2022
 
-  - Support image variations (see [VARIATIONS](docs/features/VARIATIONS.md)
+  - Support image variations (see [VARIATIONS](features/VARIATIONS.md)
     ([Kevin Gibbons](https://github.com/bakkot) and many contributors and reviewers)
   - Supports a Google Colab notebook for a standalone server running on Google hardware
     [Arturo Mendivil](https://github.com/artmen1516)
@@ -142,11 +144,11 @@ To run in full-precision mode, start `dream.py` with the `--full_precision` flag
   - Works on M1 Apple hardware.
   - Multiple bug fixes.
 
-For older changelogs, please visit the **[CHANGELOG](docs/features/CHANGELOG.md)**.
+For older changelogs, please visit the **[CHANGELOG](features/CHANGELOG.md)**.
 
 ## Troubleshooting
 
-Please check out our **[Q&A](docs/help/TROUBLESHOOT.md)** to get solutions for common installation
+Please check out our **[Q&A](help/TROUBLESHOOT.md)** to get solutions for common installation
 problems and other issues.
 
 ## Contributing
@@ -164,8 +166,8 @@ changes.
 ## Contributors
 
 This fork is a combined effort of various people from across the world.
-[Check out the list of all these amazing people](docs/other/CONTRIBUTORS.md). We thank them for
-their time, hard work and effort.
+[Check out the list of all these amazing people](other/CONTRIBUTORS.md). We thank them for their
+time, hard work and effort.
 
 ## Support
 
@@ -178,4 +180,4 @@ Original portions of the software are Copyright (c) 2020
 ## Further Reading
 
 Please see the original README for more information on this software and underlying algorithm,
-located in the file [README-CompViz.md](docs/other/README-CompViz.md).
+located in the file [README-CompViz.md](other/README-CompViz.md).
