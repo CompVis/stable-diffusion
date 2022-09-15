@@ -8,6 +8,12 @@ services:
       - ../sd-data:/data
       - ../sd-output:/output
       - sd-cache:/root/.cache
-    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 volumes:
   sd-cache:

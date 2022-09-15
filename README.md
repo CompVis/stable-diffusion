@@ -43,7 +43,7 @@ This will launch gradio on port 7860 with txt2img. You can also use `docker comp
 
 - For example, the following command will generate 10 512x512 images:
 
-`python optimizedSD/optimized_txt2img.py --prompt "Cyberpunk style image of a Telsa car reflection in rain" --H 512 --W 512 --seed 27 --n_iter 2 --n_samples 5 --ddim_steps 50`
+`python optimizedSD/optimized_txt2img.py --prompt "Cyberpunk style image of a Tesla car reflection in rain" --H 512 --W 512 --seed 27 --n_iter 2 --n_samples 5 --ddim_steps 50`
 
 ## inpainting
 
