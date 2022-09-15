@@ -107,7 +107,7 @@ class DreamServer(BaseHTTPRequestHandler):
             out_dir  = os.path.realpath(self.outdir.rstrip('/'))
             if self.path.startswith('/static/dream_web/'):
                 path = '.' + self.path
-            elif out_dir.endswith(path_dir):
+            elif out_dir.replace('\\', '/').endswith(path_dir):
                 file = os.path.basename(self.path)
                 path = os.path.join(self.outdir,file)
             else:
