@@ -1,95 +1,101 @@
+# Before you begin
 
-Table of Contents
-=================
+- For end users: Install Stable Diffusion locally using the instructions for your OS.
+- For developers: For container-related development tasks or for enabling easy deployment to other environments (on-premises or cloud), follow these instructions. For general use, install locally to leverage your machine's GPU.
 
-* [Step 1 - Get the Model](#step-1---get-the-model)
-* [Step 2 - Installation](#step-2---installation)
-   * [On a Linux container](#on-a-linux-container)
-      * [Why containers?](#why-containers)
-      * [Prerequisites](#prerequisites)
-      * [Setup](#setup)
-* [Step 3 - Usage (time to have fun)](#step-3---usage-time-to-have-fun)
-   * [Startup](#startup)
-   * [Text to Image](#text-to-image)
-   * [Image to Image](#image-to-image)
-   * [Web Interface](#web-interface)
-   * [Notes](#notes)
+# Why containers?
 
-# Step 1 - Get the Model
-Go to [Hugging Face](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original), and click "Access repository" to Download ```sd-v1-4.ckpt``` (~4 GB) to ```~/Downloads```.  
-You'll need to create an account but it's quick and free.
+They provide a flexible, reliable way to build and deploy Stable Diffusion. You'll also use a Docker volume to store the largest model files and image outputs as a first step in decoupling storage and compute. Future enhancements can do this for other assets. See [Processes](https://12factor.net/processes) under the Twelve-Factor App methodology for details on why running applications in such a stateless fashion is important.
 
-# Step 2 - Installation
+You can specify the target platform when building the image and running the container. You'll also need to specify the Stable Diffusion requirements file that matches the container's OS and the architecture it will run on.  
 
-## On a Linux container 
+Developers on Apple silicon (M1/M2): You [can't access your GPU cores from Docker containers](https://github.com/pytorch/pytorch/issues/81224) and performance is reduced compared with running it directly on macOS but for development purposes it's fine. Once you're done with development tasks on your laptop you can build for the target platform and architecture and deploy to another environment with NVIDIA GPUs on-premises or in the cloud.  
 
-### Why containers?
-They provide a flexible, reliable way to build and deploy Stable Diffusion. We also use a Docker volume to store the largest model file and image outputs as a first step in decoupling storage and compute. Future enhancements will do this for other model files and assets. See [Processes](https://12factor.net/processes) under the Twelve-Factor App methodology for details on why running applications in such a stateless fashion is important.
+# Installation on a Linux container 
 
-This example uses a Mac M1/M2 (arm64) but you can specify the platform and architecture as parameters when building the image and running the container. You'll also need to specify the Stable Diffusion requirements file that matches your OS and architecture e.g. Linux on an arm64 chip if running a Linux container on Apple silicon.  
+## Prerequisites
 
-The steps would be the same on an amd64 machine with NVIDIA GPUs as for an arm64 Mac; the platform is configurable. You [can't access the Mac M1/M2 GPU cores from Docker containers](https://github.com/pytorch/pytorch/issues/81224) and performance is reduced compared with running it directly on macOS but for development purposes it's fine. Once you're done with development tasks on your laptop you can build for the target platform and architecture and deploy to an environment with NVIDIA GPUs on-premises or in the cloud.
+### Get the data files  
 
-### Prerequisites
-[Install Docker](https://github.com/santisbon/guides#docker)  
+Go to [Hugging Face](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original), and click "Access repository" to Download the model file ```sd-v1-4.ckpt``` (~4 GB) to ```~/Downloads```. You'll need to create an account but it's quick and free.  
+
+Also download the face restoration model.
+```Shell
+cd ~/Downloads
+wget https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth
+```
+
+### Install [Docker](https://github.com/santisbon/guides#docker)  
 On the Docker Desktop app, go to Preferences, Resources, Advanced. Increase the CPUs and Memory to avoid this [Issue](https://github.com/lstein/stable-diffusion/issues/342). You may need to increase Swap and Disk image size too.  
 
-Create a Docker volume for the downloaded model file
+## Setup
+
+Set the fork you want to use and other variables.  
+```Shell
+TAG_STABLE_DIFFUSION="santisbon/stable-diffusion"
+PLATFORM="linux/arm64"
+GITHUB_STABLE_DIFFUSION="-b orig-gfpgan https://github.com/santisbon/stable-diffusion.git"
+REQS_STABLE_DIFFUSION="requirements-linux-arm64.txt"
+CONDA_SUBDIR="osx-arm64"
+
+echo $TAG_STABLE_DIFFUSION
+echo $PLATFORM
+echo $GITHUB_STABLE_DIFFUSION
+echo $REQS_STABLE_DIFFUSION
+echo $CONDA_SUBDIR
 ```
+
+Create a Docker volume for the downloaded model files.
+```Shell
 docker volume create my-vol
 ```
 
-Copy the model file (we'll need it at run time) to the Docker volume using a lightweight Linux container. You just need to create the container with the mountpoint; no need to run it.
+Copy the data files to the Docker volume using a lightweight Linux container. We'll need the models at run time. You just need to create the container with the mountpoint; no need to run this dummy container.
 ```Shell
-docker create --platform linux/arm64 --name dummy --mount source=my-vol,target=/data alpine 
+cd ~/Downloads # or wherever you saved the files
 
-cd ~/Downloads # or wherever you saved sd-v1-4.ckpt
+docker create --platform $PLATFORM --name dummy --mount source=my-vol,target=/data alpine 
+
 docker cp sd-v1-4.ckpt dummy:/data
+docker cp GFPGANv1.3.pth dummy:/data
 ```
 
-### Setup
-Set the fork you want to use.  
-Download the Miniconda installer (we'll need it at build time). Replace the URL with the version matching your system.
+Get the repo and download the Miniconda installer (we'll need it at build time). Replace the URL with the version matching your container OS and the architecture it will run on.
 ```Shell
-GITHUB_STABLE_DIFFUSION="https://github.com/santisbon/stable-diffusion.git"
-
 cd ~
 git clone $GITHUB_STABLE_DIFFUSION
 
 cd stable-diffusion/docker-build
 chmod +x entrypoint.sh
-
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O anaconda.sh && chmod +x anaconda.sh
 ```
 
 Build the Docker image. Give it any tag ```-t``` that you want.  
-Tip: Check that your shell session has the env variable set (above) with ```echo $GITHUB_STABLE_DIFFUSION```.  
-```condaarch``` will restrict the conda environment to the right architecture when installing packages. It can take on: ```linux-64```, ```osx-64```, ```osx-arm64```.
+Choose the Linux container's host platform: x86-64/Intel is ```amd64```. Apple silicon is ```arm64```. If deploying the container to the cloud to leverage powerful GPU instances you'll be on amd64 hardware but if you're just trying this out locally on Apple silicon choose arm64.  
+The application uses libraries that need to match the host environment so use the appropriate requirements file.  
+Tip: Check that your shell session has the env variables set above.  
 ```Shell
-docker build -t santisbon/stable-diffusion \
---platform linux/arm64 \
---build-arg condaarch="osx-arm64" \
+docker build -t $TAG_STABLE_DIFFUSION \
+--platform $PLATFORM \
 --build-arg gsd=$GITHUB_STABLE_DIFFUSION \
---build-arg sdreq="requirements-linux-arm64.txt" \
+--build-arg rsd=$REQS_STABLE_DIFFUSION \
+--build-arg cs=$CONDA_SUBDIR \
 .
 ```
 
-Run a container using your built image e.g.
+Run a container using your built image.  
+Tip: Make sure you've created and populated the Docker volume (above).
 ```Shell
 docker run -it \
 --rm \
---platform linux/arm64 \
+--platform $PLATFORM \
 --name stable-diffusion \
 --hostname stable-diffusion \
 --mount source=my-vol,target=/data \
---expose 9090 \
---publish 9090:9090 \
-santisbon/stable-diffusion
+$TAG_STABLE_DIFFUSION
 ```
-Tip: Make sure you've created the Docker volume (above)
 
-
-# Step 3 - Usage (time to have fun)
+# Usage (time to have fun)
 
 ## Startup
 If you're on a **Linux container** the ```dream``` script is **automatically started** and the output dir set to the Docker volume you created earlier. 
@@ -115,12 +121,11 @@ The prompt can be in quotes or not.
 ```Shell
 dream> The hulk fighting with sheldon cooper -s5 -n1 
 dream> "woman closeup highly detailed"  -s 150
-# Reuse previous seed and apply face restoration (if you installed GFPGAN)
-dream> "woman closeup highly detailed"  --steps 150 --seed -1 -G 0.75
+# Reuse previous seed and apply face restoration
+dream> "woman closeup highly detailed"  --steps 150 --seed -1 -G 0.75 
 ```
 
 You'll need to experiment to see if face restoration is making it better or worse for your specific prompt.
-The ```-U``` option for upscaling has an [Issue](https://github.com/lstein/stable-diffusion/issues/297).  
 
 If you're on a container the output is set to the Docker volume. You can copy it wherever you want.  
 You can download it from the Docker Desktop app, Volumes, my-vol, data.  
@@ -176,4 +181,3 @@ python3 scripts/orig_scripts/txt2img.py --help
 python3 scripts/orig_scripts/txt2img.py --ddim_steps 100 --n_iter 1 --n_samples 1  --plms --prompt "new born baby kitten. Hyper Detail, Octane Rendering, Unreal Engine, V-Ray"
 python3 scripts/orig_scripts/txt2img.py --ddim_steps 5   --n_iter 1 --n_samples 1  --plms --prompt "ocean" # or --klms
 ```
-
