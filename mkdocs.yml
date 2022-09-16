@@ -13,8 +13,8 @@ copyright: Copyright &copy; 2022 Lincoln D. Stein <lincoln.stein@gmail.com>
 # Configuration
 theme:
   name: material
-  features:
-    - toc.integrate
+  # features:
+  #   - toc.integrate
   palette:
     - media: '(prefers-color-scheme: light)'
       primary: blue
