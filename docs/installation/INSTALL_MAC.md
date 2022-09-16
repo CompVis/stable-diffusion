@@ -181,7 +181,12 @@ There are several causes of these errors.
 - Third, if it says you're missing taming you need to rebuild your virtual
   environment.
 
-`conda env remove -n ldm conda env create -f environment-mac.yaml`
+````bash
+conda deactivate
+
+conda env remove -n ldm
+PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
+```
 
 Fourth, If you have activated the ldm virtual environment and tried rebuilding
 it, maybe the problem could be that I have something installed that you don't
