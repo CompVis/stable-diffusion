@@ -173,7 +173,7 @@ we provide a script to perform image modification with Stable Diffusion.
 
 The following describes an example where a rough sketch made in [Pinta](https://www.pinta-project.com/) is converted into a detailed artwork.
 ```
-python scripts/img2img.py --prompt "A fantasy landscape, trending on artstation" --init-img <path-to-img.jpg> --strength 0.8
+python scripts/img2img.py --prompt "A fantasy landscape, trending on artstation" --init_img <path-to-img.jpg> --strength 0.8
 ```
 Here, strength is a value between 0.0 and 1.0, that controls the amount of noise that is added to the input image. 
 Values that approach 1.0 allow for lots of variations but will also produce images that are not semantically consistent with the input. See the following example.

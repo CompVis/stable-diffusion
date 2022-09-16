@@ -1,15 +1,8 @@
-import os
 from classes.base import BaseModel
-import numpy as np
-import time
 import torch
 from torch import autocast
-from PIL import Image
 from tqdm import tqdm, trange
-from einops import rearrange
-from contextlib import  nullcontext
-from scripts.txt2img import check_safety, put_watermark
-from scripts.txt2img import make_grid
+from contextlib import nullcontext
 
 
 class Txt2Img(BaseModel):
@@ -151,9 +144,6 @@ class Txt2Img(BaseModel):
         opt = self.opt
         model = self.model
         sample_path = self.sample_path
-        n_rows = self.n_rows
-        outpath = self.outpath
-        grid_count = self.grid_count
         data = self.data
         batch_size = self.batch_size
         sampler = self.plms_sampler
@@ -161,13 +151,12 @@ class Txt2Img(BaseModel):
         base_count = self.base_count
         self.set_seed()
 
-        precision_scope = autocast if opt.precision=="autocast" else nullcontext
+        precision_scope = autocast if opt.precision == "autocast" else nullcontext
 
         saved_files = []
         with torch.no_grad():
             with precision_scope("cuda"):
                 with model.ema_scope():
-                    all_samples = list()
                     for _n in trange(opt.n_iter, desc="Sampling"):
                         for prompts in tqdm(data, desc="data"):
                             uc = None
@@ -201,21 +190,5 @@ class Txt2Img(BaseModel):
                                 )
                                 saved_files.append(file_name)
                                 base_count += 1
-
-                            if not opt.skip_grid:
-                                all_samples.append(x_checked_image_torch)
-
-                    if not opt.skip_grid:
-                        # additionally, save as grid
-                        grid = torch.stack(all_samples, 0)
-                        grid = rearrange(grid, 'n b c h w -> (n b) c h w')
-                        grid = make_grid(grid, nrow=n_rows)
-
-                        # to image
-                        grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-                        Image.fromarray(grid.astype(np.uint8)).save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
-                        grid_count += 1
-
-                    toc = time.time()
 
         return saved_files

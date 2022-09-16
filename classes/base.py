@@ -2,21 +2,70 @@ import argparse
 import os
 import torch
 import numpy as np
+import cv2
 from PIL import Image
 from einops import rearrange
 from imwatermark import WatermarkEncoder
 from torch import autocast
-from pytorch_lightning import seed_everything
+from pytorch_lightning import seed_everything  # FAILS
 from omegaconf import OmegaConf
 from contextlib import  nullcontext
 
 # import common classes from stable diffusion
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
+from ldm.util import instantiate_from_config
+from itertools import islice
 
 # import txt2img functions from stable diffusion
-from scripts.txt2img import load_model_from_config, put_watermark, check_safety
-from scripts.txt2img import chunk
+def load_model_from_config(config, ckpt, verbose=False):
+    print(f"Loading model from {ckpt}")
+    pl_sd = torch.load(ckpt, map_location="cpu")
+    if "global_step" in pl_sd:
+        print(f"Global Step: {pl_sd['global_step']}")
+    sd = pl_sd["state_dict"]
+    model = instantiate_from_config(config.model)
+    m, u = model.load_state_dict(sd, strict=False)
+    if len(m) > 0 and verbose:
+        print("missing keys:")
+        print(m)
+    if len(u) > 0 and verbose:
+        print("unexpected keys:")
+        print(u)
+
+    model.cuda().half()
+    model.eval()
+    return model
+
+
+def put_watermark(img, wm_encoder=None):
+    if wm_encoder is not None:
+        img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        img = wm_encoder.encode(img, 'dwtDct')
+        img = Image.fromarray(img[:, :, ::-1])
+    return img
+
+
+def load_replacement(x):
+    try:
+        hwc = x.shape
+        y = Image.open("assets/rick.jpeg").convert("RGB").resize((hwc[1], hwc[0]))
+        y = (np.array(y)/255.0).astype(x.dtype)
+        assert y.shape == x.shape
+        return y
+    except Exception:
+        return x
+
+
+def check_safety(x_image):
+    return x_image, False
+
+
+def chunk(it, size):
+    it = iter(it)
+    return iter(lambda: tuple(islice(it, size)), ())
+
+# from scripts.txt2img import chunk
 
 
 class BaseModel:
@@ -108,6 +157,8 @@ class BaseModel:
         :param options: options to parse
         :return:
         """
+        print("parse_options")
+        print(options)
         for opt in options:
             if opt[0] in self.opt:
                 self.opt.__setattr__(opt[0], opt[1])
@@ -152,7 +203,10 @@ class BaseModel:
         Initialize the output directory
         :return:
         """
-        os.makedirs(self.opt.outdir, exist_ok=True)
+        try:
+            os.makedirs(self.opt.outdir, exist_ok=True)
+        except Exception:
+            pass
         self.outpath = self.opt.outdir
 
     def initialize_watermark(self):
@@ -257,6 +311,7 @@ class BaseModel:
         :return:
         """
         print("SAMPLING from model wrapper")
+        print(options)
         self.init_model(options)
         self.set_precision_scope()
         self.base_count = len(os.listdir(self.sample_path))

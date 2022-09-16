@@ -1,12 +1,11 @@
 import os
-import argparse
 import random
 import time
 import numpy as np
 import torch
 from torch import autocast
 from PIL import Image
-from contextlib import  nullcontext
+from contextlib import nullcontext
 from tqdm import tqdm, trange
 from classes.base import BaseModel
 from scripts.txt2img import make_grid
@@ -24,7 +23,7 @@ class Img2Img(BaseModel):
             "help": "the prompt to render"
         },
         {
-            "arg": "init-img",
+            "arg": "init_img",
             "type": str,
             "nargs": "?",
             "help": "path to the input image"
@@ -170,6 +169,9 @@ class Img2Img(BaseModel):
         outpath = self.outpath
         grid_count = self.grid_count
         self.set_seed()
+
+        print(opt)
+        print("*"*80)
 
         assert os.path.isfile(opt.init_img)
         init_image = load_img(opt.init_img).to(device)

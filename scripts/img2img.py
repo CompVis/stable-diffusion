@@ -69,7 +69,7 @@ def main():
     )
 
     parser.add_argument(
-        "--init-img",
+        "--init_img",
         type=str,
         nargs="?",
         help="path to the input image"
