@@ -53,8 +53,8 @@ First get the weights checkpoint download started - it's big:
 
 # OR,
 # 2. Installing standalone
-# install python 3, git, cmake, protobuf:
-brew install cmake protobuf rust
+# install python 3, git, cmake:
+brew install cmake rust
 
 # install miniconda for M1 arm64:
 curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o Miniconda3-latest-MacOSX-arm64.sh
