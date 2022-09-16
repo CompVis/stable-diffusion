@@ -45,11 +45,11 @@ First get the weights checkpoint download started - it's big:
 # NOW EITHER DO
 # 1. Installing alongside pyenv
 
-  brew install pyenv-virtualenv # you might have this from before, no problem
-  pyenv install anaconda3-2022.05
-  pyenv virtualenv anaconda3-2022.05
-  eval "$(pyenv init -)"
-  pyenv activate anaconda3-2022.05
+brew install pyenv-virtualenv # you might have this from before, no problem
+pyenv install anaconda3-2022.05
+pyenv virtualenv anaconda3-2022.05
+eval "$(pyenv init -)"
+pyenv activate anaconda3-2022.05
 
 # OR,
 # 2. Installing standalone
@@ -69,19 +69,17 @@ curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o M
 # continue from here
 
 # clone the repo
-  git clone https://github.com/lstein/stable-diffusion.git
-  cd stable-diffusion
+git clone https://github.com/lstein/stable-diffusion.git
+cd stable-diffusion
 
-#
 # wait until the checkpoint file has downloaded, then proceed
-#
 
 # create symlink to checkpoint
-  mkdir -p models/ldm/stable-diffusion-v1/
+mkdir -p models/ldm/stable-diffusion-v1/
 
-  PATH_TO_CKPT="$HOME/Downloads"  # or wherever you saved sd-v1-4.ckpt
+PATH_TO_CKPT="$HOME/Downloads"  # or wherever you saved sd-v1-4.ckpt
 
-  ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
+ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
 
 # install packages for arm64
 PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
@@ -189,7 +187,7 @@ There are several causes of these errors.
 - Third, if it says you're missing taming you need to rebuild your virtual
   environment.
 
-````bash
+```bash
 conda deactivate
 
 conda env remove -n ldm
@@ -291,8 +289,10 @@ list all of the `python` / `python3` things found in `$PATH` instead of just the
 one that will be executed by default. To do that, add the `-a` switch to
 `which`:
 
-    % which -a python3
-    ...
+```bash
+% which -a python3
+...
+```
 
 ### Debugging?
 
@@ -300,17 +300,21 @@ Tired of waiting for your renders to finish before you can see if it works?
 Reduce the steps! The image quality will be horrible but at least you'll get
 quick feedback.
 
-    python ./scripts/txt2img.py --prompt "ocean" --ddim_steps 5 --n_samples 1 --n_iter 1
+```bash
+python ./scripts/txt2img.py --prompt "ocean" --ddim_steps 5 --n_samples 1 --n_iter 1
+```
 
 ### OSError: Can't load tokenizer for 'openai/clip-vit-large-patch14'...
 
-    python scripts/preload_models.py
+```bash
+python scripts/preload_models.py
+```
 
 ### "The operator [name] is not current implemented for the MPS device." (sic)
 
 Example error.
 
-```
+```bash
 
 ... NotImplementedError: The operator 'aten::_index_put_impl_' is not current
 implemented for the MPS device. If you want this op to be added in priority
@@ -330,7 +334,9 @@ The lstein branch includes this fix in
 I have not seen this error because I had Rust installed on my computer before I
 started playing with Stable Diffusion. The fix is to install Rust.
 
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
 
 ### How come `--seed` doesn't work?
 
@@ -347,8 +353,9 @@ still working on it.
 
 ### libiomp5.dylib error?
 
-    OMP: Error #15: Initializing libiomp5.dylib, but found libomp.dylib already initialized.
-
+```bash
+OMP: Error #15: Initializing libiomp5.dylib, but found libomp.dylib already initialized.
+```
 You are likely using an Intel package by mistake. Be sure to run conda with the
 environment variable `CONDA_SUBDIR=osx-arm64`, like so:
 
@@ -428,7 +435,10 @@ This is a 32-bit vs 16-bit problem.
 ### The processor must support the Intel bla bla bla
 
 What? Intel? On an Apple Silicon?
-`bash Intel MKL FATAL ERROR: This system does not meet the minimum requirements for use of the Intel(R) Math Kernel Library. The processor must support the Intel(R) Supplemental Streaming SIMD Extensions 3 (Intel(R) SSSE3) instructions. The processor must support the Intel(R) Streaming SIMD Extensions 4.2 (Intel(R) SSE4.2) instructions. The processor must support the Intel(R) Advanced Vector Extensions (Intel(R) AVX) instructions. `
+
+```bash
+Intel MKL FATAL ERROR: This system does not meet the minimum requirements for use of the Intel(R) Math Kernel Library. The processor must support the Intel(R) Supplemental Streaming SIMD Extensions 3 (Intel(R) SSSE3) instructions. The processor must support the Intel(R) Streaming SIMD Extensions 4.2 (Intel(R) SSE4.2) instructions. The processor must support the Intel(R) Advanced Vector Extensions (Intel(R) AVX) instructions.
+```
 
 This is due to the Intel `mkl` package getting picked up when you try to install
 something that depends on it-- Rosetta can translate some Intel instructions but
