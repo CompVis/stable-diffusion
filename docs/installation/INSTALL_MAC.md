@@ -50,7 +50,7 @@ time.
 # NOW EITHER DO
 # 1. Installing alongside pyenv
 
-brew install pyenv-virtualenv # (1)!
+brew install pyenv-virtualenv # (1)
 pyenv install anaconda3-2022.05
 pyenv virtualenv anaconda3-2022.05
 eval "$(pyenv init -)"
@@ -82,7 +82,7 @@ cd stable-diffusion
 # create symlink to checkpoint
 mkdir -p models/ldm/stable-diffusion-v1/
 
-PATH_TO_CKPT="$HOME/Downloads" # (2)!
+PATH_TO_CKPT="$HOME/Downloads" # (2)
 
 ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" \
   models/ldm/stable-diffusion-v1/model.ckpt
@@ -103,7 +103,7 @@ conda activate ldm
 python scripts/preload_models.py
 
 # run SD!
-python scripts/dream.py --full_precision  # half-precision requires autocast and won't work
+python scripts/dream.py --full_precision  # (3)
 
 # or run the web interface!
 python scripts/dream.py --web
