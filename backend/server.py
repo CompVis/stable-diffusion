@@ -19,7 +19,8 @@ from uuid import uuid4
 from ldm.gfpgan.gfpgan_tools import real_esrgan_upscale
 from ldm.gfpgan.gfpgan_tools import run_gfpgan
 from ldm.generate import Generate
-from ldm.dream.pngwriter import PngWriter
+from ldm.dream.pngwriter import PngWriter, retrieve_metadata
+
 from modules.parameters import parameters_to_command, create_cmd_parser
 
 
@@ -146,15 +147,12 @@ def handle_request_all_images():
     paths.sort(key=lambda x: os.path.getmtime(x))
     image_array = []
     for path in paths:
-        image = Image.open(path)
-        metadata = {}
-        if 'Dream' in image.info:
-            try:
-                metadata = vars(parser.parse_args(shlex.split(image.info['Dream'])))
-            except SystemExit:
-                # TODO: Unable to parse metadata, ignore it for now,
-                # this can happen when metadata is missing a prompt
-                pass
+        # image = Image.open(path)
+        all_metadata = retrieve_metadata(path)
+        if 'Dream' in all_metadata and not all_metadata['sd-metadata']:
+            metadata = vars(parser.parse_args(shlex.split(all_metadata['Dream'])))
+        else:
+            metadata = all_metadata['sd-metadata']
         image_array.append({'path': path, 'metadata': metadata})
     return make_response("OK", data=image_array)
 
@@ -307,7 +305,7 @@ def save_image(image, parameters, output_dir, step_index=None, postprocessing=Fa
 
     command = parameters_to_command(parameters)
 
-    path = pngwriter.save_image_and_prompt_to_png(image, command, filename)
+    path = pngwriter.save_image_and_prompt_to_png(image, command, metadata=parameters, name=filename)
 
     return path
 
