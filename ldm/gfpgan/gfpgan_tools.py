@@ -5,10 +5,11 @@ import sys
 import numpy as np
 
 from PIL import Image
-from scripts.dream import create_argv_parser
+#from scripts.dream import create_argv_parser
+from ldm.dream.args import Args
 
-arg_parser = create_argv_parser()
-opt        = arg_parser.parse_args()
+opt                 = Args()
+opt.parse_args()
 model_path          = os.path.join(opt.gfpgan_dir, opt.gfpgan_model_path)
 gfpgan_model_exists = os.path.isfile(model_path)
 

@@ -1,0 +1,46 @@
+{
+  "name": "sdui",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsc-watch --onSuccess 'yarn run vite build -m development'",
+    "hmr": "vite dev",
+    "build": "tsc && vite build",
+    "build-dev": "tsc && vite build -m development",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@chakra-ui/react": "^2.3.1",
+    "@emotion/react": "^11.10.4",
+    "@emotion/styled": "^11.10.4",
+    "@reduxjs/toolkit": "^1.8.5",
+    "@types/uuid": "^8.3.4",
+    "dateformat": "^5.0.3",
+    "framer-motion": "^7.2.1",
+    "lodash": "^4.17.21",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-dropzone": "^14.2.2",
+    "react-icons": "^4.4.0",
+    "react-redux": "^8.0.2",
+    "redux-persist": "^6.0.0",
+    "socket.io-client": "^4.5.2",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/dateformat": "^5.0.0",
+    "@types/react": "^18.0.17",
+    "@types/react-dom": "^18.0.6",
+    "@typescript-eslint/eslint-plugin": "^5.36.2",
+    "@typescript-eslint/parser": "^5.36.2",
+    "@vitejs/plugin-react": "^2.0.1",
+    "eslint": "^8.23.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "tsc-watch": "^5.0.3",
+    "typescript": "^4.6.4",
+    "vite": "^3.0.7",
+    "vite-plugin-eslint": "^1.8.1"
+  }
+}

@@ -77,9 +77,6 @@ db.sqlite3-journal
 instance/
 .webassets-cache
 
-# WebUI temp files:
-img2img-tmp.png
-
 # Scrapy stuff:
 .scrapy
 
@@ -186,3 +183,12 @@ testtube
 checkpoints
 # If it's a Mac
 .DS_Store
+
+# Let the frontend manage its own gitignore
+!frontend/*
+
+# Scratch folder
+.scratch/
+.vscode/
+gfpgan/
+models/ldm/stable-diffusion-v1/model.sha256
