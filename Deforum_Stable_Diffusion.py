@@ -153,6 +153,120 @@ def sanitize(prompt):
     tmp = ''.join(filter(whitelist.__contains__, prompt))
     return tmp.replace(' ', '_')
 
+from functools import reduce
+def construct_RotationMatrixHomogenous(rotation_angles):
+    assert(type(rotation_angles)==list and len(rotation_angles)==3)
+    RH = np.eye(4,4)
+    cv2.Rodrigues(np.array(rotation_angles), RH[0:3, 0:3])
+    return RH
+
+# https://en.wikipedia.org/wiki/Rotation_matrix
+def getRotationMatrixManual(rotation_angles):
+	
+    rotation_angles = [np.deg2rad(x) for x in rotation_angles]
+    
+    phi         = rotation_angles[0] # around x
+    gamma       = rotation_angles[1] # around y
+    theta       = rotation_angles[2] # around z
+    
+    # X rotation
+    Rphi        = np.eye(4,4)
+    sp          = np.sin(phi)
+    cp          = np.cos(phi)
+    Rphi[1,1]   = cp
+    Rphi[2,2]   = Rphi[1,1]
+    Rphi[1,2]   = -sp
+    Rphi[2,1]   = sp
+    
+    # Y rotation
+    Rgamma        = np.eye(4,4)
+    sg            = np.sin(gamma)
+    cg            = np.cos(gamma)
+    Rgamma[0,0]   = cg
+    Rgamma[2,2]   = Rgamma[0,0]
+    Rgamma[0,2]   = sg
+    Rgamma[2,0]   = -sg
+    
+    # Z rotation (in-image-plane)
+    Rtheta      = np.eye(4,4)
+    st          = np.sin(theta)
+    ct          = np.cos(theta)
+    Rtheta[0,0] = ct
+    Rtheta[1,1] = Rtheta[0,0]
+    Rtheta[0,1] = -st
+    Rtheta[1,0] = st
+    
+    R           = reduce(lambda x,y : np.matmul(x,y), [Rphi, Rgamma, Rtheta]) 
+    
+    return R
+
+
+def getPoints_for_PerspectiveTranformEstimation(ptsIn, ptsOut, W, H, sidelength):
+    
+    ptsIn2D      =  ptsIn[0,:]
+    ptsOut2D     =  ptsOut[0,:]
+    ptsOut2Dlist =  []
+    ptsIn2Dlist  =  []
+    
+    for i in range(0,4):
+        ptsOut2Dlist.append([ptsOut2D[i,0], ptsOut2D[i,1]])
+        ptsIn2Dlist.append([ptsIn2D[i,0], ptsIn2D[i,1]])
+    
+    pin  =  np.array(ptsIn2Dlist)   +  [W/2.,H/2.]
+    pout = (np.array(ptsOut2Dlist)  +  [1.,1.]) * (0.5*sidelength)
+    pin  = pin.astype(np.float32)
+    pout = pout.astype(np.float32)
+    
+    return pin, pout
+
+def warpMatrix(W, H, theta, phi, gamma, scale, fV):
+    
+    # M is to be estimated
+    M          = np.eye(4, 4)
+    
+    fVhalf     = np.deg2rad(fV/2.)
+    d          = np.sqrt(W*W+H*H)
+    sideLength = scale*d/np.cos(fVhalf)
+    h          = d/(2.0*np.sin(fVhalf))
+    n          = h-(d/2.0);
+    f          = h+(d/2.0);
+    
+    # Translation along Z-axis by -h
+    T       = np.eye(4,4)
+    T[2,3]  = -h
+    
+    # Rotation matrices around x,y,z
+    R = getRotationMatrixManual([phi, gamma, theta])
+    
+    
+    # Projection Matrix 
+    P       = np.eye(4,4)
+    P[0,0]  = 1.0/np.tan(fVhalf)
+    P[1,1]  = P[0,0]
+    P[2,2]  = -(f+n)/(f-n)
+    P[2,3]  = -(2.0*f*n)/(f-n)
+    P[3,2]  = -1.0
+    
+    # pythonic matrix multiplication
+    F       = reduce(lambda x,y : np.matmul(x,y), [P, T, R]) 
+    
+    # shape should be 1,4,3 for ptsIn and ptsOut since perspectiveTransform() expects data in this way. 
+    # In C++, this can be achieved by Mat ptsIn(1,4,CV_64FC3);
+    ptsIn = np.array([[
+                 [-W/2., H/2., 0.],[ W/2., H/2., 0.],[ W/2.,-H/2., 0.],[-W/2.,-H/2., 0.]
+                 ]])
+    ptsOut  = np.array(np.zeros((ptsIn.shape), dtype=ptsIn.dtype))
+    ptsOut  = cv2.perspectiveTransform(ptsIn, F)
+    
+    ptsInPt2f, ptsOutPt2f = getPoints_for_PerspectiveTranformEstimation(ptsIn, ptsOut, W, H, sideLength)
+    
+    # check float32 otherwise OpenCV throws an error
+    assert(ptsInPt2f.dtype  == np.float32)
+    assert(ptsOutPt2f.dtype == np.float32)
+    M33 = cv2.getPerspectiveTransform(ptsInPt2f,ptsOutPt2f)
+
+    return M33, sideLength
+
 def anim_frame_warp_2d(prev_img_cv2, args, anim_args, keys, frame_idx):
     angle = keys.angle_series[frame_idx]
     zoom = keys.zoom_series[frame_idx]
@@ -164,7 +278,18 @@ def anim_frame_warp_2d(prev_img_cv2, args, anim_args, keys, frame_idx):
     rot_mat = cv2.getRotationMatrix2D(center, angle, zoom)
     trans_mat = np.vstack([trans_mat, [0,0,1]])
     rot_mat = np.vstack([rot_mat, [0,0,1]])
-    xform = np.matmul(rot_mat, trans_mat)
+    if anim_args.flip_2d_perspective:
+        perspective_flip_theta = keys.perspective_flip_theta_series[frame_idx]
+        perspective_flip_phi = keys.perspective_flip_phi_series[frame_idx]
+        perspective_flip_gamma = keys.perspective_flip_gamma_series[frame_idx]
+        perspective_flip_fv = keys.perspective_flip_fv_series[frame_idx]
+        M,sl = warpMatrix(args.W, args.H, perspective_flip_theta, perspective_flip_phi, perspective_flip_gamma, 1., perspective_flip_fv);
+        post_trans_mat = np.float32([[1, 0, (args.W-sl)/2], [0, 1, (args.H-sl)/2]])
+        post_trans_mat = np.vstack([post_trans_mat, [0,0,1]])
+        bM = np.matmul(M, post_trans_mat)
+        xform = np.matmul(bM, rot_mat, trans_mat)
+    else:
+        xform = np.matmul(rot_mat, trans_mat)
 
     return cv2.warpPerspective(
         prev_img_cv2,
@@ -666,6 +791,11 @@ def DeforumAnimArgs():
     rotation_3d_x = "0:(0)"#@param {type:"string"}
     rotation_3d_y = "0:(0)"#@param {type:"string"}
     rotation_3d_z = "0:(0)"#@param {type:"string"}
+    flip_2d_perspective = True #@param {type:"boolean"}
+    perspective_flip_theta = "0:(0)"#@param {type:"string"}
+    perspective_flip_phi = "0:(3)"#@param {type:"string"}
+    perspective_flip_gamma = "0:(0)"#@param {type:"string"}
+    perspective_flip_fv = "0:(53)"#@param {type:"string"}
     noise_schedule = "0: (0.02)"#@param {type:"string"}
     strength_schedule = "0: (0.65)"#@param {type:"string"}
     contrast_schedule = "0: (1.0)"#@param {type:"string"}
@@ -708,6 +838,10 @@ class DeformAnimKeys():
         self.rotation_3d_x_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_x), anim_args.max_frames)
         self.rotation_3d_y_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_y), anim_args.max_frames)
         self.rotation_3d_z_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_z), anim_args.max_frames)
+        self.perspective_flip_theta_series = get_inbetweens(parse_key_frames(anim_args.perspective_flip_theta), anim_args.max_frames)
+        self.perspective_flip_phi_series = get_inbetweens(parse_key_frames(anim_args.perspective_flip_phi), anim_args.max_frames)
+        self.perspective_flip_gamma_series = get_inbetweens(parse_key_frames(anim_args.perspective_flip_gamma), anim_args.max_frames)
+        self.perspective_flip_fv_series = get_inbetweens(parse_key_frames(anim_args.perspective_flip_fv), anim_args.max_frames)
         self.noise_schedule_series = get_inbetweens(parse_key_frames(anim_args.noise_schedule), anim_args.max_frames)
         self.strength_schedule_series = get_inbetweens(parse_key_frames(anim_args.strength_schedule), anim_args.max_frames)
         self.contrast_schedule_series = get_inbetweens(parse_key_frames(anim_args.contrast_schedule), anim_args.max_frames)
