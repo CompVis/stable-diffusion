@@ -13,6 +13,8 @@ import re
 import sys
 import traceback
 import transformers
+import io
+import hashlib
 
 from omegaconf import OmegaConf
 from PIL import Image, ImageOps
@@ -567,7 +569,11 @@ class Generate:
 
         # this does the work
         c     = OmegaConf.load(config)
-        pl_sd = torch.load(weights, map_location='cpu')
+        with open(weights,'rb') as f:
+            weight_bytes = f.read()
+        self.model_hash  = self._cached_sha256(weights,weight_bytes)
+        pl_sd = torch.load(io.BytesIO(weight_bytes), map_location='cpu')
+        del weight_bytes
         sd    = pl_sd['state_dict']
         model = instantiate_from_config(c.model)
         m, u  = model.load_state_dict(sd, strict=False)
@@ -728,3 +734,24 @@ class Generate:
 
     def _has_cuda(self):
         return self.device.type == 'cuda'
+
+    def _cached_sha256(self,path,data):
+        dirname    = os.path.dirname(path)
+        basename   = os.path.basename(path)
+        base, _    = os.path.splitext(basename)
+        hashpath   = os.path.join(dirname,base+'.sha256')
+        if os.path.exists(hashpath) and os.path.getmtime(path) <= os.path.getmtime(hashpath):
+            with open(hashpath) as f:
+                hash = f.read()
+            return hash
+        print(f'>> Calculating sha256 hash of weights file')
+        tic = time.time()
+        sha = hashlib.sha256()
+        sha.update(data)
+        hash = sha.hexdigest()
+        toc = time.time()
+        print(f'>> sha256 = {hash}','(%4.2fs)' % (toc - tic))
+        with open(hashpath,'w') as f:
+            f.write(hash)
+        return hash
+

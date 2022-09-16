@@ -1,14 +1,17 @@
 import argparse
 import json
+import copy
 import base64
 import mimetypes
 import os
+from ldm.dream.args import Args, format_metadata
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from ldm.dream.pngwriter import PngWriter, PromptFormatter
+from ldm.dream.pngwriter import PngWriter
 from threading import Event
 
 def build_opt(post_data, seed, gfpgan_model_exists):
-    opt = argparse.Namespace()
+    opt = Args()
+    opt.parse_args()  # initialize defaults
     setattr(opt, 'prompt', post_data['prompt'])
     setattr(opt, 'init_img', post_data['initimg'])
     setattr(opt, 'strength', float(post_data['strength']))
@@ -40,7 +43,7 @@ def build_opt(post_data, seed, gfpgan_model_exists):
         for part in post_data['with_variations'].split(','):
             seed_and_weight = part.split(':')
             if len(seed_and_weight) != 2:
-                print(f'could not parse with_variation part "{part}"')
+                print(f'could not parse WITH_variation part "{part}"')
                 broken = True
                 break
             try:
@@ -158,10 +161,10 @@ class DreamServer(BaseHTTPRequestHandler):
         # the images are first generated, and then again when after upscaling
         # is complete. The upscaling replaces the original file, so the second
         # entry should not be inserted into the image list.
+        # LS: This repeats code in dream.py
         def image_done(image, seed, upscaled=False):
             name = f'{prefix}.{seed}.png'
-            iter_opt = argparse.Namespace(**vars(opt)) # copy
-            print(f'iter_opt = {iter_opt}')
+            iter_opt  = copy.copy(opt)
             if opt.variation_amount > 0:
                 this_variation = [[seed, opt.variation_amount]]
                 if opt.with_variations is None:
@@ -169,10 +172,17 @@ class DreamServer(BaseHTTPRequestHandler):
                 else:
                     iter_opt.with_variations = opt.with_variations + this_variation
                 iter_opt.variation_amount = 0
-            elif opt.with_variations is None:
-                iter_opt.seed = seed
-            normalized_prompt = PromptFormatter(self.model, iter_opt).normalize_prompt()
-            path = pngwriter.save_image_and_prompt_to_png(image, f'{normalized_prompt} -S{iter_opt.seed}', name)
+            formatted_prompt  = opt.dream_prompt_str(seed=seed)
+            path = pngwriter.save_image_and_prompt_to_png(
+                image,
+                dream_prompt   = formatted_prompt,
+                metadata = format_metadata(iter_opt,
+                                           seeds      = [seed],
+                                           weights    = self.model.weights,
+                                           model_hash = self.model.model_hash
+                ),
+                name     = name,
+            )
 
             if int(config['seed']) == -1:
                 config['seed'] = seed
