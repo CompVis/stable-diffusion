@@ -228,7 +228,8 @@ class DreamServer(BaseHTTPRequestHandler):
             nonlocal step_index
             if opt.progress_images and step % 5 == 0 and step < opt.steps - 1:
                 image = self.model.sample_to_image(sample)
-                name = f'{prefix}.{opt.seed}.{step_index}.png'
+                step_index_padded = str(step_index).rjust(len(str(opt.steps)), '0')
+                name = f'{prefix}.{opt.seed}.{step_index_padded}.png'
                 metadata = f'{opt.prompt} -S{opt.seed} [intermediate]'
                 path = step_writer.save_image_and_prompt_to_png(image, dream_prompt=metadata, name=name)
                 step_index += 1
