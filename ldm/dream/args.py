@@ -216,9 +216,7 @@ class Args(object):
         # the arg value. For example, the --grid and --individual options are a little
         # funny because of their push/pull relationship. This is how to handle it.
         if name=='grid':
-            return value_arg or value_cmd  # arg supersedes cmd
-        if name=='individual':
-            return value_cmd or value_arg  # cmd supersedes arg
+            return not cmd_switches.individual and value_arg  # arg supersedes cmd
         if value_cmd is not None:
             return value_cmd
         else:
@@ -293,11 +291,6 @@ class Args(object):
             '-p',
             action='store_true',
             help='Place images in subdirectories named after the prompt.',
-        )
-        render_group.add_argument(
-            '--seamless',
-            action='store_true',
-            help='Change the model to seamless tiling (circular) mode',
         )
         render_group.add_argument(
             '--grid',
@@ -416,8 +409,8 @@ class Args(object):
             help='generate a grid'
         )
         render_group.add_argument(
-            '--individual',
             '-i',
+            '--individual',
             action='store_true',
             help='override command-line --grid setting and generate individual images'
         )
@@ -448,7 +441,6 @@ class Args(object):
             '--outdir',
             '-o',
             type=str,
-            default='outputs/img-samples',
             help='Directory to save generated images and a log of prompts and seeds',
         )
         img2img_group.add_argument(
