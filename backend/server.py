@@ -19,8 +19,7 @@ from uuid import uuid4
 from ldm.gfpgan.gfpgan_tools import real_esrgan_upscale
 from ldm.gfpgan.gfpgan_tools import run_gfpgan
 from ldm.generate import Generate
-from ldm.dream.pngwriter import PngWriter, PromptFormatter
-
+from ldm.dream.pngwriter import PngWriter
 from modules.parameters import parameters_to_command, create_cmd_parser
 
 
@@ -29,10 +28,11 @@ USER CONFIG
 """
 
 output_dir = "outputs/"  # Base output directory for images
-host = 'localhost'  # Web & socket.io host
+#host = 'localhost'  # Web & socket.io host
+host = '0.0.0.0'  # Web & socket.io host
 port = 9090  # Web & socket.io port
 verbose = False # enables copious socket.io logging
-additional_allowed_origins = ['http://localhost:5173'] # additional CORS allowed origins
+additional_allowed_origins = ['http://localhost:9090'] # additional CORS allowed origins
 
 
 """
