@@ -7,10 +7,7 @@ title: macOS
 - macOS 12.3 Monterey or later
 - Python
 - Patience
-- Apple Silicon\*
-
-\*I haven't tested any of this on Intel Macs but I have read that one person got
-it to work, so Apple Silicon might not be requried.
+- Apple Silicon or Intel Mac
 
 Things have moved really fast and so these instructions change often and are
 often out-of-date. One of the problems is that there are so many different ways
@@ -59,9 +56,13 @@ First get the weights checkpoint download started - it's big:
 # install python 3, git, cmake, protobuf:
 brew install cmake protobuf rust
 
-# install miniconda (M1 arm64 version):
-  curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o Miniconda3-latest-MacOSX-arm64.sh
-  /bin/bash Miniconda3-latest-MacOSX-arm64.sh
+# install miniconda for M1 arm64:
+curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o Miniconda3-latest-MacOSX-arm64.sh
+/bin/bash Miniconda3-latest-MacOSX-arm64.sh
+
+# OR install miniconda for Intel:
+curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o Miniconda3-latest-MacOSX-x86_64.sh
+/bin/bash Miniconda3-latest-MacOSX-x86_64.sh
 
 
 # EITHER WAY,
@@ -82,15 +83,22 @@ brew install cmake protobuf rust
 
   ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
 
-# install packages
-  PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
-  conda activate ldm
+# install packages for arm64
+PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
+conda activate ldm
+
+# OR install packages for x86_64
+PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-x86_64 conda env create -f environment-mac.yaml
+conda activate ldm
 
 # only need to do this once
 python scripts/preload_models.py
 
 # run SD!
 python scripts/dream.py --full_precision  # half-precision requires autocast and won't work
+
+# or run the web interface!
+python scripts/dream.py --web
 ```
 
 The original scripts should work as well.
