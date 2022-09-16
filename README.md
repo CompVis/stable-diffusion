@@ -13,7 +13,7 @@ _[CVPR '22 Oral](https://openaccess.thecvf.com/content/CVPR2022/html/Rombach_Hig
 ![txt2img-stable2](assets/stable-samples/txt2img/merged-0006.png)
 [Stable Diffusion](#stable-diffusion-v1) is a latent text-to-image diffusion
 model.
-Thanks to a generous compute donation from [Stability AI](https://stability.ai/) and support from [LAION](https://laion.ai/), we were able to train a Latent Diffusion Model on 512x512 images from a subset of the [LAION-5B](https://laion.ai/blog/laion-5b/) database. 
+Thanks to a generous computer donation from [Stability AI](https://stability.ai/) and support from [LAION](https://laion.ai/), we were able to train a Latent Diffusion Model on 512x512 images from a subset of the [LAION-5B](https://laion.ai/blog/laion-5b/) database. 
 Similar to Google's [Imagen](https://arxiv.org/abs/2205.11487), 
 this model uses a frozen CLIP ViT-L/14 text encoder to condition the model on text prompts.
 With its 860M UNet and 123M text encoder, the model is relatively lightweight and runs on a GPU with at least 10GB VRAM.
@@ -42,8 +42,8 @@ pip install -e .
 
 Stable Diffusion v1 refers to a specific configuration of the model
 architecture that uses a downsampling-factor 8 autoencoder with an 860M UNet
-and CLIP ViT-L/14 text encoder for the diffusion model. The model was pretrained on 256x256 images and 
-then finetuned on 512x512 images.
+and CLIP ViT-L/14 text encoder for the diffusion model. The model was pre trained on 256x256 images and 
+then fine tuned on 512x512 images.
 
 *Note: Stable Diffusion v1 is a general text-to-image diffusion model and therefore mirrors biases and (mis-)conceptions that are present
 in its training data. 
@@ -113,8 +113,8 @@ optional arguments:
   -h, --help            show this help message and exit
   --prompt [PROMPT]     the prompt to render
   --outdir [OUTDIR]     dir to write results to
-  --skip_grid           do not save a grid, only individual samples. Helpful when evaluating lots of samples
-  --skip_save           do not save individual samples. For speed measurements.
+  --skip_grid           does not save a grid, only individual samples. Helpful when evaluating lots of samples
+  --skip_save           does not save individual samples. For speed measurements.
   --ddim_steps DDIM_STEPS
                         number of ddim sampling steps
   --plms                use plms sampling
