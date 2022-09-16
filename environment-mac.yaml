@@ -41,6 +41,7 @@ dependencies:
   - torchmetrics==0.9.3
   - pip:
     - opencv-python==4.6.0
+    - protobuf==3.20.1
     - realesrgan==0.2.5.0
     - test-tube==0.7.5
     - transformers==4.21.2

@@ -249,6 +249,15 @@ class DreamServer(BaseHTTPRequestHandler):
         except CanceledException:
             print(f"Canceled.")
             return
+        except Exception as e:
+            print("Error happened")
+            print(e)
+            self.wfile.write(bytes(json.dumps(
+                {'event': 'error',
+                 'message': str(e),
+                 'type': e.__class__.__name__}
+            ) + '\n',"utf-8"))
+            raise e
 
 
 class ThreadingDreamServer(ThreadingHTTPServer):
