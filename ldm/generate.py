@@ -181,7 +181,7 @@ class Generate:
         for image, seed in results:
             name = f'{prefix}.{seed}.png'
             path = pngwriter.save_image_and_prompt_to_png(
-                image, f'{prompt} -S{seed}', name)
+                image, dream_prompt=f'{prompt} -S{seed}', name=name)
             outputs.append([path, seed])
         return outputs
 

@@ -51,6 +51,7 @@ We thank them for all of their time and hard work.
 - [Any Winter](https://github.com/any-winter-4079)
 - [Doggettx](https://github.com/doggettx)
 - [Matthias Wild](https://github.com/mauwii)
+- [Kyle Schouviller](https://github.com/kyle0654)
 
 ## __Original CompVis Authors:__
 
