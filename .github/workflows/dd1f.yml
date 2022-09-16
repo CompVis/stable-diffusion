@@ -2,6 +2,9 @@ name: Build sd1f
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - add-docker-img
 
 concurrency:
   group: llvm-cuda-${{ github.ref }}
