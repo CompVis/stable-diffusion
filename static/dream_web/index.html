@@ -2,11 +2,13 @@
   <head>
     <title>Stable Diffusion Dream Server</title>
     <meta charset="utf-8">
-    <link rel="icon" type="image/x-icon" href="static/dream_web/favicon.ico" />
+    <link rel="icon" href="data:,">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="static/dream_web/index.css">
+
+    <link rel="stylesheet" href="index.css">
     <script src="config.js"></script>
-    <script src="static/dream_web/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+    <script src="index.js"></script>
   </head>
   <body>
     <header>
@@ -17,8 +19,8 @@
     </header>
 
     <main>
-      <form id="generate-form" method="post" action="#">
-	<fieldset id="txt2img">
+      <form id="generate-form" method="post" action="api/jobs">
+	    <fieldset id="txt2img">
           <div id="search-box">
             <textarea rows="3" id="prompt" name="prompt"></textarea>
             <input type="submit" id="submit" value="Generate">
@@ -30,10 +32,10 @@
           <input value="1" type="number" id="iterations" name="iterations" size="4">
           <label for="steps">Steps:</label>
           <input value="50" type="number" id="steps" name="steps">
-          <label for="cfg_scale">Cfg Scale:</label>
-          <input value="7.5" type="number" id="cfg_scale" name="cfg_scale" step="any">
-          <label for="sampler_name">Sampler:</label>
-          <select id="sampler_name" name="sampler_name" value="k_lms">
+          <label for="cfgscale">Cfg Scale:</label>
+          <input value="7.5" type="number" id="cfgscale" name="cfgscale" step="any">
+          <label for="sampler">Sampler:</label>
+          <select id="sampler" name="sampler" value="k_lms">
             <option value="ddim">DDIM</option>
             <option value="plms">PLMS</option>
             <option value="k_lms" selected>KLMS</option>
@@ -68,8 +70,8 @@
             <option value="832">832</option> <option value="896">896</option>
             <option value="960">960</option> <option value="1024">1024</option>
           </select>
-          <label title="Set to -1 for random seed" for="seed">Seed:</label>
-          <input value="-1" type="number" id="seed" name="seed">
+          <label title="Set to 0 for random seed" for="seed">Seed:</label>
+          <input value="0" type="number" id="seed" name="seed">
           <button type="button" id="reset-seed">&olarr;</button>
           <input type="checkbox" name="progress_images" id="progress_images">
 	  <label for="progress_images">Display in-progress images (slower)</label>
@@ -114,7 +116,7 @@
           <br>
           <img id="progress-image" src='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>'>
           <div id="scaling-inprocess-message">
-            <i><span>Postprocessing...</span><span id="processing_cnt">1/3</span></i>
+            <i><span>Postprocessing...</span><span id="processing_cnt">1</span>/<span id="processing_total">3</span></i>
           </div>
         </span>
       </section>

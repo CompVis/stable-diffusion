@@ -58,6 +58,3 @@ def retrieve_metadata(img_path):
     md = im.text.get('sd-metadata',{})
     return json.loads(md)
 
-
-
-    
