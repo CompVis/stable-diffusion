@@ -9,18 +9,21 @@ title: macOS
 - Patience
 - Apple Silicon or Intel Mac
 
-Things have moved really fast and so these instructions change often and are
-often out-of-date. One of the problems is that there are so many different ways
-to run this.
+Things have moved really fast and so these instructions change often which makes
+them outdated pretty fast. One of the problems is that there are so many
+different ways to run this.
 
 We are trying to build a testing setup so that when we make changes it doesn't
 always break.
 
-How to (this hasn't been 100% tested yet):
+## How to
 
-First get the weights checkpoint download started - it's big:
+(this hasn't been 100% tested yet)
 
-1. Sign up at https://huggingface.co
+First get the weights checkpoint download started since it's big and will take
+some time:
+
+1. Sign up at [huggingface.co](https://huggingface.co)
 2. Go to the
    [Stable diffusion diffusion model page](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original)
 3. Accept the terms and click Access Repository:
@@ -28,24 +31,26 @@ First get the weights checkpoint download started - it's big:
    [sd-v1-4.ckpt (4.27 GB)](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/blob/main/sd-v1-4.ckpt)
    and note where you have saved it (probably the Downloads folder)
 
-   While that is downloading, open Terminal and run the following commands one
-   at a time.
+While that is downloading, open Terminal and run the following commands one at a
+time.
 
-```bash
+```{ .bash .annotate }
 # install brew (and Xcode command line tools):
+/bin/bash -c \
+  "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Now there are two different routes to get the Python (miniconda) environment up and running:
+# Now there are two different routes to get the Python (miniconda) environment
+# up and running:
+#
 # 1. Alongside pyenv
 # 2. No pyenv
 #
 # If you don't know what we are talking about, choose 2.
-#
+
 # NOW EITHER DO
 # 1. Installing alongside pyenv
 
-brew install pyenv-virtualenv # you might have this from before, no problem
+brew install pyenv-virtualenv # (1)!
 pyenv install anaconda3-2022.05
 pyenv virtualenv anaconda3-2022.05
 eval "$(pyenv init -)"
@@ -53,7 +58,7 @@ pyenv activate anaconda3-2022.05
 
 # OR,
 # 2. Installing standalone
-# install python 3, git, cmake:
+# install cmake and rust:
 brew install cmake rust
 
 # install miniconda for M1 arm64:
@@ -77,16 +82,21 @@ cd stable-diffusion
 # create symlink to checkpoint
 mkdir -p models/ldm/stable-diffusion-v1/
 
-PATH_TO_CKPT="$HOME/Downloads"  # or wherever you saved sd-v1-4.ckpt
+PATH_TO_CKPT="$HOME/Downloads" # (2)!
 
-ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
+ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" \
+  models/ldm/stable-diffusion-v1/model.ckpt
 
 # install packages for arm64
-PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
+PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 \
+  conda env create \
+  -f environment-mac.yaml
 conda activate ldm
 
 # OR install packages for x86_64
-PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-x86_64 conda env create -f environment-mac.yaml
+PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-x86_64 \
+  conda env create \
+  -f environment-mac.yaml
 conda activate ldm
 
 # only need to do this once
@@ -99,25 +109,32 @@ python scripts/dream.py --full_precision  # half-precision requires autocast and
 python scripts/dream.py --web
 ```
 
+1. you might have this from before, no problem
+2. or wherever you saved sd-v1-4.ckpt
+3. half-precision requires autocast and won't work
+
 The original scripts should work as well.
 
 ```bash
-python scripts/orig_scripts/txt2img.py --prompt "a photograph of an astronaut riding a horse" --plms
+python scripts/orig_scripts/txt2img.py \
+  --prompt "a photograph of an astronaut riding a horse" \
+  --plms
 ```
 
-Note,
+Note:
 
 ```bash
 export PIP_EXISTS_ACTION=w
 ```
 
-is a precaution to fix
+is a precaution to fix a problem where
 
 ```bash
-conda env create -f environment-mac.yaml
+conda env create \
+  -f environment-mac.yaml
 ```
 
-never finishing in some situations. So it isn't required but wont hurt.
+did never finish in some situations. So it isn't required but wont hurt.
 
 After you follow all the instructions and run dream.py you might get several
 errors. Here's the errors I've seen and found solutions for.
@@ -130,10 +147,10 @@ Be sure to specify 1 sample and 1 iteration.
 
 ```bash
 python ./scripts/orig_scripts/txt2img.py \
-      --prompt "ocean" \
-      --ddim_steps 5 \
-      --n_samples 1 \
-      --n_iter 1
+  --prompt "ocean" \
+  --ddim_steps 5 \
+  --n_samples 1 \
+  --n_iter 1
 ```
 
 ---
@@ -151,55 +168,76 @@ solution please
 One debugging step is to update to the latest version of PyTorch nightly.
 
 ```bash
-conda install pytorch torchvision torchaudio -c pytorch-nightly
+conda install \
+  pytorch \
+  torchvision \
+  torchaudio \
+  -c pytorch-nightly
 ```
 
 If it takes forever to run
 
 ```bash
-conda env create -f environment-mac.yaml
+conda env create \
+  -f environment-mac.yaml
 ```
 
-you could try to run `git clean -f` followed by:
+you could try to run:
 
-`conda clean --yes --all`
+```bash
+git clean -f
+conda clean \
+  --yes \
+  --all
+```
 
 Or you could try to completley reset Anaconda:
 
 ```bash
-conda update --force-reinstall -y -n base -c defaults conda
+conda update \
+  --force-reinstall \
+  -y \
+  -n base \
+  -c defaults conda
 ```
 
 ---
 
 ### "No module named cv2", torch, 'ldm', 'transformers', 'taming', etc
 
-There are several causes of these errors.
+There are several causes of these errors:
 
-- First, did you remember to `conda activate ldm`? If your terminal prompt
-  begins with "(ldm)" then you activated it. If it begins with "(base)" or
-  something else you haven't.
+1. Did you remember to `conda activate ldm`? If your terminal prompt begins with
+   "(ldm)" then you activated it. If it begins with "(base)" or something else
+   you haven't.
 
-- Second, you might've run `./scripts/preload_models.py` or `./scripts/dream.py`
-  instead of `python ./scripts/preload_models.py` or
-  `python ./scripts/dream.py`. The cause of this error is long so it's below.
+2. You might've run `./scripts/preload_models.py` or `./scripts/dream.py`
+   instead of `python ./scripts/preload_models.py` or
+   `python ./scripts/dream.py`. The cause of this error is long so it's below.
 
-- Third, if it says you're missing taming you need to rebuild your virtual
-  environment.
+    <!-- I could not find out where the error is, otherwise would have marked it as a footnote -->
 
-```bash
-conda deactivate
+3. if it says you're missing taming you need to rebuild your virtual
+   environment.
 
-conda env remove -n ldm
-PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
-```
+    ```bash
+    conda deactivate
 
-Fourth, If you have activated the ldm virtual environment and tried rebuilding
-it, maybe the problem could be that I have something installed that you don't
-and you'll just need to manually install it. Make sure you activate the virtual
-environment so it installs there instead of globally.
+    conda env remove -n ldm
+    PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 \
+      conda env create \
+      -f environment-mac.yaml
+    ```
 
-`conda activate ldm pip install _name_`
+4. If you have activated the ldm virtual environment and tried rebuilding it,
+   maybe the problem could be that I have something installed that you don't and
+   you'll just need to manually install it. Make sure you activate the virtual
+   environment so it installs there instead of globally.
+
+    ```bash
+    conda activate ldm
+    pip install <package name>
+    ```
 
 You might also need to install Rust (I mention this again below).
 
@@ -259,21 +297,22 @@ output of `python3 -V` and `python -V`.
 /Users/name/miniforge3/envs/ldm/bin/python
 ```
 
-The above is what you'll see if you have miniforge and you've correctly
-activated the ldm environment, and you used option 2 in the setup instructions
-above ("no pyenv").
+The above is what you'll see if you have miniforge and correctly activated the
+ldm environment, while usingd option 2 in the setup instructions above ("no
+pyenv").
+
+If you otherwise used the first option ("alongside pyenv"), you will get this
+prompt:
 
 ```bash
 (anaconda3-2022.05) % which python
 /Users/name/.pyenv/shims/python
 ```
 
-... and the above is what you'll see if you used option 1 ("Alongside pyenv").
-
 It's all a mess and you should know
 [how to modify the path environment variable](https://support.apple.com/guide/terminal/use-environment-variables-apd382cc5fa-4f58-4449-b20a-41c53c006f8f/mac)
-if you want to fix it. Here's a brief hint of all the ways you can modify it
-(don't really have the time to explain it all here).
+if you want to fix it. Here's a brief hint of the most common ways you can
+modify it (don't really have the time to explain it all here).
 
 - ~/.zshrc
 - ~/.bash_profile
@@ -281,18 +320,19 @@ if you want to fix it. Here's a brief hint of all the ways you can modify it
 - /etc/paths.d
 - /etc/path
 
-Which one you use will depend on what you have installed except putting a file
-in /etc/paths.d is what I prefer to do.
+Which one you use will depend on what you have installed, except putting a file
+in /etc/paths.d - which also is the way I prefer to do.
 
 Finally, to answer the question posed by this section's title, it may help to
 list all of the `python` / `python3` things found in `$PATH` instead of just the
-one that will be executed by default. To do that, add the `-a` switch to
-`which`:
+first hit. To do so, add the `-a` switch to `which`:
 
 ```bash
 % which -a python3
 ...
 ```
+
+This will show a list of all binaries which are actually available in your PATH.
 
 ### Debugging?
 
@@ -301,10 +341,14 @@ Reduce the steps! The image quality will be horrible but at least you'll get
 quick feedback.
 
 ```bash
-python ./scripts/txt2img.py --prompt "ocean" --ddim_steps 5 --n_samples 1 --n_iter 1
+python ./scripts/txt2img.py \
+  --prompt "ocean" \
+  --ddim_steps 5 \
+  --n_samples 1 \
+  --n_iter 1
 ```
 
-### OSError: Can't load tokenizer for 'openai/clip-vit-large-patch14'...
+### OSError: Can't load tokenizer for 'openai/clip-vit-large-patch14'
 
 ```bash
 python scripts/preload_models.py
@@ -312,10 +356,7 @@ python scripts/preload_models.py
 
 ### "The operator [name] is not current implemented for the MPS device." (sic)
 
-Example error.
-
-```bash
-
+```bash title="example error"
 ... NotImplementedError: The operator 'aten::_index_put_impl_' is not current
 implemented for the MPS device. If you want this op to be added in priority
 during the prototype phase of this feature, please comment on
@@ -323,7 +364,6 @@ during the prototype phase of this feature, please comment on
 As a temporary fix, you can set the environment variable
 `PYTORCH_ENABLE_MPS_FALLBACK=1` to use the CPU as a fallback for this op.
 WARNING: this will be slower than running natively on MPS.
-
 ```
 
 The lstein branch includes this fix in
@@ -335,7 +375,10 @@ I have not seen this error because I had Rust installed on my computer before I
 started playing with Stable Diffusion. The fix is to install Rust.
 
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+curl \
+  --proto '=https' \
+  --tlsv1.2 \
+  -sSf https://sh.rustup.rs | sh
 ```
 
 ### How come `--seed` doesn't work?
@@ -356,6 +399,7 @@ still working on it.
 ```bash
 OMP: Error #15: Initializing libiomp5.dylib, but found libomp.dylib already initialized.
 ```
+
 You are likely using an Intel package by mistake. Be sure to run conda with the
 environment variable `CONDA_SUBDIR=osx-arm64`, like so:
 
