@@ -305,7 +305,7 @@ def save_image(image, parameters, output_dir, step_index=None, postprocessing=Fa
 
     command = parameters_to_command(parameters)
 
-    path = pngwriter.save_image_and_prompt_to_png(image, command, parameters, filename)
+    path = pngwriter.save_image_and_prompt_to_png(image, command, metadata=parameters, name=filename)
 
     return path
 
