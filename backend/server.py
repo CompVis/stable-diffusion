@@ -19,7 +19,8 @@ from uuid import uuid4
 from ldm.gfpgan.gfpgan_tools import real_esrgan_upscale
 from ldm.gfpgan.gfpgan_tools import run_gfpgan
 from ldm.generate import Generate
-from ldm.dream.pngwriter import PngWriter
+from ldm.dream.pngwriter import PngWriter, retrieve_metadata
+
 from modules.parameters import parameters_to_command, create_cmd_parser
 
 
