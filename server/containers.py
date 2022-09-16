@@ -17,18 +17,24 @@ class Container(containers.DeclarativeContainer):
     app = None
   )
 
+  # TODO: Add a model provider service that provides model(s) dynamically
   model_singleton = providers.ThreadSafeSingleton(
     Generate,
-    width = config.model.width,
-    height = config.model.height,
-    sampler_name = config.model.sampler_name,
-    weights = config.model.weights,
-    full_precision = config.model.full_precision,
-    config = config.model.config,
-    grid = config.model.grid,
-    seamless = config.model.seamless,
-    embedding_path = config.model.embedding_path,
-    device_type = config.model.device_type
+    model          = config.model,
+    sampler_name   = config.sampler_name,
+    embedding_path = config.embedding_path,
+    full_precision = config.full_precision
+    # config = config.model.config,
+
+    # width = config.model.width,
+    # height = config.model.height,
+    # sampler_name = config.model.sampler_name,
+    # weights = config.model.weights,
+    # full_precision = config.model.full_precision,
+    # grid = config.model.grid,
+    # seamless = config.model.seamless,
+    # embedding_path = config.model.embedding_path,
+    # device_type = config.model.device_type
   )
 
   # TODO: get location from config

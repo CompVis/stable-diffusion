@@ -1,25 +1,33 @@
 # Copyright (c) 2022 Kyle Schouviller (https://github.com/kyle0654)
 
+from argparse import ArgumentParser
 import base64
+from datetime import datetime, timezone
+import glob
+import json
 import os
+from pathlib import Path
 from queue import Empty, Queue
+import shlex
 from threading import Thread
 import time
-from flask import app, url_for
 from flask_socketio import SocketIO, join_room, leave_room
+from ldm.dream.args import Args
+from ldm.dream.generator import embiggen
+from PIL import Image
 
 from ldm.dream.pngwriter import PngWriter
 from ldm.dream.server import CanceledException
 from ldm.generate import Generate
-from server.models import DreamRequest, ProgressType, Signal
+from server.models import DreamResult, JobRequest, PaginatedItems, ProgressType, Signal
 
 class JobQueueService:
   __queue: Queue = Queue()
 
-  def push(self, dreamRequest: DreamRequest):
+  def push(self, dreamRequest: DreamResult):
     self.__queue.put(dreamRequest)
 
-  def get(self, timeout: float = None) -> DreamRequest:
+  def get(self, timeout: float = None) -> DreamResult:
     return self.__queue.get(timeout= timeout)
 
 class SignalQueueService:
@@ -85,31 +93,116 @@ class LogService:
     self.__location = location
     self.__logFile = file
 
-  def log(self, dreamRequest: DreamRequest, seed = None, upscaled = False):
+  def log(self, dreamResult: DreamResult, seed = None, upscaled = False):
     with open(os.path.join(self.__location, self.__logFile), "a") as log:
-      log.write(f"{dreamRequest.id(seed, upscaled)}: {dreamRequest.to_json(seed)}\n")
+      log.write(f"{dreamResult.id}: {dreamResult.to_json()}\n")
 
 
 class ImageStorageService:
   __location: str
   __pngWriter: PngWriter
+  __legacyParser: ArgumentParser
 
   def __init__(self, location):
     self.__location = location
     self.__pngWriter = PngWriter(self.__location)
+    self.__legacyParser = Args() # TODO: inject this?
 
   def __getName(self, dreamId: str, postfix: str = '') -> str:
     return f'{dreamId}{postfix}.png'
 
-  def save(self, image, dreamRequest, seed = None, upscaled = False, postfix: str = '', metadataPostfix: str = '') -> str:
-    name = self.__getName(dreamRequest.id(seed, upscaled), postfix)
-    path = self.__pngWriter.save_image_and_prompt_to_png(image, f'{dreamRequest.prompt} -S{seed or dreamRequest.seed}{metadataPostfix}', name)
+  def save(self, image, dreamResult: DreamResult, postfix: str = '') -> str:
+    name = self.__getName(dreamResult.id, postfix)
+    meta = dreamResult.to_json() # TODO: make all methods consistent with writing metadata. Standardize metadata.
+    path = self.__pngWriter.save_image_and_prompt_to_png(image, dream_prompt=meta, metadata=None, name=name)
     return path
 
   def path(self, dreamId: str, postfix: str = '') -> str:
     name = self.__getName(dreamId, postfix)
     path = os.path.join(self.__location, name)
     return path
+  
+  # Returns true if found, false if not found or error
+  def delete(self, dreamId: str, postfix: str = '') -> bool:
+    path = self.path(dreamId, postfix)
+    if (os.path.exists(path)):
+      os.remove(path)
+      return True
+    else:
+      return False
+  
+  def getMetadata(self, dreamId: str, postfix: str = '') -> DreamResult:
+    path = self.path(dreamId, postfix)
+    image = Image.open(path)
+    text = image.text
+    if text.__contains__('Dream'):
+      dreamMeta = text.get('Dream')
+      try:
+        j = json.loads(dreamMeta)
+        return DreamResult.from_json(j)
+      except ValueError:
+        # Try to parse command-line format (legacy metadata format)
+        try:
+          opt = self.__parseLegacyMetadata(dreamMeta)
+          optd = opt.__dict__
+          if (not 'width' in optd) or (optd.get('width') is None):
+            optd['width'] = image.width
+          if (not 'height' in optd) or (optd.get('height') is None):
+            optd['height'] = image.height
+          if (not 'steps' in optd) or (optd.get('steps') is None):
+            optd['steps'] = 10 # No way around this unfortunately - seems like it wasn't storing this previously
+
+          optd['time'] = os.path.getmtime(path) # Set timestamp manually (won't be exactly correct though)
+
+          return DreamResult.from_json(optd)
+
+        except:
+          return None
+    else:
+      return None
+
+  def __parseLegacyMetadata(self, command: str) -> DreamResult:
+    # before splitting, escape single quotes so as not to mess
+    # up the parser
+    command = command.replace("'", "\\'")
+
+    try:
+        elements = shlex.split(command)
+    except ValueError as e:
+        return None
+
+    # rearrange the arguments to mimic how it works in the Dream bot.
+    switches = ['']
+    switches_started = False
+
+    for el in elements:
+        if el[0] == '-' and not switches_started:
+            switches_started = True
+        if switches_started:
+            switches.append(el)
+        else:
+            switches[0] += el
+            switches[0] += ' '
+    switches[0] = switches[0][: len(switches[0]) - 1]
+
+    try:
+        opt = self.__legacyParser.parse_cmd(switches)
+        return opt
+    except SystemExit:
+        return None
+
+  def list_files(self, page: int, perPage: int) -> PaginatedItems:
+    files = sorted(glob.glob(os.path.join(self.__location,'*.png')), key=os.path.getmtime, reverse=True)
+    count = len(files)
+
+    startId = page * perPage
+    pageCount = int(count / perPage) + 1
+    endId = min(startId + perPage, count)
+    items = [] if startId >= count else files[startId:endId]
+
+    items = list(map(lambda f: Path(f).stem, items))
+
+    return PaginatedItems(items, page, pageCount, perPage, count)
 
 
 class GeneratorService:
@@ -144,13 +237,11 @@ class GeneratorService:
   # TODO: Consider moving this to its own service if there's benefit in separating the generator
   def __process(self):
     # preload the model
+    # TODO: support multiple models
     print('Preloading model')
-
     tic = time.time()
     self.__model.load_model()
-    print(
-      f'>> model loaded in', '%4.2fs' % (time.time() - tic)
-    )
+    print(f'>> model loaded in', '%4.2fs' % (time.time() - tic))
 
     print('Started generation queue processor')
     try:
@@ -162,103 +253,136 @@ class GeneratorService:
         print('Generation queue processor stopped')
 
 
-  def __start(self, dreamRequest: DreamRequest):
-    if dreamRequest.start_callback:
-      dreamRequest.start_callback()
-    self.__signal_service.emit(Signal.job_started(dreamRequest.id()))
+  def __on_start(self, jobRequest: JobRequest):
+    self.__signal_service.emit(Signal.job_started(jobRequest.id))
 
 
-  def __done(self, dreamRequest: DreamRequest, image, seed, upscaled=False):
-    self.__imageStorage.save(image, dreamRequest, seed, upscaled)
+  def __on_image_result(self, jobRequest: JobRequest, image, seed, upscaled=False):
+    dreamResult = jobRequest.newDreamResult()
+    dreamResult.seed = seed
+    dreamResult.has_upscaled = upscaled
+    dreamResult.iterations = 1
+    jobRequest.results.append(dreamResult)
+    # TODO: Separate status of GFPGAN?
+
+    self.__imageStorage.save(image, dreamResult)
     
-
     # TODO: handle upscaling logic better (this is appending data to log, but only on first generation)
     if not upscaled:
-      self.__log.log(dreamRequest, seed, upscaled)
+      self.__log.log(dreamResult)
 
-    self.__signal_service.emit(Signal.image_result(dreamRequest.id(), dreamRequest.id(seed, upscaled), dreamRequest.clone_without_image(seed)))
+    # Send result signal
+    self.__signal_service.emit(Signal.image_result(jobRequest.id, dreamResult.id, dreamResult))
 
-    upscaling_requested = dreamRequest.upscale or dreamRequest.gfpgan_strength>0
+    upscaling_requested = dreamResult.enable_upscale or dreamResult.enable_gfpgan
     
-    if upscaled:
-      dreamRequest.images_upscaled += 1
-    else:
-      dreamRequest.images_generated +=1
-    if upscaling_requested:
-    #     action = None
-      if dreamRequest.images_generated >= dreamRequest.iterations:
-        progressType = ProgressType.UPSCALING_DONE
-        if dreamRequest.images_upscaled < dreamRequest.iterations:
-          progressType = ProgressType.UPSCALING_STARTED
-        self.__signal_service.emit(Signal.image_progress(dreamRequest.id(), dreamRequest.id(seed), dreamRequest.images_upscaled+1, dreamRequest.iterations, progressType))
+    # Report upscaling status
+    # TODO: this is very coupled to logic inside the generator. Fix that.
+    if upscaling_requested and any(result.has_upscaled for result in jobRequest.results):
+      progressType = ProgressType.UPSCALING_STARTED if len(jobRequest.results) < 2 * jobRequest.iterations else ProgressType.UPSCALING_DONE
+      upscale_count = sum(1 for i in jobRequest.results if i.has_upscaled)
+      self.__signal_service.emit(Signal.image_progress(jobRequest.id, dreamResult.id, upscale_count, jobRequest.iterations, progressType))
 
 
-  def __progress(self, dreamRequest, sample, step):
+  def __on_progress(self, jobRequest: JobRequest, sample, step):
     if self.__cancellationRequested:
       self.__cancellationRequested = False
       raise CanceledException
 
+    # TODO: Progress per request will be easier once the seeds (and ids) can all be pre-generated
     hasProgressImage = False
-    if dreamRequest.progress_images and step % 5 == 0 and step < dreamRequest.steps - 1:
+    s = str(len(jobRequest.results))
+    if jobRequest.progress_images and step % 5 == 0 and step < jobRequest.steps - 1:
       image = self.__model._sample_to_image(sample)
-      self.__intermediateStorage.save(image, dreamRequest, self.__model.seed, postfix=f'.{step}', metadataPostfix=f' [intermediate]')
+
+      # TODO: clean this up, use a pre-defined dream result
+      result = DreamResult()
+      result.parse_json(jobRequest.__dict__, new_instance=False)
+      self.__intermediateStorage.save(image, result, postfix=f'.{s}.{step}')
       hasProgressImage = True
 
-    self.__signal_service.emit(Signal.image_progress(dreamRequest.id(), dreamRequest.id(self.__model.seed), step, dreamRequest.steps, ProgressType.GENERATION, hasProgressImage))
+    self.__signal_service.emit(Signal.image_progress(jobRequest.id, f'{jobRequest.id}.{s}', step, jobRequest.steps, ProgressType.GENERATION, hasProgressImage))
 
 
-  def __generate(self, dreamRequest: DreamRequest):
+  def __generate(self, jobRequest: JobRequest):
     try:
-      initimgfile = None
-      if dreamRequest.initimg is not None:
-        with open("./img2img-tmp.png", "wb") as f:
-          initimg = dreamRequest.initimg.split(",")[1] # Ignore mime type
-          f.write(base64.b64decode(initimg))
-          initimgfile = "./img2img-tmp.png"
+      # TODO: handle this file a file service for init images
+      initimgfile = None # TODO: support this on the model directly?
+      if (jobRequest.enable_init_image):
+        if jobRequest.initimg is not None:
+          with open("./img2img-tmp.png", "wb") as f:
+            initimg = jobRequest.initimg.split(",")[1] # Ignore mime type
+            f.write(base64.b64decode(initimg))
+            initimgfile = "./img2img-tmp.png"
 
-      # Get a random seed if we don't have one yet
-      # TODO: handle "previous" seed usage?
-      if dreamRequest.seed == -1:
-        dreamRequest.seed = self.__model.seed
+      # Use previous seed if set to -1
+      initSeed = jobRequest.seed
+      if initSeed == -1:
+        initSeed = self.__model.seed
 
       # Zero gfpgan strength if the model doesn't exist
       # TODO: determine if this could be at the top now? Used to cause circular import
       from ldm.gfpgan.gfpgan_tools import gfpgan_model_exists
       if not gfpgan_model_exists:
-        dreamRequest.gfpgan_strength = 0
+        jobRequest.enable_gfpgan = False
 
-      self.__start(dreamRequest)
+      # Signal start
+      self.__on_start(jobRequest)
 
-      self.__model.prompt2image(
-        prompt           = dreamRequest.prompt,
-        init_img         = initimgfile, # TODO: ensure this works
-        strength         = None if initimgfile is None else dreamRequest.strength,
-        fit              = None if initimgfile is None else dreamRequest.fit,
-        iterations       = dreamRequest.iterations,
-        cfg_scale        = dreamRequest.cfgscale,
-        width            = dreamRequest.width,
-        height           = dreamRequest.height,
-        seed             = dreamRequest.seed,
-        steps            = dreamRequest.steps,
-        variation_amount = dreamRequest.variation_amount,
-        with_variations  = dreamRequest.with_variations,
-        gfpgan_strength  = dreamRequest.gfpgan_strength,
-        upscale          = dreamRequest.upscale,
-        sampler_name     = dreamRequest.sampler_name,
-        seamless         = dreamRequest.seamless,
-        step_callback    = lambda sample, step: self.__progress(dreamRequest, sample, step),
-        image_callback   = lambda image, seed, upscaled=False: self.__done(dreamRequest, image, seed, upscaled))
+      # Generate in model
+      # TODO: Split job generation requests instead of fitting all parameters here
+      # TODO: Support no generation (just upscaling/gfpgan)
+
+      upscale = None if not jobRequest.enable_upscale else jobRequest.upscale
+      gfpgan_strength = 0 if not jobRequest.enable_gfpgan else jobRequest.gfpgan_strength
+
+      if not jobRequest.enable_generate:
+        # If not generating, check if we're upscaling or running gfpgan
+        if not upscale and not gfpgan_strength:
+          # Invalid settings (TODO: Add message to help user)
+          raise CanceledException()
+
+        image = Image.open(initimgfile)
+        # TODO: support progress for upscale?
+        self.__model.upscale_and_reconstruct(
+          image_list = [[image,0]],
+          upscale = upscale,
+          strength = gfpgan_strength,
+          save_original = False,
+          image_callback = lambda image, seed, upscaled=False: self.__on_image_result(jobRequest, image, seed, upscaled))
+
+      else:
+        # Generating - run the generation
+        init_img = None if (not jobRequest.enable_img2img or jobRequest.strength == 0) else initimgfile
+
+
+        self.__model.prompt2image(
+          prompt           = jobRequest.prompt,
+          init_img         = init_img, # TODO: ensure this works
+          strength         = None if init_img is None else jobRequest.strength,
+          fit              = None if init_img is None else jobRequest.fit,
+          iterations       = jobRequest.iterations,
+          cfg_scale        = jobRequest.cfg_scale,
+          width            = jobRequest.width,
+          height           = jobRequest.height,
+          seed             = jobRequest.seed,
+          steps            = jobRequest.steps,
+          variation_amount = jobRequest.variation_amount,
+          with_variations  = jobRequest.with_variations,
+          gfpgan_strength  = gfpgan_strength,
+          upscale          = upscale,
+          sampler_name     = jobRequest.sampler_name,
+          seamless         = jobRequest.seamless,
+          embiggen         = jobRequest.embiggen,
+          embiggen_tiles   = jobRequest.embiggen_tiles,
+          step_callback    = lambda sample, step: self.__on_progress(jobRequest, sample, step),
+          image_callback   = lambda image, seed, upscaled=False: self.__on_image_result(jobRequest, image, seed, upscaled))
 
     except CanceledException:
-      if dreamRequest.cancelled_callback:
-        dreamRequest.cancelled_callback()
-        
-      self.__signal_service.emit(Signal.job_canceled(dreamRequest.id()))
+      self.__signal_service.emit(Signal.job_canceled(jobRequest.id))
 
     finally:
-      if dreamRequest.done_callback:
-        dreamRequest.done_callback()
-      self.__signal_service.emit(Signal.job_done(dreamRequest.id()))
+      self.__signal_service.emit(Signal.job_done(jobRequest.id))
 
       # Remove the temp file
       if (initimgfile is not None):
