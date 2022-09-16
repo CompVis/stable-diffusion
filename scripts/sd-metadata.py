@@ -13,7 +13,7 @@ filenames = sys.argv[1:]
 for f in filenames:
     try:
         metadata = retrieve_metadata(f)
-        print(f'{f}:\n',json.dumps(metadata, indent=4))
+        print(f'{f}:\n',json.dumps(metadata['sd-metadata'], indent=4))
     except FileNotFoundError:
         sys.stderr.write(f'{f} not found\n')
         continue
