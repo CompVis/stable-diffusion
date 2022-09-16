@@ -91,6 +91,7 @@ header h1 {
 }
 #fieldset-config {
     line-height:2em;
+    background-color: #F0F0F0;
 }
 input[type="number"] {
     width: 60px;
@@ -122,6 +123,9 @@ label {
     cursor: pointer;
     color: red;
 }
+#basic-parameters {
+    background-color: #EEEEEE;
+}
 #txt2img {
     background-color: #DCDCDC;
 }
@@ -129,15 +133,19 @@ label {
     background-color: #EEEEEE;
 }
 #img2img {
-    background-color: #F5F5F5;
+    background-color: #DCDCDC;
 }
 #gfpgan {
-    background-color: #DCDCDC;
+    background-color: #EEEEEE;
 }
 #progress-section {
     background-color: #F5F5F5;
 }
-
+.section-header {
+    text-align: left;
+    font-weight: bold;
+    padding: 0 0 0 0;
+}
 #no-results-message:not(:only-child) {
     display: none;
 }

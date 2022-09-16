@@ -1,0 +1,2 @@
+mkdocs-material
+mkdocs-git-revision-date-plugin>=0.3.2
