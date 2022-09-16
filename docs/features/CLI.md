@@ -99,8 +99,8 @@ These arguments are deprecated but still work:
 
 On Windows systems, you may run into problems when passing the dream script standard backslashed
 path names because the Python interpreter treats "\" as an escape. You can either double your
-slashes (ick): C:\\\\path\\\\to\\\\my\\\\file, or use Linux/Mac style forward slashes (better):
-C:/path/to/my/file.
+slashes (ick): `C:\\\\path\\\\to\\\\my\\\\file`, or use Linux/Mac style forward slashes (better):
+`C:/path/to/my/file`.
 
 ### List of prompt arguments
 
