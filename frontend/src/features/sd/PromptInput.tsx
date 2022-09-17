@@ -1,5 +1,8 @@
 import { Textarea } from '@chakra-ui/react';
-import { ChangeEvent } from 'react';
+import {
+  ChangeEvent,
+  KeyboardEvent,
+} from 'react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { RootState } from '../../app/store';
 import { setPrompt } from '../sd/sdSlice';
@@ -14,6 +17,13 @@ const PromptInput = () => {
   const handleChangePrompt = (e: ChangeEvent<HTMLTextAreaElement>) =>
     dispatch(setPrompt(e.target.value));
 
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && e.shiftKey === false) {
+      e.preventDefault();
+      dispatch(generateImage())
+    }
+  };
+
   return (
     <Textarea
       id="prompt"
@@ -23,6 +33,7 @@ const PromptInput = () => {
       height={'100%'}
       isInvalid={!prompt.length}
       onChange={handleChangePrompt}
+      onKeyDown={handleKeyDown}
       value={prompt}
       placeholder="I'm dreaming of..."
     />
