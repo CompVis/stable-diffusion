@@ -21,6 +21,8 @@ export const frontendToBackendParameters = (
         iterations,
         steps,
         cfgScale,
+        threshold,
+        perlin,
         height,
         width,
         sampler,
@@ -49,6 +51,8 @@ export const frontendToBackendParameters = (
         iterations,
         steps,
         cfg_scale: cfgScale,
+        threshold,
+        perlin,
         height,
         width,
         sampler_name: sampler,
@@ -111,6 +115,8 @@ export const backendToFrontendParameters = (parameters: {
         iterations,
         steps,
         cfg_scale,
+        threshold,
+        perlin,
         height,
         width,
         sampler_name,
@@ -171,6 +177,8 @@ export const backendToFrontendParameters = (parameters: {
         sd.iterations = iterations;
         sd.steps = steps;
         sd.cfgScale = cfg_scale;
+        sd.threshold = threshold;
+        sd.perlin = perlin;
         sd.height = height;
         sd.width = width;
         sd.sampler = sampler_name;

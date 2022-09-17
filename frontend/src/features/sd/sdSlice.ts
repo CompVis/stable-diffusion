@@ -23,6 +23,8 @@ export interface SDState {
   height: number;
   width: number;
   sampler: string;
+  threshold: number;
+  perlin: number;
   seed: number;
   img2imgStrength: number;
   gfpganStrength: number;
@@ -50,6 +52,8 @@ const initialSDState: SDState = {
   height: 512,
   width: 512,
   sampler: 'k_lms',
+  threshold: 0,
+  perlin: 0,
   seed: 0,
   seamless: false,
   shouldUseInitImage: false,
@@ -92,6 +96,12 @@ export const sdSlice = createSlice({
     },
     setCfgScale: (state, action: PayloadAction<number>) => {
       state.cfgScale = action.payload;
+    },
+    setThreshold: (state, action: PayloadAction<number>) => {
+      state.threshold = action.payload;
+    },
+    setPerlin: (state, action: PayloadAction<number>) => {
+      state.perlin = action.payload;
     },
     setHeight: (state, action: PayloadAction<number>) => {
       state.height = action.payload;
@@ -182,6 +192,8 @@ export const sdSlice = createSlice({
         prompt,
         steps,
         cfgScale,
+        threshold,
+        perlin,
         height,
         width,
         sampler,
@@ -201,6 +213,8 @@ export const sdSlice = createSlice({
       state.prompt = prompt ?? state.prompt;
       state.steps = steps || state.steps;
       state.cfgScale = cfgScale || state.cfgScale;
+      state.threshold = threshold || state.threshold;
+      state.perlin = perlin || state.perlin;
       state.width = width || state.width;
       state.height = height || state.height;
       state.sampler = sampler || state.sampler;
@@ -254,6 +268,8 @@ export const {
   setIterations,
   setSteps,
   setCfgScale,
+  setThreshold,
+  setPerlin,
   setHeight,
   setWidth,
   setSampler,

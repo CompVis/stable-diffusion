@@ -66,7 +66,6 @@ def create_cmd_parser():
     """
     parser = argparse.ArgumentParser(
         description='Example: dream> a fantastic alien landscape -W1024 -H960 -s100 -n12',
-        exit_on_error=True,
     )
     parser.add_argument('prompt', nargs='?', default='')
     parser.add_argument('-s', '--steps', type=int, help='Number of steps')

@@ -9,6 +9,8 @@ export interface SDMetadata {
   prompt?: string;
   steps?: number;
   cfgScale?: number;
+  threshold?: number;
+  perlin?: number;
   height?: number;
   width?: number;
   sampler?: string;
