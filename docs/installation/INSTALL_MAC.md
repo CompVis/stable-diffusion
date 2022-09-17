@@ -31,50 +31,57 @@ some time:
    [sd-v1-4.ckpt (4.27 GB)](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/blob/main/sd-v1-4.ckpt)
    and note where you have saved it (probably the Downloads folder)
 
-While that is downloading, open Terminal and run the following commands one at a
-time.
+While that is downloading, open a Terminal and run the following commands:
 
-```{ .bash .annotate }
-# install brew (and Xcode command line tools):
+```bash title="install brew (and Xcode command line tools)"
 /bin/bash -c \
   "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
 
-# Now there are two different routes to get the Python (miniconda) environment
-# up and running:
-#
-# 1. Alongside pyenv
-# 2. No pyenv
-#
-# If you don't know what we are talking about, choose 2.
+!!! quote "Conda Installation"
+    Now there are two different ways to set up the Python (miniconda) environment:
 
-# NOW EITHER DO
-# 1. Installing alongside pyenv
+    1. Standalone
+    2. with pyenv
+    
+    If you don't know what we are talking about, choose Standalone
 
-brew install pyenv-virtualenv # (1)
-pyenv install anaconda3-2022.05
-pyenv virtualenv anaconda3-2022.05
-eval "$(pyenv init -)"
-pyenv activate anaconda3-2022.05
+    === "Standalone"
 
-# OR,
-# 2. Installing standalone
-# install cmake and rust:
-brew install cmake rust
+        ```bash
+        # install cmake and rust:
+        brew install cmake rust
+        ```
 
-# install miniconda for M1 arm64:
-curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh \
-  -o Miniconda3-latest-MacOSX-arm64.sh
-/bin/bash Miniconda3-latest-MacOSX-arm64.sh
+        === "M1 arm64"
 
-# OR install miniconda for Intel:
-curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh \
-  -o Miniconda3-latest-MacOSX-x86_64.sh
-/bin/bash Miniconda3-latest-MacOSX-x86_64.sh
+            ```bash
+            # install miniconda for M1 arm64:
+            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh \
+              -o Miniconda3-latest-MacOSX-arm64.sh
+            /bin/bash Miniconda3-latest-MacOSX-arm64.sh
+            ```
 
+        === "Intel x86_64"
 
-# EITHER WAY,
-# continue from here
+            ```bash
+            # OR install miniconda for Intel:
+            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh \
+              -o Miniconda3-latest-MacOSX-x86_64.sh
+            /bin/bash Miniconda3-latest-MacOSX-x86_64.sh
+            ```
 
+    === "with pyenv"
+
+        ```bash
+        brew install pyenv-virtualenv # you might already have this installed, no problem
+        pyenv install anaconda3-2022.05
+        pyenv virtualenv anaconda3-2022.05
+        eval "$(pyenv init -)"
+        pyenv activate anaconda3-2022.05
+        ```
+
+```{.bash .annotate}
 # clone the repo
 git clone https://github.com/lstein/stable-diffusion.git
 cd stable-diffusion
@@ -84,44 +91,54 @@ cd stable-diffusion
 # create symlink to checkpoint
 mkdir -p models/ldm/stable-diffusion-v1/
 
-PATH_TO_CKPT="$HOME/Downloads" # (2)
+PATH_TO_CKPT="$HOME/Downloads" # (1)
 
 ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" \
   models/ldm/stable-diffusion-v1/model.ckpt
 
-# install packages for arm64
-PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 \
-  conda env create \
-  -f environment-mac.yaml
-conda activate ldm
+```
 
-# OR install packages for x86_64
-PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-x86_64 \
-  conda env create \
-  -f environment-mac.yaml
-conda activate ldm
+1. or wherever you saved sd-v1-4.ckpt
 
+!!! quote "Please install the propper package for your Architecture:"
+
+    === "M1 arm64"
+
+        ```bash
+        PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 \
+          conda env create \
+          -f environment-mac.yaml \
+          && conda activate ldm
+        ```
+
+    === "Intel x86_64"
+
+        ```bash
+        PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-x86_64 \
+          conda env create \
+          -f environment-mac.yaml \
+          && conda activate ldm
+        ```
+
+```{.bash .annotate}
 # only need to do this once
 python scripts/preload_models.py
 
-# run SD!
-python scripts/dream.py --full_precision  # (3)
+# now you can run SD in CLI mode
+python scripts/dream.py --full_precision  # (1)
 
 # or run the web interface!
 python scripts/dream.py --web
-```
 
-1. you might have this from before, no problem
-2. or wherever you saved sd-v1-4.ckpt
-3. half-precision requires autocast and won't work
-
-The original scripts should work as well.
-
-```bash
+# The original scripts should work as well.
 python scripts/orig_scripts/txt2img.py \
   --prompt "a photograph of an astronaut riding a horse" \
   --plms
 ```
+
+1. half-precision requires autocast which is unfortunatelly incompatible
+
+---
 
 Note:
 
