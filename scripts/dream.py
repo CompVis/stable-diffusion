@@ -218,10 +218,14 @@ def main_loop(gen, opt, infile):
             file_writer = PngWriter(current_outdir)
             prefix = file_writer.unique_prefix()
             results = []  # list of filename, prompt pairs
-            grid_images = dict()  # seed -> Image, only used if `opt.grid`
+            grid_images      = dict()  # seed -> Image, only used if `opt.grid`
+            prior_variations = opt.with_variations or []
+            first_seed       = opt.seed
 
             def image_writer(image, seed, upscaled=False):
                 path = None
+                nonlocal first_seed
+                nonlocal prior_variations
                 if opt.grid:
                     grid_images[seed] = image
                 else:
@@ -229,20 +233,13 @@ def main_loop(gen, opt, infile):
                         filename = f'{prefix}.{seed}.postprocessed.png'
                     else:
                         filename = f'{prefix}.{seed}.png'
-                    # the handling of variations is probably broken
-                    # Also, given the ability to add stuff to the dream_prompt_str, it isn't
-                    # necessary to make a copy of the opt option just to change its attributes
                     if opt.variation_amount > 0:
-                        iter_opt       = copy.copy(opt)
-                        this_variation = [[seed, opt.variation_amount]]
-                        if opt.with_variations is None:
-                            iter_opt.with_variations = this_variation
-                        else:
-                            iter_opt.with_variations = opt.with_variations + this_variation
-                        iter_opt.variation_amount = 0
-                        formatted_dream_prompt = iter_opt.dream_prompt_str(seed=seed)
-                    elif opt.with_variations is not None:
-                        formatted_dream_prompt = opt.dream_prompt_str(seed=seed)
+                        first_seed             = first_seed or seed
+                        this_variation         = [[seed, opt.variation_amount]]
+                        opt.with_variations    = prior_variations + this_variation
+                        formatted_dream_prompt = opt.dream_prompt_str(seed=first_seed)
+                    elif len(prior_variations) > 0:
+                        formatted_dream_prompt = opt.dream_prompt_str(seed=first_seed)
                     else:
                         formatted_dream_prompt = opt.dream_prompt_str(seed=seed)
                     path = file_writer.save_image_and_prompt_to_png(
