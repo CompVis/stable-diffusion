@@ -23,7 +23,6 @@ RUN         apt update && apt upgrade -y \
             libglib2.0-0 \
             pip \
             python3 \
-            wget \
             && git clone $GITHUB_STABLE_DIFFUSION
 
 # Install Anaconda or Miniconda
@@ -48,7 +47,6 @@ RUN         git clone https://github.com/TencentARC/GFPGAN.git
 WORKDIR     /GFPGAN 
 RUN         pip3 install -r requirements.txt \
             && python3 setup.py develop \
-            # && wget https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth -P experiments/pretrained_models 
             && ln -s "/data/GFPGANv1.3.pth" experiments/pretrained_models/GFPGANv1.3.pth
 
 WORKDIR     /stable-diffusion 
