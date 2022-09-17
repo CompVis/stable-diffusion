@@ -1,4 +1,8 @@
-# **Embiggen -- upscale your images on limited memory machines**
+---
+title: Embiggen
+---
+
+**upscale your images on limited memory machines**
 
 GFPGAN and Real-ESRGAN are both memory intensive. In order to avoid
 crashes and memory overloads during the Stable Diffusion process,
@@ -16,7 +20,7 @@ face restore a particular generated image, pass it again with the same
 prompt and generated seed along with the `-U` and `-G` prompt
 arguments to perform those actions.
 
-## Embiggen 
+## Embiggen
 
 If you wanted to be able to do more (pixels) without running out of VRAM,
 or you want to upscale with details that couldn't possibly appear
@@ -37,7 +41,7 @@ it's similar to that, except it can work up to an arbitrarily large size
 has extra logic to re-run any number of the tile sub-sections of the image
 if for example a small part of a huge run got messed up.
 
-**Usage**
+## Usage
 
 `-embiggen <scaling_factor> <esrgan_strength> <overlap_ratio OR overlap_pixels>`
 
@@ -95,12 +99,12 @@ Tiles are numbered starting with one, and left-to-right,
 top-to-bottom.  So, if you are generating a 3x3 tiled image, the
 middle row would be `4 5 6`.
 
-**Example Usage**
+## Example Usage
 
 Running Embiggen with 512x512 tiles on an existing image, scaling up by a factor of 2.5x;
 and doing the same again (default ESRGAN strength is 0.75, default overlap between tiles is 0.25):
 
-```
+```bash
 dream > a photo of a forest at sunset -s 100 -W 512 -H 512 -I outputs/forest.png -f 0.4 -embiggen 2.5
 dream > a photo of a forest at sunset -s 100 -W 512 -H 512 -I outputs/forest.png -f 0.4 -embiggen 2.5 0.75 0.25
 ```
@@ -112,11 +116,11 @@ If there weren't enough clouds in the sky of that forest you just made
 512x512 tiles with 0.25 overlaps wide) we can replace that top row of
 tiles:
 
-```
+```bash
 dream> a photo of puffy clouds over a forest at sunset -s 100 -W 512 -H 512 -I outputs/000002.seed.png -f 0.5 -embiggen_tiles 1 2 3
 ```
 
-**Note**
+## Note
 
 Because the same prompt is used on all the tiled images, and the model
 doesn't have the context of anything outside the tile being run - it
