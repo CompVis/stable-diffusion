@@ -4,6 +4,8 @@
 
 ![project logo](docs/assets/logo.png)
 
+[![discord badge]][discord link]
+
 [![latest release badge]][latest release link] [![github stars badge]][github stars link] [![github forks badge]][github forks link]
 
 [![CI checks on main badge]][CI checks on main link] [![CI checks on dev badge]][CI checks on dev link] [![latest commit to dev badge]][latest commit to dev link]
@@ -13,7 +15,9 @@
 [CI checks on dev badge]: https://flat.badgen.net/github/checks/lstein/stable-diffusion/development?label=CI%20status%20on%20dev&cache=900&icon=github
 [CI checks on dev link]: https://github.com/lstein/stable-diffusion/actions?query=branch%3Adevelopment
 [CI checks on main badge]: https://flat.badgen.net/github/checks/lstein/stable-diffusion/main?label=CI%20status%20on%20main&cache=900&icon=github
-[CI checks on main link]: https://github.com/lstein/stable-diffusion/actions?query=branch%3Amain
+[CI checks on main link]: https://github.com/lstein/stable-diffusion/actions/workflows/test-dream-conda.yml
+[discord badge]: https://flat.badgen.net/discord/members/htRgbc7e?icon=discord
+[discord link]: https://discord.com/invite/htRgbc7e
 [github forks badge]: https://flat.badgen.net/github/forks/lstein/stable-diffusion?icon=github
 [github forks link]: https://useful-forks.github.io/?repo=lstein%2Fstable-diffusion
 [github open issues badge]: https://flat.badgen.net/github/open-issues/lstein/stable-diffusion?icon=github
