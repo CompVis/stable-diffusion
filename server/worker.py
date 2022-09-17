@@ -11,7 +11,12 @@ import requests
 dotenv_path = join(dirname(__file__), '../.env')
 load_dotenv(dotenv_path)
 
-r = redis.Redis()
+r = redis.Redis(
+    host= os.environ.get('REDIS_HOST', 'redis://localhost'),
+    port= os.environ.get('REDIS_PORT', '6379'),
+    password= os.environ.get('REDIS_PASSWORD'),
+    ssl=False
+)
 
 def create_image(prompt, args):
     """Create image and upload to S3"""
@@ -42,4 +47,6 @@ while True:
     if data:
         data = json.loads(data)
         create_image(data['prompt'], data)
+    
+    time.sleep(0.25)
 

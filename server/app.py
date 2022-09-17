@@ -2,15 +2,23 @@ import os
 import redis
 import json
 import uuid
+from os.path import join, dirname
 
 from flask import Flask, request, jsonify
 from time import time
 from dotenv import load_dotenv
 
-load_dotenv('../.env')
+dotenv_path = join(dirname(__file__), '../.env')
+load_dotenv(dotenv_path)
 
 app = Flask(__name__)
-r = redis.Redis()
+
+r = redis.Redis(
+    host= os.environ.get('REDIS_HOST', 'redis://localhost'),
+    port= os.environ.get('REDIS_PORT', '6379'),
+    password= os.environ.get('REDIS_PASSWORD'),
+    ssl=False
+)
 
 
 def verify_api_key():
@@ -68,4 +76,4 @@ def heartbeat():
     return 'OK!'
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=3001, debug=True)
+    app.run(host='0.0.0.0', port=3001, debug=False)
