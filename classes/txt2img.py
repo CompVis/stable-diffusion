@@ -150,15 +150,15 @@ class Txt2Img(BaseModel):
         start_code = self.start_code
         base_count = self.base_count
         self.set_seed()
-
-        precision_scope = autocast if opt.precision == "autocast" else nullcontext
-
+        precision_scope = nullcontext
+        if opt.precision == "autocast":
+            precision_scope = autocast
         saved_files = []
         with torch.no_grad():
             with precision_scope("cuda"):
                 with model.ema_scope():
                     for _n in trange(opt.n_iter, desc="Sampling"):
-                        print("sample")
+                        self.log.info("sample")
                         for prompts in tqdm(data, desc="data"):
                             uc = None
                             if opt.scale != 1.0:
@@ -166,30 +166,45 @@ class Txt2Img(BaseModel):
                             if isinstance(prompts, tuple):
                                 prompts = list(prompts)
                             c = model.get_learned_conditioning(prompts)
-                            shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
-                            samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
-                                                             conditioning=c,
-                                                             batch_size=opt.n_samples,
-                                                             shape=shape,
-                                                             verbose=False,
-                                                             unconditional_guidance_scale=opt.scale,
-                                                             unconditional_conditioning=uc,
-                                                             eta=opt.ddim_eta,
-                                                             x_T=start_code)
-
-                            x_samples_ddim = self.get_first_stage_sample(model, samples_ddim)
-                            x_samples_ddim = x_samples_ddim.cpu().permute(0, 2, 3, 1).numpy()
-
-                            x_checked_image = self.filter_nsfw_content(x_samples_ddim)
-                            x_checked_image_torch = torch.from_numpy(x_checked_image).permute(0, 3, 1, 2)
-
-                            if not opt.skip_save:
-                                file_name = self.save_image(
-                                    x_checked_image_torch,
-                                    sample_path,
-                                    base_count
-                                )
-                                saved_files.append(file_name)
-                                base_count += 1
+                            samples_ddim, _ = sampler.sample(
+                                S=opt.ddim_steps,
+                                conditioning=c,
+                                batch_size=opt.n_samples,
+                                shape=[
+                                    opt.C,
+                                    opt.H // opt.f,
+                                    opt.W // opt.f
+                                ],
+                                verbose=False,
+                                unconditional_guidance_scale=opt.scale,
+                                unconditional_conditioning=uc,
+                                eta=opt.ddim_eta,
+                                x_T=start_code
+                            )
+                            image = self.prepare_image(model, samples_ddim)
+                            saved_files, base_count = self.handle_save_image(
+                                image,
+                                saved_files,
+                                base_count,
+                                sample_path,
+                                opt)
 
         return saved_files
+
+    def handle_save_image(self, image, saved_files, base_count, sample_path, opt):
+        if not opt.skip_save:
+            file_name = self.save_image(
+                image,
+                sample_path,
+                base_count
+            )
+            saved_files.append(file_name)
+            base_count += 1
+        return saved_files, base_count
+
+    def prepare_image(self, model, samples_ddim):
+        x_samples_ddim = self.get_first_stage_sample(model, samples_ddim)
+        x_samples_ddim = x_samples_ddim.cpu().permute(0, 2, 3, 1).numpy()
+        x_checked_image = self.filter_nsfw_content(x_samples_ddim)
+        x_checked_image_torch = torch.from_numpy(x_checked_image).permute(0, 3, 1, 2)
+        return x_checked_image_torch
