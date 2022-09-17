@@ -5,11 +5,16 @@
 </p>
 
 <p align="center">
-    <img src="https://img.shields.io/github/last-commit/lstein/stable-diffusion?logo=Python&logoColor=green&style=for-the-badge" alt="last-commit"/>
-    <img src="https://img.shields.io/github/stars/lstein/stable-diffusion?logo=GitHub&style=for-the-badge" alt="stars"/>
-    <br>
-    <img src="https://img.shields.io/github/issues/lstein/stable-diffusion?logo=GitHub&style=for-the-badge" alt="issues"/>
-    <img src="https://img.shields.io/github/issues-pr/lstein/stable-diffusion?logo=GitHub&style=for-the-badge" alt="pull-requests"/>
+    <a href="https://github.com/lstein/stable-diffusion/releases"><img src="https://flat.badgen.net/github/release/lstein/stable-diffusion/development?icon=github" alt="release"/></a>
+    <a href="https://github.com/lstein/stable-diffusion/stargazers"><img src="https://flat.badgen.net/github/stars/lstein/stable-diffusion?icon=github" alt="stars"/></a>
+    <a href="https://useful-forks.github.io/?repo=lstein%2Fstable-diffusion"><img src="https://flat.badgen.net/github/forks/lstein/stable-diffusion?icon=github" alt="forks"/></a>
+    <br />
+    <a href="https://github.com/lstein/stable-diffusion/actions/workflows/test-dream-conda.yml"><img src="https://flat.badgen.net/github/checks/lstein/stable-diffusion/main?label=CI%20status%20on%20main&cache=900&icon=github" alt="CI status on main"/></a>
+    <a href="https://github.com/lstein/stable-diffusion/actions/workflows/test-dream-conda.yml"><img src="https://flat.badgen.net/github/checks/lstein/stable-diffusion/development?label=CI%20status%20on%20dev&cache=900&icon=github" alt="CI status on dev"/></a>
+    <a href="https://github.com/lstein/stable-diffusion/commits/development"><img src="https://flat.badgen.net/github/last-commit/lstein/stable-diffusion/development?icon=github&color=yellow&label=last%20dev%20commit&cache=900" alt="last-dev-commit"/></a>
+    <br />
+    <a href="https://github.com/lstein/stable-diffusion/issues?q=is%3Aissue+is%3Aopen"><img src="https://flat.badgen.net/github/open-issues/lstein/stable-diffusion?icon=github" alt="open-issues"/></a>
+    <a href="https://github.com/lstein/stable-diffusion/pulls?q=is%3Apr+is%3Aopen"><img src="https://flat.badgen.net/github/open-prs/lstein/stable-diffusion?icon=github" alt="open-prs"/></a>
 </p>
 
 This is a fork of [CompVis/stable-diffusion](https://github.com/CompVis/stable-diffusion), the open

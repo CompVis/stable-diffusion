@@ -78,7 +78,7 @@ class DreamServer(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "text/html")
             self.end_headers()
-            with open("./static/dream_web/index.html", "rb") as content:
+            with open("./static/legacy_web/index.html", "rb") as content:
                 self.wfile.write(content.read())
         elif self.path == "/config.js":
             # unfortunately this import can't be at the top level, since that would cause a circular import
@@ -96,7 +96,7 @@ class DreamServer(BaseHTTPRequestHandler):
             self.end_headers()
             output = []
             
-            log_file = os.path.join(self.outdir, "dream_web_log.txt")
+            log_file = os.path.join(self.outdir, "legacy_web_log.txt")
             if os.path.exists(log_file):
                 with open(log_file, "r") as log:
                     for line in log:
@@ -116,7 +116,7 @@ class DreamServer(BaseHTTPRequestHandler):
         else:
             path_dir = os.path.dirname(self.path)
             out_dir  = os.path.realpath(self.outdir.rstrip('/'))
-            if self.path.startswith('/static/dream_web/'):
+            if self.path.startswith('/static/legacy_web/'):
                 path = '.' + self.path
             elif out_dir.replace('\\', '/').endswith(path_dir):
                 file = os.path.basename(self.path)
@@ -190,7 +190,7 @@ class DreamServer(BaseHTTPRequestHandler):
                 config['seed'] = seed
             # Append post_data to log, but only once!
             if not upscaled:
-                with open(os.path.join(self.outdir, "dream_web_log.txt"), "a") as log:
+                with open(os.path.join(self.outdir, "legacy_web_log.txt"), "a") as log:
                     log.write(f"{path}: {json.dumps(config)}\n")
 
                 self.wfile.write(bytes(json.dumps(

@@ -105,6 +105,7 @@ class Args(object):
         try:
             elements = shlex.split(command)
         except ValueError:
+            import sys, traceback
             print(traceback.format_exc(), file=sys.stderr)
             return
         switches = ['']
@@ -189,10 +190,10 @@ class Args(object):
             pass
 
         if cmd_switches and arg_switches and name=='__dict__':
-            a = arg_switches.__dict__
-            a.update(cmd_switches.__dict__)
-            return a
-
+            return self._merge_dict(
+                arg_switches.__dict__,
+                cmd_switches.__dict__,
+            )
         try:
             return object.__getattribute__(self,name)
         except AttributeError:
@@ -216,19 +217,22 @@ class Args(object):
         # the arg value. For example, the --grid and --individual options are a little
         # funny because of their push/pull relationship. This is how to handle it.
         if name=='grid':
-            return value_arg or value_cmd  # arg supersedes cmd
-        if name=='individual':
-            return value_cmd or value_arg  # cmd supersedes arg
-        if value_cmd is not None:
-            return value_cmd
-        else:
-            return value_arg
+            return not cmd_switches.individual and value_arg  # arg supersedes cmd
+        return value_cmd if value_cmd is not None else value_arg
 
     def __setattr__(self,name,value):
         if name.startswith('_'):
             object.__setattr__(self,name,value)
         else:
             self._cmd_switches.__dict__[name] = value
+
+    def _merge_dict(self,dict1,dict2):
+        new_dict  = {}
+        for k in set(list(dict1.keys())+list(dict2.keys())):
+            value1 = dict1.get(k,None)
+            value2 = dict2.get(k,None)
+            new_dict[k] = value2 if value2 is not None else value1
+        return new_dict
 
     def _create_arg_parser(self):
         '''
@@ -269,6 +273,17 @@ class Args(object):
             help='Indicates which diffusion model to load. (currently "stable-diffusion-1.4" (default) or "laion400m")',
         )
         model_group.add_argument(
+            '--sampler',
+            '-A',
+            '-m',
+            dest='sampler_name',
+            type=str,
+            choices=SAMPLER_CHOICES,
+            metavar='SAMPLER_NAME',
+            help=f'Switch to a different sampler. Supported samplers: {", ".join(SAMPLER_CHOICES)}',
+            default='k_lms',
+        )
+        model_group.add_argument(
             '-F',
             '--full_precision',
             dest='full_precision',
@@ -293,11 +308,6 @@ class Args(object):
             '-p',
             action='store_true',
             help='Place images in subdirectories named after the prompt.',
-        )
-        render_group.add_argument(
-            '--seamless',
-            action='store_true',
-            help='Change the model to seamless tiling (circular) mode',
         )
         render_group.add_argument(
             '--grid',
@@ -393,14 +403,12 @@ class Args(object):
             '--width',
             type=int,
             help='Image width, multiple of 64',
-            default=512
         )
         render_group.add_argument(
             '-H',
             '--height',
             type=int,
             help='Image height, multiple of 64',
-            default=512,
         )
         render_group.add_argument(
             '-C',
@@ -416,8 +424,8 @@ class Args(object):
             help='generate a grid'
         )
         render_group.add_argument(
-            '--individual',
             '-i',
+            '--individual',
             action='store_true',
             help='override command-line --grid setting and generate individual images'
         )
@@ -436,7 +444,6 @@ class Args(object):
             choices=SAMPLER_CHOICES,
             metavar='SAMPLER_NAME',
             help=f'Switch to a different sampler. Supported samplers: {", ".join(SAMPLER_CHOICES)}',
-            default='k_lms',
         )
         render_group.add_argument(
             '-t',
@@ -448,7 +455,6 @@ class Args(object):
             '--outdir',
             '-o',
             type=str,
-            default='outputs/img-samples',
             help='Directory to save generated images and a log of prompts and seeds',
         )
         img2img_group.add_argument(

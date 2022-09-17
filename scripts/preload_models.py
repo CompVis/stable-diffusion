@@ -10,6 +10,7 @@ import sys
 import transformers
 import os
 import warnings
+import urllib.request
 
 transformers.logging.set_verbosity_error()
 
@@ -81,6 +82,16 @@ if gfpgan:
         print('...success')
     except Exception:
         import traceback
+        print('Error loading ESRGAN:')
+        print(traceback.format_exc())
 
+    try:
+        import urllib.request
+        model_path = 'https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth'
+        model_dest = 'src/gfpgan/experiments/pretrained_models/GFPGANv1.3.pth'
+        print('downloading gfpgan model file...')
+        urllib.request.urlretrieve(model_path,model_dest)
+    except Exception:
+        import traceback
         print('Error loading GFPGAN:')
         print(traceback.format_exc())
