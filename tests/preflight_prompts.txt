@@ -1,0 +1,9 @@
+banana sushi -Ak_lms -S42
+banana sushi -Addim -S42
+banana sushi -Ak_lms -W640 -H480 -S42
+banana sushi -Ak_lms -S42 -G1 -U 2 0.5
+banana sushi -Ak_lms -S42 -v0.2 -n3
+banana sushi -Ak_lms -S42 -V1349749425:0.1,4145759947:0.1
+snake -I outputs/preflight/000006.4145759947.png -S42
+snake -I outputs/preflight/000006.4145759947.png -S42 -W640 -H640 --fit
+strawberry sushi -I./image-and-mask.png -S42 -f0.9 -s100 -C15
