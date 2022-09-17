@@ -143,7 +143,7 @@ class Args(object):
         a = vars(self)
         a.update(kwargs)
         switches = list()
-        switches.append(f'"{a["prompt"]}')
+        switches.append(f'"{a["prompt"]}"')
         switches.append(f'-s {a["steps"]}')
         switches.append(f'-W {a["width"]}')
         switches.append(f'-H {a["height"]}')
@@ -152,15 +152,13 @@ class Args(object):
         switches.append(f'-S {a["seed"]}')
         if a['grid']:
             switches.append('--grid')
-        if a['iterations'] and a['iterations']>0:
-            switches.append(f'-n {a["iterations"]}')
         if a['seamless']:
             switches.append('--seamless')
         if a['init_img'] and len(a['init_img'])>0:
             switches.append(f'-I {a["init_img"]}')
         if a['fit']:
             switches.append(f'--fit')
-        if a['strength'] and a['strength']>0:
+        if a['init_img'] and a['strength'] and a['strength']>0:
             switches.append(f'-f {a["strength"]}')
         if a['gfpgan_strength']:
             switches.append(f'-G {a["gfpgan_strength"]}')

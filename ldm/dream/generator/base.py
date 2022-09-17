@@ -101,7 +101,7 @@ class Generator():
                 next_noise = self.get_noise(width,height)
                 initial_noise = self.slerp(v_weight, initial_noise, next_noise)
             if self.variation_amount > 0:
-                random.seed() # reset RNG to an actually random state, so we can get a random seed for variations
+#                random.seed() # reset RNG to an actually random state, so we can get a random seed for variations
                 seed = random.randrange(0,np.iinfo(np.uint32).max)
             return (seed, initial_noise)
         else:
