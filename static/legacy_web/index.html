@@ -73,8 +73,14 @@
           <button type="button" id="reset-seed">&olarr;</button>
           <input type="checkbox" name="progress_images" id="progress_images">
 	  <label for="progress_images">Display in-progress images (slower)</label>
-	  <button type="button" id="reset-all">Reset to Defaults</button>
-	  <span id="variations">
+    <div>
+      <label title="If > 0, adds thresholding to restrict values for k-diffusion samplers (0 disables)" for="threshold">Threshold:</label>
+      <input value="0" type="number" id="threshold" name="threshold" step="0.1" min="0">
+      <label title="Perlin: optional 0-1 value adds a percentage of perlin noise to the initial noise" for="perlin">Perlin:</label>
+      <input value="0" type="number" id="perlin" name="perlin"  step="0.01" min="0" max="1">
+      <button type="button" id="reset-all">Reset to Defaults</button>
+    </div>
+    <span id="variations">
             <label title="If > 0, generates variations on the initial seed instead of random seeds per iteration. Must be between 0 and 1. Higher values will be more different." for="variation_amount">Variation amount (0 to disable):</label>
             <input value="0" type="number" id="variation_amount" name="variation_amount" step="0.01" min="0" max="1">
             <label title="list of variations to apply, in the format `seed:weight,seed:weight,..." for="with_variations">With variations (seed:weight,seed:weight,...):</label>
