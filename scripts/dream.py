@@ -100,6 +100,7 @@ def main_loop(gen, opt, infile):
     done = False
     path_filter = re.compile(r'[<>:"/\\|?*]')
     last_results = list()
+    model_config = OmegaConf.load(opt.conf)[opt.model]
 
     # os.pathconf is not available on Windows
     if hasattr(os, 'pathconf'):
@@ -138,6 +139,12 @@ def main_loop(gen, opt, infile):
             print('\nTry again with a prompt!')
             continue
 
+        # width and height are set by model if not specified
+        if not opt.width:
+            opt.width = model_config.width
+        if not opt.height:
+            opt.height = model_config.height
+        
         # retrieve previous value!
         if opt.init_img is not None and re.match('^-\\d+$', opt.init_img):
             try:
