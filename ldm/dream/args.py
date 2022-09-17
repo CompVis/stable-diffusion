@@ -61,6 +61,7 @@ import json
 import hashlib
 import os
 import copy
+import base64
 from ldm.dream.conditioning import split_weighted_subprompts
 
 SAMPLER_CHOICES = [
@@ -593,7 +594,7 @@ def format_metadata(opt,
     if opt.init_img:
         rfc_dict['type']           = 'img2img'
         rfc_dict['strength_steps'] = rfc_dict.pop('strength')
-        rfc_dict['orig_hash']      = sha256(image_dict['init_img'])
+        rfc_dict['orig_hash']      = calculate_init_img_hash(opt.init_img)
         rfc_dict['sampler']        = 'ddim'  # FIX ME WHEN IMG2IMG SUPPORTS ALL SAMPLERS
     else:
         rfc_dict['type']  = 'txt2img'
@@ -611,6 +612,23 @@ def format_metadata(opt,
         'app_version' : APP_VERSION,
         'images'      : images,
     }
+
+# image can either be a file path on disk or a base64-encoded
+# representation of the file's contents
+def calculate_init_img_hash(image_string):
+    prefix = 'data:image/png;base64,'
+    hash   = None
+    if image_string.startswith(prefix):
+        imagebase64 = image_string[len(prefix):]
+        imagedata   = base64.b64decode(imagebase64)
+        with open('outputs/test.png','wb') as file:
+            file.write(imagedata)
+        sha = hashlib.sha256()
+        sha.update(imagedata)
+        hash = sha.hexdigest()
+    else:
+        hash = sha256(image_string)
+    return hash
 
 # Bah. This should be moved somewhere else...
 def sha256(path):
