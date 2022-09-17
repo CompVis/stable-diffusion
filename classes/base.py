@@ -3,6 +3,7 @@ import os
 import torch
 import numpy as np
 import cv2
+import logging
 from PIL import Image
 from einops import rearrange
 from imwatermark import WatermarkEncoder
@@ -94,6 +95,7 @@ class BaseModel:
 
     def __init__(self, *args, **kwargs):
         self.opt = {}
+        self.initialize_logging()
         self.do_nsfw_filter = kwargs.get("do_nsfw_filter", False)
         self.do_watermark = kwargs.get("do_watermark", False)
         self.parser = None
@@ -112,6 +114,18 @@ class BaseModel:
         self.precision_scope = None
         self.initialized = False
         self.init_model(kwargs.get("options", {}))
+
+
+    def initialize_logging(self):
+        # create path and file if not exist
+        path = f"{os.path.dirname(os.path.realpath(__file__))}/../log/stablediffusiond.log"
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
+        if not os.path.exists(path):
+            open(path, 'a').close()
+        self.log = logging.getLogger(__name__)
+        self.log.setLevel(logging.INFO)
+        self.log.addHandler(logging.FileHandler(path))
 
     @property
     def plms_sampler(self):
@@ -157,8 +171,6 @@ class BaseModel:
         :param options: options to parse
         :return:
         """
-        print("parse_options")
-        print(options)
         for opt in options:
             if opt[0] in self.opt:
                 self.opt.__setattr__(opt[0], opt[1])
@@ -169,7 +181,7 @@ class BaseModel:
         :return:
         """
         if self.opt.__contains__("laion400m") and self.opt.laion400m:
-            print("Falling back to LAION 400M model...")
+            self.log.info("Falling back to LAION 400M model...")
             self.opt.config = "configs/latent-diffusion/txt2img-1p4B-eval.yaml"
             self.opt.ckpt = "models/ldm/text2img-large/model.ckpt"
             self.opt.outdir = "outputs/txt2img-samples-laion400m"
@@ -214,7 +226,7 @@ class BaseModel:
         Initialize the watermark encoder
         :return:
         """
-        print("Creating invisible watermark encoder (see https://github.com/ShieldMnt/invisible-watermark)...")
+        self.log.info("Creating invisible watermark encoder (see https://github.com/ShieldMnt/invisible-watermark)...")
         wm = "StableDiffusionV1"
         self.wm_encoder = WatermarkEncoder()
         self.wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
@@ -254,7 +266,7 @@ class BaseModel:
             data = [batch_size * [prompt]]
 
         else:
-            print(f"reading prompts from {from_file}")
+            self.log.info(f"reading prompts from {from_file}")
             with open(from_file, "r") as f:
                 data = f.read().splitlines()
                 data = list(chunk(data, batch_size))
@@ -268,8 +280,6 @@ class BaseModel:
         :return:
         """
         sample_path = self.outpath
-        print("*" * 80)
-        print(sample_path)
         os.makedirs(sample_path, exist_ok=True)
         self.sample_path = sample_path
 
@@ -312,8 +322,6 @@ class BaseModel:
         :param options:
         :return:
         """
-        print("SAMPLING from model wrapper")
-        print(options)
         self.init_model(options)
         self.set_precision_scope()
         self.base_count = len(os.listdir(self.sample_path))
