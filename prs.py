@@ -1,8 +1,8 @@
 import argparse, os, sys, glob
 import random
 import shutil
-from tkinter import E
 import torch
+import re
 from torch import nn
 from torch import Tensor
 import numpy as np
@@ -33,7 +33,6 @@ import json5 as json
 
 try:
     # this silences the annoying "Some weights of the model checkpoint were not used when initializing..." message at start.
-
     from transformers import logging
     logging.set_verbosity_error()
 except:
@@ -146,6 +145,32 @@ def slerp(device, t, v0:torch.Tensor, v1:torch.Tensor, DOT_THRESHOLD=0.9995):
 
     return v2
 
+def split_weighted_subprompts(input_string, normalize=True):
+    parsed_prompts = [(match.group("prompt").replace("\\:", ":"), float(match.group("weight") or 1)) for match in re.finditer(prompt_parser, input_string)]
+    if not normalize:
+        return parsed_prompts
+    weight_sum = sum(map(lambda x: x[1], parsed_prompts))
+    if weight_sum == 0:
+        print("Warning: Subprompt weights add up to zero. Discarding and using even weights instead.")
+        equal_weight = 1 / (len(parsed_prompts) or 1)
+        return [(x[0], equal_weight) for x in parsed_prompts]
+    return [(x[0], x[1] / weight_sum) for x in parsed_prompts]
+
+prompt_parser = re.compile("""
+    (?P<prompt>     # capture group for 'prompt'
+    (?:\\\:|[^:])+  # match one or more non ':' characters or escaped colons '\:'
+    )               # end 'prompt'
+    (?:             # non-capture group
+    :+              # match one or more ':' characters
+    (?P<weight>     # capture group for 'weight'
+    -?\d+(?:\.\d+)? # match positive or negative integer or decimal number
+    )?              # end weight capture group, make optional
+    \s*             # strip spaces after weight
+    |               # OR
+    $               # else, if no ':' then match end of line
+    )               # end non-capture group
+""", re.VERBOSE)
+
 class CFGDenoiser(nn.Module):
     def __init__(self, model):
         super().__init__()
@@ -231,13 +256,23 @@ def do_run(device, model, opt):
                         prompts = newprompts
 
                         print(f'\nPrompt for this image:\n   {prompts}\n')
+                        # split the prompt if it has : for weighting
+                        normalize_prompt_weights = True
+                        weighted_subprompts = split_weighted_subprompts(prompts[0], normalize_prompt_weights)
 
                         # save a settings file for this image
                         if opt.save_settings:
                             save_settings(opt, prompts[0], grid_count)
 
-                        c = model.get_learned_conditioning(prompts)
-
+                        # sub-prompt weighting used if more than 1
+                        if len(weighted_subprompts) > 1:
+                            c = torch.zeros_like(uc) # i dont know if this is correct.. but it works
+                            for i in range(0, len(weighted_subprompts)):
+                                # note if alpha negative, it functions same as torch.sub
+                                c = torch.add(c, model.get_learned_conditioning(weighted_subprompts[i][0]), alpha=weighted_subprompts[i][1])
+                        else: # just behave like usual
+                            c = model.get_learned_conditioning(prompts)
+                        
                         if opt.variance != 0.0 and n != 0:
                             # add a little extra random noise to get varying output with same seed
                             base_x = og_start_code # torch.randn(rand_size, device=device) * sigmas[0]
