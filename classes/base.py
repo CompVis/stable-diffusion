@@ -267,7 +267,9 @@ class BaseModel:
         Create the sample path
         :return:
         """
-        sample_path = os.path.join(self.outpath, os.path.join("samples", self.opt.outdir))
+        sample_path = self.outpath
+        print("*" * 80)
+        print(sample_path)
         os.makedirs(sample_path, exist_ok=True)
         self.sample_path = sample_path
 
