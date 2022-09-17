@@ -626,6 +626,9 @@ def metadata_dumps(opt,
         rfc_dict['type']  = 'txt2img'
 
     images = []
+    if len(seeds)==0 and opt.seed:
+        seeds=[seed]
+        
     for seed in seeds:
         rfc_dict['seed'] = seed
         images.append(copy.copy(rfc_dict))
