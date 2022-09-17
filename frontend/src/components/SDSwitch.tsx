@@ -11,6 +11,9 @@ interface Props extends SwitchProps {
   width?: string | number;
 }
 
+/**
+ * Customized Chakra FormControl + Switch multi-part component.
+ */
 const SDSwitch = (props: Props) => {
   const {
     label,
@@ -28,7 +31,7 @@ const SDSwitch = (props: Props) => {
             fontSize={fontSize}
             marginBottom={1}
             flexGrow={2}
-            whiteSpace='nowrap'
+            whiteSpace="nowrap"
           >
             {label}
           </FormLabel>

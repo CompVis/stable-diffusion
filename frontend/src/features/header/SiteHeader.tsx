@@ -27,24 +27,36 @@ const systemSelector = createSelector(
   }
 );
 
+/**
+ * Header, includes color mode toggle, settings button, status message.
+ */
 const SiteHeader = () => {
   const { colorMode, toggleColorMode } = useColorMode();
   const { isConnected } = useAppSelector(systemSelector);
 
+  const statusMessage = isConnected
+    ? `Connected to server`
+    : 'No connection to server';
+
+  const statusMessageTextColor = isConnected ? 'green.500' : 'red.500';
+
+  const colorModeIcon = colorMode == 'light' ? <FaMoon /> : <FaSun />;
+
+  // Make FaMoon and FaSun icon apparent size consistent
+  const colorModeIconFontSize = colorMode == 'light' ? 18 : 20;
+
   return (
-    <Flex minWidth='max-content' alignItems='center' gap='1' pl={2} pr={1}>
+    <Flex minWidth="max-content" alignItems="center" gap="1" pl={2} pr={1}>
       <Heading size={'lg'}>Stable Diffusion Dream Server</Heading>
 
       <Spacer />
 
-      <Text textColor={isConnected ? 'green.500' : 'red.500'}>
-        {isConnected ? `Connected to server` : 'No connection to server'}
-      </Text>
+      <Text textColor={statusMessageTextColor}>{statusMessage}</Text>
 
       <SettingsModal>
         <IconButton
-          aria-label='Settings'
-          variant='link'
+          aria-label="Settings"
+          variant="link"
           fontSize={24}
           size={'sm'}
           icon={<MdSettings />}
@@ -52,14 +64,14 @@ const SiteHeader = () => {
       </SettingsModal>
 
       <IconButton
-        aria-label='Link to Github Issues'
-        variant='link'
+        aria-label="Link to Github Issues"
+        variant="link"
         fontSize={23}
         size={'sm'}
         icon={
           <Link
             isExternal
-            href='http://github.com/lstein/stable-diffusion/issues'
+            href="http://github.com/lstein/stable-diffusion/issues"
           >
             <MdHelp />
           </Link>
@@ -67,24 +79,24 @@ const SiteHeader = () => {
       />
 
       <IconButton
-        aria-label='Link to Github Repo'
-        variant='link'
+        aria-label="Link to Github Repo"
+        variant="link"
         fontSize={20}
         size={'sm'}
         icon={
-          <Link isExternal href='http://github.com/lstein/stable-diffusion'>
+          <Link isExternal href="http://github.com/lstein/stable-diffusion">
             <FaGithub />
           </Link>
         }
       />
 
       <IconButton
-        aria-label='Toggle Dark Mode'
+        aria-label="Toggle Dark Mode"
         onClick={toggleColorMode}
-        variant='link'
+        variant="link"
         size={'sm'}
-        fontSize={colorMode == 'light' ? 18 : 20}
-        icon={colorMode == 'light' ? <FaMoon /> : <FaSun />}
+        fontSize={colorModeIconFontSize}
+        icon={colorModeIcon}
       />
     </Flex>
   );

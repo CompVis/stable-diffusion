@@ -1,8 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { SDMetadata } from '../gallery/gallerySlice';
-import randomInt from './util/randomInt';
-import { NUMPY_RAND_MAX, NUMPY_RAND_MIN } from '../../app/constants';
 
 const calculateRealSteps = (
   steps: number,
@@ -12,7 +10,7 @@ const calculateRealSteps = (
   return hasInitImage ? Math.floor(strength * steps) : steps;
 };
 
-export type UpscalingLevel = 0 | 2 | 3 | 4;
+export type UpscalingLevel = 0 | 2 | 4;
 
 export interface SDState {
   prompt: string;
@@ -34,7 +32,7 @@ export interface SDState {
   seamless: boolean;
   shouldFitToWidthHeight: boolean;
   shouldGenerateVariations: boolean;
-  variantAmount: number;
+  variationAmount: number;
   seedWeights: string;
   shouldRunESRGAN: boolean;
   shouldRunGFPGAN: boolean;
@@ -58,7 +56,7 @@ const initialSDState: SDState = {
   maskPath: '',
   shouldFitToWidthHeight: true,
   shouldGenerateVariations: false,
-  variantAmount: 0.1,
+  variationAmount: 0.1,
   seedWeights: '',
   shouldRunESRGAN: false,
   upscalingLevel: 4,
@@ -151,9 +149,6 @@ export const sdSlice = createSlice({
     resetSeed: (state) => {
       state.seed = -1;
     },
-    randomizeSeed: (state) => {
-      state.seed = randomInt(NUMPY_RAND_MIN, NUMPY_RAND_MAX);
-    },
     setParameter: (
       state,
       action: PayloadAction<{ key: string; value: string | number | boolean }>
@@ -171,8 +166,8 @@ export const sdSlice = createSlice({
     setShouldGenerateVariations: (state, action: PayloadAction<boolean>) => {
       state.shouldGenerateVariations = action.payload;
     },
-    setVariantAmount: (state, action: PayloadAction<number>) => {
-      state.variantAmount = action.payload;
+    setVariationAmount: (state, action: PayloadAction<number>) => {
+      state.variationAmount = action.payload;
     },
     setSeedWeights: (state, action: PayloadAction<string>) => {
       state.seedWeights = action.payload;
@@ -267,13 +262,12 @@ export const {
   setInitialImagePath,
   setMaskPath,
   resetSeed,
-  randomizeSeed,
   resetSDState,
   setShouldFitToWidthHeight,
   setParameter,
   setShouldGenerateVariations,
   setSeedWeights,
-  setVariantAmount,
+  setVariationAmount,
   setAllParameters,
   setShouldRunGFPGAN,
   setShouldRunESRGAN,

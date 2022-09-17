@@ -16,6 +16,9 @@ interface Props extends NumberInputProps {
   width?: string | number;
 }
 
+/**
+ * Customized Chakra FormControl + NumberInput multi-part component.
+ */
 const SDNumberInput = (props: Props) => {
   const {
     label,
@@ -31,7 +34,7 @@ const SDNumberInput = (props: Props) => {
       <Flex gap={2} justifyContent={'space-between'} alignItems={'center'}>
         {label && (
           <FormLabel marginBottom={1}>
-            <Text fontSize={fontSize} whiteSpace='nowrap'>
+            <Text fontSize={fontSize} whiteSpace="nowrap">
               {label}
             </Text>
           </FormLabel>
@@ -42,7 +45,7 @@ const SDNumberInput = (props: Props) => {
           keepWithinRange={false}
           clampValueOnBlur={true}
         >
-          <NumberInputField fontSize={'md'}/>
+          <NumberInputField fontSize={'md'} />
           <NumberInputStepper>
             <NumberIncrementStepper />
             <NumberDecrementStepper />

@@ -32,7 +32,7 @@ export const frontendToBackendParameters = (
         maskPath,
         shouldFitToWidthHeight,
         shouldGenerateVariations,
-        variantAmount,
+        variationAmount,
         seedWeights,
         shouldRunESRGAN,
         upscalingLevel,
@@ -71,13 +71,13 @@ export const frontendToBackendParameters = (
     }
 
     if (shouldGenerateVariations) {
-        generationParameters.variation_amount = variantAmount;
+        generationParameters.variation_amount = variationAmount;
         if (seedWeights) {
             generationParameters.with_variations =
                 stringToSeedWeights(seedWeights);
         }
     } else {
-        generationParameters.variation_amount = 0;
+        generationParameters.variation_amount = 0.1;
     }
 
     let esrganParameters: false | { [k: string]: any } = false;
@@ -138,7 +138,7 @@ export const backendToFrontendParameters = (parameters: {
 
     if (variation_amount > 0) {
         sd.shouldGenerateVariations = true;
-        sd.variantAmount = variation_amount;
+        sd.variationAmount = variation_amount;
         if (with_variations) {
             sd.seedWeights = seedWeightsToString(with_variations);
         }
