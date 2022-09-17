@@ -1,0 +1,4 @@
+./venv
+./danbooru-aesthetic
+./logs
+*.ckpt

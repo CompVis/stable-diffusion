@@ -82,11 +82,11 @@ We are also going to download the only the first JSON batch. If you want to trai
 
 Download the 512px folders from 0000 to 0009 (3.86GB):
 ```bash
-rsync rsync://176.9.41.242:873/danbooru2021/512px/000* ./512px/
+rsync -r rsync://176.9.41.242:873/danbooru2021/512px/000* ./512px/
 ```
 Download the first batch of metadata, posts000000000000.json (800MB):
 ``` shell
-rsync -r rsync://176.9.41.242:873/danbooru2021/metadata/posts000000000000.json ./metadata/
+rsync rsync://176.9.41.242:873/danbooru2021/metadata/posts000000000000.json ./metadata/
 ```
 You should now have two folders named: 512px and metadata.
 
@@ -106,8 +106,8 @@ Once the script has finished, you should have a "danbooru-aesthetic" folder, who
 Next we need to put the extracted data into the format required in the section "Dataset requirements". Run the following commands:
 ``` shell
 mkdir danbooru-aesthetic/img danbooru-aesthetic/txt
-mv danbooru-aesthetic/*.jpg labeled_data/img
-mv danbooru-aesthetic/*.txt labeled_data/txt
+mv danbooru-aesthetic/*.jpg danbooru-aesthetic/img
+mv danbooru-aesthetic/*.txt danbooru-aesthetic/txt
 ```
 
 In order to reduce size, zip the contents of labeled_data:

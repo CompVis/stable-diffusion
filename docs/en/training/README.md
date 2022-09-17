@@ -3,6 +3,6 @@ Training is available with waifu-diffusion. Before starting, we remind you that,
 ## Contents
 1. [Dataset](./dataset.md)
 2. [Configuration](./configuration.md)
-3. Executing
+3. [Executing](./executing.md)
 4. Recommendations
 5. FAQ
