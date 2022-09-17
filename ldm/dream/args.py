@@ -105,6 +105,7 @@ class Args(object):
         try:
             elements = shlex.split(command)
         except ValueError:
+            import sys, traceback
             print(traceback.format_exc(), file=sys.stderr)
             return
         switches = ['']
@@ -267,6 +268,17 @@ class Args(object):
             help='Indicates which diffusion model to load. (currently "stable-diffusion-1.4" (default) or "laion400m")',
         )
         model_group.add_argument(
+            '--sampler',
+            '-A',
+            '-m',
+            dest='sampler_name',
+            type=str,
+            choices=SAMPLER_CHOICES,
+            metavar='SAMPLER_NAME',
+            help=f'Switch to a different sampler. Supported samplers: {", ".join(SAMPLER_CHOICES)}',
+            default='k_lms',
+        )
+        model_group.add_argument(
             '-F',
             '--full_precision',
             dest='full_precision',
@@ -386,14 +398,12 @@ class Args(object):
             '--width',
             type=int,
             help='Image width, multiple of 64',
-            default=512
         )
         render_group.add_argument(
             '-H',
             '--height',
             type=int,
             help='Image height, multiple of 64',
-            default=512,
         )
         render_group.add_argument(
             '-C',
@@ -429,7 +439,6 @@ class Args(object):
             choices=SAMPLER_CHOICES,
             metavar='SAMPLER_NAME',
             help=f'Switch to a different sampler. Supported samplers: {", ".join(SAMPLER_CHOICES)}',
-            default='k_lms',
         )
         render_group.add_argument(
             '-t',

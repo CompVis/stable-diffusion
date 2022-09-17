@@ -123,7 +123,7 @@ def main_loop(gen, opt, infile):
         if command.startswith(('#', '//')):
             continue
 
-        if command.startswith('q '):
+        if len(command.strip()) == 1 and command.startswith('q'):
             done = True
             break
 
@@ -138,7 +138,7 @@ def main_loop(gen, opt, infile):
             parser.print_help()
             continue
         if len(opt.prompt) == 0:
-            print('Try again with a prompt!')
+            print('\nTry again with a prompt!')
             continue
 
         # retrieve previous value!
@@ -191,14 +191,14 @@ def main_loop(gen, opt, infile):
             if not os.path.exists(opt.outdir):
                 os.makedirs(opt.outdir)
             current_outdir = opt.outdir
-        elif prompt_as_dir:
+        elif opt.prompt_as_dir:
             # sanitize the prompt to a valid folder name
             subdir = path_filter.sub('_', opt.prompt)[:name_max].rstrip(' .')
 
             # truncate path to maximum allowed length
             # 27 is the length of '######.##########.##.png', plus two separators and a NUL
             subdir = subdir[:(path_max - 27 - len(os.path.abspath(opt.outdir)))]
-            current_outdir = os.path.join(outdir, subdir)
+            current_outdir = os.path.join(opt.outdir, subdir)
 
             print('Writing files to directory: "' + current_outdir + '"')
 
@@ -206,7 +206,7 @@ def main_loop(gen, opt, infile):
             if not os.path.exists(current_outdir):
                 os.makedirs(current_outdir)
         else:
-            current_outdir = outdir
+            current_outdir = opt.outdir
 
         # Here is where the images are actually generated!
         last_results = []
