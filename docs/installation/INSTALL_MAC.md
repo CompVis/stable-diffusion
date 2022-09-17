@@ -100,7 +100,7 @@ ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" \
 
 1. or wherever you saved sd-v1-4.ckpt
 
-!!! quote "Please install the propper package for your Architecture:"
+!!! quote "Select the propper Architecture"
 
     === "M1 arm64"
 
@@ -138,15 +138,9 @@ python scripts/orig_scripts/txt2img.py \
 
 1. half-precision requires autocast which is unfortunatelly incompatible
 
----
-
 Note:
 
-```bash
-export PIP_EXISTS_ACTION=w
-```
-
-is a precaution to fix a problem where
+`#!bash export PIP_EXISTS_ACTION=w` is a precaution to fix a problem where
 
 ```bash
 conda env create \
@@ -155,10 +149,12 @@ conda env create \
 
 did never finish in some situations. So it isn't required but wont hurt.
 
-After you follow all the instructions and run dream.py you might get several
-errors. Here's the errors I've seen and found solutions for.
-
 ---
+
+## Common problems
+
+After you followed all the instructions and try to run dream.py, you might
+get several errors. Here's the errors I've seen and found solutions for.
 
 ### Is it slow?
 
@@ -316,11 +312,9 @@ output of `python3 -V` and `python -V`.
 ```
 
 The above is what you'll see if you have miniforge and correctly activated the
-ldm environment, while usingd option 2 in the setup instructions above ("no
-pyenv").
+ldm environment, while usingd the standalone setup instructions above.
 
-If you otherwise used the first option ("alongside pyenv"), you will get this
-prompt:
+If you otherwise installed via pyenv, you will get this result:
 
 ```bash
 (anaconda3-2022.05) % which python
@@ -352,6 +346,8 @@ first hit. To do so, add the `-a` switch to `which`:
 
 This will show a list of all binaries which are actually available in your PATH.
 
+---
+
 ### Debugging?
 
 Tired of waiting for your renders to finish before you can see if it works?
@@ -366,11 +362,15 @@ python ./scripts/txt2img.py \
   --n_iter 1
 ```
 
+---
+
 ### OSError: Can't load tokenizer for 'openai/clip-vit-large-patch14'
 
 ```bash
 python scripts/preload_models.py
 ```
+
+---
 
 ### "The operator [name] is not current implemented for the MPS device." (sic)
 
@@ -387,6 +387,8 @@ WARNING: this will be slower than running natively on MPS.
 The lstein branch includes this fix in
 [environment-mac.yaml](https://github.com/lstein/stable-diffusion/blob/main/environment-mac.yaml).
 
+---
+
 ### "Could not build wheels for tokenizers"
 
 I have not seen this error because I had Rust installed on my computer before I
@@ -398,6 +400,8 @@ curl \
   --tlsv1.2 \
   -sSf https://sh.rustup.rs | sh
 ```
+
+---
 
 ### How come `--seed` doesn't work?
 
@@ -432,6 +436,8 @@ is a metapackage designed to prevent this, by making it impossible to install
 Do _not_ use `os.environ['KMP_DUPLICATE_LIB_OK']='True'` or equivalents as this
 masks the underlying issue of using Intel packages.
 
+---
+
 ### Not enough memory
 
 This seems to be a common problem and is probably the underlying problem for a
@@ -442,6 +448,8 @@ from 32-bit to 16-bit and that leaves more RAM for other things. I have no idea
 how that would affect the quality of the images though.
 
 See [this issue](https://github.com/CompVis/stable-diffusion/issues/71).
+
+---
 
 ### "Error: product of dimension sizes > 2\*\*31'"
 
@@ -457,6 +465,8 @@ BTW, 2\*\*31-1 =
 is also 32-bit signed [LONG_MAX](https://en.wikipedia.org/wiki/C_data_types) in
 C.
 
+---
+
 ### I just got Rickrolled! Do I have a virus?
 
 You don't have a virus. It's part of the project. Here's
@@ -468,6 +478,8 @@ call this "computer vision", sheesh).
 
 Actually, this could be happening because there's not enough RAM. You could try
 the `model.half()` suggestion or specify smaller output images.
+
+---
 
 ### My images come out black
 
