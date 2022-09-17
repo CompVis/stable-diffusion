@@ -57,9 +57,7 @@ Once the model is trained, specify the trained .pt or .bin file when starting
 dream using
 
 ```bash
-python3 ./scripts/dream.py \
-        --embedding_path /path/to/embedding.pt \
-        --full_precision
+python3 ./scripts/dream.py --embedding_path /path/to/embedding.pt
 ```
 
 Then, to utilize your subject at the dream prompt

@@ -9,13 +9,14 @@ from tqdm import tqdm, trange
 from PIL               import Image
 from einops import rearrange, repeat
 from pytorch_lightning import seed_everything
-from ldm.dream.devices import choose_autocast_device
+from ldm.dream.devices import choose_autocast
 
 downsampling = 8
 
 class Generator():
-    def __init__(self,model):
+    def __init__(self, model, precision):
         self.model               = model
+        self.precision           = precision
         self.seed                = None
         self.latent_channels     = model.channels
         self.downsampling_factor = downsampling   # BUG: should come from model or config
@@ -38,7 +39,7 @@ class Generator():
     def generate(self,prompt,init_image,width,height,iterations=1,seed=None,
                  image_callback=None, step_callback=None,
                  **kwargs):
-        device_type,scope   = choose_autocast_device(self.model.device)
+        scope = choose_autocast(self.precision)
         make_image          = self.get_make_image(
             prompt,
             init_image    = init_image,
@@ -51,7 +52,7 @@ class Generator():
         results             = []
         seed                = seed if seed else self.new_seed()
         seed, initial_noise = self.generate_initial_noise(seed, width, height)
-        with scope(device_type), self.model.ema_scope():
+        with scope(self.model.device.type), self.model.ema_scope():
             for n in trange(iterations, desc='Generating'):
                 x_T = None
                 if self.variation_amount > 0:

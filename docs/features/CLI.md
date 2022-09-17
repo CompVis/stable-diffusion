@@ -74,7 +74,7 @@ prompt arguments] (#list-of-prompt-arguments). Others
 | --prompt_as_dir         |     -p      | False                                            | Name output directories using the prompt text.                                                       |
 | --from_file <path>      |             | None                                             | Read list of prompts from a file. Use "-" to read from standard input                                |
 | --model <modelname>     |             | stable-diffusion-1.4                             | Loads model specified in configs/models.yaml. Currently one of "stable-diffusion-1.4" or "laion400m" |
-| --full_precision        |     -F      | False                                            | Run in slower full-precision mode. Needed for Macintosh M1/M2 hardware and some older video cards.   |
+| --precision <pname>     |             | auto                                             | Set to a specific precision. Rare but you may need to switch to 'float32' on some video cards.       |
 | --web                   |             | False                                            | Start in web server mode                                                                             |
 | --host <ip addr>        |             | localhost                                        | Which network interface web server should listen on. Set to 0.0.0.0 to listen on any.                |
 | --port <port>           |             | 9090                                             | Which port web server should listen for requests on.                                                 |

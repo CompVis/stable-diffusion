@@ -29,7 +29,7 @@ from ldm.models.diffusion.plms     import PLMSSampler
 from ldm.models.diffusion.ksampler import KSampler
 from ldm.dream.pngwriter           import PngWriter
 from ldm.dream.image_util          import InitImageResizer
-from ldm.dream.devices             import choose_torch_device
+from ldm.dream.devices             import choose_torch_device, choose_precision
 from ldm.dream.conditioning        import get_uc_and_c
 
 def fix_func(orig):
@@ -104,7 +104,7 @@ gr = Generate(
           # these values are set once and shouldn't be changed
           conf        = path to configuration file ('configs/models.yaml')
           model       = symbolic name of the model in the configuration file
-          full_precision = False
+          precision   = float precision to be used
 
           # this value is sticky and maintained between generation calls
           sampler_name   = ['ddim', 'k_dpm_2_a', 'k_dpm_2', 'k_euler_a', 'k_euler', 'k_heun', 'k_lms', 'plms']  // k_lms
@@ -130,6 +130,7 @@ class Generate:
             sampler_name          = 'k_lms',
             ddim_eta              = 0.0,  # deterministic
             full_precision        = False,
+            precision             = 'auto',
             # these are deprecated; if present they override values in the conf file
             weights               = None,
             config                = None,
@@ -145,7 +146,7 @@ class Generate:
         self.cfg_scale      = 7.5
         self.sampler_name   = sampler_name
         self.ddim_eta       = 0.0    # same seed always produces same image
-        self.full_precision = True if choose_torch_device() == 'mps' else full_precision
+        self.precision      = precision
         self.strength       = 0.75
         self.seamless       = False
         self.embedding_path = embedding_path
@@ -162,6 +163,14 @@ class Generate:
         # it wasn't actually doing anything. This logic could be reinstated.
         device_type = choose_torch_device()
         self.device = torch.device(device_type)
+        if full_precision:
+            if self.precision != 'auto':
+              raise ValueError('Remove --full_precision / -F if using --precision')
+            print('Please remove deprecated --full_precision / -F')
+            print('If auto config does not work you can use --precision=float32')
+            self.precision = 'float32'
+        if self.precision == 'auto':
+            self.precision = choose_precision(self.device)
 
         # for VRAM usage statistics
         self.session_peakmem = torch.cuda.max_memory_allocated() if self._has_cuda else None
@@ -440,25 +449,25 @@ class Generate:
     def _make_img2img(self):
         if not self.generators.get('img2img'):
             from ldm.dream.generator.img2img import Img2Img
-            self.generators['img2img'] = Img2Img(self.model)
+            self.generators['img2img'] = Img2Img(self.model, self.precision)
         return self.generators['img2img']
-    
+
     def _make_embiggen(self):
         if not self.generators.get('embiggen'):
             from ldm.dream.generator.embiggen import Embiggen
-            self.generators['embiggen'] = Embiggen(self.model)
+            self.generators['embiggen'] = Embiggen(self.model, self.precision)
         return self.generators['embiggen']
 
     def _make_txt2img(self):
         if not self.generators.get('txt2img'):
             from ldm.dream.generator.txt2img import Txt2Img
-            self.generators['txt2img'] = Txt2Img(self.model)
+            self.generators['txt2img'] = Txt2Img(self.model, self.precision)
         return self.generators['txt2img']
 
     def _make_inpaint(self):
         if not self.generators.get('inpaint'):
             from ldm.dream.generator.inpaint import Inpaint
-            self.generators['inpaint'] = Inpaint(self.model)
+            self.generators['inpaint'] = Inpaint(self.model, self.precision)
         return self.generators['inpaint']
 
     def load_model(self):
@@ -469,7 +478,7 @@ class Generate:
                 model = self._load_model_from_config(self.config, self.weights)
                 if self.embedding_path is not None:
                     model.embedding_manager.load(
-                        self.embedding_path, self.full_precision
+                        self.embedding_path, self.precision == 'float32' or self.precision == 'autocast'
                     )
                 self.model = model.to(self.device)
                 # model.to doesn't change the cond_stage_model.device used to move the tokenizer output, so set it here
@@ -619,16 +628,13 @@ class Generate:
         sd    = pl_sd['state_dict']
         model = instantiate_from_config(c.model)
         m, u  = model.load_state_dict(sd, strict=False)
-        
-        if self.full_precision:
-            print(
-                '>> Using slower but more accurate full-precision math (--full_precision)'
-            )
+
+        if self.precision == 'float16':
+            print('Using faster float16 precision')
+            model.to(torch.float16)
         else:
-            print(
-                '>> Using half precision math. Call with --full_precision to use more accurate but VRAM-intensive full precision.'
-            )
-            model.half()
+            print('Using more accurate float32 precision')
+
         model.to(self.device)
         model.eval()
 

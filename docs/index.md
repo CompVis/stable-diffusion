@@ -62,15 +62,12 @@ You wil need one of the following:
 
 ### Note
 
-If you are have a Nvidia 10xx series card (e.g. the 1080ti), please run the dream script in
-full-precision mode as shown below.
-
-Similarly, specify full-precision mode on Apple M1 hardware.
-
-To run in full-precision mode, start `dream.py` with the `--full_precision` flag:
+Precision is auto configured based on the device. If however you encounter
+errors like 'expected type Float but found Half' or 'not implemented for Half'
+you can try starting `dream.py` with the `--precision=float32` flag:
 
 ```bash
-(ldm) ~/stable-diffusion$ python scripts/dream.py --full_precision
+(ldm) ~/stable-diffusion$ python scripts/dream.py --precision=float32
 ```
 
 ## Features
@@ -97,6 +94,11 @@ To run in full-precision mode, start `dream.py` with the `--full_precision` flag
 - [Preload Models](features/OTHER.md#preload-models)
 
 ## Latest Changes
+
+### vNEXT <small>(TODO 2022)</small>
+
+  - Deprecated `--full_precision` / `-F`. Simply omit it and `dream.py` will auto
+    configure. To switch away from auto use the new flag like `--precision=float32`.
 
 ### v1.14 <small>(11 September 2022)</small>
 

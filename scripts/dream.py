@@ -54,6 +54,7 @@ def main():
             sampler_name   = opt.sampler_name,
             embedding_path = opt.embedding_path,
             full_precision = opt.full_precision,
+            precision      = opt.precision,
         )
     except (FileNotFoundError, IOError, KeyError) as e:
         print(f'{e}. Aborting.')

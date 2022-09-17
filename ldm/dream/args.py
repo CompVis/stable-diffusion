@@ -100,6 +100,13 @@ SAMPLER_CHOICES = [
     'plms',
 ]
 
+PRECISION_CHOICES = [
+    'auto',
+    'float32',
+    'autocast',
+    'float16',
+]
+
 # is there a way to pick this up during git commits?
 APP_ID      = 'lstein/stable-diffusion'
 APP_VERSION = 'v1.15'
@@ -322,7 +329,16 @@ class Args(object):
             '--full_precision',
             dest='full_precision',
             action='store_true',
-            help='Use more memory-intensive full precision math for calculations',
+            help='Deprecated way to set --precision=float32',
+        )
+        model_group.add_argument(
+            '--precision',
+            dest='precision',
+            type=str,
+            choices=PRECISION_CHOICES,
+            metavar='PRECISION',
+            help=f'Set model precision. Defaults to auto selected based on device. Options: {", ".join(PRECISION_CHOICES)}',
+            default='auto',
         )
         file_group.add_argument(
             '--from_file',

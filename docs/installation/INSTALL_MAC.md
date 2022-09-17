@@ -97,7 +97,7 @@ conda activate ldm
 python scripts/preload_models.py
 
 # run SD!
-python scripts/dream.py --full_precision  # half-precision requires autocast and won't work
+python scripts/dream.py
 
 # or run the web interface!
 python scripts/dream.py --web
@@ -453,5 +453,3 @@ Abort trap: 6
   warnings.warn('resource_tracker: There appear to be %d '
 ```
 
-Macs do not support `autocast/mixed-precision`, so you need to supply
-`--full_precision` to use float32 everywhere.

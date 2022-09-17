@@ -119,7 +119,7 @@ def main():
   #     "height": height,
   #     "sampler_name": opt.sampler_name,
   #     "weights": weights,
-  #     "full_precision": opt.full_precision,
+  #     "precision": opt.precision,
   #     "config": config,
   #     "grid": opt.grid,
   #     "latent_diffusion_weights": opt.laion400m,
