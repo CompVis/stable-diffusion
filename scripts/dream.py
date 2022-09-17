@@ -132,10 +132,7 @@ def main_loop(gen, opt, infile):
         ):   # in case a stored prompt still contains the !dream command
             command.replace('!dream','',1)
 
-        try:
-            parser = opt.parse_cmd(command)
-        except SystemExit:
-            parser.print_help()
+        if opt.parse_cmd(command) is None:
             continue
         if len(opt.prompt) == 0:
             print('\nTry again with a prompt!')

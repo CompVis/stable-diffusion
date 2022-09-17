@@ -190,10 +190,10 @@ class Args(object):
             pass
 
         if cmd_switches and arg_switches and name=='__dict__':
-            a = arg_switches.__dict__
-            a.update(cmd_switches.__dict__)
-            return a
-
+            return self._merge_dict(
+                arg_switches.__dict__,
+                cmd_switches.__dict__,
+            )
         try:
             return object.__getattribute__(self,name)
         except AttributeError:
@@ -218,16 +218,21 @@ class Args(object):
         # funny because of their push/pull relationship. This is how to handle it.
         if name=='grid':
             return not cmd_switches.individual and value_arg  # arg supersedes cmd
-        if value_cmd is not None:
-            return value_cmd
-        else:
-            return value_arg
+        return value_cmd if value_cmd is not None else value_arg
 
     def __setattr__(self,name,value):
         if name.startswith('_'):
             object.__setattr__(self,name,value)
         else:
             self._cmd_switches.__dict__[name] = value
+
+    def _merge_dict(self,dict1,dict2):
+        new_dict  = {}
+        for k in set(list(dict1.keys())+list(dict2.keys())):
+            value1 = dict1.get(k,None)
+            value2 = dict2.get(k,None)
+            new_dict[k] = value2 if value2 is not None else value1
+        return new_dict
 
     def _create_arg_parser(self):
         '''
