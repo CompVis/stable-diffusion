@@ -62,11 +62,13 @@ pyenv activate anaconda3-2022.05
 brew install cmake rust
 
 # install miniconda for M1 arm64:
-curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o Miniconda3-latest-MacOSX-arm64.sh
+curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh \
+  -o Miniconda3-latest-MacOSX-arm64.sh
 /bin/bash Miniconda3-latest-MacOSX-arm64.sh
 
 # OR install miniconda for Intel:
-curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o Miniconda3-latest-MacOSX-x86_64.sh
+curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh \
+  -o Miniconda3-latest-MacOSX-x86_64.sh
 /bin/bash Miniconda3-latest-MacOSX-x86_64.sh
 
 
@@ -222,7 +224,6 @@ There are several causes of these errors:
 
     ```bash
     conda deactivate
-
     conda env remove -n ldm
     PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 \
       conda env create \
@@ -360,7 +361,7 @@ python scripts/preload_models.py
 ... NotImplementedError: The operator 'aten::_index_put_impl_' is not current
 implemented for the MPS device. If you want this op to be added in priority
 during the prototype phase of this feature, please comment on
-[https://github.com/pytorch/pytorch/issues/77764](https://github.com/pytorch/pytorch/issues/77764).
+https://github.com/pytorch/pytorch/issues/77764.
 As a temporary fix, you can set the environment variable
 `PYTORCH_ENABLE_MPS_FALLBACK=1` to use the CPU as a fallback for this op.
 WARNING: this will be slower than running natively on MPS.
