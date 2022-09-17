@@ -15,6 +15,7 @@ from PIL import Image
 from pytorch_lightning import logging
 from threading import Event
 from uuid import uuid4
+from send2trash import send2trash
 
 from ldm.gfpgan.gfpgan_tools import real_esrgan_upscale
 from ldm.gfpgan.gfpgan_tools import run_gfpgan
@@ -228,7 +229,7 @@ def handle_cancel():
 @socketio.on('deleteImage')
 def handle_delete_image(path):
     print(f'>> Delete requested "{path}"')
-    Path(path).unlink()
+    send2trash(path)
     return make_response("OK")
 
 
