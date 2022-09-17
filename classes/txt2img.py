@@ -158,6 +158,7 @@ class Txt2Img(BaseModel):
             with precision_scope("cuda"):
                 with model.ema_scope():
                     for _n in trange(opt.n_iter, desc="Sampling"):
+                        print("sample")
                         for prompts in tqdm(data, desc="data"):
                             uc = None
                             if opt.scale != 1.0:
