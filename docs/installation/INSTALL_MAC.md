@@ -45,11 +45,11 @@ First get the weights checkpoint download started - it's big:
 # NOW EITHER DO
 # 1. Installing alongside pyenv
 
-  brew install pyenv-virtualenv # you might have this from before, no problem
-  pyenv install anaconda3-2022.05
-  pyenv virtualenv anaconda3-2022.05
-  eval "$(pyenv init -)"
-  pyenv activate anaconda3-2022.05
+brew install pyenv-virtualenv # you might have this from before, no problem
+pyenv install anaconda3-2022.05
+pyenv virtualenv anaconda3-2022.05
+eval "$(pyenv init -)"
+pyenv activate anaconda3-2022.05
 
 # OR,
 # 2. Installing standalone
@@ -69,19 +69,19 @@ curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o M
 # continue from here
 
 # clone the repo
-  git clone https://github.com/lstein/stable-diffusion.git
-  cd stable-diffusion
+git clone https://github.com/lstein/stable-diffusion.git
+cd stable-diffusion
 
 #
 # wait until the checkpoint file has downloaded, then proceed
 #
 
 # create symlink to checkpoint
-  mkdir -p models/ldm/stable-diffusion-v1/
+mkdir -p models/ldm/stable-diffusion-v1/
 
-  PATH_TO_CKPT="$HOME/Downloads"  # or wherever you saved sd-v1-4.ckpt
+PATH_TO_CKPT="$HOME/Downloads"  # or wherever you saved sd-v1-4.ckpt
 
-  ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
+ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
 
 # install packages for arm64
 PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
@@ -189,7 +189,7 @@ There are several causes of these errors.
 - Third, if it says you're missing taming you need to rebuild your virtual
   environment.
 
-````bash
+```bash
 conda deactivate
 
 conda env remove -n ldm
