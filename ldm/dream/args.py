@@ -654,6 +654,8 @@ def metadata_loads(metadata):
             # repack the prompt and variations
             image['prompt']     = ','.join([':'.join([x['prompt'],   str(x['weight'])]) for x in image['prompt']])
             image['variations'] = ','.join([':'.join([str(x['seed']),str(x['weight'])]) for x in image['variations']])
+            # fix a bit of semantic drift here
+            image['sampler_name']=image.pop('sampler')
             opt = Args()
             opt._cmd_switches = Namespace(**image)
             results.append(opt)
