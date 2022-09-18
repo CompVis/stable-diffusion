@@ -87,11 +87,29 @@ if gfpgan:
 
     try:
         import urllib.request
-        model_path = 'https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth'
+        model_url  = 'https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth'
         model_dest = 'src/gfpgan/experiments/pretrained_models/GFPGANv1.3.pth'
-        print('downloading gfpgan model file...')
-        urllib.request.urlretrieve(model_path,model_dest)
+
+        if not os.path.exists(model_dest):
+            print('downloading gfpgan model file...')
+            urllib.request.urlretrieve(model_path,model_dest)
     except Exception:
         import traceback
         print('Error loading GFPGAN:')
         print(traceback.format_exc())
+print('...success')
+
+print('preloading CodeFormer model file...')
+try:
+        import urllib.request
+        model_url  = 'https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth'
+        model_dest = 'ldm/restoration/codeformer/weights/codeformer.pth'
+        if not os.path.exists(model_dest):
+            print('downloading codeformer model file...')
+            os.makedirs(os.path.dirname(model_dest), exist_ok=True)
+            urllib.request.urlretrieve(model_path,model_dest)
+except Exception:
+    import traceback
+    print('Error loading CodeFormer:')
+    print(traceback.format_exc())
+print('...success')
