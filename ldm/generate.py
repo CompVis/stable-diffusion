@@ -227,7 +227,9 @@ class Generate:
             embiggen       =    None,
             embiggen_tiles =    None,
             # these are specific to GFPGAN/ESRGAN
+            facetool         = None,
             gfpgan_strength  = 0,
+            codeformer_fidelity = None,
             save_original    = False,
             upscale          = None,
             # Set this True to handle KeyboardInterrupt internally
@@ -373,7 +375,9 @@ class Generate:
             if upscale is not None or gfpgan_strength > 0:
                 self.upscale_and_reconstruct(results,
                                              upscale        = upscale,
+                                             facetool       = facetool,
                                              strength       = gfpgan_strength,
+                                             codeformer_fidelity = codeformer_fidelity,
                                              save_original  = save_original,
                                              image_callback = image_callback)
 
@@ -507,15 +511,20 @@ class Generate:
 
     def upscale_and_reconstruct(self,
                                 image_list,
+                                facetool      = 'gfpgan',
                                 upscale       = None,
                                 strength      =  0.0,
+                                codeformer_fidelity = 0.75,
                                 save_original = False,
                                 image_callback = None):
         try:
             if upscale is not None:
                 from ldm.gfpgan.gfpgan_tools import real_esrgan_upscale
             if strength > 0:
-                from ldm.gfpgan.gfpgan_tools import run_gfpgan
+                if facetool == 'codeformer':
+                    from ldm.restoration.codeformer.codeformer import CodeFormerRestoration
+                else:
+                    from ldm.gfpgan.gfpgan_tools import run_gfpgan
         except (ModuleNotFoundError, ImportError):
             print(traceback.format_exc(), file=sys.stderr)
             print('>> You may need to install the ESRGAN and/or GFPGAN modules')
@@ -534,9 +543,12 @@ class Generate:
                         seed,
                     )
                 if strength > 0:
-                    image = run_gfpgan(
-                        image, strength, seed, 1
-                    )
+                    if facetool == 'codeformer':
+                        image = CodeFormerRestoration().process(image=image, strength=strength, device=self.device, seed=seed, fidelity=codeformer_fidelity)
+                    else:
+                        image = run_gfpgan(
+                            image, strength, seed, 1
+                        )
             except Exception as e:
                 print(
                     f'>> Error running RealESRGAN or GFPGAN. Your image was not upscaled.\n{e}'

@@ -97,3 +97,39 @@ the base images.
 If you wish to stop during the image generation but want to upscale or face restore a particular
 generated image, pass it again with the same prompt and generated seed along with the `-U` and `-G`
 prompt arguments to perform those actions.
+
+## CodeFormer Support
+
+This repo also allows you to perform face restoration using
+[CodeFormer](https://github.com/sczhou/CodeFormer).
+
+In order to setup CodeFormer to work, you need to download the models like with GFPGAN. You can do
+this either by running `preload_models.py` or by manually downloading the
+[model file](https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth) and
+saving it to `ldm/restoration/codeformer/weights` folder.
+
+You can use `-ft` prompt argument to swap between CodeFormer and the default GFPGAN. The above
+mentioned `-G` prompt argument will allow you to control the strength of the restoration effect.
+
+### **Usage:**
+
+The following command will perform face restoration with CodeFormer instead of the default gfpgan.
+
+`<prompt> -G 0.8 -ft codeformer`
+
+**Other Options:**
+
+- `-cf` - cf or CodeFormer Fidelity takes values between `0` and `1`. 0 produces high quality
+  results but low accuracy and 1 produces lower quality results but higher accuacy to your original
+  face.
+
+The following command will perform face restoration with CodeFormer. CodeFormer will output a result
+that is closely matching to the input face.
+
+`<prompt> -G 1.0 -ft codeformer -cf 0.9`
+
+The following command will perform face restoration with CodeFormer. CodeFormer will output a result
+that is the best restoration possible. This may deviate slightly from the original face. This is an
+excellent option to use in situations when there is very little facial data to work with.
+
+`<prompt> -G 1.0 -ft codeformer -cf 0.1`
