@@ -7,7 +7,7 @@ title: Home
 
   ```bash
   pip install -r requirements-mkdocs.txt
-  mkdocs serve -a localhost:8080
+  mkdocs serve
   ```
 -->
 <div align="center" markdown="1">
