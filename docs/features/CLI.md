@@ -175,10 +175,10 @@ In addition to the command-line options recognized by txt2img, img2img accepts a
 
 | Argument              | Shortcut   | Default | Description                                                                                                                                |
 | --------------------- | ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--init_img <path>`   | `-I<path>` | None    | Path to the initialization image                                                                                                           |
-| `--init_color <path>` |            | None    | Path to reference image for color correction               |
-| `--fit`                | `-F`       | False   | Scale the image to fit into the specified -H and -W dimensions                                                                             |
-| `--strength <float>`   | `-f<float>` | 0.75    | How hard to try to match the prompt to the initial image. Ranges from 0.0-0.99, with higher values replacing the initial image completely. |
+| `--init_img <path>`   | `-I<path>` | `None`  | Path to the initialization image                                                                                                           |
+| `--init_color <path>` |            | `None`  | Path to reference image for color correction               |
+| `--fit`                | `-F`       | `False` | Scale the image to fit into the specified -H and -W dimensions                                                                             |
+| `--strength <float>`   | `-f<float>` | `0.75`  | How hard to try to match the prompt to the initial image. Ranges from 0.0-0.99, with higher values replacing the initial image completely. |
 
 #### inpainting
 
@@ -240,6 +240,6 @@ dream> "zebra with a mustache" -I./test-pictures<TAB>
 -I./test-pictures/bad-sketch.png          -I./test-pictures/man_with_eagle/
 ```
 
-You can then type "z", hit tab again, and it will autofill to "zebra.jpg".
+You can then type "z", hit ++tab++ again, and it will autofill to "zebra.jpg".
 
 More text completion features (such as autocompleting seeds) are on their way.
