@@ -59,13 +59,16 @@ const SamplerOptions = () => {
             />
             <SDNumberInput
                 label='Threshold'
+                min={0}
                 step={0.1}
                 onChange={(v) => dispatch(setThreshold(Number(v)))}
                 value={threshold}
             />
             <SDNumberInput
                 label='Perlin'
-                step={0.1}
+                min={0}
+                max={1}
+                step={0.05}
                 onChange={(v) => dispatch(setPerlin(Number(v)))}
                 value={perlin}
             />

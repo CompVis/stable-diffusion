@@ -25,6 +25,7 @@
     "react-icons": "^4.4.0",
     "react-redux": "^8.0.2",
     "redux-persist": "^6.0.0",
+    "socket.io": "^4.5.2",
     "socket.io-client": "^4.5.2",
     "uuid": "^9.0.0"
   },
