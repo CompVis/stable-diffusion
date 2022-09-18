@@ -170,11 +170,11 @@ class Args(object):
         switches = list()
         switches.append(f'"{a["prompt"]}"')
         switches.append(f'-s {a["steps"]}')
+        switches.append(f'-S {a["seed"]}')
         switches.append(f'-W {a["width"]}')
         switches.append(f'-H {a["height"]}')
         switches.append(f'-C {a["cfg_scale"]}')
         switches.append(f'-A {a["sampler_name"]}')
-        switches.append(f'-S {a["seed"]}')
         if a['grid']:
             switches.append('--grid')
         if a['seamless']:
