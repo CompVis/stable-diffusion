@@ -1,5 +1,7 @@
 ---
 title: CLI
+hide:
+  - toc
 ---
 
 ## **Interactive Command Line Interface**
@@ -47,9 +49,7 @@ dream> q
 00011.png: "there's a fly in my soup" -n6 -g -S 2685670268
 ```
 
-<p align='center'>
-<img src="../assets/dream-py-demo.png"/>
-</p>
+![dream-py-demo](../assets/dream-py-demo.png)
 
 The `dream>` prompt's arguments are pretty much identical to those used in the Discord bot, except
 you don't need to type "!dream" (it doesn't hurt if you do). A significant change is that creation
@@ -63,37 +63,41 @@ global defaults, such as the directory for image outputs and the location of the
 
 ## List of arguments recognized at the command line
 
-These command-line arguments can be passed to dream.py when you first run it from the Windows, Mac
+These command-line arguments can be passed to dream.py when you first run it from the Windows, Mac◊
 or Linux command line. Some set defaults that can be overridden on a per-prompt basis (see [List of
 prompt arguments] (#list-of-prompt-arguments). Others
 
-| Argument                |  Shortcut   | Default                                          | Description                                                                                          |
-| :---------------------- | :---------: | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| --help                  |     -h      |                                                  | Print a concise help message.                                                                        |
-| --outdir <path>         |  -o<path>   | outputs/img_samples                              | Location for generated images.                                                                       |
-| --prompt_as_dir         |     -p      | False                                            | Name output directories using the prompt text.                                                       |
-| --from_file <path>      |             | None                                             | Read list of prompts from a file. Use "-" to read from standard input                                |
-| --model <modelname>     |             | stable-diffusion-1.4                             | Loads model specified in configs/models.yaml. Currently one of "stable-diffusion-1.4" or "laion400m" |
-| --full_precision        |     -F      | False                                            | Run in slower full-precision mode. Needed for Macintosh M1/M2 hardware and some older video cards.   |
-| --web                   |             | False                                            | Start in web server mode                                                                             |
-| --host <ip addr>        |             | localhost                                        | Which network interface web server should listen on. Set to 0.0.0.0 to listen on any.                |
-| --port <port>           |             | 9090                                             | Which port web server should listen for requests on.                                                 |
-| --config <path>         |             | configs/models.yaml                              | Configuration file for models and their weights.                                                     |
-| --iterations <int>      |   -n<int>   | 1                                                | How many images to generate per prompt.                                                              |
-| --grid                  |     -g      | False                                            | Save all image series as a grid rather than individually.                                            |
-| --sampler <sampler>     | -A<sampler> | k_lms                                            | Sampler to use. Use -h to get list of available samplers.                                            |
-| --seamless              |             | False                                            | Create interesting effects by tiling elements of the image.                                          |
-| --embedding_path <path> |             | None                                             | Path to pre-trained embedding manager checkpoints, for custom models                                 |
-| --gfpgan_dir            |             | src/gfpgan                                       | Path to where GFPGAN is installed.                                                                   |
-| --gfpgan_model_path     |             | experiments/pretrained_models<br>/GFPGANv1.3.pth | Path to GFPGAN model file, relative to --gfpgan_dir.                                                 |
-| --device <device>       | -d<device>  | torch.cuda.current_device()                      | Device to run SD on, e.g. "cuda:0"                                                                   |
+| Argument                  | Shortcut      | Default                       | Description                                                                                             |
+| ------------------------- | ------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `--help`                  | `-h`          |                               | Print a concise help message.                                                                           |
+| `--outdir <path>`         | `-o<path>`    | `outputs/img_samples`         | Location for generated images.                                                                          |
+| `--prompt_as_dir`         | `-p`          | `False`                       | Name output directories using the prompt text.                                                          |
+| `--from_file <path>`       |               | `None`                        | Read list of prompts from a file. Use "-" to read from<br>standard input                                |
+| `--model <modelname>`     |               | `stable-diffusion-1.4`        | Loads model specified in configs/models.yaml. Currently<br>one of "stable-diffusion-1.4" or "laion400m" |
+| `--full_precision`        | `-F`          | `False`                       | Run in slower full-precision mode. Needed for Macintosh<br>M1/M2 hardware and some older video cards.   |
+| `--web`                   |               | `False`                       | Start in web server mode                                                                                |
+| `--host <ip addr>`        |               | `localhost`                   | Which network interface web server should listen on.<br>Set to 0.0.0.0 to listen on any.                |
+| `--port <port>`           |               | `9090`                        | Which port web server should listen for requests on.                                                    |
+| `--config <path>`          |               | `configs/models.yaml`          | Configuration file for models and their weights.                                                        |
+| `--iterations <int>`      | `-n<int>`     | `1`                           | How many images to generate per prompt.                                                                 |
+| `--grid`                  | `-g`          | `False`                       | Save all image series as a grid rather than individually.                                               |
+| `--sampler <sampler>`     | `-A<sampler>` | `k_lms`                       | Sampler to use. Use -h to get list of available samplers.                                               |
+| `--seamless`              |               | `False`                       | Create interesting effects by tiling elements of the image.                                             |
+| `--embedding_path <path>` |               | `None`                        | Path to pre-trained embedding manager checkpoints,<br>for custom models                                 |
+| `--gfpgan_dir`            |               | `src/gfpgan`                  | Path to where GFPGAN is installed.                                                                      |
+| `--gfpgan_model_path`     |               | see bellow\*                  | Path to GFPGAN model file, relative to `--gfpgan_dir`.                                                  |
+| `--device <device>`       | `-d<device>`  | `torch.cuda.current_device()` | Device to run SD on, e.g. "cuda:0"                                                                      |
+
+\*`experiments/pretrained_models/GFPGANv1.3.pth`
+
+### deprecated
 
 These arguments are deprecated but still work:
 
-| Argument         | Shortcut | Default | Description                                                     |
-| ---------------- | -------- | ------- | --------------------------------------------------------------- |
-| --weights <path> |          | None    | Pth to weights file; use `--model stable-diffusion-1.4` instead |
-| --laion400m      | -l       | False   | Use older LAION400m weights; use `--model=laion400m` instead    |
+| Argument           | Shortcut | Default | Description                                                    |
+| ------------------ | -------- | ------- | -------------------------------------------------------------- |
+| `--weights <path>` |          | `None`  | Pth to weights file; use `--model stable-diffusion-1.4` instead |
+| `--laion400m`      | `-l`     | `False` | Use older LAION400m weights; use `--model=laion400m` instead   |
 
 ### **A note on path names:**
 
@@ -104,7 +108,7 @@ slashes (ick): `C:\\\\path\\\\to\\\\my\\\\file`, or use Linux/Mac style forward 
 
 ### List of prompt arguments
 
-After the dream.py script initializes, it will present you with a **dream>** prompt. Here you can
+After the dream.py script initializes, it will present you with a **`dream>`** prompt. Here you can
 enter information to generate images from text (txt2img), to embellish an existing image or sketch
 (img2img), or to selectively alter chosen regions of the image (inpainting).
 
@@ -118,27 +122,27 @@ This will create the requested image with the dimensions 640 (width) and 480 (he
 
 Those are the `dream` commands that apply to txt2img:
 
-| Argument                    | Shortcut         | Default             | Description                                                                                                                                                                                                                                  |
-| --------------------------- | ---------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "my prompt"                 |                  |                     | Text prompt to use. The quotation marks are optional.                                                                                                                                                                                        |
-| --width <int>               | -W<int>          | 512                 | Width of generated image                                                                                                                                                                                                                     |
-| --height <int>              | -H<int>          | 512                 | Height of generated image                                                                                                                                                                                                                    |
-| --iterations <int>          | -n<int>          | 1                   | How many images to generate from this prompt                                                                                                                                                                                                 |
-| --steps <int>               | -s<int>          | 50                  | How many steps of refinement to apply                                                                                                                                                                                                        |
-| --cfg_scale <float>         | -C<float>        | 7.5                 | How hard to try to match the prompt to the generated image; any number greater than 0.0 works, but the useful range is roughly 5.0 to 20.0                                                                                                   |
-| --seed <int>                | -S<int>          | None                | Set the random seed for the next series of images. This can be used to recreate an image generated previously.                                                                                                                               |
-| --sampler <sampler>         | -A<sampler>      | k_lms               | Sampler to use. Use -h to get list of available samplers.                                                                                                                                                                                    |
-| --grid                      | -g               | False               | Turn on grid mode to return a single image combining all the images generated by this prompt                                                                                                                                                 |
-| --individual                | -i               | True                | Turn off grid mode (deprecated; leave off --grid instead)                                                                                                                                                                                    |
-| --outdir <path>             | -o<path>         | outputs/img_samples | Temporarily change the location of these images                                                                                                                                                                                              |
-| --seamless                  |                  | False               | Activate seamless tiling for interesting effects                                                                                                                                                                                             |
-| --log_tokenization          | -t               | False               | Display a color-coded list of the parsed tokens derived from the prompt                                                                                                                                                                      |
-| --skip_normalization        | -x               | False               | Weighted subprompts will not be normalized. See [Weighted Prompts](./OTHER.md#weighted-prompts)                                                                                                                                              |
-| --upscale <int> <float>     | -U <int> <float> | -U 1 0.75           | Upscale image by magnification factor (2, 4), and set strength of upscaling (0.0-1.0). If strength not set, will default to 0.75.                                                                                                            |
-| --gfpgan_strength <float>   | -G <float>       | -G0                 | Fix faces using the GFPGAN algorithm; argument indicates how hard the algorithm should try (0.0-1.0)                                                                                                                                         |
-| --save_original             | -save_orig       | False               | When upscaling or fixing faces, this will cause the original image to be saved rather than replaced.                                                                                                                                         |
-| --variation <float>         | -v<float>        | 0.0                 | Add a bit of noise (0.0=none, 1.0=high) to the image in order to generate a series of variations. Usually used in combination with -S<seed> and -n<int> to generate a series a riffs on a starting image. See [Variations](./VARIATIONS.md). |
-| --with_variations <pattern> | -V<pattern>      | None                | Combine two or more variations. See [Variations](./VARIATIONS.md) for now to use this.                                                                                                                                                       |
+| Argument                      | Shortcut          | Default               | Description                                                                                                                                                                                                                                                  |
+| ----------------------------- | ----------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `"my prompt"`                 |                   |                       | Text prompt to use. The quotation marks are optional.                                                                                                                                                                                                        |
+| `--width <int>`               | `-W<int>`         | `512`                 | Width of generated image                                                                                                                                                                                                                                     |
+| `--height <int>`              | `-H<int>`         | `512`                 | Height of generated image                                                                                                                                                                                                                                    |
+| `--iterations <int>`          | `-n<int>`         | `1`                   | How many images to generate from this prompt                                                                                                                                                                                                                 |
+| `--steps <int>`               | `-s<int>`         | `50`                  | How many steps of refinement to apply                                                                                                                                                                                                                         |
+| `--cfg_scale <float>`          | `-C<float>`        | `7.5`                 | How hard to try to match the prompt to the generated<br>image; any number greater than 0.0<br>works, but the useful range is roughly 5.0 to 20.0                                                                                                             |
+| `--seed <int>`                | `-S<int>`         | `None`                | Set the random seed for the next series of images.<br>This can be used to recreate an image generated previously.                                                                                                                                            |
+| `--sampler <sampler>`         | `-A<sampler>`     | `k_lms`               | Sampler to use. Use -h to get list of available samplers.                                                                                                                                                                                                    |
+| `--grid`                      | `-g`              | `False`               | Turn on grid mode to return a single image combining<br>all the images generated by this prompt                                                                                                                                                              |
+| `--individual`                | `-i`              | `True`                | Turn off grid mode (deprecated; leave off --grid instead)                                                                                                                                                                                                    |
+| `--outdir <path>`             | `-o<path>`        | `outputs/img_samples` | Temporarily change the location of these images                                                                                                                                                                                                              |
+| `--seamless`                  |                   | `False`               | Activate seamless tiling for interesting effects                                                                                                                                                                                                             |
+| `--log_tokenization`          | `-t`              | `False`               | Display a color-coded list of the parsed tokens<br>derived from the prompt                                                                                                                                                                                   |
+| `--skip_normalization`        | `-x`              | `False`               | Weighted subprompts will not be normalized. See<br>[Weighted Prompts](./OTHER.md#weighted-prompts)                                                                                                                                                           |
+| `--upscale <int> <float>`      | `-U <int> <float>` | `-U 1 0.75`           | Upscale image by magnification factor (2, 4), and<br>set strength of upscaling (0.0-1.0).<br>If strength not set, will default to 0.75.                                                                                                                       |
+| `--gfpgan_strength <float>`    | `-G <float>`       | `-G0`                 | Fix faces using the GFPGAN algorithm; argument<br>indicates how hard the algorithm should try (0.0-1.0)                                                                                                                                                      |
+| `--save_original`             | `-save_orig`      | `False`               | When upscaling or fixing faces, this will cause<br>the original image to be saved rather than replaced.                                                                                                                                                       |
+| `--variation <float>`          | `-v<float>`        | `0.0`                 | Add a bit of noise (0.0=none, 1.0=high) to the image<br>in order to generate a series of variations. Usually<br>used in combination with `-S<seed>` and `-n<int>`<br>to generate a series a riffs on a starting image.<br>See [Variations](./VARIATIONS.md). |
+| `--with_variations <pattern>` | `-V<pattern>`     | `None`                | Combine two or more variations. See [Variations](./VARIATIONS.md)<br>for now to use this.                                                                                                                                                                    |
 
 Note that the width and height of the image must be multiples of 64. You can provide different
 values, but they will be rounded down to the nearest multiple of 64.
@@ -156,11 +160,11 @@ of memory if it is large.
 
 In addition to the command-line options recognized by txt2img, img2img accepts additional options:
 
-| Argument           | Shortcut  | Default | Description                                                                                                                                |
-| ------------------ | --------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| --init_img <path>  | -I<path>  | None    | Path to the initialization image                                                                                                           |
-| --fit              | -F        | False   | Scale the image to fit into the specified -H and -W dimensions                                                                             |
-| --strength <float> | -s<float> | 0.75    | How hard to try to match the prompt to the initial image. Ranges from 0.0-0.99, with higher values replacing the initial image completely. |
+| Argument            | Shortcut   | Default | Description                                                                                                                                   |
+| ------------------- | ---------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--init_img <path>` | `-I<path>` | `None`  | Path to the initialization image                                                                                                              |
+| `--fit`              | `-F`       | `False` | Scale the image to fit into the specified -H and -W dimensions                                                                                  |
+| `--strength <float>` | `-s<float>` | `0.75`  | How hard to try to match the prompt to the initial image. Ranges from 0.0-0.99,<br>with higher values replacing the initial image completely. |
 
 ### This is an example of inpainting
 
@@ -176,9 +180,9 @@ underneath when you create the transparent areas. See [Inpainting](./INPAINTING.
 inpainting accepts all the arguments used for txt2img and img2img, as well as the --mask (-M)
 argument:
 
-| Argument           | Shortcut | Default | Description                                                                                      |
-| ------------------ | -------- | ------- | ------------------------------------------------------------------------------------------------ |
-| --init_mask <path> | -M<path> | None    | Path to an image the same size as the initial_image, with areas for inpainting made transparent. |
+| Argument             | Shortcut   | Default | Description                                                                                      |
+| -------------------- | ---------- | ------- | ------------------------------------------------------------------------------------------------ |
+| `--init_mask <path>` | `-M<path>` | `None`  | Path to an image the same size as the initial_image, with areas for<br>inpainting made transparent. |
 
 ## Command-line editing and completion
 
@@ -198,8 +202,8 @@ editing, and command completion.
 Windows users can get similar, but more limited, functionality if they launch dream.py with the
 "winpty" program:
 
-```
-> winpty python scripts\dream.py
+```cmd
+winpty python scripts\dream.py
 ```
 
 On the Mac and Linux platforms, when you exit dream.py, the last 1000 lines of your command-line
@@ -214,7 +218,7 @@ When specifying file paths using the one-letter shortcuts, the CLI will attempt 
 pathnames for you. This is most handy for the -I (init image) and -M (init mask) paths. To initiate
 completion, start the path with a slash ("/") or "./". For example:
 
-```
+```bash
 dream> zebra with a mustache -I./test-pictures<TAB>
 -I./test-pictures/Lincoln-and-Parrot.png  -I./test-pictures/zebra.jpg        -I./test-pictures/madonna.png
 -I./test-pictures/bad-sketch.png          -I./test-pictures/man_with_eagle/
