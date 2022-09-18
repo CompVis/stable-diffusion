@@ -191,11 +191,7 @@ def main_loop(gen, opt, infile):
             else:
                 opt.with_variations = None
 
-        if opt.outdir:
-            if not os.path.exists(opt.outdir):
-                os.makedirs(opt.outdir)
-            current_outdir = opt.outdir
-        elif opt.prompt_as_dir:
+        if opt.prompt_as_dir:
             # sanitize the prompt to a valid folder name
             subdir = path_filter.sub('_', opt.prompt)[:name_max].rstrip(' .')
 
@@ -210,6 +206,8 @@ def main_loop(gen, opt, infile):
             if not os.path.exists(current_outdir):
                 os.makedirs(current_outdir)
         else:
+            if not os.path.exists(opt.outdir):
+                os.makedirs(opt.outdir)
             current_outdir = opt.outdir
 
         # Here is where the images are actually generated!
