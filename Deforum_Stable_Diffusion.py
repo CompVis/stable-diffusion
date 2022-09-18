@@ -687,6 +687,7 @@ def DeforumAnimArgs():
     #@markdown ####**Video Input:**
     video_init_path ='/content/video_in.mp4'#@param {type:"string"}
     extract_nth_frame = 1#@param {type:"number"}
+    overwrite_extracted_frames = True #@param {type:"boolean"}
 
     #@markdown ####**Interpolation:**
     interpolate_key_frames = False #@param {type:"boolean"}
@@ -1117,6 +1118,28 @@ def render_animation(args, anim_args):
 
         args.seed = next_seed(args)
 
+def vid2frames(video_path, frames_path, n=1, overwrite=True):      
+    if not os.path.exists(frames_path) or overwrite: 
+      try:
+          for f in pathlib.Path(video_in_frame_path).glob('*.jpg'):
+              f.unlink()
+      except:
+          pass
+          
+      vidcap = cv2.VideoCapture(video_path)
+      success,image = vidcap.read()
+      count = 0
+      t=1
+      success = True
+      while success:
+        if count % n == 0:
+            cv2.imwrite(frames_path + os.path.sep + f"{t:05}.jpg" , image)     # save frame as JPEG file
+            t += 1
+        success,image = vidcap.read()
+        count += 1
+      print("Converted %d frames" % count)
+    else: print("Frames already unpacked")
+
 def render_input_video(args, anim_args):
     # create a folder for the video input frames to live in
     video_in_frame_path = os.path.join(args.outdir, 'inputframes') 
@@ -1124,22 +1147,10 @@ def render_input_video(args, anim_args):
     
     # save the video frames from input video
     print(f"Exporting Video Frames (1 every {anim_args.extract_nth_frame}) frames to {video_in_frame_path}...")
-    try:
-        for f in pathlib.Path(video_in_frame_path).glob('*.jpg'):
-            f.unlink()
-    except:
-        pass
-    vf = r'select=not(mod(n\,'+str(anim_args.extract_nth_frame)+'))'
-    subprocess.run([
-        'ffmpeg', '-i', f'{anim_args.video_init_path}', 
-        '-vf', f'{vf}', '-vsync', 'vfr', '-q:v', '2', 
-        '-loglevel', 'error', '-stats',  
-        os.path.join(video_in_frame_path, '%04d.jpg')
-    ], stdout=subprocess.PIPE).stdout.decode('utf-8')
+    vid2frames(anim_args.video_init_path, video_in_frame_path, anim_args.extract_nth_frame, anim_args.overwrite_extracted_frames)
 
     # determine max frames from length of input frames
     anim_args.max_frames = len([f for f in pathlib.Path(video_in_frame_path).glob('*.jpg')])
-
     args.use_init = True
     print(f"Loading {anim_args.max_frames} input frames from {video_in_frame_path} and saving video frames to {args.outdir}")
     render_animation(args, anim_args)
