@@ -172,7 +172,7 @@ In addition to the command-line options recognized by txt2img, img2img accepts a
 | ------------------- | ---------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--init_img <path>` | `-I<path>` | `None`  | Path to the initialization image                                                                                                              |
 | `--fit`              | `-F`       | `False` | Scale the image to fit into the specified -H and -W dimensions                                                                                  |
-| `--strength <float>` | `-s<float>` | `0.75`  | How hard to try to match the prompt to the initial image. Ranges from 0.0-0.99,<br>with higher values replacing the initial image completely. |
+| `--strength <float>` | `-f<float>` | `0.75`  | How hard to try to match the prompt to the initial image. Ranges from 0.0-0.99,<br>with higher values replacing the initial image completely. |
 
 #### inpainting
 
