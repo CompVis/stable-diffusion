@@ -8,7 +8,7 @@ import copy
 import warnings
 import time
 import ldm.dream.readline
-from ldm.dream.args import Args, format_metadata
+from ldm.dream.args import Args, metadata_dumps
 from ldm.dream.pngwriter import PngWriter
 from ldm.dream.server import DreamServer, ThreadingDreamServer
 from ldm.dream.image_util import make_grid
@@ -100,6 +100,7 @@ def main_loop(gen, opt, infile):
     done = False
     path_filter = re.compile(r'[<>:"/\\|?*]')
     last_results = list()
+    model_config = OmegaConf.load(opt.conf)[opt.model]
 
     # os.pathconf is not available on Windows
     if hasattr(os, 'pathconf'):
@@ -123,7 +124,7 @@ def main_loop(gen, opt, infile):
         if command.startswith(('#', '//')):
             continue
 
-        if command.startswith('q '):
+        if len(command.strip()) == 1 and command.startswith('q'):
             done = True
             break
 
@@ -132,15 +133,18 @@ def main_loop(gen, opt, infile):
         ):   # in case a stored prompt still contains the !dream command
             command.replace('!dream','',1)
 
-        try:
-            parser = opt.parse_cmd(command)
-        except SystemExit:
-            parser.print_help()
+        if opt.parse_cmd(command) is None:
             continue
         if len(opt.prompt) == 0:
-            print('Try again with a prompt!')
+            print('\nTry again with a prompt!')
             continue
 
+        # width and height are set by model if not specified
+        if not opt.width:
+            opt.width = model_config.width
+        if not opt.height:
+            opt.height = model_config.height
+        
         # retrieve previous value!
         if opt.init_img is not None and re.match('^-\\d+$', opt.init_img):
             try:
@@ -191,14 +195,14 @@ def main_loop(gen, opt, infile):
             if not os.path.exists(opt.outdir):
                 os.makedirs(opt.outdir)
             current_outdir = opt.outdir
-        elif prompt_as_dir:
+        elif opt.prompt_as_dir:
             # sanitize the prompt to a valid folder name
             subdir = path_filter.sub('_', opt.prompt)[:name_max].rstrip(' .')
 
             # truncate path to maximum allowed length
             # 27 is the length of '######.##########.##.png', plus two separators and a NUL
             subdir = subdir[:(path_max - 27 - len(os.path.abspath(opt.outdir)))]
-            current_outdir = os.path.join(outdir, subdir)
+            current_outdir = os.path.join(opt.outdir, subdir)
 
             print('Writing files to directory: "' + current_outdir + '"')
 
@@ -206,7 +210,7 @@ def main_loop(gen, opt, infile):
             if not os.path.exists(current_outdir):
                 os.makedirs(current_outdir)
         else:
-            current_outdir = outdir
+            current_outdir = opt.outdir
 
         # Here is where the images are actually generated!
         last_results = []
@@ -214,10 +218,14 @@ def main_loop(gen, opt, infile):
             file_writer = PngWriter(current_outdir)
             prefix = file_writer.unique_prefix()
             results = []  # list of filename, prompt pairs
-            grid_images = dict()  # seed -> Image, only used if `opt.grid`
+            grid_images      = dict()  # seed -> Image, only used if `opt.grid`
+            prior_variations = opt.with_variations or []
+            first_seed       = opt.seed
 
             def image_writer(image, seed, upscaled=False):
                 path = None
+                nonlocal first_seed
+                nonlocal prior_variations
                 if opt.grid:
                     grid_images[seed] = image
                 else:
@@ -225,29 +233,21 @@ def main_loop(gen, opt, infile):
                         filename = f'{prefix}.{seed}.postprocessed.png'
                     else:
                         filename = f'{prefix}.{seed}.png'
-                    # the handling of variations is probably broken
-                    # Also, given the ability to add stuff to the dream_prompt_str, it isn't
-                    # necessary to make a copy of the opt option just to change its attributes
                     if opt.variation_amount > 0:
-                        iter_opt       = copy.copy(opt)
-                        this_variation = [[seed, opt.variation_amount]]
-                        if opt.with_variations is None:
-                            iter_opt.with_variations = this_variation
-                        else:
-                            iter_opt.with_variations = opt.with_variations + this_variation
-                        iter_opt.variation_amount = 0
-                        formatted_dream_prompt = iter_opt.dream_prompt_str(seed=seed)
-                    elif opt.with_variations is not None:
-                        formatted_dream_prompt = opt.dream_prompt_str(seed=seed)
+                        first_seed             = first_seed or seed
+                        this_variation         = [[seed, opt.variation_amount]]
+                        opt.with_variations    = prior_variations + this_variation
+                        formatted_dream_prompt = opt.dream_prompt_str(seed=first_seed)
+                    elif len(prior_variations) > 0:
+                        formatted_dream_prompt = opt.dream_prompt_str(seed=first_seed)
                     else:
                         formatted_dream_prompt = opt.dream_prompt_str(seed=seed)
                     path = file_writer.save_image_and_prompt_to_png(
                         image           = image,
                         dream_prompt    = formatted_dream_prompt,
-                        metadata        = format_metadata(
+                        metadata        = metadata_dumps(
                             opt,
                             seeds      = [seed],
-                            weights    = gen.weights,
                             model_hash = gen.model_hash,
                         ),
                         name      = filename,
@@ -271,7 +271,7 @@ def main_loop(gen, opt, infile):
                 filename   = f'{prefix}.{first_seed}.png'
                 formatted_dream_prompt  = opt.dream_prompt_str(seed=first_seed,grid=True,iterations=len(grid_images))
                 formatted_dream_prompt += f' # {grid_seeds}'
-                metadata = format_metadata(
+                metadata = metadata.dumps(
                     opt,
                     seeds      = grid_seeds,
                     weights    = gen.weights,

@@ -1,102 +1,152 @@
 <html lang="en">
-  <head>
-    <title>Stable Diffusion Dream Server</title>
-    <meta charset="utf-8">
-    <link rel="icon" type="image/x-icon" href="static/dream_web/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="static/dream_web/index.css">
-    <script src="config.js"></script>
-    <script src="static/dream_web/index.js"></script>
-  </head>
-  <body>
-    <header>
-      <h1>Stable Diffusion Dream Server</h1>
-      <div id="about">
-        For news and support for this web service, visit our <a href="http://github.com/lstein/stable-diffusion">GitHub site</a>
-      </div>
-    </header>
 
-    <main>
-      <form id="generate-form" method="post" action="#">
-	<fieldset id="txt2img">
-          <div id="search-box">
-            <textarea rows="3" id="prompt" name="prompt"></textarea>
-            <input type="submit" id="submit" value="Generate">
-	  </div>
-        </fieldset>
-        <fieldset id="fieldset-config">
-	  <div class="section-header">Basic options</div>
-          <label for="iterations">Images to generate:</label>
-          <input value="1" type="number" id="iterations" name="iterations" size="4">
-          <label for="steps">Steps:</label>
-          <input value="50" type="number" id="steps" name="steps">
-          <label for="cfg_scale">Cfg Scale:</label>
-          <input value="7.5" type="number" id="cfg_scale" name="cfg_scale" step="any">
-          <label for="sampler_name">Sampler:</label>
-          <select id="sampler_name" name="sampler_name" value="k_lms">
-            <option value="ddim">DDIM</option>
-            <option value="plms">PLMS</option>
-            <option value="k_lms" selected>KLMS</option>
-            <option value="k_dpm_2">KDPM_2</option>
-            <option value="k_dpm_2_a">KDPM_2A</option>
-            <option value="k_euler">KEULER</option>
-	    <option value="k_euler_a">KEULER_A</option>
-            <option value="k_heun">KHEUN</option>
-          </select>
-          <input type="checkbox" name="seamless" id="seamless">
-	  <label for="seamless">Seamless circular tiling</label>
-          <br>
-          <label title="Set to multiple of 64" for="width">Width:</label>
-          <select id="width" name="width" value="512">
-            <option value="64">64</option> <option value="128">128</option>
-            <option value="192">192</option> <option value="256">256</option>
-            <option value="320">320</option> <option value="384">384</option>
-            <option value="448">448</option> <option value="512" selected>512</option>
-            <option value="576">576</option> <option value="640">640</option>
-            <option value="704">704</option> <option value="768">768</option>
-            <option value="832">832</option> <option value="896">896</option>
-            <option value="960">960</option> <option value="1024">1024</option>
-          </select>
-          <label title="Set to multiple of 64" for="height">Height:</label>
-          <select id="height" name="height" value="512">
-            <option value="64">64</option> <option value="128">128</option>
-            <option value="192">192</option> <option value="256">256</option>
-            <option value="320">320</option> <option value="384">384</option>
-            <option value="448">448</option> <option value="512" selected>512</option>
-            <option value="576">576</option> <option value="640">640</option>
-            <option value="704">704</option> <option value="768">768</option>
-            <option value="832">832</option> <option value="896">896</option>
-            <option value="960">960</option> <option value="1024">1024</option>
-          </select>
-          <label title="Set to -1 for random seed" for="seed">Seed:</label>
-          <input value="-1" type="number" id="seed" name="seed">
-          <button type="button" id="reset-seed">&olarr;</button>
-          <input type="checkbox" name="progress_images" id="progress_images">
-	  <label for="progress_images">Display in-progress images (slower)</label>
-	  <button type="button" id="reset-all">Reset to Defaults</button>
-	  <span id="variations">
-            <label title="If > 0, generates variations on the initial seed instead of random seeds per iteration. Must be between 0 and 1. Higher values will be more different." for="variation_amount">Variation amount (0 to disable):</label>
-            <input value="0" type="number" id="variation_amount" name="variation_amount" step="0.01" min="0" max="1">
-            <label title="list of variations to apply, in the format `seed:weight,seed:weight,..." for="with_variations">With variations (seed:weight,seed:weight,...):</label>
-            <input value="" type="text" id="with_variations" name="with_variations">
-	  </span>
-	</fieldset>
-	<fieldset id="img2img">
-	  <div class="section-header">Image-to-image options</div>
+<head>
+  <title>Stable Diffusion Dream Server</title>
+  <meta charset="utf-8">
+  <link rel="icon" type="image/x-icon" href="static/dream_web/favicon.ico" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <script src="config.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"
+    integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA=="
+    crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="index.css">
+  <script src="index.js"></script>
+</head>
+
+<body>
+  <header>
+    <h1>Stable Diffusion Dream Server</h1>
+    <div id="about">
+      For news and support for this web service, visit our <a href="http://github.com/lstein/stable-diffusion">GitHub
+        site</a>
+    </div>
+  </header>
+
+  <main>
+    <!--
+      <div id="dropper" style="background-color:red;width:200px;height:200px;">
+      </div>
+      -->
+    <form id="generate-form" method="post" action="api/jobs">
+      <fieldset id="txt2img">
+        <legend>
+          <input type="checkbox" name="enable_generate" id="enable_generate" checked>
+          <label for="enable_generate">Generate</label>
+        </legend>
+        <div id="search-box">
+          <textarea rows="3" id="prompt" name="prompt"></textarea>
+        </div>
+        <label for="iterations">Images to generate:</label>
+        <input value="1" type="number" id="iterations" name="iterations" size="4">
+        <label for="steps">Steps:</label>
+        <input value="50" type="number" id="steps" name="steps">
+        <label for="cfg_scale">Cfg Scale:</label>
+        <input value="7.5" type="number" id="cfg_scale" name="cfg_scale" step="any">
+        <label for="sampler_name">Sampler:</label>
+        <select id="sampler_name" name="sampler_name" value="k_lms">
+          <option value="ddim">DDIM</option>
+          <option value="plms">PLMS</option>
+          <option value="k_lms" selected>KLMS</option>
+          <option value="k_dpm_2">KDPM_2</option>
+          <option value="k_dpm_2_a">KDPM_2A</option>
+          <option value="k_euler">KEULER</option>
+          <option value="k_euler_a">KEULER_A</option>
+          <option value="k_heun">KHEUN</option>
+        </select>
+        <input type="checkbox" name="seamless" id="seamless">
+        <label for="seamless">Seamless circular tiling</label>
+        <br>
+        <label title="Set to multiple of 64" for="width">Width:</label>
+        <select id="width" name="width" value="512">
+          <option value="64">64</option>
+          <option value="128">128</option>
+          <option value="192">192</option>
+          <option value="256">256</option>
+          <option value="320">320</option>
+          <option value="384">384</option>
+          <option value="448">448</option>
+          <option value="512" selected>512</option>
+          <option value="576">576</option>
+          <option value="640">640</option>
+          <option value="704">704</option>
+          <option value="768">768</option>
+          <option value="832">832</option>
+          <option value="896">896</option>
+          <option value="960">960</option>
+          <option value="1024">1024</option>
+        </select>
+        <label title="Set to multiple of 64" for="height">Height:</label>
+        <select id="height" name="height" value="512">
+          <option value="64">64</option>
+          <option value="128">128</option>
+          <option value="192">192</option>
+          <option value="256">256</option>
+          <option value="320">320</option>
+          <option value="384">384</option>
+          <option value="448">448</option>
+          <option value="512" selected>512</option>
+          <option value="576">576</option>
+          <option value="640">640</option>
+          <option value="704">704</option>
+          <option value="768">768</option>
+          <option value="832">832</option>
+          <option value="896">896</option>
+          <option value="960">960</option>
+          <option value="1024">1024</option>
+        </select>
+        <label title="Set to 0 for random seed" for="seed">Seed:</label>
+        <input value="0" type="number" id="seed" name="seed">
+        <button type="button" id="reset-seed">&olarr;</button>
+        <input type="checkbox" name="progress_images" id="progress_images">
+        <label for="progress_images">Display in-progress images (slower)</label>
+        <button type="button" id="reset-all">Reset to Defaults</button>
+        <div id="variations">
+          <label
+            title="If > 0, generates variations on the initial seed instead of random seeds per iteration. Must be between 0 and 1. Higher values will be more different."
+            for="variation_amount">Variation amount (0 to disable):</label>
+          <input value="0" type="number" id="variation_amount" name="variation_amount" step="0.01" min="0" max="1">
+          <label title="list of variations to apply, in the format `seed:weight,seed:weight,..."
+            for="with_variations">With variations (seed:weight,seed:weight,...):</label>
+          <input value="" type="text" id="with_variations" name="with_variations">
+        </div>
+      </fieldset>
+      <fieldset id="initimg">
+        <legend>
+          <input type="checkbox" name="enable_init_image" id="enable_init_image" checked>
+          <label for="enable_init_image">Enable init image</label>
+        </legend>
+        <div>
           <label title="Upload an image to use img2img" for="initimg">Initial image:</label>
           <input type="file" id="initimg" name="initimg" accept=".jpg, .jpeg, .png">
           <button type="button" id="remove-image">Remove Image</button>
-	    <br>
-	    <label for="strength">Img2Img Strength:</label>
-	    <input value="0.75" type="number" id="strength" name="strength" step="0.01" min="0" max="1">
-	    <input type="checkbox" id="fit" name="fit" checked>
-	    <label title="Rescale image to fit within requested width and height" for="fit">Fit to width/height</label>
-	</fieldset>
+        </div>
+        <fieldset id="img2img">
+          <legend>
+            <input type="checkbox" name="enable_img2img" id="enable_img2img" checked>
+            <label for="enable_img2img">Enable Img2Img</label>
+          </legend>
+          <label for="strength">Img2Img Strength:</label>
+          <input value="0.75" type="number" id="strength" name="strength" step="0.01" min="0" max="1">
+          <input type="checkbox" id="fit" name="fit" checked>
+          <label title="Rescale image to fit within requested width and height" for="fit">Fit to width/height:</label>
+        </fieldset>
+      </fieldset>
+      <div id="postprocess">
         <fieldset id="gfpgan">
-	  <div class="section-header">Post-processing options</div>
-          <label title="Strength of the gfpgan (face fixing) algorithm." for="gfpgan_strength">GPFGAN Strength (0 to disable):</label>
-          <input value="0.0" min="0" max="1" type="number" id="gfpgan_strength" name="gfpgan_strength" step="0.1">
-          <label title="Upscaling to perform using ESRGAN." for="upscale_level">Upscaling Level</label>
+          <legend>
+            <input type="checkbox" name="enable_gfpgan" id="enable_gfpgan">
+            <label for="enable_gfpgan">Enable gfpgan</label>
+          </legend>
+          <label title="Strength of the gfpgan (face fixing) algorithm." for="gfpgan_strength">GPFGAN Strength:</label>
+          <input value="0.8" min="0" max="1" type="number" id="gfpgan_strength" name="gfpgan_strength" step="0.05">
+        </fieldset>
+        <fieldset id="upscale">
+          <legend>
+            <input type="checkbox" name="enable_upscale" id="enable_upscale">
+            <label for="enable_upscale">Enable Upscaling</label>
+          </legend>
+          <label title="Upscaling to perform using ESRGAN." for="upscale_level">Upscaling Level:</label>
           <select id="upscale_level" name="upscale_level" value="">
             <option value="" selected>None</option>
             <option value="2">2x</option>
@@ -105,25 +155,25 @@
           <label title="Strength of the esrgan (upscaling) algorithm." for="upscale_strength">Upscale Strength:</label>
           <input value="0.75" min="0" max="1" type="number" id="upscale_strength" name="upscale_strength" step="0.05">
         </fieldset>
-      </form>
-      <br>
-      <section id="progress-section">
-        <div id="progress-container">
-          <progress id="progress-bar" value="0" max="1"></progress>
-          <span id="cancel-button" title="Cancel">&#10006;</span>
-          <br>
-          <img id="progress-image" src='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>'>
-          <div id="scaling-inprocess-message">
-            <i><span>Postprocessing...</span><span id="processing_cnt">1/3</span></i>
-          </div>
-        </span>
-      </section>
-
-      <div id="results">
-        <div id="no-results-message">
-          <i><p>No results...</p></i>
+      </div>
+      <input type="submit" id="submit" value="Generate">
+    </form>
+    <br>
+    <section id="progress-section">
+      <div id="progress-container">
+        <progress id="progress-bar" value="0" max="1"></progress>
+        <span id="cancel-button" title="Cancel">&#10006;</span>
+        <br>
+        <img id="progress-image" src='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>'>
+        <div id="scaling-inprocess-message">
+          <i><span>Postprocessing...</span><span id="processing_cnt">1</span>/<span id="processing_total">3</span></i>
         </div>
       </div>
-    </main>
-  </body>
+    </section>
+
+    <div id="results">
+    </div>
+  </main>
+</body>
+
 </html>
