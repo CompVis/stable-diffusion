@@ -191,6 +191,8 @@ class Txt2Img(BaseModel):
                                 sample_path,
                                 opt)
 
+                    self.save_grid(opt, samples_ddim)
+
         return saved_files
 
     def handle_save_image(self, image, saved_files, base_count, sample_path, opt):

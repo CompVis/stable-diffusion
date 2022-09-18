@@ -8,7 +8,6 @@ from PIL import Image
 from contextlib import nullcontext
 from tqdm import tqdm, trange
 from classes.base import BaseModel
-from scripts.txt2img import make_grid
 from einops import rearrange, repeat
 from scripts.img2img import load_img
 
@@ -164,14 +163,8 @@ class Img2Img(BaseModel):
         data = self.data
         sample_path = self.sample_path
         base_count = self.base_count
-        n_rows = self.n_rows
         device = self.device
-        outpath = self.outpath
-        grid_count = self.grid_count
         self.set_seed()
-
-        print(opt)
-        print("*"*80)
 
         assert os.path.isfile(opt.init_img)
         init_image = load_img(opt.init_img).to(device)
@@ -201,13 +194,16 @@ class Img2Img(BaseModel):
                             c = model.get_learned_conditioning(prompts)
 
                             # encode (scaled latent)
-                            z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc] * batch_size).to(device))
+                            z_enc = sampler.stochastic_encode(
+                                init_latent,
+                                torch.tensor([t_enc] * batch_size).to(device))
                             # decode it
-                            samples = sampler.decode(z_enc,
-                                                     c,
-                                                     t_enc,
-                                                     unconditional_guidance_scale=opt.scale,
-                                                     unconditional_conditioning=uc)
+                            samples = sampler.decode(
+                                z_enc,
+                                c,
+                                t_enc,
+                                unconditional_guidance_scale=opt.scale,
+                                unconditional_conditioning=uc)
 
                             x_samples = self.get_first_stage_sample(model, samples)
 
@@ -222,17 +218,7 @@ class Img2Img(BaseModel):
 
                             all_samples.append(x_samples)
 
-                    if not opt.skip_grid:
-                        # additionally, save as grid
-                        grid = torch.stack(all_samples, 0)
-                        grid = rearrange(grid, 'n b c h w -> (n b) c h w')
-                        grid = make_grid(grid, nrow=n_rows)
-
-                        # to image
-                        grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-                        Image.fromarray(grid.astype(np.uint8)).save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
-                        grid_count += 1
-
+                    self.save_grid(opt, all_samples)
                     toc = time.time()
 
         return saved_files
