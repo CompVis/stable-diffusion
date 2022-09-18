@@ -49,8 +49,8 @@ pyenv activate anaconda3-2022.05
 
 # OR,
 # 2. Installing standalone
-# install python 3, git, cmake, protobuf:
-brew install cmake protobuf rust
+# install python 3, git, cmake:
+brew install cmake rust
 
 # install miniconda (M1 arm64 version):
 curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o Miniconda3-latest-MacOSX-arm64.sh
@@ -78,6 +78,7 @@ ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
 # install packages
 PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
 conda activate ldm
+conda install -y protobuf=3.20.1
 
 # only need to do this once
 python scripts/preload_models.py
