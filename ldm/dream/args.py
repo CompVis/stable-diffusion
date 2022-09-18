@@ -181,6 +181,10 @@ class Args(object):
             switches.append('--seamless')
         if a['init_img'] and len(a['init_img'])>0:
             switches.append(f'-I {a["init_img"]}')
+        if a['init_mask'] and len(a['init_mask'])>0:
+            switches.append(f'-M {a["init_mask"]}')
+        if a['init_color'] and len(a['init_color'])>0:
+            switches.append(f'--init_color {a["init_color"]}')
         if a['fit']:
             switches.append(f'--fit')
         if a['init_img'] and a['strength'] and a['strength']>0:
@@ -494,6 +498,11 @@ class Args(object):
             help='Path to input mask for inpainting mode (supersedes width and height)',
         )
         img2img_group.add_argument(
+            '--init_color',
+            type=str,
+            help='Path to reference image for color correction (used for repeated img2img and inpainting)'
+        )
+        img2img_group.add_argument(
             '-T',
             '-fit',
             '--fit',
@@ -508,11 +517,24 @@ class Args(object):
             default=0.75,
         )
         postprocessing_group.add_argument(
+            '-ft',
+            '--facetool',
+            type=str,
+            help='Select the face restoration AI to use: gfpgan, codeformer',
+        )
+        postprocessing_group.add_argument(
             '-G',
             '--gfpgan_strength',
             type=float,
             help='The strength at which to apply the GFPGAN model to the result, in order to improve faces.',
             default=0,
+        )
+        postprocessing_group.add_argument(
+            '-cf',
+            '--codeformer_fidelity',
+            type=float,
+            help='Takes values between 0 and 1. 0 produces high quality but low accuracy. 1 produces high accuracy but low quality.',
+            default=0.75
         )
         postprocessing_group.add_argument(
             '-U',
@@ -654,6 +676,8 @@ def metadata_loads(metadata):
             # repack the prompt and variations
             image['prompt']     = ','.join([':'.join([x['prompt'],   str(x['weight'])]) for x in image['prompt']])
             image['variations'] = ','.join([':'.join([str(x['seed']),str(x['weight'])]) for x in image['variations']])
+            # fix a bit of semantic drift here
+            image['sampler_name']=image.pop('sampler')
             opt = Args()
             opt._cmd_switches = Namespace(**image)
             results.append(opt)
