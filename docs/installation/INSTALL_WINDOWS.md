@@ -28,17 +28,16 @@ in the wiki
 
 ### **Conda**
 
-1. Install Anaconda3 (miniconda3 version) from here:
-   https://docs.anaconda.com/anaconda/install/windows/
+1. Install Anaconda3 (miniconda3 version) from [here](https://docs.anaconda.com/anaconda/install/windows/)
 
-2. Install Git from here: https://git-scm.com/download/win
+2. Install Git from [here](https://git-scm.com/download/win)
 
 3. Launch Anaconda from the Windows Start menu. This will bring up a command
    window. Type all the remaining commands in this window.
 
 4. Run the command:
 
-    ```bash
+    ```batch
     git clone https://github.com/lstein/stable-diffusion.git
     ```
 
@@ -48,15 +47,15 @@ in the wiki
 5. Enter the newly-created stable-diffusion folder. From this step forward make
    sure that you are working in the stable-diffusion directory!
 
-    ```bash
+    ```batch
     cd stable-diffusion
     ```
 
 6. Run the following two commands:
 
-    ```bash
-    conda env create -f environment.yaml    (step 6a)
-    conda activate ldm                      (step 6b)
+    ```batch
+    conda env create -f environment.yaml
+    conda activate ldm
     ```
 
     This will install all python requirements and activate the "ldm" environment
@@ -64,7 +63,7 @@ in the wiki
 
 7. Run the command:
 
-    ```bash
+    ```batch
     python scripts\preload_models.py
     ```
 
@@ -77,9 +76,9 @@ in the wiki
 8. Now you need to install the weights for the big stable diffusion model.
 
       - For running with the released weights, you will first need to set up an
-        acount with Hugging Face (https://huggingface.co).
+        acount with [Hugging Face](https://huggingface.co).
       - Use your credentials to log in, and then point your browser at
-        https://huggingface.co/CompVis/stable-diffusion-v-1-4-original.
+        [https://huggingface.co/CompVis/stable-diffusion-v-1-4-original](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original).
       - You may be asked to sign a license agreement at this point.
       - Click on "Files and versions" near the top of the page, and then click on
         the file named `sd-v1-4.ckpt`. You'll be taken to a page that prompts you
@@ -90,7 +89,7 @@ in the wiki
       Now run the following commands from **within the stable-diffusion directory**
       to copy the weights file to the right place:
 
-      ```bash
+      ```batch
       mkdir -p models\ldm\stable-diffusion-v1
       copy C:\path\to\sd-v1-4.ckpt models\ldm\stable-diffusion-v1\model.ckpt
       ```
@@ -102,7 +101,7 @@ in the wiki
 
 9. Start generating images!
 
-    ```bash
+    ```batch
     # for the pre-release weights
     python scripts\dream.py -l
 
@@ -122,14 +121,14 @@ in the wiki
 
 ---
 
-### Updating to newer versions of the script
+## Updating to newer versions of the script
 
 This distribution is changing rapidly. If you used the `git clone` method
 (step 5) to download the stable-diffusion directory, then to update to the
 latest and greatest version, launch the Anaconda window, enter
 `stable-diffusion`, and type:
 
-```bash
+```batch
 git pull
 conda env update -f environment.yaml
 ```
