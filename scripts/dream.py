@@ -269,7 +269,7 @@ def main_loop(gen, opt, infile):
                 filename   = f'{prefix}.{first_seed}.png'
                 formatted_dream_prompt  = opt.dream_prompt_str(seed=first_seed,grid=True,iterations=len(grid_images))
                 formatted_dream_prompt += f' # {grid_seeds}'
-                metadata = metadata.dumps(
+                metadata = metadata_dumps(
                     opt,
                     seeds      = grid_seeds,
                     weights    = gen.weights,

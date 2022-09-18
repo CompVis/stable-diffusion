@@ -170,11 +170,11 @@ class Args(object):
         switches = list()
         switches.append(f'"{a["prompt"]}"')
         switches.append(f'-s {a["steps"]}')
+        switches.append(f'-S {a["seed"]}')
         switches.append(f'-W {a["width"]}')
         switches.append(f'-H {a["height"]}')
         switches.append(f'-C {a["cfg_scale"]}')
         switches.append(f'-A {a["sampler_name"]}')
-        switches.append(f'-S {a["seed"]}')
         if a['grid']:
             switches.append('--grid')
         if a['seamless']:
@@ -517,11 +517,24 @@ class Args(object):
             default=0.75,
         )
         postprocessing_group.add_argument(
+            '-ft',
+            '--facetool',
+            type=str,
+            help='Select the face restoration AI to use: gfpgan, codeformer',
+        )
+        postprocessing_group.add_argument(
             '-G',
             '--gfpgan_strength',
             type=float,
             help='The strength at which to apply the GFPGAN model to the result, in order to improve faces.',
             default=0,
+        )
+        postprocessing_group.add_argument(
+            '-cf',
+            '--codeformer_fidelity',
+            type=float,
+            help='Takes values between 0 and 1. 0 produces high quality but low accuracy. 1 produces high accuracy but low quality.',
+            default=0.75
         )
         postprocessing_group.add_argument(
             '-U',
