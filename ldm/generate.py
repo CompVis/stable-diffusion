@@ -308,6 +308,7 @@ class Generate:
         strength = strength or self.strength
         self.seed = seed
         self.log_tokenization = log_tokenization
+        self.step_callback    = step_callback
         with_variations = [] if with_variations is None else with_variations
 
         # will instantiate the model or return it from cache
@@ -439,6 +440,97 @@ class Generate:
                 '%4.2fG' % (self.session_peakmem / 1e9),
             )
         return results
+
+    # this needs to be generalized to all sorts of postprocessors, but for now
+    # sufficient to support most use cases
+    def apply_postprocessor(
+            self,
+            image_path,
+            tool                = 'gfpgan',  # one of 'upscale', 'gfpgan', 'codeformer', or 'embiggen'
+            gfpgan_strength     = 0.0,
+            codeformer_fidelity = 0.75,
+            save_original       = True, # to get new name
+            upscale             = None,
+            callback            = None,
+            opt                 = None,
+            ):
+        # retrieve the seed from the image;
+        # note that we will try both the new way and the old way, since not all files have the
+        # metadata (yet)
+        seed   = None
+        image_metadata = None
+        prompt = None
+        try:
+            meta = retrieve_metadata(image_path)
+            args = metadata_loads(meta)
+            if len(args) > 1:
+                print("* Can't postprocess a grid")
+                return
+            seed   = args[0].seed
+            prompt = args[0].prompt
+            print(f'>> retrieved seed {seed} and prompt "{prompt}" from {image_path}')
+        except:
+            m    = re.search('(\d+)\.png$',image_path)
+            if m:
+                seed = m.group(1)
+
+        if not seed:
+            print('* Could not recover seed for image. Replacing with 42. This will not affect image quality')
+            seed = 42
+        
+        # face fixers and esrgan take an Image, but embiggen takes a path
+        image = Image.open(image_path)
+
+        # Note that we need to adopt a uniform API for the postprocessors.
+        # This is completely ad hoc ATCM
+        if tool in ('gfpgan','codeformer','upscale'):
+            if tool == 'gfpgan':
+                facetool = 'gfpgan'
+            elif tool == 'codeformer':
+                facetool = 'codeformer'
+            elif tool == 'upscale':
+                facetool = 'gfpgan'   # but won't be run
+                gfpgan_strength = 0
+            return self.upscale_and_reconstruct(
+                [[image,seed]],
+                facetool = facetool,
+                strength = gfpgan_strength,
+                codeformer_fidelity = codeformer_fidelity,
+                save_original = save_original,
+                upscale = upscale,
+                image_callback = callback,
+            )
+
+        elif tool == 'embiggen':
+            # fetch the metadata from the image
+            generator = self._make_embiggen()
+            uc, c = get_uc_and_c(
+                prompt, model =self.model,
+                skip_normalize=opt.skip_normalize,
+                log_tokens    =opt.log_tokenization
+            )
+            # embiggen takes a image path (sigh)
+            generator.generate(
+                prompt,
+                sampler     = self.sampler,
+                steps       = opt.steps,
+                cfg_scale   = opt.cfg_scale,
+                ddim_eta    = self.ddim_eta,
+                conditioning= (uc, c),
+                init_img    = image_path,  # not the Image! (sigh)
+                init_image  = image,       # embiggen wants both! (sigh)
+                strength    = opt.strength,
+                width       = opt.width,
+                height      = opt.height,
+                embiggen    = opt.embiggen,
+                embiggen_tiles = opt.embiggen_tiles,
+                image_callback = callback,
+            )
+
+        else:
+            print(f'* postprocessing tool {tool} is not yet supported')
+            return None
+
 
     def _make_images(self, img_path, mask_path, width, height, fit=False):
         init_image = None

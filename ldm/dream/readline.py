@@ -26,8 +26,8 @@ class Completer:
                             '--init_color')):
             return self._path_completions(text, state, ('.png','.jpg','.jpeg'))
 
-        if buffer.strip().endswith('cd') or text.startswith(('.', '/')):
-            return self._path_completions(text, state, ())
+        if buffer.strip().endswith('pp') or text.startswith(('.', '/')):
+            return self._path_completions(text, state, ('.png','.jpg','.jpeg'))
 
         response = None
         if state == 0:

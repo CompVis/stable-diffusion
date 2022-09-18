@@ -400,7 +400,10 @@ class Args(object):
     # This creates the parser that processes commands on the dream> command line
     def _create_dream_cmd_parser(self):
         parser = argparse.ArgumentParser(
-            description='Example: dream> a fantastic alien landscape -W1024 -H960 -s100 -n12'
+            description="""
+            Generate example: dream> a fantastic alien landscape -W576 -H512 -s60 -n4
+            Postprocess example: dream> !pp 0000045.4829112.png -G1 -U4 -ft codeformer
+            """
         )
         render_group     = parser.add_argument_group('General rendering')
         img2img_group    = parser.add_argument_group('Image-to-image and inpainting')
@@ -523,6 +526,7 @@ class Args(object):
             '-ft',
             '--facetool',
             type=str,
+            default='gfpgan',
             help='Select the face restoration AI to use: gfpgan, codeformer',
         )
         postprocessing_group.add_argument(
@@ -530,7 +534,7 @@ class Args(object):
             '--gfpgan_strength',
             type=float,
             help='The strength at which to apply the GFPGAN model to the result, in order to improve faces.',
-            default=0,
+            default=0.0,
         )
         postprocessing_group.add_argument(
             '-cf',
@@ -690,8 +694,10 @@ def metadata_loads(metadata):
             images = [metadata['sd-metadata']['image']]
         for image in images:
             # repack the prompt and variations
-            image['prompt']     = ','.join([':'.join([x['prompt'],   str(x['weight'])]) for x in image['prompt']])
-            image['variations'] = ','.join([':'.join([str(x['seed']),str(x['weight'])]) for x in image['variations']])
+            if 'prompt' in image:
+                image['prompt']     = ','.join([':'.join([x['prompt'],   str(x['weight'])]) for x in image['prompt']])
+            if 'variations' in image:
+                image['variations'] = ','.join([':'.join([str(x['seed']),str(x['weight'])]) for x in image['variations']])
             # fix a bit of semantic drift here
             image['sampler_name']=image.pop('sampler')
             opt = Args()
