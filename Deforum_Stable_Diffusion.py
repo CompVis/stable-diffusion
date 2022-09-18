@@ -923,8 +923,10 @@ animation_prompts = {
 # !!   "id": "qH74gBWDd2oq",
 # !!   "cellView": "form"
 # !! }}
-def DeforumArgs():
+override_settings_with_file = False #@param {type:"boolean"}
+custom_settings_file = "/content/drive/MyDrive/Settings.txt"#@param {type:"string"}
 
+def DeforumArgs():
     #@markdown **Image Settings**
     W = 512 #@param
     H = 512 #@param
@@ -1390,8 +1392,32 @@ def render_interpolation(args, anim_args):
     args.init_c = None
 
 
-args = SimpleNamespace(**DeforumArgs())
-anim_args = SimpleNamespace(**DeforumAnimArgs())
+args_dict = DeforumArgs()
+anim_args_dict = DeforumAnimArgs()
+
+if override_settings_with_file:
+    print(f"reading custom settings from {custom_settings_file}")
+    if not os.path.isfile(custom_settings_file):
+        print('The custom settings file does not exist. The in-notebook settings will be used instead')
+    else:
+        with open(custom_settings_file, "r") as f:
+            jdata = json.loads(f.read())
+            animation_prompts = jdata["prompts"]
+            for i, k in enumerate(args_dict):
+                if k in jdata:
+                    args_dict[k] = jdata[k]
+                else:
+                    print(f"key {k} doesn't exist in the custom settings data! using the default value of {args_dict[k]}")
+            for i, k in enumerate(anim_args_dict):
+                if k in jdata:
+                    anim_args_dict[k] = jdata[k]
+                else:
+                    print(f"key {k} doesn't exist in the custom settings data! using the default value of {anim_args_dict[k]}")
+            print(args_dict)
+            print(anim_args_dict)
+
+args = SimpleNamespace(**args_dict)
+anim_args = SimpleNamespace(**anim_args_dict)
 
 args.timestring = time.strftime('%Y%m%d%H%M%S')
 args.strength = max(0.0, min(1.0, args.strength))
