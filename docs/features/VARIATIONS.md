@@ -102,6 +102,7 @@ generate more variations around the almost-but-not-quite image. We do the
 latter, using both the `-V` (combining) and `-v` (variation strength) options.
 Note that we use `-n6` to generate 6 variations:
 
+```bash
 dream> "prompt" -S3357757885 -V3647897225,0.1,1614299449,0.1 -v0.05 -n6
 Outputs:
 ./outputs/Xena/000004.3279757577.png: "prompt" -s50 -W512 -H512 -C7.5 -Ak_lms -V 3647897225:0.1,1614299449:0.1,3279757577:0.05 -S3357757885
