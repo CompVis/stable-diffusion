@@ -17,6 +17,12 @@ from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 from ldm.util import instantiate_from_config
 from itertools import islice
+# load safety model
+from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
+from transformers import AutoFeatureExtractor
+safety_model_id = "CompVis/stable-diffusion-safety-checker"
+safety_feature_extractor = AutoFeatureExtractor.from_pretrained(safety_model_id)
+safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
 
 # import txt2img functions from stable diffusion
 def load_model_from_config(config, ckpt, verbose=False):
@@ -58,10 +64,6 @@ def load_replacement(x):
         return x
 
 
-def check_safety(x_image):
-    return x_image, False
-
-
 def chunk(it, size):
     it = iter(it)
     return iter(lambda: tuple(islice(it, size)), ())
@@ -96,8 +98,6 @@ class BaseModel:
     def __init__(self, *args, **kwargs):
         self.opt = {}
         self.initialize_logging()
-        self.do_nsfw_filter = kwargs.get("do_nsfw_filter", False)
-        self.do_watermark = kwargs.get("do_watermark", False)
         self.parser = None
         self.config = None
         self.data = None
@@ -172,8 +172,7 @@ class BaseModel:
         :return:
         """
         for opt in options:
-            if opt[0] in self.opt:
-                self.opt.__setattr__(opt[0], opt[1])
+            self.opt.__setattr__(opt[0], opt[1])
 
     def initialize_options(self):
         """
@@ -231,14 +230,33 @@ class BaseModel:
         self.wm_encoder = WatermarkEncoder()
         self.wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
 
+    def numpy_to_pil(self, images):
+        """
+        Convert a numpy image or a batch of images to a PIL image.
+        """
+        if images.ndim == 3:
+            images = images[None, ...]
+        images = (images * 255).round().astype("uint8")
+        pil_images = [Image.fromarray(image) for image in images]
+        return pil_images
+
+    def check_safety(self, x_image):
+        safety_checker_input = safety_feature_extractor(self.numpy_to_pil(x_image), return_tensors="pt")
+        x_checked_image, has_nsfw_concept = safety_checker(images=x_image, clip_input=safety_checker_input.pixel_values)
+        assert x_checked_image.shape[0] == len(has_nsfw_concept)
+        for i in range(len(has_nsfw_concept)):
+            if has_nsfw_concept[i]:
+                x_checked_image[i] = load_replacement(x_checked_image[i])
+        return x_checked_image, has_nsfw_concept
+
     def filter_nsfw_content(self, x_samples_ddim):
         """
         Check if the samples are safe for work, replace them with a placeholder if not
         :param x_samples_ddim:
         :return:
         """
-        if self.do_nsfw_filter:
-            x_samples_ddim, has_nsfw = check_safety(x_samples_ddim)
+        if self.opt.do_nsfw_filter:
+            x_samples_ddim, has_nsfw = self.check_safety(x_samples_ddim)
             return x_samples_ddim
         return x_samples_ddim
 
@@ -248,7 +266,7 @@ class BaseModel:
         :param img:
         :return:
         """
-        if self.do_watermark:
+        if self.opt.do_watermark != "":
             img = put_watermark(img, self.wm_encoder)
         return img
 
@@ -353,7 +371,7 @@ class BaseModel:
         :param n_rows:
         :return:
         """
-        if not opt.skip_grid:
+        if opt.skip_grid:
             return
         grid = torch.stack(images, 0)
         grid = rearrange(grid, 'n b c h w -> (n b) c h w')
