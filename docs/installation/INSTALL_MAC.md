@@ -2,6 +2,8 @@
 title: macOS
 ---
 
+# :fontawesome-brands-apple: macOS
+
 ## Requirements
 
 - macOS 12.3 Monterey or later

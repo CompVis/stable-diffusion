@@ -2,6 +2,8 @@
 title: Linux
 ---
 
+# :fontawesome-brands-linux: Linux
+
 ## Installation
 
 1. You will need to install the following prerequisites if they are not already

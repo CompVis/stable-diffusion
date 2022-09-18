@@ -4,6 +4,8 @@ hide:
   - toc
 ---
 
+# :material-bash: CLI
+
 ## **Interactive Command Line Interface**
 
 The `dream.py` script, located in `scripts/dream.py`, provides an interactive interface to image

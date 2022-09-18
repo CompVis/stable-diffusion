@@ -2,6 +2,10 @@
 title: Variations
 ---
 
+# :material-tune-variant: Variations
+
+## Intro
+
 Release 1.13 of SD-Dream adds support for image variations.
 
 You are able to do the following:

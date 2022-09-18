@@ -12,7 +12,7 @@ title: Home
 -->
 <div align="center" markdown="1">
 
-# Stable Diffusion Dream Script
+# :material-script-text-outline: Stable Diffusion Dream Script
 
 ![project logo](assets/logo.png)
 
@@ -55,29 +55,29 @@ GPU cards with as little as 4 GB or RAM.
     [Issues](https://github.com/lstein/stable-diffusion/issues) tab to report bugs and make feature
     requests. Be sure to use the provided templates. They will help aid diagnose issues faster.
 
-## Installation
+## :octicons-package-dependencies-24: Installation
 
 This fork is supported across multiple platforms. You can find individual installation instructions
 below.
 
-- [Linux](installation/INSTALL_LINUX.md)
-- [Windows](installation/INSTALL_WINDOWS.md)
-- [Macintosh](installation/INSTALL_MAC.md)
+- :fontawesome-brands-linux: [Linux](installation/INSTALL_LINUX.md)
+- :fontawesome-brands-windows: [Windows](installation/INSTALL_WINDOWS.md)
+- :fontawesome-brands-apple: [Macintosh](installation/INSTALL_MAC.md)
 
-## Hardware Requirements
+## :fontawesome-solid-computer: Hardware Requirements
 
-### System
+### :octicons-cpu-24: System
 
 You wil need one of the following:
 
-- An NVIDIA-based graphics card with 4 GB or more VRAM memory.
-- An Apple computer with an M1 chip.
+- :simple-nvidia: An NVIDIA-based graphics card with 4 GB or more VRAM memory.
+- :fontawesome-brands-apple: An Apple computer with an M1 chip.
 
-### Memory
+### :fontawesome-solid-memory: Memory
 
 - At least 12 GB Main Memory RAM.
 
-### Disk
+### :fontawesome-regular-hard-drive: Disk
 
 - At least 6 GB of free disk space for the machine learning model, Python, and all its dependencies.
 
@@ -94,7 +94,7 @@ You wil need one of the following:
     (ldm) ~/stable-diffusion$ python scripts/dream.py --full_precision
     ```
 
-## Features
+## :octicons-list-unordered-24: Features
 
 ### Major Features
 
@@ -117,7 +117,7 @@ You wil need one of the following:
 - [Creating Transparent Regions for Inpainting](features/INPAINTING.md#creating-transparent-regions-for-inpainting)
 - [Preload Models](features/OTHER.md#preload-models)
 
-## Latest Changes
+## :octicons-log-16: Latest Changes
 
 ### v1.14 <small>(11 September 2022)</small>
 
@@ -148,12 +148,12 @@ You wil need one of the following:
 
 For older changelogs, please visit the **[CHANGELOG](features/CHANGELOG.md)**.
 
-## Troubleshooting
+## :material-target: Troubleshooting
 
-Please check out our **[Q&A](help/TROUBLESHOOT.md)** to get solutions for common installation
+Please check out our **[:material-frequently-asked-questions: Q&A](help/TROUBLESHOOT.md)** to get solutions for common installation
 problems and other issues.
 
-## Contributing
+## :octicons-repo-push-24: Contributing
 
 Anyone who wishes to contribute to this project, whether documentation, features, bug fixes, code
 cleanup, testing, or code reviews, is very much encouraged to do so. If you are unfamiliar with how
@@ -165,13 +165,13 @@ important thing is to **make your pull request against the "development" branch*
 "main". This will help keep public breakage to a minimum and will allow you to propose more radical
 changes.
 
-## Contributors
+## :octicons-person-24: Contributors
 
 This fork is a combined effort of various people from across the world.
 [Check out the list of all these amazing people](other/CONTRIBUTORS.md). We thank them for their
 time, hard work and effort.
 
-## Support
+## :octicons-question-24: Support
 
 For support, please use this repository's GitHub Issues tracking service. Feel free to send me an
 email if you use and like the script.
@@ -179,7 +179,7 @@ email if you use and like the script.
 Original portions of the software are Copyright (c) 2020
 [Lincoln D. Stein](https://github.com/lstein)
 
-## Further Reading
+## :octicons-book-24: Further Reading
 
 Please see the original README for more information on this software and underlying algorithm,
 located in the file [README-CompViz.md](other/README-CompViz.md).

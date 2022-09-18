@@ -2,6 +2,8 @@
 title: Upscale
 ---
 
+# :material-image-size-select-large: Upscale 
+
 ## **GFPGAN and Real-ESRGAN Support**
 
 The script also provides the ability to do face restoration and upscaling with the help of GFPGAN

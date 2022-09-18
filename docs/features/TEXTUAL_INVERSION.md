@@ -2,6 +2,8 @@
 title: TEXTUAL_INVERSION
 ---
 
+# :material-file-document-plus-outline: TEXTUAL_INVERSION
+
 ## **Personalizing Text-to-Image Generation**
 
 You may personalize the generated images to provide your own styles or objects

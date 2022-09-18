@@ -2,6 +2,8 @@
 title: Windows
 ---
 
+# :fontawesome-brands-windows: Windows
+
 ## **Notebook install (semi-automated)**
 
 We have a

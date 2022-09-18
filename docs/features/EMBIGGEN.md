@@ -2,6 +2,8 @@
 title: Embiggen
 ---
 
+# :material-loupe: Embiggen
+
 **upscale your images on limited memory machines**
 
 GFPGAN and Real-ESRGAN are both memory intensive. In order to avoid

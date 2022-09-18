@@ -2,6 +2,8 @@
 title: Inpainting
 ---
 
+# :octicons-paintbrush-16: Inpainting
+
 ## **Creating Transparent Regions for Inpainting**
 
 Inpainting is really cool. To do it, you start with an initial image and use a photoeditor to make
