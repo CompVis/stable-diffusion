@@ -39,7 +39,7 @@ and one with the init word provided.
 
 On a RTX3090, the process for SD will take ~1h @1.6 iterations/sec.
 
-!!! Info _Note_
+!!! note
 
     According to the associated paper, the optimal number of
     images is 3-5. Your model may not converge if you use more images than

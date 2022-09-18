@@ -59,7 +59,6 @@ and it can also be less than one if the init_img is too big.
 Esrgan_strength defaults to 0.75, and the overlap_ratio defaults to
 0.25, both are optional.
 
-
 Unlike Img2Img, the `--width` (`-W`) and `--height` (`-H`) arguments
 do not control the size of the image as a whole, but the size of the
 tiles used to Embiggen the image.
@@ -120,19 +119,19 @@ tiles:
 dream> a photo of puffy clouds over a forest at sunset -s 100 -W 512 -H 512 -I outputs/000002.seed.png -f 0.5 -embiggen_tiles 1 2 3
 ```
 
-## Note
+!!! note
 
-Because the same prompt is used on all the tiled images, and the model
-doesn't have the context of anything outside the tile being run - it
-can end up creating repeated pattern (also called 'motifs') across all
-the tiles based on that prompt. The best way to combat this is
-lowering the `--strength` (`-f`) to stay more true to the init image,
-and increasing the number of steps so there is more compute-time to
-create the detail.  Anecdotally `--strength` 0.35-0.45 works pretty
-well on most things. It may also work great in some examples even with
-the `--strength` set high for patterns, landscapes, or subjects that
-are more abstract. Because this is (relatively) fast, you can also
-always create a few Embiggen'ed images and manually composite them to
-preserve the best parts from each.
+    Because the same prompt is used on all the tiled images, and the model
+    doesn't have the context of anything outside the tile being run - it
+    can end up creating repeated pattern (also called 'motifs') across all
+    the tiles based on that prompt. The best way to combat this is
+    lowering the `--strength` (`-f`) to stay more true to the init image,
+    and increasing the number of steps so there is more compute-time to
+    create the detail.  Anecdotally `--strength` 0.35-0.45 works pretty
+    well on most things. It may also work great in some examples even with
+    the `--strength` set high for patterns, landscapes, or subjects that
+    are more abstract. Because this is (relatively) fast, you can also
+    always create a few Embiggen'ed images and manually composite them to
+    preserve the best parts from each.
 
 Author: [Travco](https://github.com/travco)

@@ -22,8 +22,10 @@ be retrieved using scripts/images2prompt.py
 
 The script is confirmed to work on Linux, Windows and Mac systems.
 
-_Note:_ This script runs from the command-line or can be used as a Web application. The Web GUI is
-currently rudimentary, but a much better replacement is on its way.
+!!! note
+
+    This script runs from the command-line or can be used as a Web application. The Web GUI is
+    currently rudimentary, but a much better replacement is on its way.
 
 ```bash
 (ldm) ~/stable-diffusion$ python3 ./scripts/dream.py
@@ -99,12 +101,12 @@ These arguments are deprecated but still work:
 | `--weights <path>` |          | `None`  | Pth to weights file; use `--model stable-diffusion-1.4` instead |
 | `--laion400m`      | `-l`     | `False` | Use older LAION400m weights; use `--model=laion400m` instead   |
 
-### **A note on path names:**
+!!! note
 
-On Windows systems, you may run into problems when passing the dream script standard backslashed
-path names because the Python interpreter treats "\" as an escape. You can either double your
-slashes (ick): `C:\\\\path\\\\to\\\\my\\\\file`, or use Linux/Mac style forward slashes (better):
-`C:/path/to/my/file`.
+    On Windows systems, you may run into problems when passing the dream script standard backslashed
+    path names because the Python interpreter treats `\` as an escape. You can either double your
+    slashes (ick): `C:\\\\path\\\\to\\\\my\\\\file`, or use Linux/Mac style forward slashes (better):
+    `C:/path/to/my/file`.
 
 ### List of prompt arguments
 
@@ -144,8 +146,10 @@ Those are the `dream` commands that apply to txt2img:
 | `--variation <float>`          | `-v<float>`        | `0.0`                 | Add a bit of noise (0.0=none, 1.0=high) to the image<br>in order to generate a series of variations. Usually<br>used in combination with `-S<seed>` and `-n<int>`<br>to generate a series a riffs on a starting image.<br>See [Variations](./VARIATIONS.md). |
 | `--with_variations <pattern>` | `-V<pattern>`     | `None`                | Combine two or more variations. See [Variations](./VARIATIONS.md)<br>for now to use this.                                                                                                                                                                    |
 
-Note that the width and height of the image must be multiples of 64. You can provide different
-values, but they will be rounded down to the nearest multiple of 64.
+!!! note
+
+    The width and height of the image must be multiples of 64. You can provide different
+    values, but they will be rounded down to the nearest multiple of 64.
 
 ### This is an example of img2img
 

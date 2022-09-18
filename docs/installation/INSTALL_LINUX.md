@@ -57,9 +57,11 @@ title: Linux
     (ldm) ~/stable-diffusion$ python3 scripts/preload_models.py
     ```
 
-    Note that this step is necessary because I modified the original just-in-time
-    model loading scheme to allow the script to work on GPU machines that are not
-    internet connected. See [Preload Models](../features/OTHER.md#preload-models)
+    !!! note
+
+        This step is necessary because I modified the original just-in-time
+        model loading scheme to allow the script to work on GPU machines that are not
+        internet connected. See [Preload Models](../features/OTHER.md#preload-models)
 
 7. Now you need to install the weights for the stable diffusion model.
 

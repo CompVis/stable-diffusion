@@ -34,9 +34,11 @@ source text-to-image generator. It provides a streamlined process with various n
 options to aid the image generation process. It runs on Windows, Mac and Linux machines, and runs on
 GPU cards with as little as 4 GB or RAM.
 
-_Note: This fork is rapidly evolving. Please use the
-[Issues](https://github.com/lstein/stable-diffusion/issues) tab to report bugs and make feature
-requests. Be sure to use the provided templates. They will help aid diagnose issues faster._
+!!! note
+
+    This fork is rapidly evolving. Please use the
+    [Issues](https://github.com/lstein/stable-diffusion/issues) tab to report bugs and make feature
+    requests. Be sure to use the provided templates. They will help aid diagnose issues faster.
 
 ## Installation
 
@@ -64,18 +66,18 @@ You wil need one of the following:
 
 - At least 6 GB of free disk space for the machine learning model, Python, and all its dependencies.
 
-### Note
+!!! note
 
-If you are have a Nvidia 10xx series card (e.g. the 1080ti), please run the dream script in
-full-precision mode as shown below.
+    If you are have a Nvidia 10xx series card (e.g. the 1080ti), please run the dream script in
+    full-precision mode as shown below.
 
-Similarly, specify full-precision mode on Apple M1 hardware.
+    Similarly, specify full-precision mode on Apple M1 hardware.
 
-To run in full-precision mode, start `dream.py` with the `--full_precision` flag:
+    To run in full-precision mode, start `dream.py` with the `--full_precision` flag:
 
-```bash
-(ldm) ~/stable-diffusion$ python scripts/dream.py --full_precision
-```
+    ```bash
+    (ldm) ~/stable-diffusion$ python scripts/dream.py --full_precision
+    ```
 
 ## Features
 
