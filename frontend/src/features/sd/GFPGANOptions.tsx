@@ -1,15 +1,15 @@
 import { Flex } from '@chakra-ui/react';
 
 import { RootState } from '../../app/store';
-import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../app/store';
 
 import { SDState, setGfpganStrength } from '../sd/sdSlice';
 
-import SDNumberInput from '../../components/SDNumberInput';
 
 import { createSelector } from '@reduxjs/toolkit';
 import { isEqual } from 'lodash';
 import { SystemState } from '../system/systemSlice';
+import SDNumberInput from '../../common/components/SDNumberInput';
 
 const sdSelector = createSelector(
   (state: RootState) => state.sd,

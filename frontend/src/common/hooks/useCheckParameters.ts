@@ -1,11 +1,11 @@
 import { createSelector } from '@reduxjs/toolkit';
 import { isEqual } from 'lodash';
 import { useMemo } from 'react';
-import { useAppSelector } from '../../app/hooks';
+import { useAppSelector } from '../../app/store';
 import { RootState } from '../../app/store';
-import { SDState } from '../sd/sdSlice';
-import { validateSeedWeights } from '../sd/util/seedWeightPairs';
-import { SystemState } from './systemSlice';
+import { SDState } from '../../features/sd/sdSlice';
+import { SystemState } from '../../features/system/systemSlice';
+import { validateSeedWeights } from '../util/seedWeightPairs';
 
 const sdSelector = createSelector(
   (state: RootState) => state.sd,

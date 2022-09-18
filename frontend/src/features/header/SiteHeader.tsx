@@ -12,15 +12,20 @@ import { isEqual } from 'lodash';
 
 import { FaSun, FaMoon, FaGithub } from 'react-icons/fa';
 import { MdHelp, MdSettings } from 'react-icons/md';
-import { useAppSelector } from '../../app/hooks';
+import { useAppSelector } from '../../app/store';
 import { RootState } from '../../app/store';
 import SettingsModal from '../system/SettingsModal';
 import { SystemState } from '../system/systemSlice';
-
 const systemSelector = createSelector(
   (state: RootState) => state.system,
   (system: SystemState) => {
-    return { isConnected: system.isConnected };
+    return {
+      isConnected: system.isConnected,
+      isProcessing: system.isProcessing,
+      currentIteration: system.currentIteration,
+      totalIterations: system.totalIterations,
+      currentStatus: system.currentStatus,
+    };
   },
   {
     memoizeOptions: { resultEqualityCheck: isEqual },
@@ -32,11 +37,13 @@ const systemSelector = createSelector(
  */
 const SiteHeader = () => {
   const { colorMode, toggleColorMode } = useColorMode();
-  const { isConnected } = useAppSelector(systemSelector);
-
-  const statusMessage = isConnected
-    ? `Connected to server`
-    : 'No connection to server';
+  const {
+    isConnected,
+    isProcessing,
+    currentIteration,
+    totalIterations,
+    currentStatus,
+  } = useAppSelector(systemSelector);
 
   const statusMessageTextColor = isConnected ? 'green.500' : 'red.500';
 
@@ -44,6 +51,14 @@ const SiteHeader = () => {
 
   // Make FaMoon and FaSun icon apparent size consistent
   const colorModeIconFontSize = colorMode == 'light' ? 18 : 20;
+
+  let statusMessage = currentStatus;
+
+  if (isProcessing) {
+    if (totalIterations > 1) {
+      statusMessage += ` [${currentIteration}/${totalIterations}]`;
+    }
+  }
 
   return (
     <Flex minWidth="max-content" alignItems="center" gap="1" pl={2} pr={1}>

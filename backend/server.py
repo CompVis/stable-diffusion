@@ -7,6 +7,8 @@ import eventlet
 import glob
 import shlex
 import argparse
+import math
+import shutil
 
 from flask_socketio import SocketIO
 from flask import Flask, send_from_directory, url_for, jsonify
@@ -119,15 +121,15 @@ result_path = os.path.join(output_dir, 'img-samples/')
 intermediate_path = os.path.join(result_path, 'intermediates/')
 
 # path for user-uploaded init images and masks
-init_path = os.path.join(result_path, 'init-images/')
-mask_path = os.path.join(result_path, 'mask-images/')
+init_image_path = os.path.join(result_path, 'init-images/')
+mask_image_path = os.path.join(result_path, 'mask-images/')
 
 # txt log
 log_path = os.path.join(result_path, 'dream_log.txt')
 
 # make all output paths
 [os.makedirs(path, exist_ok=True)
- for path in [result_path, intermediate_path, init_path, mask_path]]
+ for path in [result_path, intermediate_path, init_image_path, mask_image_path]]
 
 
 """
@@ -155,7 +157,8 @@ def handle_request_all_images():
         else:
             metadata = all_metadata['sd-metadata']
         image_array.append({'path': path, 'metadata': metadata})
-    return make_response("OK", data=image_array)
+    socketio.emit('galleryImages', {'images': image_array})
+    eventlet.sleep(0)
 
 
 @socketio.on('generateImage')
@@ -166,15 +169,31 @@ def handle_generate_image_event(generation_parameters, esrgan_parameters, gfpgan
         esrgan_parameters,
         gfpgan_parameters
     )
-    return make_response("OK")
 
 
 @socketio.on('runESRGAN')
 def handle_run_esrgan_event(original_image, esrgan_parameters):
     print(f'>> ESRGAN upscale requested for "{original_image["url"]}": {esrgan_parameters}')
+    progress = {
+        'currentStep': 1,
+        'totalSteps': 1,
+        'currentIteration': 1,
+        'totalIterations': 1,
+        'currentStatus': 'Preparing',
+        'isProcessing': True,
+        'currentStatusHasSteps': False
+    }
+
+    socketio.emit('progressUpdate', progress)
+    eventlet.sleep(0)
+
     image = Image.open(original_image["url"])
 
     seed = original_image['metadata']['seed'] if 'seed' in original_image['metadata'] else 'unknown_seed'
+
+    progress['currentStatus'] = 'Upscaling'
+    socketio.emit('progressUpdate', progress)
+    eventlet.sleep(0)
 
     image = real_esrgan_upscale(
         image=image,
@@ -183,23 +202,53 @@ def handle_run_esrgan_event(original_image, esrgan_parameters):
         seed=seed
     )
 
+    progress['currentStatus'] = 'Saving image'
+    socketio.emit('progressUpdate', progress)
+    eventlet.sleep(0)
+
     esrgan_parameters['seed'] = seed
     path = save_image(image, esrgan_parameters, result_path, postprocessing='esrgan')
     command = parameters_to_command(esrgan_parameters)
 
     write_log_message(f'[Upscaled] "{original_image["url"]}" > "{path}": {command}')
 
+    progress['currentStatus'] = 'Finished'
+    progress['currentStep'] = 0
+    progress['totalSteps'] = 0
+    progress['currentIteration'] = 0
+    progress['totalIterations'] = 0
+    progress['isProcessing'] = False
+    socketio.emit('progressUpdate', progress)
+    eventlet.sleep(0)
+
     socketio.emit(
-            'result', {'url': os.path.relpath(path), 'type': 'esrgan', 'uuid': original_image['uuid'],'metadata': esrgan_parameters})
+            'esrganResult', {'url': os.path.relpath(path), 'uuid': original_image['uuid'], 'metadata': esrgan_parameters})
 
 
 
 @socketio.on('runGFPGAN')
 def handle_run_gfpgan_event(original_image, gfpgan_parameters):
     print(f'>> GFPGAN face fix requested for "{original_image["url"]}": {gfpgan_parameters}')
+    progress = {
+        'currentStep': 1,
+        'totalSteps': 1,
+        'currentIteration': 1,
+        'totalIterations': 1,
+        'currentStatus': 'Preparing',
+        'isProcessing': True,
+        'currentStatusHasSteps': False
+    }
+
+    socketio.emit('progressUpdate', progress)
+    eventlet.sleep(0)
+
     image = Image.open(original_image["url"])
 
     seed = original_image['metadata']['seed'] if 'seed' in original_image['metadata'] else 'unknown_seed'
+
+    progress['currentStatus'] = 'Fixing faces'
+    socketio.emit('progressUpdate', progress)
+    eventlet.sleep(0)
 
     image = run_gfpgan(
         image=image,
@@ -208,29 +257,42 @@ def handle_run_gfpgan_event(original_image, gfpgan_parameters):
         upsampler_scale=1
     )
 
+    progress['currentStatus'] = 'Saving image'
+    socketio.emit('progressUpdate', progress)
+    eventlet.sleep(0)
+
     gfpgan_parameters['seed'] = seed
     path = save_image(image, gfpgan_parameters, result_path, postprocessing='gfpgan')
     command = parameters_to_command(gfpgan_parameters)
 
     write_log_message(f'[Fixed faces] "{original_image["url"]}" > "{path}": {command}')
 
+    progress['currentStatus'] = 'Finished'
+    progress['currentStep'] = 0
+    progress['totalSteps'] = 0
+    progress['currentIteration'] = 0
+    progress['totalIterations'] = 0
+    progress['isProcessing'] = False
+    socketio.emit('progressUpdate', progress)
+    eventlet.sleep(0)
+
     socketio.emit(
-            'result', {'url': os.path.relpath(path), 'type': 'gfpgan', 'uuid': original_image['uuid'],'metadata': gfpgan_parameters})
+            'gfpganResult', {'url': os.path.relpath(path), 'uuid': original_image['uuid'], 'metadata': gfpgan_parameters})
 
 
 @socketio.on('cancel')
 def handle_cancel():
     print(f'>> Cancel processing requested')
     canceled.set()
-    return make_response("OK")
+    socketio.emit('processingCanceled')
 
 
 # TODO: I think this needs a safety mechanism.
 @socketio.on('deleteImage')
-def handle_delete_image(path):
+def handle_delete_image(path, uuid):
     print(f'>> Delete requested "{path}"')
     send2trash(path)
-    return make_response("OK")
+    socketio.emit('imageDeleted', {'url': path, 'uuid': uuid})
 
 
 # TODO: I think this needs a safety mechanism.
@@ -240,11 +302,11 @@ def handle_upload_initial_image(bytes, name):
     uuid = uuid4().hex
     split = os.path.splitext(name)
     name = f'{split[0]}.{uuid}{split[1]}'
-    file_path = os.path.join(init_path, name)
+    file_path = os.path.join(init_image_path, name)
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     newFile = open(file_path, "wb")
     newFile.write(bytes)
-    return make_response("OK", data=file_path)
+    socketio.emit('initialImageUploaded', {'url': file_path, 'uuid': ''})
 
 
 # TODO: I think this needs a safety mechanism.
@@ -254,11 +316,11 @@ def handle_upload_mask_image(bytes, name):
     uuid = uuid4().hex
     split = os.path.splitext(name)
     name = f'{split[0]}.{uuid}{split[1]}'
-    file_path = os.path.join(mask_path, name)
+    file_path = os.path.join(mask_image_path, name)
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     newFile = open(file_path, "wb")
     newFile.write(bytes)
-    return make_response("OK", data=file_path)
+    socketio.emit('maskImageUploaded', {'url': file_path, 'uuid': ''})
 
 
 
@@ -273,20 +335,18 @@ ADDITIONAL FUNCTIONS
 """
 
 
+def make_unique_init_image_filename(name):
+    uuid = uuid4().hex
+    split = os.path.splitext(name)
+    name = f'{split[0]}.{uuid}{split[1]}'
+    return name
+
+
 def write_log_message(message, log_path=log_path):
     """Logs the filename and parameters used to generate or process that image to log file"""
     message = f'{message}\n'
     with open(log_path, 'a', encoding='utf-8') as file:
         file.writelines(message)
-
-
-def make_response(status, message=None, data=None):
-    response = {'status': status}
-    if message is not None:
-        response['message'] = message
-    if data is not None:
-        response['data'] = data
-    return response
 
 
 def save_image(image, parameters, output_dir, step_index=None, postprocessing=False):
@@ -310,16 +370,69 @@ def save_image(image, parameters, output_dir, step_index=None, postprocessing=Fa
 
     return path
 
+def calculate_real_steps(steps, strength, has_init_image):
+    return math.floor(strength * steps) if has_init_image else steps
+
 def generate_images(generation_parameters, esrgan_parameters, gfpgan_parameters):
     canceled.clear()
 
     step_index = 1
 
+    """
+    If a result image is used as an init image, and then deleted, we will want to be
+    able to use it as an init image in the future. Need to copy it.
+
+    If the init/mask image doesn't exist in the init_image_path/mask_image_path,
+    make a unique filename for it and copy it there.
+    """
+    if ('init_img' in generation_parameters):
+        filename = os.path.basename(generation_parameters['init_img'])
+        if not os.path.exists(os.path.join(init_image_path, filename)):
+            unique_filename = make_unique_init_image_filename(filename)
+            new_path = os.path.join(init_image_path, unique_filename)
+            shutil.copy(generation_parameters['init_img'], new_path)
+            generation_parameters['init_img'] = new_path
+        if ('init_mask' in generation_parameters):
+            filename = os.path.basename(generation_parameters['init_mask'])
+            if not os.path.exists(os.path.join(mask_image_path, filename)):
+                unique_filename = make_unique_init_image_filename(filename)
+                new_path = os.path.join(init_image_path, unique_filename)
+                shutil.copy(generation_parameters['init_img'], new_path)
+                generation_parameters['init_mask'] = new_path
+
+
+
+    totalSteps = calculate_real_steps(
+        steps=generation_parameters['steps'],
+        strength=generation_parameters['strength'] if 'strength' in generation_parameters else None,
+        has_init_image='init_img' in generation_parameters
+        )
+
+    progress = {
+        'currentStep': 1,
+        'totalSteps': totalSteps,
+        'currentIteration': 1,
+        'totalIterations': generation_parameters['iterations'],
+        'currentStatus': 'Preparing',
+        'isProcessing': True,
+        'currentStatusHasSteps': False
+    }
+
+    socketio.emit('progressUpdate', progress)
+    eventlet.sleep(0)
+
     def image_progress(sample, step):
         if canceled.is_set():
             raise CanceledException
+
         nonlocal step_index
         nonlocal generation_parameters
+        nonlocal progress
+
+        progress['currentStep'] = step + 1
+        progress['currentStatus'] = 'Generating'
+        progress['currentStatusHasSteps'] = True
+
         if generation_parameters["progress_images"] and step % 5 == 0 and step < generation_parameters['steps'] - 1:
             image = model.sample_to_image(sample)
             path = save_image(image, generation_parameters, intermediate_path, step_index)
@@ -327,18 +440,30 @@ def generate_images(generation_parameters, esrgan_parameters, gfpgan_parameters)
             step_index += 1
             socketio.emit('intermediateResult', {
                           'url': os.path.relpath(path), 'metadata': generation_parameters})
-        socketio.emit('progress', {'step': step + 1})
+        socketio.emit('progressUpdate', progress)
         eventlet.sleep(0)
 
     def image_done(image, seed):
         nonlocal generation_parameters
         nonlocal esrgan_parameters
         nonlocal gfpgan_parameters
+        nonlocal progress
+
+        step_index = 1
+
+        progress['currentStatus'] = 'Generation complete'
+        socketio.emit('progressUpdate', progress)
+        eventlet.sleep(0)
 
         all_parameters = generation_parameters
         postprocessing = False
 
         if esrgan_parameters:
+            progress['currentStatus'] = 'Upscaling'
+            progress['currentStatusHasSteps'] = False
+            socketio.emit('progressUpdate', progress)
+            eventlet.sleep(0)
+
             image = real_esrgan_upscale(
                 image=image,
                 strength=esrgan_parameters['strength'],
@@ -349,6 +474,11 @@ def generate_images(generation_parameters, esrgan_parameters, gfpgan_parameters)
             all_parameters["upscale"] = [esrgan_parameters['level'], esrgan_parameters['strength']]
 
         if gfpgan_parameters:
+            progress['currentStatus'] = 'Fixing faces'
+            progress['currentStatusHasSteps'] = False
+            socketio.emit('progressUpdate', progress)
+            eventlet.sleep(0)
+
             image = run_gfpgan(
                 image=image,
                 strength=gfpgan_parameters['strength'],
@@ -359,6 +489,9 @@ def generate_images(generation_parameters, esrgan_parameters, gfpgan_parameters)
             all_parameters["gfpgan_strength"] = gfpgan_parameters['strength']
 
         all_parameters['seed'] = seed
+        progress['currentStatus'] = 'Saving image'
+        socketio.emit('progressUpdate', progress)
+        eventlet.sleep(0)
 
         path = save_image(image, all_parameters, result_path, postprocessing=postprocessing)
         command = parameters_to_command(all_parameters)
@@ -366,8 +499,24 @@ def generate_images(generation_parameters, esrgan_parameters, gfpgan_parameters)
         print(f'Image generated: "{path}"')
         write_log_message(f'[Generated] "{path}": {command}')
 
+        if (progress['totalIterations'] > progress['currentIteration']):
+            progress['currentStep'] = 1
+            progress['currentIteration'] +=1
+            progress['currentStatus'] = 'Iteration finished'
+            progress['currentStatusHasSteps'] = False
+        else:
+            progress['currentStep'] = 0
+            progress['totalSteps'] = 0
+            progress['currentIteration'] = 0
+            progress['totalIterations'] = 0
+            progress['currentStatus'] = 'Finished'
+            progress['isProcessing'] = False
+
+        socketio.emit('progressUpdate', progress)
+        eventlet.sleep(0)
+
         socketio.emit(
-            'result', {'url': os.path.relpath(path), 'type': 'generation', 'metadata': all_parameters})
+            'generationResult', {'url': os.path.relpath(path), 'metadata': all_parameters})
         eventlet.sleep(0)
 
     try:
@@ -382,7 +531,7 @@ def generate_images(generation_parameters, esrgan_parameters, gfpgan_parameters)
     except CanceledException:
         pass
     except Exception as e:
-        socketio.emit('error', (str(e)))
+        socketio.emit('error', {'message': (str(e))})
         print("\n")
         traceback.print_exc()
         print("\n")

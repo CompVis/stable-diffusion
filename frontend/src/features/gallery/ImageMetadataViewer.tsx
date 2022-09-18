@@ -10,8 +10,8 @@ import {
 import { memo } from 'react';
 import { FaPlus } from 'react-icons/fa';
 import { PARAMETERS } from '../../app/constants';
-import { useAppDispatch } from '../../app/hooks';
-import SDButton from '../../components/SDButton';
+import { useAppDispatch } from '../../app/store';
+import SDButton from '../../common/components/SDButton';
 import { setAllParameters, setParameter } from '../sd/sdSlice';
 import { SDImage, SDMetadata } from './gallerySlice';
 

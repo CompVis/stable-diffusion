@@ -2,21 +2,12 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { SDMetadata } from '../gallery/gallerySlice';
 
-const calculateRealSteps = (
-  steps: number,
-  strength: number,
-  hasInitImage: boolean
-): number => {
-  return hasInitImage ? Math.floor(strength * steps) : steps;
-};
-
 export type UpscalingLevel = 0 | 2 | 4;
 
 export interface SDState {
   prompt: string;
   iterations: number;
   steps: number;
-  realSteps: number;
   cfgScale: number;
   height: number;
   width: number;
@@ -43,7 +34,6 @@ const initialSDState: SDState = {
   prompt: '',
   iterations: 1,
   steps: 50,
-  realSteps: 50,
   cfgScale: 7.5,
   height: 512,
   width: 512,
@@ -79,14 +69,7 @@ export const sdSlice = createSlice({
       state.iterations = action.payload;
     },
     setSteps: (state, action: PayloadAction<number>) => {
-      const { img2imgStrength, initialImagePath } = state;
-      const steps = action.payload;
-      state.steps = steps;
-      state.realSteps = calculateRealSteps(
-        steps,
-        img2imgStrength,
-        Boolean(initialImagePath)
-      );
+      state.steps = action.payload;
     },
     setCfgScale: (state, action: PayloadAction<number>) => {
       state.cfgScale = action.payload;
@@ -105,14 +88,7 @@ export const sdSlice = createSlice({
       state.shouldRandomizeSeed = false;
     },
     setImg2imgStrength: (state, action: PayloadAction<number>) => {
-      const img2imgStrength = action.payload;
-      const { steps, initialImagePath } = state;
-      state.img2imgStrength = img2imgStrength;
-      state.realSteps = calculateRealSteps(
-        steps,
-        img2imgStrength,
-        Boolean(initialImagePath)
-      );
+      state.img2imgStrength = action.payload;
     },
     setGfpganStrength: (state, action: PayloadAction<number>) => {
       state.gfpganStrength = action.payload;
@@ -127,15 +103,9 @@ export const sdSlice = createSlice({
       state.shouldUseInitImage = action.payload;
     },
     setInitialImagePath: (state, action: PayloadAction<string>) => {
-      const initialImagePath = action.payload;
-      const { steps, img2imgStrength } = state;
-      state.shouldUseInitImage = initialImagePath ? true : false;
-      state.initialImagePath = initialImagePath;
-      state.realSteps = calculateRealSteps(
-        steps,
-        img2imgStrength,
-        Boolean(initialImagePath)
-      );
+      const newInitialImagePath = action.payload;
+      state.shouldUseInitImage = newInitialImagePath ? true : false;
+      state.initialImagePath = newInitialImagePath;
     },
     setMaskPath: (state, action: PayloadAction<string>) => {
       state.maskPath = action.payload;
@@ -153,6 +123,7 @@ export const sdSlice = createSlice({
       state,
       action: PayloadAction<{ key: string; value: string | number | boolean }>
     ) => {
+      // TODO: This probably needs to be refactored.
       const { key, value } = action.payload;
       const temp = { ...state, [key]: value };
       if (key === 'seed') {
@@ -173,6 +144,7 @@ export const sdSlice = createSlice({
       state.seedWeights = action.payload;
     },
     setAllParameters: (state, action: PayloadAction<SDMetadata>) => {
+      // TODO: This probably needs to be refactored.
       const {
         prompt,
         steps,

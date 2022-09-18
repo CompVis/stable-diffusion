@@ -1,5 +1,5 @@
 import { Center, Flex, Image, Text, useColorModeValue } from '@chakra-ui/react';
-import { useAppSelector } from '../../app/hooks';
+import { useAppSelector } from '../../app/store';
 import { RootState } from '../../app/store';
 import { useState } from 'react';
 import ImageMetadataViewer from './ImageMetadataViewer';

@@ -1,6 +1,6 @@
-import { Flex } from '@chakra-ui/react';
+import { Center, Flex, Text } from '@chakra-ui/react';
 import { RootState } from '../../app/store';
-import { useAppSelector } from '../../app/hooks';
+import { useAppSelector } from '../../app/store';
 import HoverableImage from './HoverableImage';
 
 /**
@@ -19,7 +19,7 @@ const ImageGallery = () => {
    * TODO: Refactor if performance complaints, or after migrating to new API which supports pagination.
    */
 
-  return (
+  return images.length ? (
     <Flex gap={2} wrap="wrap" pb={2}>
       {[...images].reverse().map((image) => {
         const { uuid } = image;
@@ -29,6 +29,10 @@ const ImageGallery = () => {
         );
       })}
     </Flex>
+  ) : (
+    <Center height={'100%'} position={'relative'}>
+      <Text size={'xl'}>No images in gallery</Text>
+    </Center>
   );
 };
 

@@ -1,25 +1,28 @@
 import { Grid, GridItem } from '@chakra-ui/react';
-import CurrentImageDisplay from './features/gallery/CurrentImageDisplay';
-import LogViewer from './features/system/LogViewer';
-import PromptInput from './features/sd/PromptInput';
-import ProgressBar from './features/header/ProgressBar';
-import { useEffect } from 'react';
-import { useAppDispatch } from './app/hooks';
-import { requestAllImages } from './app/socketio';
-import ProcessButtons from './features/sd/ProcessButtons';
-import ImageGallery from './features/gallery/ImageGallery';
-import SiteHeader from './features/header/SiteHeader';
-import OptionsAccordion from './features/sd/OptionsAccordion';
+import { useEffect, useState } from 'react';
+import CurrentImageDisplay from '../features/gallery/CurrentImageDisplay';
+import ImageGallery from '../features/gallery/ImageGallery';
+import ProgressBar from '../features/header/ProgressBar';
+import SiteHeader from '../features/header/SiteHeader';
+import OptionsAccordion from '../features/sd/OptionsAccordion';
+import ProcessButtons from '../features/sd/ProcessButtons';
+import PromptInput from '../features/sd/PromptInput';
+import LogViewer from '../features/system/LogViewer';
+import Loading from '../Loading';
+import { useAppDispatch } from './store';
+import { requestAllImages } from './socketio/actions';
 
 const App = () => {
   const dispatch = useAppDispatch();
+  const [isReady, setIsReady] = useState<boolean>(false);
 
   // Load images from the gallery once
   useEffect(() => {
     dispatch(requestAllImages());
+    setIsReady(true);
   }, [dispatch]);
 
-  return (
+  return isReady ? (
     <>
       <Grid
         width="100vw"
@@ -57,6 +60,8 @@ const App = () => {
       </Grid>
       <LogViewer />
     </>
+  ) : (
+    <Loading />
   );
 };
 

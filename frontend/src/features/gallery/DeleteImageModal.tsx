@@ -21,8 +21,8 @@ import {
   SyntheticEvent,
   useRef,
 } from 'react';
-import { useAppDispatch, useAppSelector } from '../../app/hooks';
-import { deleteImage } from '../../app/socketio';
+import { useAppDispatch, useAppSelector } from '../../app/store';
+import { deleteImage } from '../../app/socketio/actions';
 import { RootState } from '../../app/store';
 import { setShouldConfirmOnDelete, SystemState } from '../system/systemSlice';
 import { SDImage } from './gallerySlice';

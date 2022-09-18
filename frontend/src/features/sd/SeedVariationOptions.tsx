@@ -11,10 +11,12 @@ import { createSelector } from '@reduxjs/toolkit';
 import { isEqual } from 'lodash';
 import { ChangeEvent } from 'react';
 import { NUMPY_RAND_MAX, NUMPY_RAND_MIN } from '../../app/constants';
-import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../app/store';
 import { RootState } from '../../app/store';
-import SDNumberInput from '../../components/SDNumberInput';
-import SDSwitch from '../../components/SDSwitch';
+import SDNumberInput from '../../common/components/SDNumberInput';
+import SDSwitch from '../../common/components/SDSwitch';
+import randomInt from '../../common/util/randomInt';
+import { validateSeedWeights } from '../../common/util/seedWeightPairs';
 import {
   SDState,
   setIterations,
@@ -24,8 +26,6 @@ import {
   setShouldRandomizeSeed,
   setVariationAmount,
 } from './sdSlice';
-import randomInt from './util/randomInt';
-import { validateSeedWeights } from './util/seedWeightPairs';
 
 const sdSelector = createSelector(
   (state: RootState) => state.sd,

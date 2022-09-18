@@ -1,14 +1,14 @@
 import { Button, Flex, IconButton, useToast } from '@chakra-ui/react';
 import { SyntheticEvent, useCallback } from 'react';
 import { FaTrash } from 'react-icons/fa';
-import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../app/store';
 import { RootState } from '../../app/store';
 import {
   SDState,
   setInitialImagePath,
   setMaskPath,
 } from '../../features/sd/sdSlice';
-import { uploadInitialImage, uploadMaskImage } from '../../app/socketio';
+import { uploadInitialImage, uploadMaskImage } from '../../app/socketio/actions';
 import { createSelector } from '@reduxjs/toolkit';
 import { isEqual } from 'lodash';
 import ImageUploader from './ImageUploader';

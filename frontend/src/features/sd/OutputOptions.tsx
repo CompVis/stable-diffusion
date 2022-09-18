@@ -1,17 +1,17 @@
 import { Flex } from '@chakra-ui/react';
 
 import { RootState } from '../../app/store';
-import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../app/store';
 
 import { setHeight, setWidth, setSeamless, SDState } from '../sd/sdSlice';
 
-import SDSelect from '../../components/SDSelect';
 
 import { HEIGHTS, WIDTHS } from '../../app/constants';
-import SDSwitch from '../../components/SDSwitch';
 import { createSelector } from '@reduxjs/toolkit';
 import { isEqual } from 'lodash';
 import { ChangeEvent } from 'react';
+import SDSelect from '../../common/components/SDSelect';
+import SDSwitch from '../../common/components/SDSwitch';
 
 const sdSelector = createSelector(
   (state: RootState) => state.sd,

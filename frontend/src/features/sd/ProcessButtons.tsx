@@ -1,12 +1,12 @@
 import { Flex } from '@chakra-ui/react';
 import { createSelector } from '@reduxjs/toolkit';
 import { isEqual } from 'lodash';
-import { useAppDispatch, useAppSelector } from '../../app/hooks';
-import { cancelProcessing, generateImage } from '../../app/socketio';
+import { useAppDispatch, useAppSelector } from '../../app/store';
+import { cancelProcessing, generateImage } from '../../app/socketio/actions';
 import { RootState } from '../../app/store';
-import SDButton from '../../components/SDButton';
+import SDButton from '../../common/components/SDButton';
+import useCheckParameters from '../../common/hooks/useCheckParameters';
 import { SystemState } from '../system/systemSlice';
-import useCheckParameters from '../system/useCheckParameters';
 
 const systemSelector = createSelector(
   (state: RootState) => state.system,

@@ -16,7 +16,7 @@ import {
   Text,
   useDisclosure,
 } from '@chakra-ui/react';
-import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../app/store';
 import {
   setShouldConfirmOnDelete,
   setShouldDisplayInProgress,

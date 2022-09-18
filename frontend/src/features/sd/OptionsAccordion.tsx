@@ -12,7 +12,7 @@ import {
 } from '@chakra-ui/react';
 
 import { RootState } from '../../app/store';
-import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../app/store';
 
 import {
   setShouldRunGFPGAN,

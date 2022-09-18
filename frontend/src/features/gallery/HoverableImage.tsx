@@ -6,7 +6,7 @@ import {
   Image,
   useColorModeValue,
 } from '@chakra-ui/react';
-import { useAppDispatch } from '../../app/hooks';
+import { useAppDispatch } from '../../app/store';
 import { SDImage, setCurrentImage } from './gallerySlice';
 import { FaCheck, FaCopy, FaSeedling, FaTrash } from 'react-icons/fa';
 import DeleteImageModal from './DeleteImageModal';

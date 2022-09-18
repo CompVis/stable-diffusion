@@ -1,6 +1,6 @@
 import { Flex, Image } from '@chakra-ui/react';
 import { useState } from 'react';
-import { useAppSelector } from '../../app/hooks';
+import { useAppSelector } from '../../app/store';
 import { RootState } from '../../app/store';
 import { SDState } from '../../features/sd/sdSlice';
 import './InitAndMaskImage.css';

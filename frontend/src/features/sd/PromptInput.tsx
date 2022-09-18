@@ -3,7 +3,8 @@ import {
   ChangeEvent,
   KeyboardEvent,
 } from 'react';
-import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../app/store';
+import { generateImage } from '../../app/socketio/actions';
 import { RootState } from '../../app/store';
 import { setPrompt } from '../sd/sdSlice';
 

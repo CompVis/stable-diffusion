@@ -1,16 +1,14 @@
-import { SDState } from '../features/sd/sdSlice';
-import randomInt from '../features/sd/util/randomInt';
-import {
-    seedWeightsToString,
-    stringToSeedWeights,
-} from '../features/sd/util/seedWeightPairs';
-import { SystemState } from '../features/system/systemSlice';
-import { NUMPY_RAND_MAX, NUMPY_RAND_MIN } from './constants';
 
 /*
     These functions translate frontend state into parameters
     suitable for consumption by the backend, and vice-versa.
 */
+
+import { NUMPY_RAND_MAX, NUMPY_RAND_MIN } from "../../app/constants";
+import { SDState } from "../../features/sd/sdSlice";
+import { SystemState } from "../../features/system/systemSlice";
+import randomInt from "./randomInt";
+import { seedWeightsToString, stringToSeedWeights } from "./seedWeightPairs";
 
 export const frontendToBackendParameters = (
     sdState: SDState,
@@ -77,7 +75,7 @@ export const frontendToBackendParameters = (
                 stringToSeedWeights(seedWeights);
         }
     } else {
-        generationParameters.variation_amount = 0.1;
+        generationParameters.variation_amount = 0;
     }
 
     let esrganParameters: false | { [k: string]: any } = false;
@@ -95,6 +93,8 @@ export const frontendToBackendParameters = (
             strength: gfpganStrength,
         };
     }
+
+    console.log(generationParameters)
 
     return {
         generationParameters,

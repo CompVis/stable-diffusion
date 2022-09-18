@@ -1,10 +1,10 @@
 import { Flex } from '@chakra-ui/react';
 import { createSelector } from '@reduxjs/toolkit';
 import { ChangeEvent } from 'react';
-import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../app/store';
 import { RootState } from '../../app/store';
-import SDNumberInput from '../../components/SDNumberInput';
-import SDSwitch from '../../components/SDSwitch';
+import SDNumberInput from '../../common/components/SDNumberInput';
+import SDSwitch from '../../common/components/SDSwitch';
 import InitAndMaskImage from './InitAndMaskImage';
 import {
   SDState,

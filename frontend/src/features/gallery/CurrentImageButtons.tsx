@@ -1,14 +1,14 @@
 import { Flex } from '@chakra-ui/react';
-import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../app/store';
 import { RootState } from '../../app/store';
 import { setAllParameters, setInitialImagePath, setSeed } from '../sd/sdSlice';
 import DeleteImageModal from './DeleteImageModal';
-import SDButton from '../../components/SDButton';
-import { runESRGAN, runGFPGAN } from '../../app/socketio';
 import { createSelector } from '@reduxjs/toolkit';
 import { SystemState } from '../system/systemSlice';
 import { isEqual } from 'lodash';
 import { SDImage } from './gallerySlice';
+import SDButton from '../../common/components/SDButton';
+import { runESRGAN, runGFPGAN } from '../../app/socketio/actions';
 
 const systemSelector = createSelector(
   (state: RootState) => state.system,

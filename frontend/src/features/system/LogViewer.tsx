@@ -5,7 +5,7 @@ import {
   Text,
   Tooltip,
 } from '@chakra-ui/react';
-import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../app/store';
 import { RootState } from '../../app/store';
 import { setShouldShowLogViewer, SystemState } from './systemSlice';
 import { useLayoutEffect, useRef, useState } from 'react';
@@ -44,18 +44,42 @@ const LogViewer = () => {
   const log = useAppSelector(logSelector);
   const { shouldShowLogViewer } = useAppSelector(systemSelector);
 
+  // Set colors based on dark/light mode
   const bg = useColorModeValue('gray.50', 'gray.900');
   const borderColor = useColorModeValue('gray.500', 'gray.500');
+  const logTextColors = useColorModeValue(
+    {
+      info: undefined,
+      warning: 'yellow.500',
+      error: 'red.500',
+    },
+    {
+      info: undefined,
+      warning: 'yellow.300',
+      error: 'red.300',
+    }
+  );
 
   // Rudimentary autoscroll
   const [shouldAutoscroll, setShouldAutoscroll] = useState<boolean>(true);
   const viewerRef = useRef<HTMLDivElement>(null);
 
+  /**
+   * If autoscroll is on, scroll to the bottom when:
+   * - log updates
+   * - viewer is toggled
+   *
+   * Also scroll to the bottom whenever autoscroll is turned on.
+   */
   useLayoutEffect(() => {
     if (viewerRef.current !== null && shouldAutoscroll) {
       viewerRef.current.scrollTop = viewerRef.current.scrollHeight;
     }
-  }, [shouldAutoscroll]);
+  }, [shouldAutoscroll, log, shouldShowLogViewer]);
+
+  const handleClickLogViewerToggle = () => {
+    dispatch(setShouldShowLogViewer(!shouldShowLogViewer));
+  };
 
   return (
     <>
@@ -78,16 +102,19 @@ const LogViewer = () => {
           background={bg}
           ref={viewerRef}
         >
-          {log.map((entry, i) => (
-            <Flex gap={2} key={i}>
-              <Text fontSize="sm" fontWeight={'semibold'}>
-                {entry.timestamp}:
-              </Text>
-              <Text fontSize="sm" wordBreak={'break-all'}>
-                {entry.message}
-              </Text>
-            </Flex>
-          ))}
+          {log.map((entry, i) => {
+            const { timestamp, message, level } = entry;
+            return (
+              <Flex gap={2} key={i} textColor={logTextColors[level]}>
+                <Text fontSize="sm" fontWeight={'semibold'}>
+                  {timestamp}:
+                </Text>
+                <Text fontSize="sm" wordBreak={'break-all'}>
+                  {message}
+                </Text>
+              </Flex>
+            );
+          })}
         </Flex>
       )}
       {shouldShowLogViewer && (
@@ -114,7 +141,7 @@ const LogViewer = () => {
           variant={'solid'}
           aria-label="Toggle Log Viewer"
           icon={shouldShowLogViewer ? <FaMinus /> : <FaCode />}
-          onClick={() => dispatch(setShouldShowLogViewer(!shouldShowLogViewer))}
+          onClick={handleClickLogViewerToggle}
         />
       </Tooltip>
     </>
