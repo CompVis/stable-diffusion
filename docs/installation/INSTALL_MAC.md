@@ -138,16 +138,16 @@ python scripts/orig_scripts/txt2img.py \
 
 1. half-precision requires autocast which is unfortunatelly incompatible
 
-Note:
+!!! note
 
-`#!bash export PIP_EXISTS_ACTION=w` is a precaution to fix a problem where
+    `#!bash export PIP_EXISTS_ACTION=w` is a precaution to fix a problem where
 
-```bash
-conda env create \
-  -f environment-mac.yaml
-```
+    ```bash
+    conda env create \
+      -f environment-mac.yaml
+    ```
 
-did never finish in some situations. So it isn't required but wont hurt.
+    did never finish in some situations. So it isn't required but wont hurt.
 
 ---
 
