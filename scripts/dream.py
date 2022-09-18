@@ -8,7 +8,7 @@ import copy
 import warnings
 import time
 import ldm.dream.readline
-from ldm.dream.args import Args, format_metadata
+from ldm.dream.args import Args, metadata_dumps
 from ldm.dream.pngwriter import PngWriter
 from ldm.dream.server import DreamServer, ThreadingDreamServer
 from ldm.dream.image_util import make_grid
@@ -245,10 +245,9 @@ def main_loop(gen, opt, infile):
                     path = file_writer.save_image_and_prompt_to_png(
                         image           = image,
                         dream_prompt    = formatted_dream_prompt,
-                        metadata        = format_metadata(
+                        metadata        = metadata_dumps(
                             opt,
                             seeds      = [seed],
-                            weights    = gen.weights,
                             model_hash = gen.model_hash,
                         ),
                         name      = filename,
@@ -272,7 +271,7 @@ def main_loop(gen, opt, infile):
                 filename   = f'{prefix}.{first_seed}.png'
                 formatted_dream_prompt  = opt.dream_prompt_str(seed=first_seed,grid=True,iterations=len(grid_images))
                 formatted_dream_prompt += f' # {grid_seeds}'
-                metadata = format_metadata(
+                metadata = metadata.dumps(
                     opt,
                     seeds      = grid_seeds,
                     weights    = gen.weights,
