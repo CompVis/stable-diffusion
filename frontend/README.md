@@ -1,16 +1,17 @@
 # Stable Diffusion Web UI
 
-## Build
-
-from `frontend/`:
-
-- `yarn dev` runs vite dev server
-- `yarn build-dev` builds dev
-- `yarn build` builds prod
-
-from `.`:
-
+## Run
 - `python backend/server.py` serves both frontend and backend at http://localhost:9090
+
+## Dev
+
+1. From `frontend/`, run `yarn dev` to start the dev server.
+2. Note the address it starts up on (probably `http://localhost:5173/`).
+3. Edit `backend/server.py`'s `additional_allowed_origins` to include this address, e.g. `additional_allowed_origins = ['http://localhost:5173']`.
+4. Leaving the dev server running, open a new terminal and go to the project root.
+5. Run `python backend/server.py`.
+6. Navigate to the dev server address e.g. `http://localhost:5173/`.
+
 
 ## TODO
 
@@ -22,4 +23,4 @@ from `.`:
 - More status info e.g. phase of processing, image we are on of the total count, etc
 - Mobile friendly layout
 - Proper image gallery/viewer/manager
-- Instead of deleting images directly, use something like [send2trash](https://pypi.org/project/Send2Trash/)
+- Help tooltips and such
