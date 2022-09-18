@@ -15,6 +15,8 @@ import traceback
 import transformers
 import io
 import hashlib
+import cv2
+import skimage
 
 from omegaconf import OmegaConf
 from PIL import Image, ImageOps
@@ -220,6 +222,7 @@ class Generate:
             init_mask        = None,
             fit              = False,
             strength         = None,
+            init_color       = None,
             # these are specific to embiggen (which also relies on img2img args)
             embiggen       =    None,
             embiggen_tiles =    None,
@@ -362,6 +365,11 @@ class Generate:
                 embiggen_tiles = embiggen_tiles,
             )
 
+            if init_color:
+                self.correct_colors(image_list           = results,
+                                    reference_image_path = init_color,
+                                    image_callback       = image_callback)
+
             if upscale is not None or gfpgan_strength > 0:
                 self.upscale_and_reconstruct(results,
                                              upscale        = upscale,
@@ -474,6 +482,28 @@ class Generate:
                     m._orig_padding_mode = m.padding_mode
 
         return self.model
+
+    def correct_colors(self,
+                       image_list,
+                       reference_image_path,
+                       image_callback = None):
+        reference_image = Image.open(reference_image_path)
+        correction_target = cv2.cvtColor(np.asarray(reference_image),
+                                         cv2.COLOR_RGB2LAB)
+        for r in image_list:
+            image, seed = r
+            image = cv2.cvtColor(np.asarray(image),
+                                 cv2.COLOR_RGB2LAB)
+            image = skimage.exposure.match_histograms(image,
+                                                      correction_target,
+                                                      channel_axis=2)
+            image = Image.fromarray(
+                cv2.cvtColor(image, cv2.COLOR_LAB2RGB).astype("uint8")
+            )
+            if image_callback is not None:
+                image_callback(image, seed)
+            else:
+                r[0] = image
 
     def upscale_and_reconstruct(self,
                                 image_list,
