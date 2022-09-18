@@ -38,12 +38,11 @@ While that is downloading, open a Terminal and run the following commands:
   "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-!!! quote "Conda Installation"
-    Now there are two different ways to set up the Python (miniconda) environment:
+!!! todo "Conda Installation"
 
+    Now there are two different ways to set up the Python (miniconda) environment:
     1. Standalone
     2. with pyenv
-    
     If you don't know what we are talking about, choose Standalone
 
     === "Standalone"
@@ -81,7 +80,7 @@ While that is downloading, open a Terminal and run the following commands:
         pyenv activate anaconda3-2022.05
         ```
 
-```{.bash .annotate}
+```{.bash .annotate title="local repo setup"}
 # clone the repo
 git clone https://github.com/lstein/stable-diffusion.git
 cd stable-diffusion
@@ -100,7 +99,7 @@ ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" \
 
 1. or wherever you saved sd-v1-4.ckpt
 
-!!! quote "Select the propper Architecture"
+!!! todo "create Conda Environment"
 
     === "M1 arm64"
 
@@ -120,7 +119,7 @@ ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" \
           && conda activate ldm
         ```
 
-```{.bash .annotate}
+```{.bash .annotate title="preload models and run script"}
 # only need to do this once
 python scripts/preload_models.py
 
@@ -374,15 +373,17 @@ python scripts/preload_models.py
 
 ### "The operator [name] is not current implemented for the MPS device." (sic)
 
-```bash title="example error"
-... NotImplementedError: The operator 'aten::_index_put_impl_' is not current
-implemented for the MPS device. If you want this op to be added in priority
-during the prototype phase of this feature, please comment on
-https://github.com/pytorch/pytorch/issues/77764.
-As a temporary fix, you can set the environment variable
-`PYTORCH_ENABLE_MPS_FALLBACK=1` to use the CPU as a fallback for this op.
-WARNING: this will be slower than running natively on MPS.
-```
+!!! example "example error"
+
+    ```bash
+    ... NotImplementedError: The operator 'aten::_index_put_impl_' is not current
+    implemented for the MPS device. If you want this op to be added in priority
+    during the prototype phase of this feature, please comment on
+    https://github.com/pytorch/pytorch/issues/77764.
+    As a temporary fix, you can set the environment variable
+    `PYTORCH_ENABLE_MPS_FALLBACK=1` to use the CPU as a fallback for this op.
+    WARNING: this will be slower than running natively on MPS.
+    ```
 
 The lstein branch includes this fix in
 [environment-mac.yaml](https://github.com/lstein/stable-diffusion/blob/main/environment-mac.yaml).

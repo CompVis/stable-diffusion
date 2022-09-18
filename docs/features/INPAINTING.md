@@ -34,7 +34,7 @@ We are hoping to get rid of the need for this workaround in an upcoming release.
 2. Layer->Transparency->Add Alpha Channel
 3. Use lasoo tool to select region to mask
 4. Choose Select -> Float to create a floating selection
-5. Open the Layers toolbar (^L) and select "Floating Selection"
+5. Open the Layers toolbar (++ctrl+l++) and select "Floating Selection"
 6. Set opacity to 0%
 7. Export as PNG
 8. In the export dialogue, Make sure the "Save colour values from transparent pixels" checkbox is
