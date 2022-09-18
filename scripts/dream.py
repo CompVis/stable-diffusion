@@ -113,6 +113,8 @@ def main_loop(gen, opt, infile):
         name_max = 255
 
     while not done:
+        operation = 'generate'   # default operation, alternative is 'postprocess'
+        
         try:
             command = get_next_command(infile)
         except EOFError:
@@ -133,8 +135,14 @@ def main_loop(gen, opt, infile):
         if command.startswith(
             '!dream'
         ):   # in case a stored prompt still contains the !dream command
-            command.replace('!dream','',1)
+            command = command.replace('!dream ','',1)
 
+        if command.startswith(
+                '!fix'
+        ):
+            command = command.replace('!fix ','',1)
+            operation = 'postprocess'
+            
         if opt.parse_cmd(command) is None:
             continue
         if len(opt.prompt) == 0:
@@ -147,7 +155,7 @@ def main_loop(gen, opt, infile):
         if not opt.height:
             opt.height = model_config.height
         
-        # retrieve previous value!
+        # retrieve previous value of init image if requested
         if opt.init_img is not None and re.match('^-\\d+$', opt.init_img):
             try:
                 opt.init_img = last_results[int(opt.init_img)][0]
@@ -158,7 +166,8 @@ def main_loop(gen, opt, infile):
                 opt.init_img = None
                 continue
 
-        if opt.seed is not None and opt.seed < 0:   # retrieve previous value!
+        # retrieve previous valueof seed if requested
+        if opt.seed is not None and opt.seed < 0:   
             try:
                 opt.seed = last_results[opt.seed][1]
                 print(f'>> Reusing previous seed {opt.seed}')
@@ -257,12 +266,16 @@ def main_loop(gen, opt, infile):
                         results.append([path, formatted_dream_prompt])
                 last_results.append([path, seed])
 
-            catch_ctrl_c = infile is None # if running interactively, we catch keyboard interrupts
-            gen.prompt2image(
-                image_callback=image_writer,
-                catch_interrupts=catch_ctrl_c,
-                **vars(opt)
-            )
+            if operation == 'generate':
+                catch_ctrl_c = infile is None # if running interactively, we catch keyboard interrupts
+                gen.prompt2image(
+                    image_callback=image_writer,
+                    catch_interrupts=catch_ctrl_c,
+                    **vars(opt)
+                )
+            elif operation == 'postprocess':
+                print(f'>> fixing {opt.prompt}')
+                do_postprocess(gen,opt,image_writer)
 
             if opt.grid and len(grid_images) > 0:
                 grid_img   = make_grid(list(grid_images.values()))
@@ -300,7 +313,27 @@ def main_loop(gen, opt, infile):
 
     print('goodbye!')
 
+def do_postprocess (gen, opt, callback):
+    file_path = opt.prompt     # treat the prompt as the file pathname
+    if os.path.dirname(file_path) == '': #basename given
+        file_path = os.path.join(opt.outdir,file_path)
+    if not os.path.exists(file_path):
+        print(f'* file {file_path} does not exist')
+        return
 
+    tool = opt.facetool if opt.gfpgan_strength > 0 else ('embiggen' if opt.embiggen else 'upscale')
+    opt.save_original = True # do not overwrite old image!
+    return gen.apply_postprocessor(
+        image_path      = opt.prompt,
+        tool            = tool,
+        gfpgan_strength = opt.gfpgan_strength,
+        codeformer_fidelity = opt.codeformer_fidelity,
+        save_original       = opt.save_original,
+        upscale             = opt.upscale,
+        callback            = callback,
+        opt                 = opt,
+        )
+    
 def get_next_command(infile=None) -> str:  # command string
     if infile is None:
         command = input('dream> ')
