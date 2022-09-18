@@ -5,6 +5,7 @@ import cv2
 import torch
 
 import numpy as np
+from imwatermark import WatermarkEncoder
 from omegaconf import OmegaConf
 from PIL import Image
 from tqdm import tqdm, trange
@@ -20,6 +21,12 @@ from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 
+# load safety model
+from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
+from transformers import AutoFeatureExtractor
+safety_model_id = "CompVis/stable-diffusion-safety-checker"
+safety_feature_extractor = AutoFeatureExtractor.from_pretrained(safety_model_id)
+safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
 
 torch.cuda.empty_cache()
 
@@ -81,14 +88,13 @@ def load_replacement(x):
 
 
 def check_safety(x_image):
-    return x_image, False
-    # safety_checker_input = safety_feature_extractor(numpy_to_pil(x_image), return_tensors="pt")
-    # x_checked_image, has_nsfw_concept = safety_checker(images=x_image, clip_input=safety_checker_input.pixel_values)
-    # assert x_checked_image.shape[0] == len(has_nsfw_concept)
-    # for i in range(len(has_nsfw_concept)):
-    #     if has_nsfw_concept[i]:
-    #         x_checked_image[i] = load_replacement(x_checked_image[i])
-    # return x_checked_image, has_nsfw_concept
+    safety_checker_input = safety_feature_extractor(numpy_to_pil(x_image), return_tensors="pt")
+    x_checked_image, has_nsfw_concept = safety_checker(images=x_image, clip_input=safety_checker_input.pixel_values)
+    assert x_checked_image.shape[0] == len(has_nsfw_concept)
+    for i in range(len(has_nsfw_concept)):
+        if has_nsfw_concept[i]:
+            x_checked_image[i] = load_replacement(x_checked_image[i])
+    return x_checked_image, has_nsfw_concept
 
 
 def main():
@@ -250,8 +256,8 @@ def main():
 
     print("Creating invisible watermark encoder (see https://github.com/ShieldMnt/invisible-watermark)...")
     wm = "StableDiffusionV1"
-    #wm_encoder = WatermarkEncoder()
-    #wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
+    wm_encoder = WatermarkEncoder()
+    wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
 
     batch_size = opt.n_samples
     n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
@@ -312,7 +318,7 @@ def main():
                             for x_sample in x_checked_image_torch:
                                 x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                                 img = Image.fromarray(x_sample.astype(np.uint8))
-                                #img = put_watermark(img, wm_encoder)
+                                img = put_watermark(img, wm_encoder)
                                 img.save(os.path.join(sample_path, f"{base_count:05}.png"))
                                 base_count += 1
 
