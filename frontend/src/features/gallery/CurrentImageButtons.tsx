@@ -43,9 +43,15 @@ const CurrentImageButtons = ({
   setShouldShowImageDetails,
 }: CurrentImageButtonsProps) => {
   const dispatch = useAppDispatch();
+
   const { intermediateImage } = useAppSelector(
     (state: RootState) => state.gallery
   );
+
+  const { upscalingLevel, gfpganStrength } = useAppSelector(
+    (state: RootState) => state.sd
+  );
+
   const { isProcessing, isConnected, isGFPGANAvailable, isESRGANAvailable } =
     useAppSelector(systemSelector);
 
@@ -101,7 +107,8 @@ const CurrentImageButtons = ({
         isDisabled={
           !isESRGANAvailable ||
           Boolean(intermediateImage) ||
-          !(isConnected && !isProcessing)
+          !(isConnected && !isProcessing) ||
+          !upscalingLevel
         }
         onClick={handleClickUpscale}
       />
@@ -113,7 +120,8 @@ const CurrentImageButtons = ({
         isDisabled={
           !isGFPGANAvailable ||
           Boolean(intermediateImage) ||
-          !(isConnected && !isProcessing)
+          !(isConnected && !isProcessing) ||
+          !gfpganStrength
         }
         onClick={handleClickFixFaces}
       />

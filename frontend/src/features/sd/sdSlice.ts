@@ -2,7 +2,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { SDMetadata } from '../gallery/gallerySlice';
 
-export type UpscalingLevel = 0 | 2 | 4;
+export type UpscalingLevel = 2 | 4;
 
 export interface SDState {
   prompt: string;

@@ -94,8 +94,6 @@ export const frontendToBackendParameters = (
         };
     }
 
-    console.log(generationParameters)
-
     return {
         generationParameters,
         esrganParameters,
