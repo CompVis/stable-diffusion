@@ -40,6 +40,8 @@ def parameters_to_command(params):
         switches.append(f'-I {params["init_img"]}')
     if 'init_mask' in params and len(params['init_mask']) > 0:
         switches.append(f'-M {params["init_mask"]}')
+    if 'init_color' in params and len(params['init_color']) > 0:
+        switches.append(f'--init_color {params["init_color"]}')
     if 'strength' in params and 'init_img' in params:
         switches.append(f'-f {params["strength"]}')
         if 'fit' in params and params["fit"] == True:
@@ -127,6 +129,11 @@ def create_cmd_parser():
         '--init_mask',
         type=str,
         help='Path to input mask for inpainting mode (supersedes width and height)',
+    )
+    parser.add_argument(
+        '--init_color',
+        type=str,
+        help='Path to reference image for color correction (used for repeated img2img and inpainting)'
     )
     parser.add_argument(
         '-T',
