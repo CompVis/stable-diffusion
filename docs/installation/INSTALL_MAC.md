@@ -33,10 +33,20 @@ some time:
 
 While that is downloading, open a Terminal and run the following commands:
 
-```bash title="install brew (and Xcode command line tools)"
-/bin/bash -c \
-  "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
+!!! todo "Homebrew"
+
+    === "no brew installation yet"
+
+        ```bash title="install brew (and Xcode command line tools)"
+        /bin/bash -c \
+          "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        ```
+
+    === "brew is already installed"
+    
+        Only if you installed protobuf in a previous version of this tutorial, otherwise skip
+
+        `#!bash brew uninstall protobuf`
 
 !!! todo "Conda Installation"
 
@@ -54,8 +64,7 @@ While that is downloading, open a Terminal and run the following commands:
 
         === "M1 arm64"
 
-            ```bash
-            # install miniconda for M1 arm64:
+            ```bash title="Install miniconda for M1 arm64"
             curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh \
               -o Miniconda3-latest-MacOSX-arm64.sh
             /bin/bash Miniconda3-latest-MacOSX-arm64.sh
@@ -63,8 +72,7 @@ While that is downloading, open a Terminal and run the following commands:
 
         === "Intel x86_64"
 
-            ```bash
-            # OR install miniconda for Intel:
+            ```bash title="Install miniconda for Intel"
             curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh \
               -o Miniconda3-latest-MacOSX-x86_64.sh
             /bin/bash Miniconda3-latest-MacOSX-x86_64.sh
@@ -72,13 +80,15 @@ While that is downloading, open a Terminal and run the following commands:
 
     === "with pyenv"
 
-        ```bash
-        brew install pyenv-virtualenv # you might already have this installed, no problem
+        ```{.bash .annotate}
+        brew install rust pyenv-virtualenv # (1)
         pyenv install anaconda3-2022.05
         pyenv virtualenv anaconda3-2022.05
         eval "$(pyenv init -)"
         pyenv activate anaconda3-2022.05
         ```
+        
+        1. you might already have this installed, no problem
 
 ```{.bash .annotate title="local repo setup"}
 # clone the repo
