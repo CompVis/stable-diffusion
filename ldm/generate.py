@@ -510,6 +510,8 @@ class Generate:
                 skip_normalize=opt.skip_normalize,
                 log_tokens    =opt.log_tokenization
             )
+            opt.strength  = 0.40
+            print(f'>> Setting img2img strength to {opt.strength} for happy embiggening')
             # embiggen takes a image path (sigh)
             generator.generate(
                 prompt,

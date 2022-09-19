@@ -55,7 +55,6 @@ and it can also be less than one if the init_img is too big.
 Esrgan_strength defaults to 0.75, and the overlap_ratio defaults to
 0.25, both are optional.
 
-
 Unlike Img2Img, the `--width` (`-W`) and `--height` (`-H`) arguments
 do not control the size of the image as a whole, but the size of the
 tiles used to Embiggen the image.
