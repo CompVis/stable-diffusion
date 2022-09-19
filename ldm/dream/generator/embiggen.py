@@ -79,7 +79,7 @@ class Embiggen(Generator):
             initsuperwidth = round(initsuperwidth*embiggen[0])
             initsuperheight = round(initsuperheight*embiggen[0])
             if embiggen[1] > 0:  # No point in ESRGAN upscaling if strength is set zero
-                from ldm.restoration.realesrgan import ESRGAN
+                from ldm.dream.restoration.realesrgan import ESRGAN
                 esrgan = ESRGAN()
                 print(
                     f'>> ESRGAN upscaling init image prior to cutting with Embiggen with strength {embiggen[1]}')
