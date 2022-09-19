@@ -1,79 +1,98 @@
 import { Flex } from '@chakra-ui/react';
 
 import { RootState } from '../../app/store';
-import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../app/store';
 
 import { setCfgScale, setSampler, setThreshold, setPerlin, setSteps, SDState } from '../sd/sdSlice';
 
-import SDNumberInput from '../../components/SDNumberInput';
-import SDSelect from '../../components/SDSelect';
 
 import { SAMPLERS } from '../../app/constants';
 import { createSelector } from '@reduxjs/toolkit';
 import { isEqual } from 'lodash';
+import { ChangeEvent } from 'react';
+import SDNumberInput from '../../common/components/SDNumberInput';
+import SDSelect from '../../common/components/SDSelect';
 
 const sdSelector = createSelector(
-    (state: RootState) => state.sd,
-    (sd: SDState) => {
-        return {
-            steps: sd.steps,
-            cfgScale: sd.cfgScale,
-            sampler: sd.sampler,
-            threshold: sd.threshold,
-            perlin: sd.perlin,
-        };
+  (state: RootState) => state.sd,
+  (sd: SDState) => {
+    return {
+      steps: sd.steps,
+      cfgScale: sd.cfgScale,
+      sampler: sd.sampler,
+      threshold: sd.threshold,
+      perlin: sd.perlin,
+    };
+  },
+  {
+    memoizeOptions: {
+      resultEqualityCheck: isEqual,
     },
-    {
-        memoizeOptions: {
-            resultEqualityCheck: isEqual,
-        },
-    }
+  }
 );
 
+/**
+ * Sampler options. Includes steps, CFG scale, sampler.
+ */
 const SamplerOptions = () => {
-    const { steps, cfgScale, sampler, threshold, perlin } = useAppSelector(sdSelector);
 
-    const dispatch = useAppDispatch();
+  const dispatch = useAppDispatch();
+  const { steps, cfgScale, sampler, threshold, perlin } = useAppSelector(sdSelector);
 
-    return (
-        <Flex gap={2} direction={'column'}>
-            <SDNumberInput
-                label='Steps'
-                min={1}
-                step={1}
-                precision={0}
-                onChange={(v) => dispatch(setSteps(Number(v)))}
-                value={steps}
-            />
-            <SDNumberInput
-                label='CFG scale'
-                step={0.5}
-                onChange={(v) => dispatch(setCfgScale(Number(v)))}
-                value={cfgScale}
-            />
-            <SDSelect
-                label='Sampler'
-                value={sampler}
-                onChange={(e) => dispatch(setSampler(e.target.value))}
-                validValues={SAMPLERS}
-            />
-            <SDNumberInput
-                label='Threshold'
-                min={0}
-                step={0.1}
-                onChange={(v) => dispatch(setThreshold(Number(v)))}
-                value={threshold}
-            />
-            <SDNumberInput
-                label='Perlin'
-                min={0}
-                max={1}
-                step={0.05}
-                onChange={(v) => dispatch(setPerlin(Number(v)))}
-                value={perlin}
-            />
-        </Flex>
-    );
+  const handleChangeSteps = (v: string | number) =>
+    dispatch(setSteps(Number(v)));
+
+  const handleChangeCfgScale = (v: string | number) =>
+    dispatch(setCfgScale(Number(v)));
+
+  const handleChangeSampler = (e: ChangeEvent<HTMLSelectElement>) =>
+    dispatch(setSampler(e.target.value));
+
+  const handleChangeThreshold = (v: string | number) =>
+    dispatch(setThreshold(Number(v)));
+
+  const handleChangePerlin = (v: string | number) =>
+    dispatch(setPerlin(Number(v)));
+
+  return (
+    <Flex gap={2} direction={'column'}>
+      <SDNumberInput
+        label="Steps"
+        min={1}
+        step={1}
+        precision={0}
+        onChange={handleChangeSteps}
+        value={steps}
+      />
+      <SDNumberInput
+        label="CFG scale"
+        step={0.5}
+        onChange={handleChangeCfgScale}
+        value={cfgScale}
+      />
+      <SDSelect
+        label="Sampler"
+        value={sampler}
+        onChange={handleChangeSampler}
+        validValues={SAMPLERS}
+      />
+      <SDNumberInput
+          label='Threshold'
+          min={0}
+          step={0.1}
+          onChange={handleChangeThreshold}
+          value={threshold}
+      />
+      <SDNumberInput
+          label='Perlin'
+          min={0}
+          max={1}
+          step={0.05}
+          onChange={handleChangePerlin}
+          value={perlin}
+      />
+    </Flex>
+  );
 };
 
 export default SamplerOptions;

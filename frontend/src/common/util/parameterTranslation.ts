@@ -1,16 +1,14 @@
-import { SDState } from '../features/sd/sdSlice';
-import randomInt from '../features/sd/util/randomInt';
-import {
-    seedWeightsToString,
-    stringToSeedWeights,
-} from '../features/sd/util/seedWeightPairs';
-import { SystemState } from '../features/system/systemSlice';
-import { NUMPY_RAND_MAX, NUMPY_RAND_MIN } from './constants';
 
 /*
     These functions translate frontend state into parameters
     suitable for consumption by the backend, and vice-versa.
 */
+
+import { NUMPY_RAND_MAX, NUMPY_RAND_MIN } from "../../app/constants";
+import { SDState } from "../../features/sd/sdSlice";
+import { SystemState } from "../../features/system/systemSlice";
+import randomInt from "./randomInt";
+import { seedWeightsToString, stringToSeedWeights } from "./seedWeightPairs";
 
 export const frontendToBackendParameters = (
     sdState: SDState,
@@ -34,7 +32,7 @@ export const frontendToBackendParameters = (
         maskPath,
         shouldFitToWidthHeight,
         shouldGenerateVariations,
-        variantAmount,
+        variationAmount,
         seedWeights,
         shouldRunESRGAN,
         upscalingLevel,
@@ -75,7 +73,7 @@ export const frontendToBackendParameters = (
     }
 
     if (shouldGenerateVariations) {
-        generationParameters.variation_amount = variantAmount;
+        generationParameters.variation_amount = variationAmount;
         if (seedWeights) {
             generationParameters.with_variations =
                 stringToSeedWeights(seedWeights);
@@ -144,7 +142,7 @@ export const backendToFrontendParameters = (parameters: {
 
     if (variation_amount > 0) {
         sd.shouldGenerateVariations = true;
-        sd.variantAmount = variation_amount;
+        sd.variationAmount = variation_amount;
         if (with_variations) {
             sd.seedWeights = seedWeightsToString(with_variations);
         }

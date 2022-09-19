@@ -4,8 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsc-watch --onSuccess 'yarn run vite build -m development'",
-    "hmr": "vite dev",
+    "dev": "vite dev",
     "build": "tsc && vite build",
     "build-dev": "tsc && vite build -m development",
     "preview": "vite preview"
