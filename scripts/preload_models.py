@@ -103,7 +103,7 @@ print('preloading CodeFormer model file...')
 try:
         import urllib.request
         model_url  = 'https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth'
-        model_dest = 'ldm/restoration/codeformer/weights/codeformer.pth'
+        model_dest = 'ldm/dream/restoration/codeformer/weights/codeformer.pth'
         if not os.path.exists(model_dest):
             print('downloading codeformer model file...')
             os.makedirs(os.path.dirname(model_dest), exist_ok=True)

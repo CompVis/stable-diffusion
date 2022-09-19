@@ -372,14 +372,16 @@ class Args(object):
         )
         # Restoration related args
         postprocessing_group.add_argument(
-            '--restore',
-            action='store_true',
-            help='Enable Face Restoration',
+            '--no_restore',
+            dest='restore',
+            action='store_false',
+            help='Disable face restoration with GFPGAN or codeformer',
         )
         postprocessing_group.add_argument(
-            '--esrgan',
-            action='store_true',
-            help='Enable Upscaling',
+            '--no_upscale',
+            dest='esrgan',
+            action='store_false',
+            help='Disable upscaling with ESRGAN',
         )
         postprocessing_group.add_argument(
             '--esrgan_bg_tile',
