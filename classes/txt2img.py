@@ -1,4 +1,4 @@
-from classes.base import BaseModel
+from stablediffusion.classes.base import BaseModel
 import torch
 from torch import autocast
 from tqdm import tqdm, trange
