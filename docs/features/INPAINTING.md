@@ -37,5 +37,44 @@ We are hoping to get rid of the need for this workaround in an upcoming release.
 5. Open the Layers toolbar (^L) and select "Floating Selection"
 6. Set opacity to 0%
 7. Export as PNG
+8. In the export dialogue, Make sure the "Save colour values from
+   transparent pixels" checkbox is selected.
+
+
+## Recipe for Adobe Photoshop
+
+1. Open image in Photoshop
+<p align='left'>
+<img src="../assets/step1.png"/>
+</p>
+
+2. Use any of the selection tools (Marquee, Lasso, or Wand) to select the area you desire to inpaint.
+<p align='left'>
+<img src="../assets/step2.png"/>
+</p>
+
+3. Because we'll be applying a mask over the area we want to preserve, you should now select the inverse by using the Shift + Ctrl + I shortcut, or right clicking and using the "Select Inverse" option.
+
+4. You'll now create a mask by selecting the image layer, and Masking the selection. Make sure that you don't delete any of the underlying image, or your inpainting results will be dramatically impacted.
+<p align='left'>
+<img src="../assets/step4.png"/>
+</p>
+
+5. Make sure to hide any background layers that are present. You should see the mask applied to your image layer, and the image on your canvas should display the checkered background.
+<p align='left'>
+<img src="../assets/step5.png"/>
+</p>
+
+<p align='left'>
+<img src="../assets/step6.png"/>
+</p>
+
+6. Save the image as a transparent PNG by using the "Save a Copy" option in the File menu, or using the Alt + Ctrl + S keyboard shortcut.
+
+7. After following the inpainting instructions above (either through the CLI or the Web UI), marvel at your newfound ability to selectively dream. Lookin' good!
+<p align='left'>
+<img src="../assets/step7.png"/>
+</p>
+
 8. In the export dialogue, Make sure the "Save colour values from transparent pixels" checkbox is
    selected.

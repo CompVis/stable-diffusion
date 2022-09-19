@@ -1,24 +1,13 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { SDMetadata } from '../gallery/gallerySlice';
-import randomInt from './util/randomInt';
-import { NUMPY_RAND_MAX, NUMPY_RAND_MIN } from '../../app/constants';
 
-const calculateRealSteps = (
-  steps: number,
-  strength: number,
-  hasInitImage: boolean
-): number => {
-  return hasInitImage ? Math.floor(strength * steps) : steps;
-};
-
-export type UpscalingLevel = 0 | 2 | 3 | 4;
+export type UpscalingLevel = 2 | 4;
 
 export interface SDState {
   prompt: string;
   iterations: number;
   steps: number;
-  realSteps: number;
   cfgScale: number;
   height: number;
   width: number;
@@ -34,7 +23,7 @@ export interface SDState {
   seamless: boolean;
   shouldFitToWidthHeight: boolean;
   shouldGenerateVariations: boolean;
-  variantAmount: number;
+  variationAmount: number;
   seedWeights: string;
   shouldRunESRGAN: boolean;
   shouldRunGFPGAN: boolean;
@@ -45,7 +34,6 @@ const initialSDState: SDState = {
   prompt: '',
   iterations: 1,
   steps: 50,
-  realSteps: 50,
   cfgScale: 7.5,
   height: 512,
   width: 512,
@@ -58,7 +46,7 @@ const initialSDState: SDState = {
   maskPath: '',
   shouldFitToWidthHeight: true,
   shouldGenerateVariations: false,
-  variantAmount: 0.1,
+  variationAmount: 0.1,
   seedWeights: '',
   shouldRunESRGAN: false,
   upscalingLevel: 4,
@@ -81,14 +69,7 @@ export const sdSlice = createSlice({
       state.iterations = action.payload;
     },
     setSteps: (state, action: PayloadAction<number>) => {
-      const { img2imgStrength, initialImagePath } = state;
-      const steps = action.payload;
-      state.steps = steps;
-      state.realSteps = calculateRealSteps(
-        steps,
-        img2imgStrength,
-        Boolean(initialImagePath)
-      );
+      state.steps = action.payload;
     },
     setCfgScale: (state, action: PayloadAction<number>) => {
       state.cfgScale = action.payload;
@@ -107,14 +88,7 @@ export const sdSlice = createSlice({
       state.shouldRandomizeSeed = false;
     },
     setImg2imgStrength: (state, action: PayloadAction<number>) => {
-      const img2imgStrength = action.payload;
-      const { steps, initialImagePath } = state;
-      state.img2imgStrength = img2imgStrength;
-      state.realSteps = calculateRealSteps(
-        steps,
-        img2imgStrength,
-        Boolean(initialImagePath)
-      );
+      state.img2imgStrength = action.payload;
     },
     setGfpganStrength: (state, action: PayloadAction<number>) => {
       state.gfpganStrength = action.payload;
@@ -129,15 +103,9 @@ export const sdSlice = createSlice({
       state.shouldUseInitImage = action.payload;
     },
     setInitialImagePath: (state, action: PayloadAction<string>) => {
-      const initialImagePath = action.payload;
-      const { steps, img2imgStrength } = state;
-      state.shouldUseInitImage = initialImagePath ? true : false;
-      state.initialImagePath = initialImagePath;
-      state.realSteps = calculateRealSteps(
-        steps,
-        img2imgStrength,
-        Boolean(initialImagePath)
-      );
+      const newInitialImagePath = action.payload;
+      state.shouldUseInitImage = newInitialImagePath ? true : false;
+      state.initialImagePath = newInitialImagePath;
     },
     setMaskPath: (state, action: PayloadAction<string>) => {
       state.maskPath = action.payload;
@@ -151,13 +119,11 @@ export const sdSlice = createSlice({
     resetSeed: (state) => {
       state.seed = -1;
     },
-    randomizeSeed: (state) => {
-      state.seed = randomInt(NUMPY_RAND_MIN, NUMPY_RAND_MAX);
-    },
     setParameter: (
       state,
       action: PayloadAction<{ key: string; value: string | number | boolean }>
     ) => {
+      // TODO: This probably needs to be refactored.
       const { key, value } = action.payload;
       const temp = { ...state, [key]: value };
       if (key === 'seed') {
@@ -171,13 +137,14 @@ export const sdSlice = createSlice({
     setShouldGenerateVariations: (state, action: PayloadAction<boolean>) => {
       state.shouldGenerateVariations = action.payload;
     },
-    setVariantAmount: (state, action: PayloadAction<number>) => {
-      state.variantAmount = action.payload;
+    setVariationAmount: (state, action: PayloadAction<number>) => {
+      state.variationAmount = action.payload;
     },
     setSeedWeights: (state, action: PayloadAction<string>) => {
       state.seedWeights = action.payload;
     },
     setAllParameters: (state, action: PayloadAction<SDMetadata>) => {
+      // TODO: This probably needs to be refactored.
       const {
         prompt,
         steps,
@@ -267,13 +234,12 @@ export const {
   setInitialImagePath,
   setMaskPath,
   resetSeed,
-  randomizeSeed,
   resetSDState,
   setShouldFitToWidthHeight,
   setParameter,
   setShouldGenerateVariations,
   setSeedWeights,
-  setVariantAmount,
+  setVariationAmount,
   setAllParameters,
   setShouldRunGFPGAN,
   setShouldRunESRGAN,
