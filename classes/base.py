@@ -11,7 +11,6 @@ from torch import autocast
 from pytorch_lightning import seed_everything  # FAILS
 from omegaconf import OmegaConf
 from contextlib import  nullcontext
-from scripts.txt2img import make_grid
 # import common classes from stable diffusion
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
@@ -67,8 +66,6 @@ def load_replacement(x):
 def chunk(it, size):
     it = iter(it)
     return iter(lambda: tuple(islice(it, size)), ())
-
-# from scripts.txt2img import chunk
 
 
 class BaseModel:
@@ -360,24 +357,3 @@ class BaseModel:
             file_name = os.path.join(sample_path, f"{base_count:05}.png")
             img.save(file_name)
             return file_name
-
-    def save_grid(self, opt, images):
-        """
-        Saves a grid of images if skip_grid is not True
-        :param opt: options passed to sampler
-        :param all_samples: list of image samples
-        :param outpath: path to save the grid
-        :param grid_count: number of grids already saved
-        :param n_rows:
-        :return:
-        """
-        if opt.skip_grid:
-            return
-        grid = torch.stack(images, 0)
-        grid = rearrange(grid, 'n b c h w -> (n b) c h w')
-        grid = make_grid(grid, nrow=self.n_rows)
-        filename = f'grid-{self.grid_count:04}.png'
-        grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-        img = Image.fromarray(grid.astype(np.uint8))
-        img.save(os.path.join(self.outpath, filename))
-        self.grid_count += 1
