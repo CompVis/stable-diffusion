@@ -4,6 +4,11 @@
 
 ![project logo](docs/assets/logo.png)
 
+<p align='center'>
+  <a href="https://discord.gg/ZmtBAhwWhy"><img src="docs/assets/join-us-on-discord-image.png"/></a>
+</p>
+
+# **Stable Diffusion Dream Script**
 [![discord badge]][discord link]
 
 [![latest release badge]][latest release link] [![github stars badge]][github stars link] [![github forks badge]][github forks link]
