@@ -245,9 +245,9 @@ def main_loop(gen, opt, infile):
         # Here is where the images are actually generated!
         last_results = []
         try:
-            file_writer = PngWriter(current_outdir)
-            prefix = file_writer.unique_prefix()
-            results = []  # list of filename, prompt pairs
+            file_writer      = PngWriter(current_outdir)
+            prefix           = file_writer.unique_prefix()
+            results          = []  # list of filename, prompt pairs
             grid_images      = dict()  # seed -> Image, only used if `opt.grid`
             prior_variations = opt.with_variations or []
             first_seed       = opt.seed
@@ -259,7 +259,9 @@ def main_loop(gen, opt, infile):
                 if opt.grid:
                     grid_images[seed] = image
                 else:
-                    if upscaled and opt.save_original:
+                    if operation == 'postprocess':
+                        filename = choose_postprocess_name(opt.prompt)
+                    elif upscaled and opt.save_original:
                         filename = f'{prefix}.{seed}.postprocessed.png'
                     else:
                         filename = f'{prefix}.{seed}.png'
@@ -270,6 +272,8 @@ def main_loop(gen, opt, infile):
                         formatted_dream_prompt = opt.dream_prompt_str(seed=first_seed)
                     elif len(prior_variations) > 0:
                         formatted_dream_prompt = opt.dream_prompt_str(seed=first_seed)
+                    elif operation == 'postprocess':
+                        formatted_dream_prompt = '!fix '+opt.dream_prompt_str(seed=seed)
                     else:
                         formatted_dream_prompt = opt.dream_prompt_str(seed=seed)
                     path = file_writer.save_image_and_prompt_to_png(
@@ -355,6 +359,18 @@ def do_postprocess (gen, opt, callback):
         opt                 = opt,
         )
     
+def choose_postprocess_name(original_filename):
+    basename,_ = os.path.splitext(os.path.basename(original_filename))
+    if re.search('\d+\.\d+$',basename):
+        return f'{basename}.fixed.png'
+    match = re.search('(\d+\.\d+)\.fixed(-(\d+))?$',basename) 
+    if match:
+        counter  = match.group(3) or 0
+        return '{prefix}-{counter:02d}.png'.format(prefix=match.group(1), counter=int(counter)+1)
+    else:
+        return f'{basename}.fixed.png'
+        
+
 def get_next_command(infile=None) -> str:  # command string
     if infile is None:
         command = input('dream> ')

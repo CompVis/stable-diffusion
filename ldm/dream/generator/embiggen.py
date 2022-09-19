@@ -62,6 +62,9 @@ class Embiggen(Generator):
             embiggen_tiles = list(map(lambda n: n-1, embiggen_tiles))
             embiggen_tiles.sort()
 
+        if strength >= 0.5:
+            print(f'* WARNING: Embiggen may produce mirror motifs if the strength (-f) is too high (currently {strength}). Try values between 0.35-0.45.')
+
         # Prep img2img generator, since we wrap over it
         gen_img2img = Img2Img(self.model)
 
