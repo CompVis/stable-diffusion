@@ -2,7 +2,9 @@
 
 # Waifu Diffusion
 
-Waifu Diffusion is the name for this project of finetuning Stable Diffusion on Danbooru images.
+Waifu Diffusion is the name for this project of finetuning Stable Diffusion on images and captions downloaded through Danbooru
+
+(**Note:** This project has **no affiliation with Danbooru.**)
 
 <img src=https://cdn.discordapp.com/attachments/872361510133981234/1016022078635388979/unknown.png?3867929 width=40% height=40%>
 
