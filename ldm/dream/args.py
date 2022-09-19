@@ -681,7 +681,10 @@ def metadata_loads(metadata):
     '''
     results = []
     try:
-        images = metadata['sd-metadata']['images']
+        if 'grid' in metadata['sd-metadata']:
+            images = metadata['sd-metadata']['images']
+        else:
+            images = [metadata['sd-metadata']['image']]
         for image in images:
             # repack the prompt and variations
             image['prompt']     = ','.join([':'.join([x['prompt'],   str(x['weight'])]) for x in image['prompt']])
