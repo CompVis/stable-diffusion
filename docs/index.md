@@ -1,5 +1,6 @@
 ---
 title: Home
+template: main.html
 ---
 
 <!--
@@ -10,7 +11,7 @@ title: Home
   mkdocs serve
   ```
 -->
-<div align="center" markdown="1">
+<div align="center" markdown>
 
 # :material-script-text-outline: Stable Diffusion Dream Script
 
@@ -42,6 +43,7 @@ title: Home
 [latest commit to dev link]: https://github.com/lstein/stable-diffusion/commits/development
 [latest release badge]: https://flat.badgen.net/github/release/lstein/stable-diffusion/development?icon=github
 [latest release link]: https://github.com/lstein/stable-diffusion/releases
+
 </div>
 
 This is a fork of [CompVis/stable-diffusion](https://github.com/CompVis/stable-diffusion), the open
@@ -93,30 +95,6 @@ You wil need one of the following:
     ```bash
     (ldm) ~/stable-diffusion$ python scripts/dream.py --full_precision
     ```
-
-## :octicons-list-unordered-24: Features
-
-### Major Features
-
-- [Interactive Command Line Interface](features/CLI.md)
-- [Image To Image](features/IMG2IMG.md)
-- [Inpainting Support](features/INPAINTING.md)
-- [GFPGAN and Real-ESRGAN Support](features/UPSCALE.md)
-- [Seamless Tiling](features/OTHER.md#seamless-tiling)
-- [Google Colab](features/OTHER.md#google-colab)
-- [Web Server](features/WEB.md)
-- [Reading Prompts From File](features/OTHER.md#reading-prompts-from-a-file)
-- [Shortcut: Reusing Seeds](features/OTHER.md#shortcuts-reusing-seeds)
-- [Weighted Prompts](features/OTHER.md#weighted-prompts)
-- [Variations](features/VARIATIONS.md)
-- [Personalizing Text-to-Image Generation](features/TEXTUAL_INVERSION.md)
-- [Simplified API for text to image generation](features/OTHER.md#simplified-api)
-
-### Other Features
-
-- [Creating Transparent Regions for Inpainting](features/INPAINTING.md#creating-transparent-regions-for-inpainting)
-- [Preload Models](features/OTHER.md#preload-models)
-
 ## :octicons-log-16: Latest Changes
 
 ### v1.14 <small>(11 September 2022)</small>

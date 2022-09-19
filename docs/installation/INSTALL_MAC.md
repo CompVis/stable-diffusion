@@ -83,14 +83,14 @@ While that is downloading, open a Terminal and run the following commands:
     === "with pyenv"
 
         ```{.bash .annotate}
-        brew install rust pyenv-virtualenv # (1)
+        brew install rust pyenv-virtualenv # (1)!
         pyenv install anaconda3-2022.05
         pyenv virtualenv anaconda3-2022.05
         eval "$(pyenv init -)"
         pyenv activate anaconda3-2022.05
         ```
         
-        1. you might already have this installed, no problem
+        1. You might already have this installed, if that is the case just continue.
 
 ```{.bash .annotate title="local repo setup"}
 # clone the repo
@@ -102,7 +102,7 @@ cd stable-diffusion
 # create symlink to checkpoint
 mkdir -p models/ldm/stable-diffusion-v1/
 
-PATH_TO_CKPT="$HOME/Downloads" # (1)
+PATH_TO_CKPT="$HOME/Downloads" # (1)!
 
 ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" \
   models/ldm/stable-diffusion-v1/model.ckpt
@@ -136,7 +136,7 @@ ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" \
 python scripts/preload_models.py
 
 # now you can run SD in CLI mode
-python scripts/dream.py --full_precision  # (1)
+python scripts/dream.py --full_precision  # (1)!
 
 # or run the web interface!
 python scripts/dream.py --web
@@ -169,9 +169,7 @@ get several errors. Here's the errors I've seen and found solutions for.
 
 ### Is it slow?
 
-Be sure to specify 1 sample and 1 iteration.
-
-```bash
+```bash title="Be sure to specify 1 sample and 1 iteration."
 python ./scripts/orig_scripts/txt2img.py \
   --prompt "ocean" \
   --ddim_steps 5 \
@@ -197,8 +195,8 @@ One debugging step is to update to the latest version of PyTorch nightly.
 conda install \
   pytorch \
   torchvision \
-  torchaudio \
-  -c pytorch-nightly
+  -c pytorch-nightly \
+  -n ldm
 ```
 
 If it takes forever to run
@@ -397,7 +395,7 @@ python scripts/preload_models.py
     WARNING: this will be slower than running natively on MPS.
     ```
 
-The lstein branch includes this fix in
+This fork already includes a fix for this in
 [environment-mac.yaml](https://github.com/lstein/stable-diffusion/blob/main/environment-mac.yaml).
 
 ---

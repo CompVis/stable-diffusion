@@ -71,26 +71,26 @@ These command-line arguments can be passed to `dream.py` when you first run it f
 or Linux command line. Some set defaults that can be overridden on a per-prompt basis (see [List of
 prompt arguments] (#list-of-prompt-arguments). Others
 
-| Argument                  | Shortcut      | Default                       | Description                                                                                             |
-| ------------------------- | ------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `--help`                  | `-h`          |                               | Print a concise help message.                                                                           |
-| `--outdir <path>`         | `-o<path>`    | `outputs/img_samples`         | Location for generated images.                                                                          |
-| `--prompt_as_dir`         | `-p`          | `False`                       | Name output directories using the prompt text.                                                          |
-| `--from_file <path>`       |               | `None`                        | Read list of prompts from a file. Use "-" to read from<br>standard input                                |
-| `--model <modelname>`     |               | `stable-diffusion-1.4`        | Loads model specified in configs/models.yaml. Currently<br>one of "stable-diffusion-1.4" or "laion400m" |
-| `--full_precision`        | `-F`          | `False`                       | Run in slower full-precision mode. Needed for Macintosh<br>M1/M2 hardware and some older video cards.   |
-| `--web`                   |               | `False`                       | Start in web server mode                                                                                |
-| `--host <ip addr>`        |               | `localhost`                   | Which network interface web server should listen on.<br>Set to 0.0.0.0 to listen on any.                |
-| `--port <port>`           |               | `9090`                        | Which port web server should listen for requests on.                                                    |
-| `--config <path>`          |               | `configs/models.yaml`          | Configuration file for models and their weights.                                                        |
-| `--iterations <int>`      | `-n<int>`     | `1`                           | How many images to generate per prompt.                                                                 |
-| `--grid`                  | `-g`          | `False`                       | Save all image series as a grid rather than individually.                                               |
-| `--sampler <sampler>`     | `-A<sampler>` | `k_lms`                       | Sampler to use. Use -h to get list of available samplers.                                               |
-| `--seamless`              |               | `False`                       | Create interesting effects by tiling elements of the image.                                             |
-| `--embedding_path <path>` |               | `None`                        | Path to pre-trained embedding manager checkpoints,<br>for custom models                                 |
-| `--gfpgan_dir`            |               | `src/gfpgan`                  | Path to where GFPGAN is installed.                                                                      |
-| `--gfpgan_model_path`     |               | see bellow\*                  | Path to GFPGAN model file, relative to `--gfpgan_dir`.                                                  |
-| `--device <device>`       | `-d<device>`  | `torch.cuda.current_device()` | Device to run SD on, e.g. "cuda:0"                                                                      |
+Argument                  | Shortcut      | Default                       | Description                                                                                           |
+------------------------- | ------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------- |
+`--help`                  | `-h`          |                               | Print a concise help message.                                                                         |
+`--outdir <path>`         | `-o<path>`    | `outputs/img_samples`         | Location for generated images.                                                                        |
+`--prompt_as_dir`         | `-p`          | `False`                       | Name output directories using the prompt text.                                                        |
+`--from_file <path>`       |               | `None`                        | Read list of prompts from a file. Use `-` to read from<br>standard input                               |
+`--model <modelname>`     |               | `stable-diffusion-1.4`        | Loads model specified in configs/models.yaml. Currently<br>one of "stable-diffusion-1.4" or "laion400m" |
+`--full_precision`        | `-F`          | `False`                       | Run in slower full-precision mode. Needed for Macintosh<br>M1/M2 hardware and some older video cards. |
+`--web`                   |               | `False`                       | Start in web server mode                                                                              |
+`--host <ip addr>`        |               | `localhost`                   | Which network interface web server should listen on.<br>Set to 0.0.0.0 to listen on any.              |
+`--port <port>`           |               | `9090`                        | Which port web server should listen for requests on.                                                  |
+`--config <path>`          |               | `configs/models.yaml`          | Configuration file for models and their weights.                                                        |
+`--iterations <int>`      | `-n<int>`     | `1`                           | How many images to generate per prompt.                                                               |
+`--grid`                  | `-g`          | `False`                       | Save all image series as a grid rather than individually.                                             |
+`--sampler <sampler>`     | `-A<sampler>` | `k_lms`                       | Sampler to use. Use -h to get list of available samplers.                                             |
+`--seamless`              |               | `False`                       | Create interesting effects by tiling elements of the image.                                           |
+`--embedding_path <path>` |               | `None`                        | Path to pre-trained embedding manager checkpoints,<br>for custom models                               |
+`--gfpgan_dir`            |               | `src/gfpgan`                  | Path to where GFPGAN is installed.                                                                    |
+`--gfpgan_model_path`     |               | see bellow\*                  | Path to GFPGAN model file, relative to `--gfpgan_dir`.                                                 |
+`--device <device>`       | `-d<device>`  | `torch.cuda.current_device()` | Device to run SD on, e.g. "cuda:0"                                                                    |
 
 \*`experiments/pretrained_models/GFPGANv1.3.pth`
 
@@ -107,7 +107,7 @@ These arguments are deprecated but still work:
 
     On Windows systems, you may run into problems when passing the dream script standard backslashed
     path names because the Python interpreter treats `\` as an escape. You can either double your
-    slashes (ick): `C:\\\\path\\\\to\\\\my\\\\file`, or use Linux/Mac style forward slashes (better):
+    slashes (ick): `C:\\path\\to\\my\\file`, or use Linux/Mac style forward slashes (better):
     `C:/path/to/my/file`.
 
 ### List of prompt arguments
@@ -137,9 +137,9 @@ Those are the `dream` commands that apply to txt2img:
 | `--steps <int>`               | `-s<int>`         | `50`                  | How many steps of refinement to apply                                                                                                                                                                                                                         |
 | `--cfg_scale <float>`          | `-C<float>`        | `7.5`                 | How hard to try to match the prompt to the generated<br>image; any number greater than 0.0<br>works, but the useful range is roughly 5.0 to 20.0                                                                                                             |
 | `--seed <int>`                | `-S<int>`         | `None`                | Set the random seed for the next series of images.<br>This can be used to recreate an image generated previously.                                                                                                                                            |
-| `--sampler <sampler>`         | `-A<sampler>`     | `k_lms`               | Sampler to use. Use `-h` to get list of available samplers.                                                                                                                                                                                                    |
+| `--sampler <sampler>`         | `-A<sampler>`     | `k_lms`               | Sampler to use. Use `-h` to get list of available samplers.                                                                                                                                                                                                  |
 | `--grid`                      | `-g`              | `False`               | Turn on grid mode to return a single image combining<br>all the images generated by this prompt                                                                                                                                                              |
-| `--individual`                | `-i`              | `True`                | Turn off grid mode (deprecated; leave off `--grid` instead)                                                                                                                                                                                                    |
+| `--individual`                | `-i`              | `True`                | Turn off grid mode (deprecated; leave off `--grid` instead)                                                                                                                                                                                                  |
 | `--outdir <path>`             | `-o<path>`        | `outputs/img_samples` | Temporarily change the location of these images                                                                                                                                                                                                              |
 | `--seamless`                  |                   | `False`               | Activate seamless tiling for interesting effects                                                                                                                                                                                                             |
 | `--log_tokenization`          | `-t`              | `False`               | Display a color-coded list of the parsed tokens<br>derived from the prompt                                                                                                                                                                                   |
@@ -175,14 +175,14 @@ chain as the the reference image for each step in the chain.
 
 In addition to the command-line options recognized by txt2img, img2img accepts additional options:
 
-| Argument              | Shortcut   | Default | Description                                                                                                                                |
-| --------------------- | ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--init_img <path>`   | `-I<path>` | `None`  | Path to the initialization image                                                                                                           |
-| `--init_color <path>` |            | `None`  | Path to reference image for color correction               |
-| `--fit`                | `-F`       | `False` | Scale the image to fit into the specified -H and -W dimensions                                                                             |
-| `--strength <float>`   | `-f<float>` | `0.75`  | How hard to try to match the prompt to the initial image. Ranges from 0.0-0.99, with higher values replacing the initial image completely. |
+| Argument              | Shortcut   | Default | Description                                                                                                                                   |
+| --------------------- | ---------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--init_img <path>`   | `-I<path>` | `None`  | Path to the initialization image                                                                                                              |
+| `--init_color <path>` |            | `None`  | Path to reference image for color correction                                                                                                  |
+| `--fit`                | `-F`       | `False` | Scale the image to fit into the specified -H and -W dimensions                                                                                  |
+| `--strength <float>`   | `-f<float>` | `0.75`  | How hard to try to match the prompt to the initial image. Ranges from 0.0-0.99,<br>with higher values replacing the initial image completely. |
 
-#### inpainting
+#### Inpainting
 
 !!! example
 
@@ -195,11 +195,11 @@ In addition to the command-line options recognized by txt2img, img2img accepts a
     the areas to overpaint made transparent, but you must be careful not to destroy the pixels
     underneath when you create the transparent areas. See [Inpainting](./INPAINTING.md) for details.
 
-inpainting accepts all the arguments used for txt2img and img2img, as well as the `--mask` (`-M`)
+Inpainting accepts all the arguments used for txt2img and img2img, as well as the `--mask` (`-M`)
 argument:
 
-| Argument             | Shortcut   | Default | Description                                                                                      |
-| -------------------- | ---------- | ------- | ------------------------------------------------------------------------------------------------ |
+| Argument             | Shortcut   | Default | Description                                                                                         |
+| -------------------- | ---------- | ------- | --------------------------------------------------------------------------------------------------- |
 | `--init_mask <path>` | `-M<path>` | `None`  | Path to an image the same size as the initial_image, with areas for<br>inpainting made transparent. |
 
 ## Command-line editing and completion
@@ -226,15 +226,15 @@ winpty python scripts\dream.py
 
 On the Mac and Linux platforms, when you exit `dream.py`, the last 1000 lines of your command-line
 history will be saved. When you restart `dream.py`, you can access the saved history using the
-up-arrow key.
+++up++ key.
 
 In addition, limited command-line completion is installed. In various contexts, you can start typing
 your command and press tab. A list of potential completions will be presented to you. You can then
 type a little more, hit tab again, and eventually autocomplete what you want.
 
 When specifying file paths using the one-letter shortcuts, the CLI will attempt to complete
-pathnames for you. This is most handy for the -I (init image) and -M (init mask) paths. To initiate
-completion, start the path with a slash ("/") or "./". For example:
+pathnames for you. This is most handy for the `-I` (init image) and `-M` (init mask) paths. To initiate
+completion, start the path with a slash `/` or `./`, for example:
 
 ```bash
 dream> "zebra with a mustache" -I./test-pictures<TAB>
@@ -242,6 +242,6 @@ dream> "zebra with a mustache" -I./test-pictures<TAB>
 -I./test-pictures/bad-sketch.png          -I./test-pictures/man_with_eagle/
 ```
 
-You can then type "z", hit ++tab++ again, and it will autofill to "zebra.jpg".
+You can then type ++z++, hit ++tab++ again, and it will autofill to `zebra.jpg`.
 
 More text completion features (such as autocompleting seeds) are on their way.
