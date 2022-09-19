@@ -15,7 +15,7 @@ copy the GFPGAN [models file](https://github.com/TencentARC/GFPGAN/releases/down
 into **src/gfpgan/experiments/pretrained_models**. On Mac and Linux systems, here's how you'd do it using
 **wget**:
 ~~~~
-> wget https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth src/gfpgan/experiments/pretrained_models/
+> wget https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth -P src/gfpgan/experiments/pretrained_models/
 ~~~~
 
 Make sure that you're in the stable-diffusion directory when you do this.
