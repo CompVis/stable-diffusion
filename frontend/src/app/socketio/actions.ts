@@ -1,5 +1,5 @@
 import { createAction } from '@reduxjs/toolkit';
-import { SDImage } from '../../features/gallery/gallerySlice';
+import * as InvokeAI from '../invokeai';
 
 /**
  * We can't use redux-toolkit's createSlice() to make these actions,
@@ -9,9 +9,9 @@ import { SDImage } from '../../features/gallery/gallerySlice';
  */
 
 export const generateImage = createAction<undefined>('socketio/generateImage');
-export const runESRGAN = createAction<SDImage>('socketio/runESRGAN');
-export const runGFPGAN = createAction<SDImage>('socketio/runGFPGAN');
-export const deleteImage = createAction<SDImage>('socketio/deleteImage');
+export const runESRGAN = createAction<InvokeAI.Image>('socketio/runESRGAN');
+export const runGFPGAN = createAction<InvokeAI.Image>('socketio/runGFPGAN');
+export const deleteImage = createAction<InvokeAI.Image>('socketio/deleteImage');
 export const requestAllImages = createAction<undefined>(
   'socketio/requestAllImages'
 );
@@ -22,3 +22,5 @@ export const uploadInitialImage = createAction<File>(
   'socketio/uploadInitialImage'
 );
 export const uploadMaskImage = createAction<File>('socketio/uploadMaskImage');
+
+export const requestSystemConfig = createAction<undefined>('socketio/requestSystemConfig');

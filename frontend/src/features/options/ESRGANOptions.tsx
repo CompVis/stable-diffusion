@@ -7,8 +7,8 @@ import {
   setUpscalingLevel,
   setUpscalingStrength,
   UpscalingLevel,
-  SDState,
-} from '../sd/sdSlice';
+  OptionsState,
+} from '../options/optionsSlice';
 
 
 import { UPSCALING_LEVELS } from '../../app/constants';
@@ -19,12 +19,12 @@ import { ChangeEvent } from 'react';
 import SDNumberInput from '../../common/components/SDNumberInput';
 import SDSelect from '../../common/components/SDSelect';
 
-const sdSelector = createSelector(
-  (state: RootState) => state.sd,
-  (sd: SDState) => {
+const optionsSelector = createSelector(
+  (state: RootState) => state.options,
+  (options: OptionsState) => {
     return {
-      upscalingLevel: sd.upscalingLevel,
-      upscalingStrength: sd.upscalingStrength,
+      upscalingLevel: options.upscalingLevel,
+      upscalingStrength: options.upscalingStrength,
     };
   },
   {
@@ -53,7 +53,7 @@ const systemSelector = createSelector(
  */
 const ESRGANOptions = () => {
   const dispatch = useAppDispatch();
-  const { upscalingLevel, upscalingStrength } = useAppSelector(sdSelector);
+  const { upscalingLevel, upscalingStrength } = useAppSelector(optionsSelector);
   const { isESRGANAvailable } = useAppSelector(systemSelector);
 
   const handleChangeLevel = (e: ChangeEvent<HTMLSelectElement>) =>

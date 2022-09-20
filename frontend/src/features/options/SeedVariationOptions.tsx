@@ -18,25 +18,25 @@ import SDSwitch from '../../common/components/SDSwitch';
 import randomInt from '../../common/util/randomInt';
 import { validateSeedWeights } from '../../common/util/seedWeightPairs';
 import {
-  SDState,
+  OptionsState,
   setIterations,
   setSeed,
   setSeedWeights,
   setShouldGenerateVariations,
   setShouldRandomizeSeed,
   setVariationAmount,
-} from './sdSlice';
+} from './optionsSlice';
 
-const sdSelector = createSelector(
-  (state: RootState) => state.sd,
-  (sd: SDState) => {
+const optionsSelector = createSelector(
+  (state: RootState) => state.options,
+  (options: OptionsState) => {
     return {
-      variationAmount: sd.variationAmount,
-      seedWeights: sd.seedWeights,
-      shouldGenerateVariations: sd.shouldGenerateVariations,
-      shouldRandomizeSeed: sd.shouldRandomizeSeed,
-      seed: sd.seed,
-      iterations: sd.iterations,
+      variationAmount: options.variationAmount,
+      seedWeights: options.seedWeights,
+      shouldGenerateVariations: options.shouldGenerateVariations,
+      shouldRandomizeSeed: options.shouldRandomizeSeed,
+      seed: options.seed,
+      iterations: options.iterations,
     };
   },
   {
@@ -57,7 +57,7 @@ const SeedVariationOptions = () => {
     shouldRandomizeSeed,
     seed,
     iterations,
-  } = useAppSelector(sdSelector);
+  } = useAppSelector(optionsSelector);
 
   const dispatch = useAppDispatch();
 
