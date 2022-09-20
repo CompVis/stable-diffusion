@@ -274,7 +274,6 @@ def main_loop(gen, opt, infile):
                 metadata = metadata_dumps(
                     opt,
                     seeds      = grid_seeds,
-                    weights    = gen.weights,
                     model_hash = gen.model_hash
                     )
                 path = file_writer.save_image_and_prompt_to_png(
