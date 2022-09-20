@@ -1,5 +1,6 @@
-from classes.base import BaseModel
+import time
 import torch
+from classes.base import BaseModel
 from torch import autocast
 from tqdm import tqdm, trange
 from contextlib import nullcontext
@@ -139,6 +140,7 @@ class Txt2Img(BaseModel):
     ]
 
     def sample(self, options=None):
+        print("SAMPLE*****************************")
         super().sample(options)
         torch.cuda.empty_cache()
         opt = self.opt
@@ -154,29 +156,29 @@ class Txt2Img(BaseModel):
         if opt.precision == "autocast":
             precision_scope = autocast
         saved_files = []
+        print("Create image")
         with torch.no_grad():
             with precision_scope("cuda"):
                 with model.ema_scope():
+                    tic = time.time()
                     uc = None
-                    if opt.scale != 1.0:
-                        uc = model.get_learned_conditioning(
-                            batch_size * [""]
-                        )
                     for _n in trange(opt.n_iter, desc="Sampling"):
-                        self.log.info("sample")
                         for prompts in tqdm(data, desc="data"):
+                            uc = None
+                            if opt.scale != 1.0:
+                                uc = model.get_learned_conditioning(
+                                    batch_size * [""]
+                                )
+                                self.log.info("sample")
                             if isinstance(prompts, tuple):
                                 prompts = list(prompts)
                             c = model.get_learned_conditioning(prompts)
+                            shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
                             samples_ddim, _ = sampler.sample(
                                 S=opt.ddim_steps,
                                 conditioning=c,
-                                batch_size=opt.n_samples,
-                                shape=[
-                                    opt.C,
-                                    opt.H // opt.f,
-                                    opt.W // opt.f
-                                ],
+                                batch_size=1,
+                                shape=shape,
                                 verbose=False,
                                 unconditional_guidance_scale=opt.scale,
                                 unconditional_conditioning=uc,
@@ -190,6 +192,7 @@ class Txt2Img(BaseModel):
                                 base_count,
                                 sample_path,
                                 opt)
+                    toc = time.time()
 
         return saved_files
 
