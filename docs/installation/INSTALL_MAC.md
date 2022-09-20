@@ -36,6 +36,7 @@ First get the weights checkpoint download started - it's big:
 
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
+#
 # Now there are two different routes to get the Python (miniconda) environment up and running:
 # 1. Alongside pyenv
 # 2. No pyenv
@@ -45,7 +46,8 @@ First get the weights checkpoint download started - it's big:
 # NOW EITHER DO
 # 1. Installing alongside pyenv
 
-brew install pyenv-virtualenv # you might have this from before, no problem
+
+brew install rust pyenv-virtualenv # you might have this from before, no problem
 pyenv install anaconda3-2022.05
 pyenv virtualenv anaconda3-2022.05
 eval "$(pyenv init -)"
@@ -54,7 +56,7 @@ pyenv activate anaconda3-2022.05
 # OR,
 # 2. Installing standalone
 # install python 3, git, cmake, protobuf:
-brew install cmake protobuf rust
+brew install cmake rust
 
 # install miniconda for M1 arm64:
 curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o Miniconda3-latest-MacOSX-arm64.sh
@@ -191,10 +193,8 @@ There are several causes of these errors.
 
 ```bash
 conda deactivate
-
 conda env remove -n ldm
-PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
-```
+conda env create -f environment-mac.yaml
 
 Fourth, If you have activated the ldm virtual environment and tried rebuilding
 it, maybe the problem could be that I have something installed that you don't

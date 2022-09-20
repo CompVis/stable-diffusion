@@ -3,7 +3,7 @@ import { Flex } from '@chakra-ui/react';
 import { RootState } from '../../app/store';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 
-import { setHeight, setWidth, setSeamless, SDState } from '../sd/sdSlice';
+import { setHeight, setWidth, setSeamless, OptionsState } from '../options/optionsSlice';
 
 
 import { HEIGHTS, WIDTHS } from '../../app/constants';
@@ -13,13 +13,13 @@ import { ChangeEvent } from 'react';
 import SDSelect from '../../common/components/SDSelect';
 import SDSwitch from '../../common/components/SDSwitch';
 
-const sdSelector = createSelector(
-  (state: RootState) => state.sd,
-  (sd: SDState) => {
+const optionsSelector = createSelector(
+  (state: RootState) => state.options,
+  (options: OptionsState) => {
     return {
-      height: sd.height,
-      width: sd.width,
-      seamless: sd.seamless,
+      height: options.height,
+      width: options.width,
+      seamless: options.seamless,
     };
   },
   {
@@ -34,7 +34,7 @@ const sdSelector = createSelector(
  */
 const OutputOptions = () => {
   const dispatch = useAppDispatch();
-  const { height, width, seamless } = useAppSelector(sdSelector);
+  const { height, width, seamless } = useAppSelector(optionsSelector);
 
   const handleChangeWidth = (e: ChangeEvent<HTMLSelectElement>) =>
     dispatch(setWidth(Number(e.target.value)));

@@ -2,38 +2,29 @@ import { AnyAction, MiddlewareAPI, Dispatch } from '@reduxjs/toolkit';
 import { v4 as uuidv4 } from 'uuid';
 import dateFormat from 'dateformat';
 
+import * as InvokeAI from '../invokeai';
+
 import {
   addLogEntry,
   setIsConnected,
   setIsProcessing,
-  SystemStatus,
   setSystemStatus,
   setCurrentStatus,
+  setSystemConfig,
 } from '../../features/system/systemSlice';
-
-import type {
-  ServerGenerationResult,
-  ServerESRGANResult,
-  ServerGFPGANResult,
-  ServerIntermediateResult,
-  ServerError,
-  ServerGalleryImages,
-  ServerImageUrlAndUuid,
-  ServerImageUrl,
-} from './types';
-
-import { backendToFrontendParameters } from '../../common/util/parameterTranslation';
 
 import {
   addImage,
   clearIntermediateImage,
   removeImage,
-  SDImage,
   setGalleryImages,
   setIntermediateImage,
 } from '../../features/gallery/gallerySlice';
 
-import { setInitialImagePath, setMaskPath } from '../../features/sd/sdSlice';
+import {
+  setInitialImagePath,
+  setMaskPath,
+} from '../../features/options/optionsSlice';
 
 /**
  * Returns an object containing listener callbacks for socketio events.
@@ -79,18 +70,16 @@ const makeSocketIOListeners = (
     /**
      * Callback to run when we receive a 'generationResult' event.
      */
-    onGenerationResult: (data: ServerGenerationResult) => {
+    onGenerationResult: (data: InvokeAI.ImageResultResponse) => {
       try {
         const { url, metadata } = data;
         const newUuid = uuidv4();
-
-        const translatedMetadata = backendToFrontendParameters(metadata);
 
         dispatch(
           addImage({
             uuid: newUuid,
             url,
-            metadata: translatedMetadata,
+            metadata: metadata,
           })
         );
         dispatch(
@@ -107,7 +96,7 @@ const makeSocketIOListeners = (
     /**
      * Callback to run when we receive a 'intermediateResult' event.
      */
-    onIntermediateResult: (data: ServerIntermediateResult) => {
+    onIntermediateResult: (data: InvokeAI.ImageResultResponse) => {
       try {
         const uuid = uuidv4();
         const { url, metadata } = data;
@@ -132,31 +121,15 @@ const makeSocketIOListeners = (
     /**
      * Callback to run when we receive an 'esrganResult' event.
      */
-    onESRGANResult: (data: ServerESRGANResult) => {
+    onESRGANResult: (data: InvokeAI.ImageResultResponse) => {
       try {
-        const { url, uuid, metadata } = data;
-        const newUuid = uuidv4();
-
-        // This image was only ESRGAN'd, grab the original image's metadata
-        const originalImage = getState().gallery.images.find(
-          (i: SDImage) => i.uuid === uuid
-        );
-
-        // Retain the original metadata
-        const newMetadata = {
-          ...originalImage.metadata,
-        };
-
-        // Update the ESRGAN-related fields
-        newMetadata.shouldRunESRGAN = true;
-        newMetadata.upscalingLevel = metadata.upscale[0];
-        newMetadata.upscalingStrength = metadata.upscale[1];
+        const { url, metadata } = data;
 
         dispatch(
           addImage({
-            uuid: newUuid,
+            uuid: uuidv4(),
             url,
-            metadata: newMetadata,
+            metadata,
           })
         );
 
@@ -174,30 +147,15 @@ const makeSocketIOListeners = (
     /**
      * Callback to run when we receive a 'gfpganResult' event.
      */
-    onGFPGANResult: (data: ServerGFPGANResult) => {
+    onGFPGANResult: (data: InvokeAI.ImageResultResponse) => {
       try {
-        const { url, uuid, metadata } = data;
-        const newUuid = uuidv4();
-
-        // This image was only GFPGAN'd, grab the original image's metadata
-        const originalImage = getState().gallery.images.find(
-          (i: SDImage) => i.uuid === uuid
-        );
-
-        // Retain the original metadata
-        const newMetadata = {
-          ...originalImage.metadata,
-        };
-
-        // Update the GFPGAN-related fields
-        newMetadata.shouldRunGFPGAN = true;
-        newMetadata.gfpganStrength = metadata.gfpgan_strength;
+        const { url, metadata } = data;
 
         dispatch(
           addImage({
-            uuid: newUuid,
+            uuid: uuidv4(),
             url,
-            metadata: newMetadata,
+            metadata,
           })
         );
 
@@ -215,7 +173,7 @@ const makeSocketIOListeners = (
      * Callback to run when we receive a 'progressUpdate' event.
      * TODO: Add additional progress phases
      */
-    onProgressUpdate: (data: SystemStatus) => {
+    onProgressUpdate: (data: InvokeAI.SystemStatus) => {
       try {
         dispatch(setIsProcessing(true));
         dispatch(setSystemStatus(data));
@@ -226,7 +184,7 @@ const makeSocketIOListeners = (
     /**
      * Callback to run when we receive a 'progressUpdate' event.
      */
-    onError: (data: ServerError) => {
+    onError: (data: InvokeAI.ErrorResponse) => {
       const { message, additionalData } = data;
 
       if (additionalData) {
@@ -250,13 +208,14 @@ const makeSocketIOListeners = (
     /**
      * Callback to run when we receive a 'galleryImages' event.
      */
-    onGalleryImages: (data: ServerGalleryImages) => {
+    onGalleryImages: (data: InvokeAI.GalleryImagesResponse) => {
       const { images } = data;
-      const preparedImages = images.map((image): SDImage => {
+      const preparedImages = images.map((image): InvokeAI.Image => {
+        const { url, metadata } = image;
         return {
           uuid: uuidv4(),
-          url: image.path,
-          metadata: backendToFrontendParameters(image.metadata),
+          url,
+          metadata,
         };
       });
       dispatch(setGalleryImages(preparedImages));
@@ -296,7 +255,7 @@ const makeSocketIOListeners = (
     /**
      * Callback to run when we receive a 'imageDeleted' event.
      */
-    onImageDeleted: (data: ServerImageUrlAndUuid) => {
+    onImageDeleted: (data: InvokeAI.ImageUrlAndUuidResponse) => {
       const { url, uuid } = data;
       dispatch(removeImage(uuid));
       dispatch(
@@ -309,7 +268,7 @@ const makeSocketIOListeners = (
     /**
      * Callback to run when we receive a 'initialImageUploaded' event.
      */
-    onInitialImageUploaded: (data: ServerImageUrl) => {
+    onInitialImageUploaded: (data: InvokeAI.ImageUrlResponse) => {
       const { url } = data;
       dispatch(setInitialImagePath(url));
       dispatch(
@@ -322,7 +281,7 @@ const makeSocketIOListeners = (
     /**
      * Callback to run when we receive a 'maskImageUploaded' event.
      */
-    onMaskImageUploaded: (data: ServerImageUrl) => {
+    onMaskImageUploaded: (data: InvokeAI.ImageUrlResponse) => {
       const { url } = data;
       dispatch(setMaskPath(url));
       dispatch(
@@ -331,6 +290,9 @@ const makeSocketIOListeners = (
           message: `Mask image uploaded: ${url}`,
         })
       );
+    },
+    onSystemConfig: (data: InvokeAI.SystemConfig) => {
+      dispatch(setSystemConfig(data));
     },
   };
 };

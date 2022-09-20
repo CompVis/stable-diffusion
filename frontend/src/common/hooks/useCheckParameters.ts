@@ -3,20 +3,20 @@ import { isEqual } from 'lodash';
 import { useMemo } from 'react';
 import { useAppSelector } from '../../app/store';
 import { RootState } from '../../app/store';
-import { SDState } from '../../features/sd/sdSlice';
+import { OptionsState } from '../../features/options/optionsSlice';
 import { SystemState } from '../../features/system/systemSlice';
 import { validateSeedWeights } from '../util/seedWeightPairs';
 
-const sdSelector = createSelector(
-  (state: RootState) => state.sd,
-  (sd: SDState) => {
+const optionsSelector = createSelector(
+  (state: RootState) => state.options,
+  (options: OptionsState) => {
     return {
-      prompt: sd.prompt,
-      shouldGenerateVariations: sd.shouldGenerateVariations,
-      seedWeights: sd.seedWeights,
-      maskPath: sd.maskPath,
-      initialImagePath: sd.initialImagePath,
-      seed: sd.seed,
+      prompt: options.prompt,
+      shouldGenerateVariations: options.shouldGenerateVariations,
+      seedWeights: options.seedWeights,
+      maskPath: options.maskPath,
+      initialImagePath: options.initialImagePath,
+      seed: options.seed,
     };
   },
   {
@@ -53,7 +53,7 @@ const useCheckParameters = (): boolean => {
     maskPath,
     initialImagePath,
     seed,
-  } = useAppSelector(sdSelector);
+  } = useAppSelector(optionsSelector);
 
   const { isProcessing, isConnected } = useAppSelector(systemSelector);
 

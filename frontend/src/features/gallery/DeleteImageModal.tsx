@@ -17,6 +17,7 @@ import { createSelector } from '@reduxjs/toolkit';
 import {
   ChangeEvent,
   cloneElement,
+  forwardRef,
   ReactElement,
   SyntheticEvent,
   useRef,
@@ -25,7 +26,7 @@ import { useAppDispatch, useAppSelector } from '../../app/store';
 import { deleteImage } from '../../app/socketio/actions';
 import { RootState } from '../../app/store';
 import { setShouldConfirmOnDelete, SystemState } from '../system/systemSlice';
-import { SDImage } from './gallerySlice';
+import * as InvokeAI from '../../app/invokeai';
 
 interface DeleteImageModalProps {
   /**
@@ -35,7 +36,7 @@ interface DeleteImageModalProps {
   /**
    * The image to delete.
    */
-  image: SDImage;
+  image: InvokeAI.Image;
 }
 
 const systemSelector = createSelector(
@@ -49,73 +50,76 @@ const systemSelector = createSelector(
  * If it is false, the image is deleted immediately.
  * The confirmation modal has a "Don't ask me again" switch to set the boolean.
  */
-const DeleteImageModal = ({ image, children }: DeleteImageModalProps) => {
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const dispatch = useAppDispatch();
-  const shouldConfirmOnDelete = useAppSelector(systemSelector);
-  const cancelRef = useRef<HTMLButtonElement>(null);
+const DeleteImageModal = forwardRef(
+  ({ image, children }: DeleteImageModalProps, ref) => {
+    const { isOpen, onOpen, onClose } = useDisclosure();
+    const dispatch = useAppDispatch();
+    const shouldConfirmOnDelete = useAppSelector(systemSelector);
+    const cancelRef = useRef<HTMLButtonElement>(null);
 
-  const handleClickDelete = (e: SyntheticEvent) => {
-    e.stopPropagation();
-    shouldConfirmOnDelete ? onOpen() : handleDelete();
-  };
+    const handleClickDelete = (e: SyntheticEvent) => {
+      e.stopPropagation();
+      shouldConfirmOnDelete ? onOpen() : handleDelete();
+    };
 
-  const handleDelete = () => {
-    dispatch(deleteImage(image));
-    onClose();
-  };
+    const handleDelete = () => {
+      dispatch(deleteImage(image));
+      onClose();
+    };
 
-  const handleChangeShouldConfirmOnDelete = (
-    e: ChangeEvent<HTMLInputElement>
-  ) => dispatch(setShouldConfirmOnDelete(!e.target.checked));
+    const handleChangeShouldConfirmOnDelete = (
+      e: ChangeEvent<HTMLInputElement>
+    ) => dispatch(setShouldConfirmOnDelete(!e.target.checked));
 
-  return (
-    <>
-      {cloneElement(children, {
-        // TODO: This feels wrong.
-        onClick: handleClickDelete,
-      })}
+    return (
+      <>
+        {cloneElement(children, {
+          // TODO: This feels wrong.
+          onClick: handleClickDelete,
+          ref: ref,
+        })}
 
-      <AlertDialog
-        isOpen={isOpen}
-        leastDestructiveRef={cancelRef}
-        onClose={onClose}
-      >
-        <AlertDialogOverlay>
-          <AlertDialogContent>
-            <AlertDialogHeader fontSize="lg" fontWeight="bold">
-              Delete image
-            </AlertDialogHeader>
+        <AlertDialog
+          isOpen={isOpen}
+          leastDestructiveRef={cancelRef}
+          onClose={onClose}
+        >
+          <AlertDialogOverlay>
+            <AlertDialogContent>
+              <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                Delete image
+              </AlertDialogHeader>
 
-            <AlertDialogBody>
-              <Flex direction={'column'} gap={5}>
-                <Text>
-                  Are you sure? You can't undo this action afterwards.
-                </Text>
-                <FormControl>
-                  <Flex alignItems={'center'}>
-                    <FormLabel mb={0}>Don't ask me again</FormLabel>
-                    <Switch
-                      checked={!shouldConfirmOnDelete}
-                      onChange={handleChangeShouldConfirmOnDelete}
-                    />
-                  </Flex>
-                </FormControl>
-              </Flex>
-            </AlertDialogBody>
-            <AlertDialogFooter>
-              <Button ref={cancelRef} onClick={onClose}>
-                Cancel
-              </Button>
-              <Button colorScheme="red" onClick={handleDelete} ml={3}>
-                Delete
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialogOverlay>
-      </AlertDialog>
-    </>
-  );
-};
+              <AlertDialogBody>
+                <Flex direction={'column'} gap={5}>
+                  <Text>
+                    Are you sure? You can't undo this action afterwards.
+                  </Text>
+                  <FormControl>
+                    <Flex alignItems={'center'}>
+                      <FormLabel mb={0}>Don't ask me again</FormLabel>
+                      <Switch
+                        checked={!shouldConfirmOnDelete}
+                        onChange={handleChangeShouldConfirmOnDelete}
+                      />
+                    </Flex>
+                  </FormControl>
+                </Flex>
+              </AlertDialogBody>
+              <AlertDialogFooter>
+                <Button ref={cancelRef} onClick={onClose}>
+                  Cancel
+                </Button>
+                <Button colorScheme="red" onClick={handleDelete} ml={3}>
+                  Delete
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialogOverlay>
+        </AlertDialog>
+      </>
+    );
+  }
+);
 
 export default DeleteImageModal;

@@ -5,7 +5,7 @@ import type { TypedUseSelectorHook } from 'react-redux';
 import { persistReducer } from 'redux-persist';
 import storage from 'redux-persist/lib/storage'; // defaults to localStorage for web
 
-import sdReducer from '../features/sd/sdSlice';
+import optionsReducer from '../features/options/optionsSlice';
 import galleryReducer from '../features/gallery/gallerySlice';
 import systemReducer from '../features/system/systemSlice';
 import { socketioMiddleware } from './socketio/middleware';
@@ -53,7 +53,7 @@ const systemPersistConfig = {
 };
 
 const reducers = combineReducers({
-  sd: sdReducer,
+  options: optionsReducer,
   gallery: galleryReducer,
   system: persistReducer(systemPersistConfig, systemReducer),
 });
