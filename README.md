@@ -1,3 +1,15 @@
+# Modified evolutionary version.
+
+Install as usual (below).
+Then use the "pipeline_stable_diffusion.py" in lieu of the original pipeline_stable_diffusion.py found at 
+<< python -c "import diffusers ; print(diffusers.__file__)" >>.
+Then edit the prompt in minisd.py.
+Then
+ ./multi_minisd.sh
+
+
+
+
 # Stable Diffusion
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
 
