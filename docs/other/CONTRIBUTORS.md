@@ -2,6 +2,8 @@
 title: Contributors
 ---
 
+# :octicons-person-24: Contributors
+
 The list of all the amazing people who have contributed to the various features that you get to
 experience in this fork.
 

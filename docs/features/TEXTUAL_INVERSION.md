@@ -2,6 +2,8 @@
 title: TEXTUAL_INVERSION
 ---
 
+# :material-file-document-plus-outline: TEXTUAL_INVERSION
+
 ## **Personalizing Text-to-Image Generation**
 
 You may personalize the generated images to provide your own styles or objects
@@ -39,7 +41,7 @@ and one with the init word provided.
 
 On a RTX3090, the process for SD will take ~1h @1.6 iterations/sec.
 
-!!! Info _Note_
+!!! note
 
     According to the associated paper, the optimal number of
     images is 3-5. Your model may not converge if you use more images than
@@ -57,9 +59,7 @@ Once the model is trained, specify the trained .pt or .bin file when starting
 dream using
 
 ```bash
-python3 ./scripts/dream.py \
-        --embedding_path /path/to/embedding.pt \
-        --full_precision
+python3 ./scripts/dream.py --embedding_path /path/to/embedding.pt
 ```
 
 Then, to utilize your subject at the dream prompt

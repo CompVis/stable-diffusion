@@ -3,6 +3,9 @@ outputs/
 models/ldm/stable-diffusion-v1/model.ckpt
 ldm/restoration/codeformer/weights
 
+# ignore the Anaconda/Miniconda installer used while building Docker image
+anaconda.sh
+
 # ignore a directory which serves as a place for initial images
 inputs/
 

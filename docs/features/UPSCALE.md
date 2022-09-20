@@ -2,6 +2,8 @@
 title: Upscale
 ---
 
+# :material-image-size-select-large: Upscale 
+
 ## **GFPGAN and Real-ESRGAN Support**
 
 The script also provides the ability to do face restoration and upscaling with the help of GFPGAN
@@ -30,11 +32,13 @@ this package which asked you to install GFPGAN in a sibling directory, you may u
 `--gfpgan_dir` argument with `dream.py` to set a custom path to your GFPGAN directory. _There are
 other GFPGAN related boot arguments if you wish to customize further._
 
-**Note: Internet connection needed:** Users whose GPU machines are isolated from the Internet (e.g.
-on a University cluster) should be aware that the first time you run dream.py with GFPGAN and
-Real-ESRGAN turned on, it will try to download model files from the Internet. To rectify this, you
-may run `python3 scripts/preload_models.py` after you have installed GFPGAN and all its
-dependencies.
+!!! warning "Internet connection needed"
+
+    Users whose GPU machines are isolated from the Internet (e.g.
+    on a University cluster) should be aware that the first time you run dream.py with GFPGAN and
+    Real-ESRGAN turned on, it will try to download model files from the Internet. To rectify this, you
+    may run `python3 scripts/preload_models.py` after you have installed GFPGAN and all its
+    dependencies.
 
 ## **Usage**
 
@@ -83,16 +87,16 @@ This also works with img2img:
 dream> a man wearing a pineapple hat -I path/to/your/file.png -U 2 0.5 -G 0.6
 ```
 
-### **Note**
+!!! note
 
-GFPGAN and Real-ESRGAN are both memory intensive. In order to avoid crashes and memory overloads
-during the Stable Diffusion process, these effects are applied after Stable Diffusion has completed
-its work.
+    GFPGAN and Real-ESRGAN are both memory intensive. In order to avoid crashes and memory overloads
+    during the Stable Diffusion process, these effects are applied after Stable Diffusion has completed
+    its work.
 
-In single image generations, you will see the output right away but when you are using multiple
-iterations, the images will first be generated and then upscaled and face restored after that
-process is complete. While the image generation is taking place, you will still be able to preview
-the base images.
+    In single image generations, you will see the output right away but when you are using multiple
+    iterations, the images will first be generated and then upscaled and face restored after that
+    process is complete. While the image generation is taking place, you will still be able to preview
+    the base images.
 
 If you wish to stop during the image generation but want to upscale or face restore a particular
 generated image, pass it again with the same prompt and generated seed along with the `-U` and `-G`

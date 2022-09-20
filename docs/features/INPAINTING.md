@@ -2,6 +2,8 @@
 title: Inpainting
 ---
 
+# :octicons-paintbrush-16: Inpainting
+
 ## **Creating Transparent Regions for Inpainting**
 
 Inpainting is really cool. To do it, you start with an initial image and use a photoeditor to make
@@ -26,6 +28,8 @@ dream> "man with cat on shoulder" -I./images/man.png -M./images/man-transparent.
 
 We are hoping to get rid of the need for this workaround in an upcoming release.
 
+---
+
 ## Recipe for GIMP
 
 [GIMP](https://www.gimp.org/) is a popular Linux photoediting tool.
@@ -34,7 +38,7 @@ We are hoping to get rid of the need for this workaround in an upcoming release.
 2. Layer->Transparency->Add Alpha Channel
 3. Use lasoo tool to select region to mask
 4. Choose Select -> Float to create a floating selection
-5. Open the Layers toolbar (^L) and select "Floating Selection"
+5. Open the Layers toolbar (++ctrl+l++) and select "Floating Selection"
 6. Set opacity to 0%
 7. Export as PNG
 8. In the export dialogue, Make sure the "Save colour values from
@@ -44,37 +48,41 @@ We are hoping to get rid of the need for this workaround in an upcoming release.
 ## Recipe for Adobe Photoshop
 
 1. Open image in Photoshop
-<p align='left'>
-<img src="../assets/step1.png"/>
-</p>
+
+    <figure markdown>
+    ![step1](../assets/step1.png)
+    </figure>
 
 2. Use any of the selection tools (Marquee, Lasso, or Wand) to select the area you desire to inpaint.
-<p align='left'>
-<img src="../assets/step2.png"/>
-</p>
 
-3. Because we'll be applying a mask over the area we want to preserve, you should now select the inverse by using the Shift + Ctrl + I shortcut, or right clicking and using the "Select Inverse" option.
+    <figure markdown>
+    ![step2](../assets/step2.png)
+    </figure>
 
-4. You'll now create a mask by selecting the image layer, and Masking the selection. Make sure that you don't delete any of the underlying image, or your inpainting results will be dramatically impacted.
-<p align='left'>
-<img src="../assets/step4.png"/>
-</p>
+3. Because we'll be applying a mask over the area we want to preserve, you should now select the inverse by using the ++shift+ctrl+i++ shortcut, or right clicking and using the "Select Inverse" option.
+
+4. You'll now create a mask by selecting the image layer, and Masking the selection. Make sure that you don't delete any of the undrlying image, or your inpainting results will be dramatically impacted.
+
+    <figure markdown>
+    ![step4](../assets/step4.png)
+    </figure>
 
 5. Make sure to hide any background layers that are present. You should see the mask applied to your image layer, and the image on your canvas should display the checkered background.
-<p align='left'>
-<img src="../assets/step5.png"/>
-</p>
 
-<p align='left'>
-<img src="../assets/step6.png"/>
-</p>
+    <figure markdown>
+    ![step5](../assets/step5.png)
+    </figure>
 
-6. Save the image as a transparent PNG by using the "Save a Copy" option in the File menu, or using the Alt + Ctrl + S keyboard shortcut.
+6. Save the image as a transparent PNG by using the "Save a Copy" option in the File menu, or using the Alt + Ctrl + S keyboard shortcut
+
+    <figure markdown>
+    ![step6](../assets/step6.png)
+    </figure>
 
 7. After following the inpainting instructions above (either through the CLI or the Web UI), marvel at your newfound ability to selectively dream. Lookin' good!
-<p align='left'>
-<img src="../assets/step7.png"/>
-</p>
 
-8. In the export dialogue, Make sure the "Save colour values from transparent pixels" checkbox is
-   selected.
+    <figure markdown>
+    ![step7](../assets/step7.png)
+    </figure>
+
+8. In the export dialogue, Make sure the "Save colour values from transparent pixels" checkbox is selected.  

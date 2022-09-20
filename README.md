@@ -1,4 +1,4 @@
-<div align="center">
+<h1 align='center'><b>InvokeAI: A Stable Diffusion Toolkit</b></h1>
 
 # Stable Diffusion Dream Script
 
@@ -8,7 +8,7 @@
   <a href="https://discord.gg/ZmtBAhwWhy"><img src="docs/assets/join-us-on-discord-image.png"/></a>
 </p>
 
-# **Stable Diffusion Dream Script**
+# **InvokeAI - A Stable Diffusion Toolkit**
 [![discord badge]][discord link]
 
 [![latest release badge]][latest release link] [![github stars badge]][github stars link] [![github forks badge]][github forks link]
@@ -86,17 +86,14 @@ You wil need one of the following:
 
 - At least 6 GB of free disk space for the machine learning model, Python, and all its dependencies.
 
-> Note
->
-> If you have an Nvidia 10xx series card (e.g. the 1080ti), please run the dream script in
-> full-precision mode as shown below.
+#### Note
 
-Similarly, specify full-precision mode on Apple M1 hardware.
-
-To run in full-precision mode, start `dream.py` with the `--full_precision` flag:
+Precision is auto configured based on the device. If however you encounter
+errors like 'expected type Float but found Half' or 'not implemented for Half'
+you can try starting `dream.py` with the `--precision=float32` flag:
 
 ```bash
-(ldm) ~/stable-diffusion$ python scripts/dream.py --full_precision
+(ldm) ~/stable-diffusion$ python scripts/dream.py --precision=float32
 ```
 
 ### Features
@@ -125,6 +122,11 @@ To run in full-precision mode, start `dream.py` with the `--full_precision` flag
 - [Preload Models](docs/features/OTHER.md#preload-models)
 
 ### Latest Changes
+
+- vNEXT (TODO 2022)
+
+  - Deprecated `--full_precision` / `-F`. Simply omit it and `dream.py` will auto
+    configure. To switch away from auto use the new flag like `--precision=float32`.
 
 - v1.14 (11 September 2022)
 
