@@ -12,7 +12,7 @@
     <img src="https://img.shields.io/github/issues-pr/lstein/stable-diffusion?logo=GitHub&style=for-the-badge" alt="pull-requests"/>
 </p>
 
-# **Stable Diffusion Dream Script**
+# **InvokeAI - A Stable Diffusion Dream Script**
 
 This is a fork of
 [CompVis/stable-diffusion](https://github.com/CompVis/stable-diffusion),
@@ -22,9 +22,11 @@ generation process. It runs on Windows, Mac and Linux machines,
 and runs on GPU cards with as little as 4 GB or RAM.
 
 _Note: This fork is rapidly evolving. Please use the
-[Issues](https://github.com/lstein/stable-diffusion/issues) tab to
+[Issues](https://github.com/invoke-ai/InvokeAI/issues) tab to
 report bugs and make feature requests. Be sure to use the provided
 templates. They will help aid diagnose issues faster._
+
+_This repository was formally known as lstein/stable-diffusion_
 
 # **Table of Contents**
 
