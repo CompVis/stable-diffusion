@@ -3,7 +3,7 @@ import { Flex } from '@chakra-ui/react';
 import { RootState } from '../../app/store';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 
-import { SDState, setGfpganStrength } from '../sd/sdSlice';
+import { OptionsState, setGfpganStrength } from '../options/optionsSlice';
 
 
 import { createSelector } from '@reduxjs/toolkit';
@@ -11,11 +11,11 @@ import { isEqual } from 'lodash';
 import { SystemState } from '../system/systemSlice';
 import SDNumberInput from '../../common/components/SDNumberInput';
 
-const sdSelector = createSelector(
-  (state: RootState) => state.sd,
-  (sd: SDState) => {
+const optionsSelector = createSelector(
+  (state: RootState) => state.options,
+  (options: OptionsState) => {
     return {
-      gfpganStrength: sd.gfpganStrength,
+      gfpganStrength: options.gfpganStrength,
     };
   },
   {
@@ -44,7 +44,7 @@ const systemSelector = createSelector(
  */
 const GFPGANOptions = () => {
   const dispatch = useAppDispatch();
-  const { gfpganStrength } = useAppSelector(sdSelector);
+  const { gfpganStrength } = useAppSelector(optionsSelector);
   const { isGFPGANAvailable } = useAppSelector(systemSelector);
 
   const handleChangeStrength = (v: string | number) =>

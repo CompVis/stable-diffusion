@@ -1,10 +1,12 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { SDMetadata } from '../gallery/gallerySlice';
+import * as InvokeAI from '../../app/invokeai';
+import promptToString from '../../common/util/promptToString';
+import { seedWeightsToString } from '../../common/util/seedWeightPairs';
 
 export type UpscalingLevel = 2 | 4;
 
-export interface SDState {
+export interface OptionsState {
   prompt: string;
   iterations: number;
   steps: number;
@@ -32,7 +34,7 @@ export interface SDState {
   shouldRandomizeSeed: boolean;
 }
 
-const initialSDState: SDState = {
+const initialOptionsState: OptionsState = {
   prompt: '',
   iterations: 1,
   steps: 50,
@@ -60,14 +62,19 @@ const initialSDState: SDState = {
   shouldRandomizeSeed: true,
 };
 
-const initialState: SDState = initialSDState;
+const initialState: OptionsState = initialOptionsState;
 
-export const sdSlice = createSlice({
-  name: 'sd',
+export const optionsSlice = createSlice({
+  name: 'options',
   initialState,
   reducers: {
-    setPrompt: (state, action: PayloadAction<string>) => {
-      state.prompt = action.payload;
+    setPrompt: (state, action: PayloadAction<string | InvokeAI.Prompt>) => {
+      const newPrompt = action.payload;
+      if (typeof newPrompt === 'string') {
+        state.prompt = newPrompt;
+      } else {
+        state.prompt = promptToString(newPrompt);
+      }
     },
     setIterations: (state, action: PayloadAction<number>) => {
       state.iterations = action.payload;
@@ -153,69 +160,93 @@ export const sdSlice = createSlice({
     setSeedWeights: (state, action: PayloadAction<string>) => {
       state.seedWeights = action.payload;
     },
-    setAllParameters: (state, action: PayloadAction<SDMetadata>) => {
-      // TODO: This probably needs to be refactored.
+    setAllParameters: (state, action: PayloadAction<InvokeAI.Metadata>) => {
       const {
+        type,
+        postprocessing,
+        sampler,
         prompt,
+        seed,
+        variations,
         steps,
-        cfgScale,
+        cfg_scale,
         threshold,
         perlin,
-        height,
-        width,
-        sampler,
-        seed,
-        img2imgStrength,
-        gfpganStrength,
-        upscalingLevel,
-        upscalingStrength,
-        initialImagePath,
-        maskPath,
         seamless,
-        shouldFitToWidthHeight,
-      } = action.payload;
+        width,
+        height,
+        strength,
+        fit,
+        init_image_path,
+        mask_image_path,
+      } = action.payload.image;
 
-      // ?? = falsy values ('', 0, etc) are used
-      // || = falsy values not used
-      state.prompt = prompt ?? state.prompt;
-      state.steps = steps || state.steps;
-      state.cfgScale = cfgScale || state.cfgScale;
-      state.threshold = threshold || state.threshold;
-      state.perlin = perlin || state.perlin;
-      state.width = width || state.width;
-      state.height = height || state.height;
-      state.sampler = sampler || state.sampler;
-      state.seed = seed ?? state.seed;
-      state.seamless = seamless ?? state.seamless;
-      state.shouldFitToWidthHeight =
-        shouldFitToWidthHeight ?? state.shouldFitToWidthHeight;
-      state.img2imgStrength = img2imgStrength ?? state.img2imgStrength;
-      state.gfpganStrength = gfpganStrength ?? state.gfpganStrength;
-      state.upscalingLevel = upscalingLevel ?? state.upscalingLevel;
-      state.upscalingStrength = upscalingStrength ?? state.upscalingStrength;
-      state.initialImagePath = initialImagePath ?? state.initialImagePath;
-      state.maskPath = maskPath ?? state.maskPath;
+      if (type === 'img2img') {
+        if (init_image_path) state.initialImagePath = init_image_path;
+        if (mask_image_path) state.maskPath = mask_image_path;
+        if (strength) state.img2imgStrength = strength;
+        if (typeof fit === 'boolean') state.shouldFitToWidthHeight = fit;
+        state.shouldUseInitImage = true;
+      } else {
+        state.shouldUseInitImage = false;
+      }
 
-      // If the image whose parameters we are using has a seed, disable randomizing the seed
+      if (variations && variations.length > 0) {
+        state.seedWeights = seedWeightsToString(variations);
+        state.shouldGenerateVariations = true;
+      } else {
+        state.shouldGenerateVariations = false;
+      }
+
       if (seed) {
+        state.seed = seed;
         state.shouldRandomizeSeed = false;
       }
 
-      // if we have a gfpgan strength, enable it
-      state.shouldRunGFPGAN = gfpganStrength ? true : false;
+      let postprocessingNotDone = ['gfpgan', 'esrgan'];
+      if (postprocessing && postprocessing.length > 0) {
+        postprocessing.forEach(
+          (postprocess: InvokeAI.PostProcessedImageMetadata) => {
+            if (postprocess.type === 'gfpgan') {
+              const { strength } = postprocess;
+              if (strength) state.gfpganStrength = strength;
+              state.shouldRunGFPGAN = true;
+              postprocessingNotDone = postprocessingNotDone.filter(
+                (p) => p !== 'gfpgan'
+              );
+            }
+            if (postprocess.type === 'esrgan') {
+              const { scale, strength } = postprocess;
+              if (scale) state.upscalingLevel = scale;
+              if (strength) state.upscalingStrength = strength;
+              state.shouldRunESRGAN = true;
+              postprocessingNotDone = postprocessingNotDone.filter(
+                (p) => p !== 'esrgan'
+              );
+            }
+          }
+        );
+      }
 
-      // if we have a esrgan strength, enable it
-      state.shouldRunESRGAN = upscalingLevel ? true : false;
+      postprocessingNotDone.forEach((p) => {
+        if (p === 'esrgan') state.shouldRunESRGAN = false;
+        if (p === 'gfpgan') state.shouldRunGFPGAN = false;
+      });
 
-      // if we want to recreate an image exactly, we disable variations
-      state.shouldGenerateVariations = false;
-
-      state.shouldUseInitImage = initialImagePath ? true : false;
+      if (prompt) state.prompt = promptToString(prompt);
+      if (sampler) state.sampler = sampler;
+      if (steps) state.steps = steps;
+      if (cfg_scale) state.cfgScale = cfg_scale;
+      if (threshold) state.threshold = threshold;
+      if (perlin) state.perlin = perlin;
+      if (typeof seamless === 'boolean') state.seamless = seamless;
+      if (width) state.width = width;
+      if (height) state.height = height;
     },
-    resetSDState: (state) => {
+    resetOptionsState: (state) => {
       return {
         ...state,
-        ...initialSDState,
+        ...initialOptionsState,
       };
     },
     setShouldRunGFPGAN: (state, action: PayloadAction<boolean>) => {
@@ -250,7 +281,7 @@ export const {
   setInitialImagePath,
   setMaskPath,
   resetSeed,
-  resetSDState,
+  resetOptionsState,
   setShouldFitToWidthHeight,
   setParameter,
   setShouldGenerateVariations,
@@ -260,6 +291,6 @@ export const {
   setShouldRunGFPGAN,
   setShouldRunESRGAN,
   setShouldRandomizeSeed,
-} = sdSlice.actions;
+} = optionsSlice.actions;
 
-export default sdSlice.reducer;
+export default optionsSlice.reducer;

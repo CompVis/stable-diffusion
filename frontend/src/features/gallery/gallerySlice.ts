@@ -1,41 +1,13 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { UpscalingLevel } from '../sd/sdSlice';
 import { clamp } from 'lodash';
-
-// TODO: Revise pending metadata RFC: https://github.com/lstein/stable-diffusion/issues/266
-export interface SDMetadata {
-  prompt?: string;
-  steps?: number;
-  cfgScale?: number;
-  threshold?: number;
-  perlin?: number;
-  height?: number;
-  width?: number;
-  sampler?: string;
-  seed?: number;
-  img2imgStrength?: number;
-  gfpganStrength?: number;
-  upscalingLevel?: UpscalingLevel;
-  upscalingStrength?: number;
-  initialImagePath?: string;
-  maskPath?: string;
-  seamless?: boolean;
-  shouldFitToWidthHeight?: boolean;
-}
-
-export interface SDImage {
-  // TODO: I have installed @types/uuid but cannot figure out how to use them here.
-  uuid: string;
-  url: string;
-  metadata: SDMetadata;
-}
+import * as InvokeAI from '../../app/invokeai';
 
 export interface GalleryState {
+  currentImage?: InvokeAI.Image;
   currentImageUuid: string;
-  images: Array<SDImage>;
-  intermediateImage?: SDImage;
-  currentImage?: SDImage;
+  images: Array<InvokeAI.Image>;
+  intermediateImage?: InvokeAI.Image;
 }
 
 const initialState: GalleryState = {
@@ -47,7 +19,7 @@ export const gallerySlice = createSlice({
   name: 'gallery',
   initialState,
   reducers: {
-    setCurrentImage: (state, action: PayloadAction<SDImage>) => {
+    setCurrentImage: (state, action: PayloadAction<InvokeAI.Image>) => {
       state.currentImage = action.payload;
       state.currentImageUuid = action.payload.uuid;
     },
@@ -94,19 +66,19 @@ export const gallerySlice = createSlice({
 
       state.images = newImages;
     },
-    addImage: (state, action: PayloadAction<SDImage>) => {
+    addImage: (state, action: PayloadAction<InvokeAI.Image>) => {
       state.images.push(action.payload);
       state.currentImageUuid = action.payload.uuid;
       state.intermediateImage = undefined;
       state.currentImage = action.payload;
     },
-    setIntermediateImage: (state, action: PayloadAction<SDImage>) => {
+    setIntermediateImage: (state, action: PayloadAction<InvokeAI.Image>) => {
       state.intermediateImage = action.payload;
     },
     clearIntermediateImage: (state) => {
       state.intermediateImage = undefined;
     },
-    setGalleryImages: (state, action: PayloadAction<Array<SDImage>>) => {
+    setGalleryImages: (state, action: PayloadAction<Array<InvokeAI.Image>>) => {
       const newImages = action.payload;
       if (newImages.length) {
         const newCurrentImage = newImages[newImages.length - 1];
@@ -119,12 +91,12 @@ export const gallerySlice = createSlice({
 });
 
 export const {
-  setCurrentImage,
-  removeImage,
   addImage,
+  clearIntermediateImage,
+  removeImage,
+  setCurrentImage,
   setGalleryImages,
   setIntermediateImage,
-  clearIntermediateImage,
 } = gallerySlice.actions;
 
 export default gallerySlice.reducer;

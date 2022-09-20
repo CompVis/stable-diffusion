@@ -1,12 +1,18 @@
 import { Flex } from '@chakra-ui/react';
+import { createSelector } from '@reduxjs/toolkit';
+import { isEqual } from 'lodash';
+
+import * as InvokeAI from '../../app/invokeai';
+
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { RootState } from '../../app/store';
-import { setAllParameters, setInitialImagePath, setSeed } from '../sd/sdSlice';
+import {
+  setAllParameters,
+  setInitialImagePath,
+  setSeed,
+} from '../options/optionsSlice';
 import DeleteImageModal from './DeleteImageModal';
-import { createSelector } from '@reduxjs/toolkit';
 import { SystemState } from '../system/systemSlice';
-import { isEqual } from 'lodash';
-import { SDImage } from './gallerySlice';
 import SDButton from '../../common/components/SDButton';
 import { runESRGAN, runGFPGAN } from '../../app/socketio/actions';
 
@@ -28,7 +34,7 @@ const systemSelector = createSelector(
 );
 
 type CurrentImageButtonsProps = {
-  image: SDImage;
+  image: InvokeAI.Image;
   shouldShowImageDetails: boolean;
   setShouldShowImageDetails: (b: boolean) => void;
 };
@@ -49,7 +55,7 @@ const CurrentImageButtons = ({
   );
 
   const { upscalingLevel, gfpganStrength } = useAppSelector(
-    (state: RootState) => state.sd
+    (state: RootState) => state.options
   );
 
   const { isProcessing, isConnected, isGFPGANAvailable, isESRGANAvailable } =
@@ -63,8 +69,7 @@ const CurrentImageButtons = ({
 
   // Non-null assertion: this button is disabled if there is no seed.
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const handleClickUseSeed = () => dispatch(setSeed(image.metadata.seed!));
-
+  const handleClickUseSeed = () => dispatch(setSeed(image.metadata.image.seed));
   const handleClickUpscale = () => dispatch(runESRGAN(image));
 
   const handleClickFixFaces = () => dispatch(runGFPGAN(image));
@@ -87,6 +92,7 @@ const CurrentImageButtons = ({
         colorScheme={'gray'}
         flexGrow={1}
         variant={'outline'}
+        isDisabled={!['txt2img', 'img2img'].includes(image.metadata.image.type)}
         onClick={handleClickUseAllParameters}
       />
 
@@ -95,7 +101,7 @@ const CurrentImageButtons = ({
         colorScheme={'gray'}
         flexGrow={1}
         variant={'outline'}
-        isDisabled={!image.metadata.seed}
+        isDisabled={!image.metadata.image.seed}
         onClick={handleClickUseSeed}
       />
 

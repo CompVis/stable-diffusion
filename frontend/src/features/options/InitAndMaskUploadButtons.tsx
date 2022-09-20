@@ -1,25 +1,28 @@
 import { Button, Flex, IconButton, useToast } from '@chakra-ui/react';
 import { SyntheticEvent, useCallback } from 'react';
-import { FaTrash } from 'react-icons/fa';
+import { FaTrash, FaUpload } from 'react-icons/fa';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { RootState } from '../../app/store';
 import {
-  SDState,
+  OptionsState,
   setInitialImagePath,
   setMaskPath,
-} from '../../features/sd/sdSlice';
-import { uploadInitialImage, uploadMaskImage } from '../../app/socketio/actions';
+} from '../../features/options/optionsSlice';
+import {
+  uploadInitialImage,
+  uploadMaskImage,
+} from '../../app/socketio/actions';
 import { createSelector } from '@reduxjs/toolkit';
 import { isEqual } from 'lodash';
 import ImageUploader from './ImageUploader';
 import { FileRejection } from 'react-dropzone';
 
-const sdSelector = createSelector(
-  (state: RootState) => state.sd,
-  (sd: SDState) => {
+const optionsSelector = createSelector(
+  (state: RootState) => state.options,
+  (options: OptionsState) => {
     return {
-      initialImagePath: sd.initialImagePath,
-      maskPath: sd.maskPath,
+      initialImagePath: options.initialImagePath,
+      maskPath: options.maskPath,
     };
   },
   { memoizeOptions: { resultEqualityCheck: isEqual } }
@@ -36,15 +39,20 @@ const InitAndMaskUploadButtons = ({
   setShouldShowMask,
 }: InitAndMaskUploadButtonsProps) => {
   const dispatch = useAppDispatch();
-  const { initialImagePath } = useAppSelector(sdSelector);
+  const { initialImagePath, maskPath } = useAppSelector(optionsSelector);
 
   // Use a toast to alert user when a file upload is rejected
   const toast = useToast();
 
   // Clear the init and mask images
-  const handleClickResetInitialImageAndMask = (e: SyntheticEvent) => {
+  const handleClickResetInitialImage = (e: SyntheticEvent) => {
     e.stopPropagation();
     dispatch(setInitialImagePath(''));
+  };
+
+  // Clear the init and mask images
+  const handleClickResetMask = (e: SyntheticEvent) => {
+    e.stopPropagation();
     dispatch(setMaskPath(''));
   };
 
@@ -96,10 +104,20 @@ const InitAndMaskUploadButtons = ({
           fontWeight={'normal'}
           onMouseOver={handleMouseOverInitialImageUploadButton}
           onMouseOut={handleMouseOutInitialImageUploadButton}
+          leftIcon={<FaUpload />}
+          width={'100%'}
         >
-          Upload Image
+          Image
         </Button>
       </ImageUploader>
+
+      <IconButton
+        isDisabled={!initialImagePath}
+        size={'sm'}
+        aria-label={'Reset mask'}
+        onClick={handleClickResetInitialImage}
+        icon={<FaTrash />}
+      />
 
       <ImageUploader
         fileAcceptedCallback={maskImageFileAcceptedCallback}
@@ -112,16 +130,18 @@ const InitAndMaskUploadButtons = ({
           fontWeight={'normal'}
           onMouseOver={handleMouseOverMaskUploadButton}
           onMouseOut={handleMouseOutMaskUploadButton}
+          leftIcon={<FaUpload />}
+          width={'100%'}
         >
-          Upload Mask
+          Mask
         </Button>
       </ImageUploader>
 
       <IconButton
-        isDisabled={!initialImagePath}
+        isDisabled={!maskPath}
         size={'sm'}
-        aria-label={'Reset initial image and mask'}
-        onClick={handleClickResetInitialImageAndMask}
+        aria-label={'Reset mask'}
+        onClick={handleClickResetMask}
         icon={<FaTrash />}
       />
     </Flex>

@@ -3,7 +3,7 @@ import { Flex } from '@chakra-ui/react';
 import { RootState } from '../../app/store';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 
-import { setCfgScale, setSampler, setThreshold, setPerlin, setSteps, SDState } from '../sd/sdSlice';
+import { setCfgScale, setSampler, setThreshold, setPerlin, setSteps, OptionsState } from '../options/optionsSlice';
 
 
 import { SAMPLERS } from '../../app/constants';
@@ -13,15 +13,15 @@ import { ChangeEvent } from 'react';
 import SDNumberInput from '../../common/components/SDNumberInput';
 import SDSelect from '../../common/components/SDSelect';
 
-const sdSelector = createSelector(
-  (state: RootState) => state.sd,
-  (sd: SDState) => {
+const optionsSelector = createSelector(
+  (state: RootState) => state.options,
+  (options: OptionsState) => {
     return {
-      steps: sd.steps,
-      cfgScale: sd.cfgScale,
-      sampler: sd.sampler,
-      threshold: sd.threshold,
-      perlin: sd.perlin,
+      steps: options.steps,
+      cfgScale: options.cfgScale,
+      sampler: options.sampler,
+      threshold: options.threshold,
+      perlin: options.perlin,
     };
   },
   {
@@ -37,7 +37,7 @@ const sdSelector = createSelector(
 const SamplerOptions = () => {
 
   const dispatch = useAppDispatch();
-  const { steps, cfgScale, sampler, threshold, perlin } = useAppSelector(sdSelector);
+  const { steps, cfgScale, sampler, threshold, perlin } = useAppSelector(optionsSelector);
 
   const handleChangeSteps = (v: string | number) =>
     dispatch(setSteps(Number(v)));

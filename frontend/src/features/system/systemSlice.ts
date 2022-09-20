@@ -1,6 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { ExpandedIndex } from '@chakra-ui/react';
+import * as InvokeAI from '../../app/invokeai'
 
 export type LogLevel = 'info' | 'warning' | 'error';
 
@@ -14,17 +15,7 @@ export interface Log {
   [index: number]: LogEntry;
 }
 
-export interface SystemStatus {
-  isProcessing: boolean;
-  currentStep: number;
-  totalSteps: number;
-  currentIteration: number;
-  totalIterations: number;
-  currentStatus: string;
-  currentStatusHasSteps: boolean;
-}
-
-export interface SystemState extends SystemStatus {
+export interface SystemState extends InvokeAI.SystemStatus, InvokeAI.SystemConfig {
   shouldDisplayInProgress: boolean;
   log: Array<LogEntry>;
   shouldShowLogViewer: boolean;
@@ -59,6 +50,11 @@ const initialSystemState = {
   totalIterations: 0,
   currentStatus: '',
   currentStatusHasSteps: false,
+  model: '',
+  model_id: '',
+  model_hash: '',
+  app_id: '',
+  app_version: '',
 };
 
 const initialState: SystemState = initialSystemState;
@@ -76,7 +72,7 @@ export const systemSlice = createSlice({
     setCurrentStatus: (state, action: PayloadAction<string>) => {
       state.currentStatus = action.payload;
     },
-    setSystemStatus: (state, action: PayloadAction<SystemStatus>) => {
+    setSystemStatus: (state, action: PayloadAction<InvokeAI.SystemStatus>) => {
       const currentStatus =
         !action.payload.isProcessing && state.isConnected
           ? 'Connected'
@@ -118,6 +114,9 @@ export const systemSlice = createSlice({
     setOpenAccordions: (state, action: PayloadAction<ExpandedIndex>) => {
       state.openAccordions = action.payload;
     },
+    setSystemConfig: (state, action: PayloadAction<InvokeAI.SystemConfig>) => {
+      return { ...state, ...action.payload };
+    },
   },
 });
 
@@ -132,6 +131,7 @@ export const {
   setOpenAccordions,
   setSystemStatus,
   setCurrentStatus,
+  setSystemConfig,
 } = systemSlice.actions;
 
 export default systemSlice.reducer;

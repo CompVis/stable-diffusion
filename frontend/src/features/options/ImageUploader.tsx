@@ -1,3 +1,4 @@
+import { Box } from '@chakra-ui/react';
 import { cloneElement, ReactElement, SyntheticEvent, useCallback } from 'react';
 import { FileRejection, useDropzone } from 'react-dropzone';
 
@@ -51,12 +52,12 @@ const ImageUploader = ({
   };
 
   return (
-    <div {...getRootProps()}>
+    <Box {...getRootProps()} flexGrow={3}>
       <input {...getInputProps({ multiple: false })} />
       {cloneElement(children, {
         onClick: handleClickUploadIcon,
       })}
-    </div>
+    </Box>
   );
 };
 

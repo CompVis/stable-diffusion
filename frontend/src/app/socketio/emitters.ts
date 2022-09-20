@@ -2,11 +2,11 @@ import { AnyAction, Dispatch, MiddlewareAPI } from '@reduxjs/toolkit';
 import dateFormat from 'dateformat';
 import { Socket } from 'socket.io-client';
 import { frontendToBackendParameters } from '../../common/util/parameterTranslation';
-import { SDImage } from '../../features/gallery/gallerySlice';
 import {
   addLogEntry,
   setIsProcessing,
 } from '../../features/system/systemSlice';
+import * as InvokeAI from '../invokeai';
 
 /**
  * Returns an object containing all functions which use `socketio.emit()`.
@@ -24,7 +24,7 @@ const makeSocketIOEmitters = (
       dispatch(setIsProcessing(true));
 
       const { generationParameters, esrganParameters, gfpganParameters } =
-        frontendToBackendParameters(getState().sd, getState().system);
+        frontendToBackendParameters(getState().options, getState().system);
 
       socketio.emit(
         'generateImage',
@@ -44,9 +44,9 @@ const makeSocketIOEmitters = (
         })
       );
     },
-    emitRunESRGAN: (imageToProcess: SDImage) => {
+    emitRunESRGAN: (imageToProcess: InvokeAI.Image) => {
       dispatch(setIsProcessing(true));
-      const { upscalingLevel, upscalingStrength } = getState().sd;
+      const { upscalingLevel, upscalingStrength } = getState().options;
       const esrganParameters = {
         upscale: [upscalingLevel, upscalingStrength],
       };
@@ -61,9 +61,9 @@ const makeSocketIOEmitters = (
         })
       );
     },
-    emitRunGFPGAN: (imageToProcess: SDImage) => {
+    emitRunGFPGAN: (imageToProcess: InvokeAI.Image) => {
       dispatch(setIsProcessing(true));
-      const { gfpganStrength } = getState().sd;
+      const { gfpganStrength } = getState().options;
 
       const gfpganParameters = {
         gfpgan_strength: gfpganStrength,
@@ -79,7 +79,7 @@ const makeSocketIOEmitters = (
         })
       );
     },
-    emitDeleteImage: (imageToDelete: SDImage) => {
+    emitDeleteImage: (imageToDelete: InvokeAI.Image) => {
       const { url, uuid } = imageToDelete;
       socketio.emit('deleteImage', url, uuid);
     },
@@ -95,6 +95,9 @@ const makeSocketIOEmitters = (
     emitUploadMaskImage: (file: File) => {
       socketio.emit('uploadMaskImage', file, file.name);
     },
+    emitRequestSystemConfig: () => {
+      socketio.emit('requestSystemConfig')
+    }
   };
 };
 
