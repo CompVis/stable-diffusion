@@ -30,14 +30,15 @@ do
     #sentinel=${RANDOM}
     #touch SD_image_${sentinel}.png
     #touch SD_latent_${sentinel}.txt
-    echo GENERATING FOUR IMAGES.
+    lambda=7
+    echo "GENERATING $lambda IMAGES ================================"
     cat goodbad.py | awk '!x[$0]++' > goodbad2.py
     mv goodbad2.py goodbad.py
-    python minisd.py
-    python minisd.py
-    python minisd.py
-    python minisd.py
-    list_of_four_images="`ls -ctr SD*_image_*.png | tail -n 4`"
+    for kk in `seq $lambda`
+    do
+      python minisd.py
+    done
+    list_of_four_images="`ls -ctr SD*_image_*.png | tail -n $lambda`"
     for img in $list_of_four_images
     do
         echo We add image $img =======================

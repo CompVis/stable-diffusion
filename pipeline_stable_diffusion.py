@@ -267,7 +267,7 @@ class StableDiffusionPipeline(DiffusionPipeline):
                         #if l < 0.0000001:
                         #        print(f"we find proba(bad)={l}")
                         #        break
-                    latents = torch.from_numpy(z.reshape(latents_shape)).half()
+                    latents = torch.from_numpy(z.reshape(latents_shape)).float() #.half()
         else:
             if latents.shape != latents_shape:
                 raise ValueError(f"Unexpected latents shape, got {latents.shape}, expected {latents_shape}")
