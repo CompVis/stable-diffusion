@@ -253,7 +253,7 @@ class StableDiffusionPipeline(DiffusionPipeline):
                     #nevergrad_optimizer = ng.optimizers.RandomSearch(len(z), budget)
                     #nevergrad_optimizer = ng.optimizers.DiscreteLenglerOnePlusOne(len(z), 10000)
                     #nevergrad_optimizer = ng.optimizers.DiscreteOnePlusOne(len(z), 10000)
-                    #nevergrad_optimizer.suggest(z)
+                    nevergrad_optimizer.suggest(z)
                     
                     for i in range(budget):
                         x = nevergrad_optimizer.ask()
@@ -264,9 +264,9 @@ class StableDiffusionPipeline(DiffusionPipeline):
                           print("var/variable = ", sum(((1-epsilon)*z + epsilon * x.value)**2)/len(x.value))
                         x = nevergrad_optimizer.recommend().value
                         z = (1.-epsilon) * z + epsilon * x
-                        if l < 0.0000001:
-                                print(f"we find proba(bad)={l}")
-                                break
+                        #if l < 0.0000001:
+                        #        print(f"we find proba(bad)={l}")
+                        #        break
                     latents = torch.from_numpy(z.reshape(latents_shape)).half()
         else:
             if latents.shape != latents_shape:
