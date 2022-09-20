@@ -34,7 +34,7 @@ def load_model_from_config(ckpt, verbose=False):
 
 
 config = "optimizedSD/v1-inference.yaml"
-ckpt = "models/ldm/stable-diffusion-v1/model.ckpt"
+DEFAULT_CKPT = "models/ldm/stable-diffusion-v1/model.ckpt"
 
 parser = argparse.ArgumentParser()
 
@@ -167,6 +167,12 @@ parser.add_argument(
     choices=["ddim", "plms","heun", "euler", "euler_a", "dpm2", "dpm2_a", "lms"],
     default="plms",
 )
+parser.add_argument(
+    "--ckpt",
+    type=str,
+    help="path to checkpoint of model",
+    default=DEFAULT_CKPT,
+)
 opt = parser.parse_args()
 
 tic = time.time()
@@ -181,7 +187,7 @@ seed_everything(opt.seed)
 # Logging
 logger(vars(opt), log_csv = "logs/txt2img_logs.csv")
 
-sd = load_model_from_config(f"{ckpt}")
+sd = load_model_from_config(f"{opt.ckpt}")
 li, lo = [], []
 for key, value in sd.items():
     sp = key.split(".")
@@ -232,12 +238,15 @@ n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
 if not opt.from_file:
     assert opt.prompt is not None
     prompt = opt.prompt
+    print(f"Using prompt: {prompt}")
     data = [batch_size * [prompt]]
 
 else:
     print(f"reading prompts from {opt.from_file}")
     with open(opt.from_file, "r") as f:
-        data = f.read().splitlines()
+        text = f.read()
+        print(f"Using prompt: {text.strip()}")
+        data = text.splitlines()
         data = batch_size * list(data)
         data = list(chunk(sorted(data), batch_size))
 
