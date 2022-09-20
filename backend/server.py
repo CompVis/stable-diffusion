@@ -158,9 +158,8 @@ def handle_request_all_images():
     paths.sort(key=lambda x: os.path.getmtime(x))
     image_array = []
     for path in paths:
-        # image = Image.open(path)
         metadata = retrieve_metadata(path)
-        image_array.append({"url": path, "metadata": metadata})
+        image_array.append({"url": path, "metadata": metadata["sd-metadata"]})
     socketio.emit("galleryImages", {"images": image_array})
     eventlet.sleep(0)
 
@@ -508,7 +507,13 @@ def save_image(
     pngwriter = PngWriter(output_dir)
     prefix = pngwriter.unique_prefix()
 
-    filename = f"{prefix}.{metadata['image']['seed']}"
+    seed = "unknown_seed"
+
+    if "image" in metadata:
+        if "seed" in metadata["image"]:
+            seed = metadata["image"]["seed"]
+
+    filename = f"{prefix}.{seed}"
 
     if step_index:
         filename += f".{step_index}"
