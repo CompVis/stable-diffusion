@@ -1,15 +1,15 @@
-<h1 align='center'><b>Stable Diffusion Dream Script</b></h1>
+<h1 align='center'><b>IvokeAI: A Stable Diffusion Toolkit</b></h1>
 
 <p align='center'>
 <img src="docs/assets/logo.png"/>
 </p>
 
 <p align="center">
-    <img src="https://img.shields.io/github/last-commit/lstein/stable-diffusion?logo=Python&logoColor=green&style=for-the-badge" alt="last-commit"/>
-    <img src="https://img.shields.io/github/stars/lstein/stable-diffusion?logo=GitHub&style=for-the-badge" alt="stars"/>
+    <img src="https://img.shields.io/github/last-commit/invoke-ai/InvokeAI?logo=Python&logoColor=green&style=for-the-badge" alt="last-commit"/>
+    <img src="https://img.shields.io/github/stars/invoke-ai/InvokeAI?logo=GitHub&style=for-the-badge" alt="stars"/>
     <br>
-    <img src="https://img.shields.io/github/issues/lstein/stable-diffusion?logo=GitHub&style=for-the-badge" alt="issues"/>
-    <img src="https://img.shields.io/github/issues-pr/lstein/stable-diffusion?logo=GitHub&style=for-the-badge" alt="pull-requests"/>
+    <img src="https://img.shields.io/github/issues/invoke-ai/InvokeAI?logo=GitHub&style=for-the-badge" alt="issues"/>
+    <img src="https://img.shields.io/github/issues-pr/invoke-ai/InvokeAI?logo=GitHub&style=for-the-badge" alt="pull-requests"/>
 </p>
 
 # **InvokeAI - A Stable Diffusion Dream Script**
@@ -26,7 +26,7 @@ _Note: This fork is rapidly evolving. Please use the
 report bugs and make feature requests. Be sure to use the provided
 templates. They will help aid diagnose issues faster._
 
-_This repository was formally known as lstein/stable-diffusion_
+_This repository was formally known as /stable-diffusion_
 
 # **Table of Contents**
 
