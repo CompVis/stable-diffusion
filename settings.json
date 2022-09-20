@@ -5,8 +5,8 @@
     "prompt" : "A druid in his shop, selling potions and trinkets, fantasy painting by Tomer Hanuka and Esao Andrews, detailed",
     "batch_name" : "Default", // Directory to save to inside out_path
     "out_path" : "./out", // base output directory, default is "out" inside your prs folder.
-    "width" : 512, // resolution (not used when doing init_image)
-    "height" : 512, // resolution (not used when doing init_image)
+    "width" : 512, // resolution 
+    "height" : 512, // resolution 
     "steps" : 50, // Number of steps to do
     "scale" : 7.0, // Affects how strongly the prompt is applied, a value from 6.0 to 9.0 is sensible.
     "seed" : "random", // Can be set to a specific number (no quotes), is incremented with each batch
@@ -15,7 +15,7 @@
     "n_iter" : 1, // number of images to make within a batch (seed remains the same for each iteration)
     "variance" : 0.1, // How much to vary each image iteration within a batch (only applies if n_iter is 2 or more)
     // Init image stuff
-    "init_image": null, // the file to use for a starting point (leave as null for no init)
+    "init_image": null, // the file to use for a starting point (leave as null for no init). will be resized to match width/height above
     "init_strength": 0.62, // how strongly the init should be applied (essentially skip_steps)
     // Go BIG stuff
     "gobig": false, // A true setting will trigger the gobig upscaling process (or, use --gobig on the command line)
