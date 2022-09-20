@@ -44,7 +44,6 @@ We are hoping to get rid of the need for this workaround in an upcoming release.
 8. In the export dialogue, Make sure the "Save colour values from
    transparent pixels" checkbox is selected.
 
----
 
 ## Recipe for Adobe Photoshop
 

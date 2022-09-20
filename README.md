@@ -1,4 +1,4 @@
-<div align="center">
+<h1 align='center'><b>InvokeAI: A Stable Diffusion Toolkit</b></h1>
 
 # Stable Diffusion Dream Script
 
@@ -8,7 +8,7 @@
   <a href="https://discord.gg/ZmtBAhwWhy"><img src="docs/assets/join-us-on-discord-image.png"/></a>
 </p>
 
-# **Stable Diffusion Dream Script**
+# **InvokeAI - A Stable Diffusion Toolkit**
 [![discord badge]][discord link]
 
 [![latest release badge]][latest release link] [![github stars badge]][github stars link] [![github forks badge]][github forks link]
