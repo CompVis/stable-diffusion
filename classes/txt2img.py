@@ -203,7 +203,10 @@ class Txt2Img(BaseModel):
                 sample_path,
                 base_count
             )
-            saved_files.append(file_name)
+            saved_files.append({
+                "file_name": file_name,
+                "seed": opt.seed,
+            })
             base_count += 1
         return saved_files, base_count
 
