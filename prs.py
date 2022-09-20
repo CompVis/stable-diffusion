@@ -91,12 +91,15 @@ def get_resampling_mode():
     except Exception as ex:
         return 1  # 'Lanczos' irrespective of version.
 
-def load_img(path):
+def load_img(w, h, path):
     image = Image.open(path).convert("RGB")
-    w, h = image.size
+    xw, xh = image.size
     #print(f"loaded input image of size ({w}, {h}) from {path}")
-    w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
-    image = image.resize((w, h), get_resampling_mode())
+    #w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
+    if xw != w or xh != h:
+        image = image.resize((w, h), get_resampling_mode())
+        print(f'Warning: Init image size ({xw}x{xh}) differs from target size ({w}x{h}).')
+        print(f'         It will be resized, but you may want to check your settings ArtDiffuser.')
     image = np.array(image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
     image = torch.from_numpy(image)
@@ -210,18 +213,18 @@ def do_run(device, model, opt):
         else:
             sampler = DDIMSampler(model, device)
 
-    def img_to_latent(path: str) -> Tensor:
+    def img_to_latent(width, height, path: str) -> Tensor:
         assert os.path.isfile(path)
         if device.type == "cuda":
-            image = load_img(path).to(device).half()
+            image = load_img(width, height, path).to(device).half()
         else:
-            image = load_img(path).to(device)
+            image = load_img(width, height, path).to(device)
         image = repeat(image, '1 ... -> b ...', b=batch_size)
         latent: Tensor = model.get_first_stage_encoding(model.encode_first_stage(image))  # move to latent space
         return latent
     
     if opt.init_image is not None:
-        init_latent = img_to_latent(opt.init_image)
+        init_latent = img_to_latent(opt.W, opt.H, opt.init_image)
         assert 0. <= opt.strength <= 1., 'can only work with strength in [0.0, 1.0]'
         t_enc = int(opt.strength * opt.ddim_steps)
     else:
@@ -996,6 +999,7 @@ def main():
 
     # load the model to the device
     if "cuda" in str(device):
+        torch.set_default_tensor_type(torch.HalfTensor)
         model = model.half() # half-precision mode for gpus, saves vram, good good
     model = model.to(device)
 
