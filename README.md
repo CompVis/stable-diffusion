@@ -1,4 +1,4 @@
-<h1 align='center'><b>IvokeAI: A Stable Diffusion Toolkit</b></h1>
+<h1 align='center'><b>InvokeAI: A Stable Diffusion Toolkit</b></h1>
 
 <p align='center'>
 <img src="docs/assets/logo.png"/>
