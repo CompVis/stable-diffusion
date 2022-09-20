@@ -1,4 +1,4 @@
-from stablediffusion.classes.base import BaseModel
+from classes.base import BaseModel
 import torch
 from torch import autocast
 from tqdm import tqdm, trange
@@ -190,8 +190,6 @@ class Txt2Img(BaseModel):
                                 base_count,
                                 sample_path,
                                 opt)
-
-                    self.save_grid(opt, samples_ddim)
 
         return saved_files
 
