@@ -32,6 +32,8 @@ do
     #touch SD_latent_${sentinel}.txt
     lambda=7
     echo "GENERATING $lambda IMAGES ================================"
+    echo "`grep -c 'good +=' goodbad.py` positive examples"
+    echo "`grep -c 'bad +=' goodbad.py` negative examples"
     cat goodbad.py | awk '!x[$0]++' > goodbad2.py
     mv goodbad2.py goodbad.py
     for kk in `seq $lambda`
