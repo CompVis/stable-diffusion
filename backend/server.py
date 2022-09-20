@@ -36,7 +36,10 @@ output_dir = "outputs/"  # Base output directory for images
 # host = 'localhost'  # Web & socket.io host
 host = "localhost"  # Web & socket.io host
 port = 9090  # Web & socket.io port
-
+verbose = False  # enables copious socket.io logging
+additional_allowed_origins = [
+    "http://localhost:5173"
+]  # additional CORS allowed origins
 model = "stable-diffusion-1.4"
 
 """
@@ -502,12 +505,10 @@ def write_log_message(message, log_path=log_path):
 def save_image(
     image, command, metadata, output_dir, step_index=None, postprocessing=False
 ):
-    seed = metadata["seed"] if "seed" in metadata else "unknown_seed"
-
     pngwriter = PngWriter(output_dir)
     prefix = pngwriter.unique_prefix()
 
-    filename = f"{prefix}.{seed}"
+    filename = f"{prefix}.{metadata['image']['seed']}"
 
     if step_index:
         filename += f".{step_index}"
