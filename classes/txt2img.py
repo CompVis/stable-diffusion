@@ -140,7 +140,6 @@ class Txt2Img(BaseModel):
     ]
 
     def sample(self, options=None):
-        print("SAMPLE*****************************")
         super().sample(options)
         torch.cuda.empty_cache()
         opt = self.opt
@@ -156,7 +155,6 @@ class Txt2Img(BaseModel):
         if opt.precision == "autocast":
             precision_scope = autocast
         saved_files = []
-        print("Create image")
         with torch.no_grad():
             with precision_scope("cuda"):
                 with model.ema_scope():
