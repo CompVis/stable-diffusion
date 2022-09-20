@@ -258,12 +258,16 @@ class StableDiffusionPipeline(DiffusionPipeline):
                     for i in range(budget):
                         x = nevergrad_optimizer.ask()
                         l = loss(x.value)
+                        nevergrad_optimizer.tell(x, l)
                         if np.log2(i+1) == int(np.log2(i+1)):
                           print(f"iteration {i} --> {l}")
                           print("var/variable = ", sum(((1-epsilon)*z + epsilon * x.value)**2)/len(x.value))
+                        x = nevergrad_optimizer.recommend().value
+                        z = (1.-epsilon) * z + epsilon * x
                         if l < 0.0000001:
                                 print(f"we find proba(bad)={l}")
                                 break
+                    latents = torch.from_numpy(z.reshape(latents_shape)).half()
         else:
             if latents.shape != latents_shape:
                 raise ValueError(f"Unexpected latents shape, got {latents.shape}, expected {latents_shape}")
