@@ -6,13 +6,13 @@ import {
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { generateImage } from '../../app/socketio/actions';
 import { RootState } from '../../app/store';
-import { setPrompt } from '../sd/sdSlice';
+import { setPrompt } from '../options/optionsSlice';
 
 /**
  * Prompt input text area.
  */
 const PromptInput = () => {
-  const { prompt } = useAppSelector((state: RootState) => state.sd);
+  const { prompt } = useAppSelector((state: RootState) => state.options);
   const dispatch = useAppDispatch();
 
   const handleChangePrompt = (e: ChangeEvent<HTMLTextAreaElement>) =>

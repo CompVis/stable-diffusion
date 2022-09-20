@@ -33,5 +33,20 @@ export const theme = extendTheme({
         fontWeight: 'light',
       },
     },
+    Button: {
+      variants: {
+        imageHoverIconButton: (props: StyleFunctionProps) => ({
+          bg: props.colorMode === 'dark' ? 'blackAlpha.700' : 'whiteAlpha.800',
+          color:
+            props.colorMode === 'dark' ? 'whiteAlpha.700' : 'blackAlpha.700',
+          _hover: {
+            bg:
+              props.colorMode === 'dark' ? 'blackAlpha.800' : 'whiteAlpha.800',
+            color:
+              props.colorMode === 'dark' ? 'whiteAlpha.900' : 'blackAlpha.900',
+          },
+        }),
+      },
+    },
   },
 });

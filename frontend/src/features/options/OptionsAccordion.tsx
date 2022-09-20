@@ -17,9 +17,9 @@ import { useAppDispatch, useAppSelector } from '../../app/store';
 import {
   setShouldRunGFPGAN,
   setShouldRunESRGAN,
-  SDState,
+  OptionsState,
   setShouldUseInitImage,
-} from '../sd/sdSlice';
+} from '../options/optionsSlice';
 import { createSelector } from '@reduxjs/toolkit';
 import { isEqual } from 'lodash';
 import { setOpenAccordions, SystemState } from '../system/systemSlice';
@@ -31,14 +31,14 @@ import OutputOptions from './OutputOptions';
 import ImageToImageOptions from './ImageToImageOptions';
 import { ChangeEvent } from 'react';
 
-const sdSelector = createSelector(
-  (state: RootState) => state.sd,
-  (sd: SDState) => {
+const optionsSelector = createSelector(
+  (state: RootState) => state.options,
+  (options: OptionsState) => {
     return {
-      initialImagePath: sd.initialImagePath,
-      shouldUseInitImage: sd.shouldUseInitImage,
-      shouldRunESRGAN: sd.shouldRunESRGAN,
-      shouldRunGFPGAN: sd.shouldRunGFPGAN,
+      initialImagePath: options.initialImagePath,
+      shouldUseInitImage: options.shouldUseInitImage,
+      shouldRunESRGAN: options.shouldRunESRGAN,
+      shouldRunGFPGAN: options.shouldRunGFPGAN,
     };
   },
   {
@@ -73,7 +73,7 @@ const OptionsAccordion = () => {
     shouldRunGFPGAN,
     shouldUseInitImage,
     initialImagePath,
-  } = useAppSelector(sdSelector);
+  } = useAppSelector(optionsSelector);
 
   const { isGFPGANAvailable, isESRGANAvailable, openAccordions } =
     useAppSelector(systemSelector);

@@ -2,15 +2,15 @@ import { Grid, GridItem } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import CurrentImageDisplay from '../features/gallery/CurrentImageDisplay';
 import ImageGallery from '../features/gallery/ImageGallery';
-import ProgressBar from '../features/header/ProgressBar';
-import SiteHeader from '../features/header/SiteHeader';
-import OptionsAccordion from '../features/sd/OptionsAccordion';
-import ProcessButtons from '../features/sd/ProcessButtons';
-import PromptInput from '../features/sd/PromptInput';
+import ProgressBar from '../features/system/ProgressBar';
+import SiteHeader from '../features/system/SiteHeader';
+import OptionsAccordion from '../features/options/OptionsAccordion';
+import ProcessButtons from '../features/options/ProcessButtons';
+import PromptInput from '../features/options/PromptInput';
 import LogViewer from '../features/system/LogViewer';
 import Loading from '../Loading';
 import { useAppDispatch } from './store';
-import { requestAllImages } from './socketio/actions';
+import { requestAllImages, requestSystemConfig } from './socketio/actions';
 
 const App = () => {
   const dispatch = useAppDispatch();
@@ -19,6 +19,7 @@ const App = () => {
   // Load images from the gallery once
   useEffect(() => {
     dispatch(requestAllImages());
+    dispatch(requestSystemConfig());
     setIsReady(true);
   }, [dispatch]);
 

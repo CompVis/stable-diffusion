@@ -62,7 +62,7 @@ const SiteHeader = () => {
 
   return (
     <Flex minWidth="max-content" alignItems="center" gap="1" pl={2} pr={1}>
-      <Heading size={'lg'}>Stable Diffusion Dream Server</Heading>
+      <Heading size={'lg'}>InvokeUI</Heading>
 
       <Spacer />
 

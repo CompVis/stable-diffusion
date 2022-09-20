@@ -4,17 +4,20 @@ import {
   Icon,
   IconButton,
   Image,
+  Tooltip,
   useColorModeValue,
 } from '@chakra-ui/react';
 import { useAppDispatch } from '../../app/store';
-import { SDImage, setCurrentImage } from './gallerySlice';
-import { FaCheck, FaCopy, FaSeedling, FaTrash } from 'react-icons/fa';
+import { setCurrentImage } from './gallerySlice';
+import { FaCheck, FaSeedling, FaTrashAlt } from 'react-icons/fa';
 import DeleteImageModal from './DeleteImageModal';
 import { memo, SyntheticEvent, useState } from 'react';
-import { setAllParameters, setSeed } from '../sd/sdSlice';
+import { setAllParameters, setSeed } from '../options/optionsSlice';
+import * as InvokeAI from '../../app/invokeai';
+import { IoArrowUndoCircleOutline } from 'react-icons/io5';
 
 interface HoverableImageProps {
-  image: SDImage;
+  image: InvokeAI.Image;
   isSelected: boolean;
 }
 
@@ -52,7 +55,7 @@ const HoverableImage = memo((props: HoverableImageProps) => {
     e.stopPropagation();
     // Non-null assertion: this button is not rendered unless this exists
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    dispatch(setSeed(image.metadata.seed!));
+    dispatch(setSeed(image.metadata.image.seed));
   };
 
   const handleClickImage = () => dispatch(setCurrentImage(image));
@@ -94,32 +97,41 @@ const HoverableImage = memo((props: HoverableImageProps) => {
             top={1}
             right={1}
           >
-            <DeleteImageModal image={image}>
-              <IconButton
-                colorScheme="red"
-                aria-label="Delete image"
-                icon={<FaTrash />}
-                size="xs"
-                fontSize={15}
-              />
-            </DeleteImageModal>
-            <IconButton
-              aria-label="Use all parameters"
-              colorScheme={'blue'}
-              icon={<FaCopy />}
-              size="xs"
-              fontSize={15}
-              onClickCapture={handleClickSetAllParameters}
-            />
-            {image.metadata.seed && (
-              <IconButton
-                aria-label="Use seed"
-                colorScheme={'blue'}
-                icon={<FaSeedling />}
-                size="xs"
-                fontSize={16}
-                onClickCapture={handleClickSetSeed}
-              />
+            <Tooltip label={'Delete image'}>
+              <DeleteImageModal image={image}>
+                <IconButton
+                  colorScheme="red"
+                  aria-label="Delete image"
+                  icon={<FaTrashAlt />}
+                  size="xs"
+                  variant={'imageHoverIconButton'}
+                  fontSize={14}
+                />
+              </DeleteImageModal>
+            </Tooltip>
+            {['txt2img', 'img2img'].includes(image.metadata.image.type) && (
+              <Tooltip label="Use all parameters">
+                <IconButton
+                  aria-label="Use all parameters"
+                  icon={<IoArrowUndoCircleOutline />}
+                  size="xs"
+                  fontSize={18}
+                  variant={'imageHoverIconButton'}
+                  onClickCapture={handleClickSetAllParameters}
+                />
+              </Tooltip>
+            )}
+            {image.metadata.image.seed && (
+              <Tooltip label="Use seed">
+                <IconButton
+                  aria-label="Use seed"
+                  icon={<FaSeedling />}
+                  size="xs"
+                  fontSize={16}
+                  variant={'imageHoverIconButton'}
+                  onClickCapture={handleClickSetSeed}
+                />
+              </Tooltip>
             )}
           </Flex>
         )}

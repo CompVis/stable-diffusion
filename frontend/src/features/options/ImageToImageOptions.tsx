@@ -7,17 +7,17 @@ import SDNumberInput from '../../common/components/SDNumberInput';
 import SDSwitch from '../../common/components/SDSwitch';
 import InitAndMaskImage from './InitAndMaskImage';
 import {
-  SDState,
+  OptionsState,
   setImg2imgStrength,
   setShouldFitToWidthHeight,
-} from './sdSlice';
+} from './optionsSlice';
 
-const sdSelector = createSelector(
-  (state: RootState) => state.sd,
-  (sd: SDState) => {
+const optionsSelector = createSelector(
+  (state: RootState) => state.options,
+  (options: OptionsState) => {
     return {
-      img2imgStrength: sd.img2imgStrength,
-      shouldFitToWidthHeight: sd.shouldFitToWidthHeight,
+      img2imgStrength: options.img2imgStrength,
+      shouldFitToWidthHeight: options.shouldFitToWidthHeight,
     };
   }
 );
@@ -28,7 +28,7 @@ const sdSelector = createSelector(
 const ImageToImageOptions = () => {
   const dispatch = useAppDispatch();
   const { img2imgStrength, shouldFitToWidthHeight } =
-    useAppSelector(sdSelector);
+    useAppSelector(optionsSelector);
 
   const handleChangeStrength = (v: string | number) =>
     dispatch(setImg2imgStrength(Number(v)));
