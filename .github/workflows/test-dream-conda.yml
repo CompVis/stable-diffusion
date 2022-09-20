@@ -85,9 +85,9 @@ jobs:
           fi
           # Utterly hacky, but I don't know how else to do this
           if [[ ${{ github.ref }} == 'refs/heads/master' ]]; then
-            time ${{ steps.vars.outputs.PYTHON_BIN }} scripts/dream.py --from_file tests/preflight_prompts.txt --full_precision
+            time ${{ steps.vars.outputs.PYTHON_BIN }} scripts/dream.py --from_file tests/preflight_prompts.txt
           elif [[ ${{ github.ref }} == 'refs/heads/development' ]]; then
-            time ${{ steps.vars.outputs.PYTHON_BIN }} scripts/dream.py --from_file tests/dev_prompts.txt --full_precision
+            time ${{ steps.vars.outputs.PYTHON_BIN }} scripts/dream.py --from_file tests/dev_prompts.txt
           fi
           mkdir -p outputs/img-samples
       - name: Archive results

@@ -1,10 +1,13 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import dateFormat from 'dateformat';
 import { ExpandedIndex } from '@chakra-ui/react';
+import * as InvokeAI from '../../app/invokeai'
+
+export type LogLevel = 'info' | 'warning' | 'error';
 
 export interface LogEntry {
   timestamp: string;
+  level: LogLevel;
   message: string;
 }
 
@@ -12,10 +15,8 @@ export interface Log {
   [index: number]: LogEntry;
 }
 
-export interface SystemState {
+export interface SystemState extends InvokeAI.SystemStatus, InvokeAI.SystemConfig {
   shouldDisplayInProgress: boolean;
-  isProcessing: boolean;
-  currentStep: number;
   log: Array<LogEntry>;
   shouldShowLogViewer: boolean;
   isGFPGANAvailable: boolean;
@@ -24,12 +25,17 @@ export interface SystemState {
   socketId: string;
   shouldConfirmOnDelete: boolean;
   openAccordions: ExpandedIndex;
+  currentStep: number;
+  totalSteps: number;
+  currentIteration: number;
+  totalIterations: number;
+  currentStatus: string;
+  currentStatusHasSteps: boolean;
 }
 
 const initialSystemState = {
   isConnected: false,
   isProcessing: false,
-  currentStep: 0,
   log: [],
   shouldShowLogViewer: false,
   shouldDisplayInProgress: false,
@@ -38,6 +44,17 @@ const initialSystemState = {
   socketId: '',
   shouldConfirmOnDelete: true,
   openAccordions: [0],
+  currentStep: 0,
+  totalSteps: 0,
+  currentIteration: 0,
+  totalIterations: 0,
+  currentStatus: '',
+  currentStatusHasSteps: false,
+  model: '',
+  model_id: '',
+  model_hash: '',
+  app_id: '',
+  app_version: '',
 };
 
 const initialState: SystemState = initialSystemState;
@@ -51,18 +68,35 @@ export const systemSlice = createSlice({
     },
     setIsProcessing: (state, action: PayloadAction<boolean>) => {
       state.isProcessing = action.payload;
-      if (action.payload === false) {
-        state.currentStep = 0;
-      }
     },
-    setCurrentStep: (state, action: PayloadAction<number>) => {
-      state.currentStep = action.payload;
+    setCurrentStatus: (state, action: PayloadAction<string>) => {
+      state.currentStatus = action.payload;
     },
-    addLogEntry: (state, action: PayloadAction<string>) => {
+    setSystemStatus: (state, action: PayloadAction<InvokeAI.SystemStatus>) => {
+      const currentStatus =
+        !action.payload.isProcessing && state.isConnected
+          ? 'Connected'
+          : action.payload.currentStatus;
+
+      return { ...state, ...action.payload, currentStatus };
+    },
+    addLogEntry: (
+      state,
+      action: PayloadAction<{
+        timestamp: string;
+        message: string;
+        level?: LogLevel;
+      }>
+    ) => {
+      const { timestamp, message, level } = action.payload;
+      const logLevel = level || 'info';
+
       const entry: LogEntry = {
-        timestamp: dateFormat(new Date(), 'isoDateTime'),
-        message: action.payload,
+        timestamp,
+        message,
+        level: logLevel,
       };
+
       state.log.push(entry);
     },
     setShouldShowLogViewer: (state, action: PayloadAction<boolean>) => {
@@ -80,19 +114,24 @@ export const systemSlice = createSlice({
     setOpenAccordions: (state, action: PayloadAction<ExpandedIndex>) => {
       state.openAccordions = action.payload;
     },
+    setSystemConfig: (state, action: PayloadAction<InvokeAI.SystemConfig>) => {
+      return { ...state, ...action.payload };
+    },
   },
 });
 
 export const {
   setShouldDisplayInProgress,
   setIsProcessing,
-  setCurrentStep,
   addLogEntry,
   setShouldShowLogViewer,
   setIsConnected,
   setSocketId,
   setShouldConfirmOnDelete,
   setOpenAccordions,
+  setSystemStatus,
+  setCurrentStatus,
+  setSystemConfig,
 } = systemSlice.actions;
 
 export default systemSlice.reducer;

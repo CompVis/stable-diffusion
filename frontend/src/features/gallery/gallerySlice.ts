@@ -1,40 +1,13 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { v4 as uuidv4 } from 'uuid';
-import { UpscalingLevel } from '../sd/sdSlice';
-import { backendToFrontendParameters } from '../../app/parameterTranslation';
-
-// TODO: Revise pending metadata RFC: https://github.com/lstein/stable-diffusion/issues/266
-export interface SDMetadata {
-  prompt?: string;
-  steps?: number;
-  cfgScale?: number;
-  height?: number;
-  width?: number;
-  sampler?: string;
-  seed?: number;
-  img2imgStrength?: number;
-  gfpganStrength?: number;
-  upscalingLevel?: UpscalingLevel;
-  upscalingStrength?: number;
-  initialImagePath?: string;
-  maskPath?: string;
-  seamless?: boolean;
-  shouldFitToWidthHeight?: boolean;
-}
-
-export interface SDImage {
-  // TODO: I have installed @types/uuid but cannot figure out how to use them here.
-  uuid: string;
-  url: string;
-  metadata: SDMetadata;
-}
+import { clamp } from 'lodash';
+import * as InvokeAI from '../../app/invokeai';
 
 export interface GalleryState {
+  currentImage?: InvokeAI.Image;
   currentImageUuid: string;
-  images: Array<SDImage>;
-  intermediateImage?: SDImage;
-  currentImage?: SDImage;
+  images: Array<InvokeAI.Image>;
+  intermediateImage?: InvokeAI.Image;
 }
 
 const initialState: GalleryState = {
@@ -46,99 +19,84 @@ export const gallerySlice = createSlice({
   name: 'gallery',
   initialState,
   reducers: {
-    setCurrentImage: (state, action: PayloadAction<SDImage>) => {
+    setCurrentImage: (state, action: PayloadAction<InvokeAI.Image>) => {
       state.currentImage = action.payload;
       state.currentImageUuid = action.payload.uuid;
     },
-    removeImage: (state, action: PayloadAction<SDImage>) => {
-      const { uuid } = action.payload;
+    removeImage: (state, action: PayloadAction<string>) => {
+      const uuid = action.payload;
 
       const newImages = state.images.filter((image) => image.uuid !== uuid);
 
-      const imageToDeleteIndex = state.images.findIndex(
-        (image) => image.uuid === uuid
-      );
+      if (uuid === state.currentImageUuid) {
+        /**
+         * We are deleting the currently selected image.
+         *
+         * We want the new currentl selected image to be under the cursor in the
+         * gallery, so we need to do some fanagling. The currently selected image
+         * is set by its UUID, not its index in the image list.
+         *
+         * Get the currently selected image's index.
+         */
+        const imageToDeleteIndex = state.images.findIndex(
+          (image) => image.uuid === uuid
+        );
 
-      const newCurrentImageIndex = Math.min(
-        Math.max(imageToDeleteIndex, 0),
-        newImages.length - 1
-      );
+        /**
+         * New current image needs to be in the same spot, but because the gallery
+         * is sorted in reverse order, the new current image's index will actuall be
+         * one less than the deleted image's index.
+         *
+         * Clamp the new index to ensure it is valid..
+         */
+        const newCurrentImageIndex = clamp(
+          imageToDeleteIndex - 1,
+          0,
+          newImages.length - 1
+        );
+
+        state.currentImage = newImages.length
+          ? newImages[newCurrentImageIndex]
+          : undefined;
+
+        state.currentImageUuid = newImages.length
+          ? newImages[newCurrentImageIndex].uuid
+          : '';
+      }
 
       state.images = newImages;
-
-      state.currentImage = newImages.length
-        ? newImages[newCurrentImageIndex]
-        : undefined;
-
-      state.currentImageUuid = newImages.length
-        ? newImages[newCurrentImageIndex].uuid
-        : '';
     },
-    addImage: (state, action: PayloadAction<SDImage>) => {
+    addImage: (state, action: PayloadAction<InvokeAI.Image>) => {
       state.images.push(action.payload);
       state.currentImageUuid = action.payload.uuid;
       state.intermediateImage = undefined;
       state.currentImage = action.payload;
     },
-    setIntermediateImage: (state, action: PayloadAction<SDImage>) => {
+    setIntermediateImage: (state, action: PayloadAction<InvokeAI.Image>) => {
       state.intermediateImage = action.payload;
     },
     clearIntermediateImage: (state) => {
       state.intermediateImage = undefined;
     },
-    setGalleryImages: (
-      state,
-      action: PayloadAction<
-        Array<{
-          path: string;
-          metadata: { [key: string]: string | number | boolean };
-        }>
-      >
-    ) => {
-      // TODO: Revise pending metadata RFC: https://github.com/lstein/stable-diffusion/issues/266
-      const images = action.payload;
-
-      if (images.length === 0) {
-        // there are no images on disk, clear the gallery
-        state.images = [];
-        state.currentImageUuid = '';
-        state.currentImage = undefined;
-      } else {
-        // Filter image urls that are already in the rehydrated state
-        const filteredImages = action.payload.filter(
-          (image) => !state.images.find((i) => i.url === image.path)
-        );
-
-        const preparedImages = filteredImages.map((image): SDImage => {
-          return {
-            uuid: uuidv4(),
-            url: image.path,
-            metadata: backendToFrontendParameters(image.metadata),
-          };
-        });
-
-        const newImages = [...state.images].concat(preparedImages);
-
-        // if previous currentimage no longer exists, set a new one
-        if (!newImages.find((image) => image.uuid === state.currentImageUuid)) {
-          const newCurrentImage = newImages[newImages.length - 1];
-          state.currentImage = newCurrentImage;
-          state.currentImageUuid = newCurrentImage.uuid;
-        }
-
+    setGalleryImages: (state, action: PayloadAction<Array<InvokeAI.Image>>) => {
+      const newImages = action.payload;
+      if (newImages.length) {
+        const newCurrentImage = newImages[newImages.length - 1];
         state.images = newImages;
+        state.currentImage = newCurrentImage;
+        state.currentImageUuid = newCurrentImage.uuid;
       }
     },
   },
 });
 
 export const {
-  setCurrentImage,
-  removeImage,
   addImage,
+  clearIntermediateImage,
+  removeImage,
+  setCurrentImage,
   setGalleryImages,
   setIntermediateImage,
-  clearIntermediateImage,
 } = gallerySlice.actions;
 
 export default gallerySlice.reducer;

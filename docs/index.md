@@ -97,6 +97,11 @@ You wil need one of the following:
     ```
 ## :octicons-log-16: Latest Changes
 
+### vNEXT <small>(TODO 2022)</small>
+
+  - Deprecated `--full_precision` / `-F`. Simply omit it and `dream.py` will auto
+    configure. To switch away from auto use the new flag like `--precision=float32`.
+
 ### v1.14 <small>(11 September 2022)</small>
 
 - Memory optimizations for small-RAM cards. 512x512 now possible on 4 GB GPUs.

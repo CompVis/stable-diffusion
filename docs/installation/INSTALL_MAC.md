@@ -106,7 +106,6 @@ PATH_TO_CKPT="$HOME/Downloads" # (1)!
 
 ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" \
   models/ldm/stable-diffusion-v1/model.ckpt
-
 ```
 
 1. or wherever you saved sd-v1-4.ckpt
@@ -548,5 +547,3 @@ Abort trap: 6
   warnings.warn('resource_tracker: There appear to be %d '
 ```
 
-Macs do not support `autocast/mixed-precision`, so you need to supply
-`--full_precision` to use float32 everywhere.
