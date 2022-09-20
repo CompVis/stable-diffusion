@@ -12,8 +12,6 @@
     <img src="https://img.shields.io/github/issues-pr/invoke-ai/InvokeAI?logo=GitHub&style=for-the-badge" alt="pull-requests"/>
 </p>
 
-# **InvokeAI - A Stable Diffusion Dream Script**
-
 This is a fork of
 [CompVis/stable-diffusion](https://github.com/CompVis/stable-diffusion),
 the open source text-to-image generator. It provides a streamlined
