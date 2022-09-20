@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e -x
+set -e
 
 touch empty_file
 rm empty_file
@@ -31,16 +31,25 @@ do
     #touch SD_image_${sentinel}.png
     #touch SD_latent_${sentinel}.txt
     echo GENERATING FOUR IMAGES.
+    cat goodbad.py | awk '!x[$0]++' > goodbad2.py
+    mv goodbad2.py goodbad.py
     python minisd.py
     python minisd.py
     python minisd.py
     python minisd.py
-    for img in `ls -ctr SD*_image_*.png | tail -n 4`
+    list_of_four_images="`ls -ctr SD*_image_*.png | tail -n 4`"
+    for img in $list_of_four_images
     do
+        echo We add image $img =======================
         montage $mylist $img -mode Concatenate -tile 5x output.png
         open --wait output.png  
         read -p "Rank of the last image ?" rank
-        mylist="$mylist $img`
+        echo "Provided rank: $rank"
+        mylist="$mylist $img"
+        if [[ $rank -le 0 ]]
+        then
+        read -p "Enter all ranks !!!!" myranks
+        else 
         mynewranks=""
         for r in $myranks
         do
@@ -48,20 +57,19 @@ do
             mynewranks="$mynewranks $r"
         done
         myranks="$mynewranks $rank"
+        fi
         #echo Before sorting ===========================
         #echo $myranks
         #echo $mylist
-        #sleep 2
+        #sleep 5
     
         # Now sorting
         mynewlist=""
         mynewranks=""
-        touch goodbad.py
-        rm goodbad.py
-        touch goodbad.py
-        echo "good = []" >> goodbad.py
-        echo "bad = []" >> goodbad.py
-    
+        sed -i.backup 's/good +=.*//g' goodbad.py
+        num_good=`cat goodbad.py | grep 'good +=' | wc -l `
+        num_good=$(( $num_good / 2 + 5 ))
+        echo "We keep the $num_good best."
         for r in `seq 20`
         do
           for k in `seq 20`
@@ -73,19 +81,20 @@ do
              if [[ `echo $myranks | cut -d ' ' -f $k` -eq $r ]]
              then 
                 echo Found $my_image at rank $k for $r
-                if [[ $r -le 5 ]]
+                if [[ $r -le $num_good ]]
                 then
                 cat empty_file `echo $my_image | sed 's/image_[0-9]*.png/PROUTPROUT&/g' | sed 's/PROUTPROUTimage/latent/g' | sed 's/\.png/\.txt/g'` | sed "s/.*/good += [&]/g"  >> goodbad.py
                 else
                 cat empty_file `echo $my_image | sed 's/image_[0-9]*.png/PROUTPROUT&/g' | sed 's/PROUTPROUTimage/latent/g' | sed 's/\.png/\.txt/g'` | sed "s/.*/bad += [&]/g" >> goodbad.py
                 fi
+                echo "" >> goodbad.py
+                break
              fi
-             echo "" >> goodbad.py
           done
         done
+        myranks=$mynewranks
+        mylist=$mynewlist
     done
-    myranks=$mynewranks
-    mylist=$mynewlist
     echo After sorting ===========================
     echo $myranks
     echo $mylist
