@@ -151,17 +151,12 @@ def handle_request_capabilities():
 @socketio.on("requestAllImages")
 def handle_request_all_images():
     print(f">> All images requested")
-    parser = create_cmd_parser()
     paths = list(filter(os.path.isfile, glob.glob(result_path + "*.png")))
     paths.sort(key=lambda x: os.path.getmtime(x))
     image_array = []
     for path in paths:
         # image = Image.open(path)
-        all_metadata = retrieve_metadata(path)
-        if "Dream" in all_metadata and not all_metadata["sd-metadata"]:
-            metadata = vars(parser.parse_args(shlex.split(all_metadata["Dream"])))
-        else:
-            metadata = all_metadata["sd-metadata"]
+        metadata = retrieve_metadata(path)
         image_array.append({"url": path, "metadata": metadata})
     socketio.emit("galleryImages", {"images": image_array})
     eventlet.sleep(0)
