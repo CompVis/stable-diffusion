@@ -245,15 +245,24 @@ class StableDiffusionPipeline(DiffusionPipeline):
                         #return clf.predict_proba([z+epsilon*x])[0][0]
                 
                 
-                import nevergrad as ng
-                budget = 300
-                z = np.array(random.choice(good))
                 if i_believe_in_evolution:
-                    nevergrad_optimizer = ng.optimizers.RandomSearch(len(z), budget)
+                    import nevergrad as ng
+                    budget = 300
                     #nevergrad_optimizer = ng.optimizers.RandomSearch(len(z), budget)
-                    #nevergrad_optimizer = ng.optimizers.DiscreteLenglerOnePlusOne(len(z), 10000)
-                    #nevergrad_optimizer = ng.optimizers.DiscreteOnePlusOne(len(z), 10000)
-                    nevergrad_optimizer.suggest(z)
+                    #nevergrad_optimizer = ng.optimizers.RandomSearch(len(z), budget)
+                    nevergrad_optimizer = ng.optimizers.DiscreteLenglerOnePlusOne(len(z), budget)
+                    #nevergrad_optimizer = ng.optimizers.DiscreteOnePlusOne(len(z), budget)
+                    for k in range(5):
+                        z1 = np.array(random.choice(good))
+                        z2 = np.array(random.choice(good))
+                        z3 = np.array(random.choice(good))
+                        z4 = np.array(random.choice(good))
+                        z5 = np.array(random.choice(good))
+                        z = z1
+                        for u in range(len(z)):
+                            z[u] = random.choice([z1[u],z2[u],z3[u],z4[u],z5[u]])
+                        nevergrad_optimizer.suggest(z)
+
                     
                     for i in range(budget):
                         x = nevergrad_optimizer.ask()
