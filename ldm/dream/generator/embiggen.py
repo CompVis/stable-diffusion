@@ -12,9 +12,9 @@ from ldm.dream.generator.img2img import Img2Img
 
 
 class Embiggen(Generator):
-    def __init__(self, model):
-        super().__init__(model)
-        self.init_latent = None
+    def __init__(self, model, precision):
+        super().__init__(model, precision)
+        self.init_latent         = None
 
     @torch.no_grad()
     def get_make_image(

@@ -2,6 +2,8 @@
 title: Others
 ---
 
+# :fontawesome-regular-share-from-square: Others
+
 ## **Google Colab**
 
 Stable Diffusion AI Notebook: <a

@@ -12,6 +12,7 @@ from ldm.dream.args import Args, metadata_dumps
 from ldm.dream.pngwriter import PngWriter
 from ldm.dream.server import DreamServer, ThreadingDreamServer
 from ldm.dream.image_util import make_grid
+from ldm.dream.log import write_log
 from omegaconf import OmegaConf
 
 # Placeholder to be replaced with proper class that tracks the
@@ -71,10 +72,11 @@ def main():
             sampler_name   = opt.sampler_name,
             embedding_path = opt.embedding_path,
             full_precision = opt.full_precision,
+            precision      = opt.precision,
             gfpgan=gfpgan,
             codeformer=codeformer,
             esrgan=esrgan
-        )
+            )
     except (FileNotFoundError, IOError, KeyError) as e:
         print(f'{e}. Aborting.')
         sys.exit(-1)
@@ -330,8 +332,9 @@ def main_loop(gen, opt, infile):
             continue
 
         print('Outputs:')
-        log_path = os.path.join(current_outdir, 'dream_log.txt')
-        write_log_message(results, log_path)
+        log_path = os.path.join(current_outdir, 'dream_log')
+        global output_cntr
+        output_cntr = write_log(results, log_path ,('txt', 'md'), output_cntr)
         print()
 
     print('goodbye!')

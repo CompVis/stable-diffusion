@@ -23,14 +23,14 @@ class Container(containers.DeclarativeContainer):
     model          = config.model,
     sampler_name   = config.sampler_name,
     embedding_path = config.embedding_path,
-    full_precision = config.full_precision
+    precision      = config.precision
     # config = config.model.config,
 
     # width = config.model.width,
     # height = config.model.height,
     # sampler_name = config.model.sampler_name,
     # weights = config.model.weights,
-    # full_precision = config.model.full_precision,
+    # precision = config.model.precision,
     # grid = config.model.grid,
     # seamless = config.model.seamless,
     # embedding_path = config.model.embedding_path,

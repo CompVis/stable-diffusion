@@ -92,7 +92,7 @@ if gfpgan:
 
         if not os.path.exists(model_dest):
             print('downloading gfpgan model file...')
-            urllib.request.urlretrieve(model_path,model_dest)
+            urllib.request.urlretrieve(model_url,model_dest)
     except Exception:
         import traceback
         print('Error loading GFPGAN:')

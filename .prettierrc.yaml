@@ -5,9 +5,9 @@ singleQuote: true
 quoteProps: as-needed
 embeddedLanguageFormatting: auto
 overrides:
-  - files: "*.md"
+  - files: '*.md'
     options:
       proseWrap: always
-      printWidth: 100
+      printWidth: 80
       parser: markdown
       cursorOffset: -1

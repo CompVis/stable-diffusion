@@ -4,15 +4,15 @@ ldm.dream.generator.img2img descends from ldm.dream.generator
 
 import torch
 import numpy as  np
-from ldm.dream.devices             import choose_autocast_device
+from ldm.dream.devices             import choose_autocast
 from ldm.dream.generator.base      import Generator
 from ldm.models.diffusion.ddim     import DDIMSampler
 
 class Img2Img(Generator):
-    def __init__(self,model):
-        super().__init__(model)
+    def __init__(self, model, precision):
+        super().__init__(model, precision)
         self.init_latent         = None    # by get_noise()
-    
+
     @torch.no_grad()
     def get_make_image(self,prompt,sampler,steps,cfg_scale,ddim_eta,
                        conditioning,init_image,strength,step_callback=None,**kwargs):
@@ -32,8 +32,8 @@ class Img2Img(Generator):
             ddim_num_steps=steps, ddim_eta=ddim_eta, verbose=False
         )
 
-        device_type,scope   = choose_autocast_device(self.model.device)
-        with scope(device_type):
+        scope = choose_autocast(self.precision)
+        with scope(self.model.device.type):
             self.init_latent = self.model.get_first_stage_encoding(
                 self.model.encode_first_stage(init_image)
             ) # move to latent space

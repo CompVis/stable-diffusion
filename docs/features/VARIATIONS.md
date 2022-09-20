@@ -2,6 +2,10 @@
 title: Variations
 ---
 
+# :material-tune-variant: Variations
+
+## Intro
+
 Release 1.13 of SD-Dream adds support for image variations.
 
 You are able to do the following:
@@ -29,7 +33,7 @@ This will be indicated as `prompt` in the examples below.
 First we let SD create a series of images in the usual way, in this case
 requesting six iterations:
 
-```
+```bash
 dream> lucy lawless as xena, warrior princess, character portrait, high resolution -n6
 ...
 Outputs:
@@ -41,9 +45,10 @@ Outputs:
 ./outputs/Xena/000001.3357757885.png: "prompt" -s50 -W512 -H512 -C7.5 -Ak_lms -S3357757885
 ```
 
-The one with seed 3357757885 looks nice:
-
-![var1](../assets/variation_walkthru/000001.3357757885.png)
+<figure markdown>
+  ![var1](../assets/variation_walkthru/000001.3357757885.png)
+  <figcaption>Seed 3357757885 looks nice</figcaption>
+</figure>
 
 ---
 
@@ -75,15 +80,21 @@ used to generate it.
 This gives us a series of closely-related variations, including the two shown
 here.
 
-![var2](../assets/variation_walkthru/000002.3647897225.png) 
+<figure markdown>
+  ![var2](../assets/variation_walkthru/000002.3647897225.png)
+  <figcaption>subseed 3647897225</figcaption>
+</figure>
 
-![var3](../assets/variation_walkthru/000002.1614299449.png)
+<figure markdown>
+  ![var3](../assets/variation_walkthru/000002.1614299449.png)
+  <figcaption>subseed 1614299449</figcaption>
+</figure>
 
 I like the expression on Xena's face in the first one (subseed 3647897225), and
 the armor on her shoulder in the second one (subseed 1614299449). Can we combine
 them to get the best of both worlds?
 
-We combine the two variations using `-V` (--with_variations). Again, we must
+We combine the two variations using `-V` (`--with_variations`). Again, we must
 provide the seed for the originally-chosen image in order for this to work.
 
 ```bash
@@ -95,7 +106,9 @@ Outputs:
 Here we are providing equal weights (0.1 and 0.1) for both the subseeds. The
 resulting image is close, but not exactly what I wanted:
 
-![var4](../assets/variation_walkthru/000003.1614299449.png)
+<figure markdown>
+  ![var4](../assets/variation_walkthru/000003.1614299449.png)
+</figure>
 
 We could either try combining the images with different weights, or we can
 generate more variations around the almost-but-not-quite image. We do the
@@ -116,7 +129,10 @@ Outputs:
 This produces six images, all slight variations on the combination of the chosen
 two images. Here's the one I like best:
 
-![var5](../assets/variation_walkthru/000004.3747154981.png)
+<figure markdown>
+  ![var5](../assets/variation_walkthru/000004.3747154981.png)
+  <figcaption>000004.3747154981.png</figcaption>
+</figure>
 
 As you can see, this is a very powerful tool, which when combined with subprompt
 weighting, gives you great control over the content and quality of your

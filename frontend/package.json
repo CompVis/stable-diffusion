@@ -1,16 +1,16 @@
 {
-  "name": "sdui",
+  "name": "invoke-ai-ui",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "tsc-watch --onSuccess 'yarn run vite build -m development'",
-    "hmr": "vite dev",
+    "dev": "vite dev",
     "build": "tsc && vite build",
     "build-dev": "tsc && vite build -m development",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@chakra-ui/icons": "^2.0.10",
     "@chakra-ui/react": "^2.3.1",
     "@emotion/react": "^11.10.4",
     "@emotion/styled": "^11.10.4",

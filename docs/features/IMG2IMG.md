@@ -2,7 +2,8 @@
 title: Image-to-Image
 ---
 
-## **IMG2IMG**
+# :material-image-multiple: **IMG2IMG**
+
 This script also provides an `img2img` feature that lets you seed your creations with an initial
 drawing or photo. This is a really cool feature that tells stable diffusion to build the prompt on
 top of the image you provide, preserving the original's basic shape and layout. To use it, provide

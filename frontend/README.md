@@ -1,85 +1,37 @@
 # Stable Diffusion Web UI
 
-Demo at https://peaceful-otter-7a427f.netlify.app/ (not connected to back end)
+## Run
 
-much of this readme is just notes for myself during dev work
+- `python backend/server.py` serves both frontend and backend at http://localhost:9090
 
-numpy rand: 0 to 4294967295
+## Evironment
 
-## Test and Build
+Install [node](https://nodejs.org/en/download/) (includes npm) and optionally
+[yarn](https://yarnpkg.com/getting-started/install).
 
-from `frontend/`:
+From `frontend/` run `npm install` / `yarn install` to install the frontend packages.
 
--   `yarn dev` runs `tsc-watch`, which runs `vite build` on successful `tsc` transpilation
+## Dev
 
-from `.`:
+1. From `frontend/`, run `npm dev` / `yarn dev` to start the dev server.
+2. Note the address it starts up on (probably `http://localhost:5173/`).
+3. Edit `backend/server.py`'s `additional_allowed_origins` to include this address, e.g.
+   `additional_allowed_origins = ['http://localhost:5173']`.
+4. Leaving the dev server running, open a new terminal and go to the project root.
+5. Run `python backend/server.py`.
+6. Navigate to the dev server address e.g. `http://localhost:5173/`.
 
--   `python backend/server.py` serves both frontend and backend at http://localhost:9090
+To build for dev: `npm build-dev` / `yarn build-dev`
 
-## API
-
-`backend/server.py` serves the UI and provides a [socket.io](https://github.com/socketio/socket.io) API via [flask-socketio](https://github.com/miguelgrinberg/flask-socketio).
-
-### Server Listeners
-
-The server listens for these socket.io events:
-
-`cancel`
-
--   Cancels in-progress image generation
--   Returns ack only
-
-`generateImage`
-
--   Accepts object of image parameters
--   Generates an image
--   Returns ack only (image generation function sends progress and result via separate events)
-
-`deleteImage`
-
--   Accepts file path to image
--   Deletes image
--   Returns ack only
-
-`deleteAllImages` WIP
-
--   Deletes all images in `outputs/`
--   Returns ack only
-
-`requestAllImages`
-
--   Returns array of all images in `outputs/`
-
-`requestCapabilities` WIP
-
--   Returns capabilities of server (torch device, GFPGAN and ESRGAN availability, ???)
-
-`sendImage` WIP
-
--   Accepts a File and attributes
--   Saves image
--   Used to save init images which are not generated images
-
-### Server Emitters
-
-`progress`
-
--   Emitted during each step in generation
--   Sends a number from 0 to 1 representing percentage of steps completed
-
-`result` WIP
-
--   Emitted when an image generation has completed
--   Sends a object:
-
-```
-{
-    url: relative_file_path,
-    metadata: image_metadata_object
-}
-```
+To build for production: `npm build` / `yarn build`
 
 ## TODO
 
--   Search repo for "TODO"
--   My one gripe with Chakra: no way to disable all animations right now and drop the dependence on `framer-motion`. I would prefer to save the ~30kb on bundle and have zero animations. This is on the Chakra roadmap. See https://github.com/chakra-ui/chakra-ui/pull/6368 for last discussion on this. Need to check in on this issue periodically.
+- Search repo for "TODO"
+- My one gripe with Chakra: no way to disable all animations right now and drop the dependence on
+  `framer-motion`. I would prefer to save the ~30kb on bundle and have zero animations. This is on
+  the Chakra roadmap. See https://github.com/chakra-ui/chakra-ui/pull/6368 for last discussion on
+  this. Need to check in on this issue periodically.
+- Mobile friendly layout
+- Proper image gallery/viewer/manager
+- Help tooltips and such
