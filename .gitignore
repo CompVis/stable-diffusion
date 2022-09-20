@@ -1,3 +1,8 @@
+CLIP/
+taming-transformers/
+init_images/
+_esrgan_/
+*.png
 __pycache__/
 *.egg-info/
 out/
