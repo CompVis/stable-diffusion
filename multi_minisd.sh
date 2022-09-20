@@ -32,15 +32,21 @@ do
     #touch SD_latent_${sentinel}.txt
     lambda=7
     echo "GENERATING $lambda IMAGES ================================"
-    echo "`grep -c 'good +=' goodbad.py` positive examples"
-    echo "`grep -c 'bad +=' goodbad.py` negative examples"
     cat goodbad.py | awk '!x[$0]++' > goodbad2.py
     mv goodbad2.py goodbad.py
+    echo "`grep -c 'good +=' goodbad.py` positive examples"
+    echo "`grep -c 'bad +=' goodbad.py` negative examples"
     for kk in `seq $lambda`
     do
       python minisd.py
     done
     list_of_four_images="`ls -ctr SD*_image_*.png | tail -n $lambda`"
+    my_new_list=""
+    # We stop at 19 so that it becomes 20 with the new one
+    for k in `seq 19`
+    do
+       my_new_list="$my_new_list `echo $mylist | cut -d ' ' -f $k`"
+    done
     for img in $list_of_four_images
     do
         echo We add image $img =======================
