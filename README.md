@@ -19,7 +19,7 @@
 [discord badge]: https://flat.badgen.net/discord/members/htRgbc7e?icon=discord
 [discord link]: https://discord.gg/ZmtBAhwWhy
 [github forks badge]: https://flat.badgen.net/github/forks/invoke-ai/InvokeAI?icon=github
-[github forks link]: https://useful-forks.github.io/?repo=lstein%2Fstable-diffusion
+[github forks link]: https://useful-forks.github.io/?repo=invoke-ai%2FInvokeAI
 [github open issues badge]: https://flat.badgen.net/github/open-issues/invoke-ai/InvokeAI?icon=github
 [github open issues link]: https://github.com/invoke-ai/InvokeAI/issues?q=is%3Aissue+is%3Aopen
 [github open prs badge]: https://flat.badgen.net/github/open-prs/invoke-ai/InvokeAI?icon=github
