@@ -573,14 +573,14 @@ class Args(object):
             '-G',
             '--gfpgan_strength',
             type=float,
-            help='The strength at which to apply the GFPGAN model to the result, in order to improve faces.',
+            help='The strength at which to apply the face restoration to the result.',
             default=0.0,
         )
         postprocessing_group.add_argument(
             '-cf',
             '--codeformer_fidelity',
             type=float,
-            help='Takes values between 0 and 1. 0 produces high quality but low accuracy. 1 produces high accuracy but low quality.',
+            help='Used along with CodeFormer. Takes values between 0 and 1. 0 produces high quality but low accuracy. 1 produces high accuracy but low quality.',
             default=0.75
         )
         postprocessing_group.add_argument(
