@@ -10,6 +10,7 @@ example.png
 scores.json
 danbooru-aesthetic
 logs
+*.tar
 
 # =========================================================================== #
 # 	Python-related

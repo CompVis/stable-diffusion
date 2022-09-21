@@ -21,6 +21,7 @@ class LocalBase(Dataset):
                  shuffle=False,
                  mode='train',
                  val_split=64,
+                 
                  ):
         super().__init__()
 
@@ -153,16 +154,11 @@ if __name__ == "__main__":
     image.save('example.png')
 """
 
-"""
 from tqdm import tqdm
 if __name__ == "__main__":
-    dataset = LocalBase('../glide-finetune/touhou-portrait-aesthetic', size=512)
-    for i in tqdm(range(dataset.__len__())):
-        image = dataset.get_image(i)
-        if image == None:
-            continue
-        image.save(f'./danbooru-aesthetic/img/{dataset.hashes[i]}.png')
-        with open(f'./danbooru-aesthetic/txt/{dataset.hashes[i]}.txt', 'w') as f:
-            f.write(dataset.get_caption(i))
-
-"""
+    dataset = LocalBase('./danbooru-aesthetic', size=512)
+    import time
+    a = time.process_time()
+    for i in range(8):
+        dataset.get_image(i)
+    print('time:', time.process_time()-a)

@@ -17,3 +17,4 @@ gradio
 git+https://github.com/illeatmyhat/taming-transformers.git@master#egg=taming-transformers
 git+https://github.com/openai/CLIP.git@main#egg=clip
 git+https://github.com/hlky/k-diffusion-sd#egg=k_diffusion
+webdataset

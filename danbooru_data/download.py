@@ -3,50 +3,69 @@ import json
 import requests
 import multiprocessing
 import tqdm
+import webdataset
+from concurrent import futures
+import io
+import tarfile
+import glob
+import uuid
+
+from PIL import Image
 
 # downloads URLs from JSON
 
 import argparse
+import shutil
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--file', '-f', type=str, required=False)
-parser.add_argument('--out_dir', '-o', type=str, required=False)
-parser.add_argument('--threads', '-p', required=False, default=32)
+parser.add_argument('--file', '-f', type=str, required=False, default='links.json')
+parser.add_argument('--out_file', '-o', type=str, required=False, default='dataset-%06d.tar')
+parser.add_argument('--max_size', '-m', type=int, required=False, default=4294967296)
+parser.add_argument('--threads', '-p', required=False, default=16)
 args = parser.parse_args()
 
 class DownloadManager():
-    def __init__(self, max_threads=32):
+    def __init__(self, max_threads: int = 32):
         self.failed_downloads = []
         self.max_threads = max_threads
+        self.uuid = str(uuid.uuid1())
     
-    # args = (link, metadata, out_img_dir, out_text_dir)
+    # args = (post_id, link, caption_data)
     def download(self, args):
         try:
-            r = requests.get(args[0], stream=True)
-            with open(args[2] + args[0].split('/')[-1], 'wb') as f:
-                for chunk in r.iter_content(1024):
-                    f.write(chunk)
-            with open(args[3] + args[0].split('/')[-1].split('.')[0] + '.txt', 'w') as f:
-                f.write(args[1])
-        except:
-            self.failed_downloads.append((args[0], args[1]))
+            image = Image.open(requests.get(args[1], stream=True).raw).convert('RGB')
+            image_bytes = io.BytesIO()
+            image.save(image_bytes, format='PNG')
+            __key__ = '%07d' % int(args[0])
+            image = image_bytes.getvalue()
+            caption = str(json.dumps(args[2]))
+
+            with open(f'{self.uuid}/{__key__}.image', 'wb') as f:
+                f.write(image)
+            with open(f'{self.uuid}/{__key__}.caption', 'w') as f:
+                f.write(caption)
+
+        except Exception as e:
+            print(e)
+            self.failed_downloads.append((args[0], args[1], args[2]))
     
-    def download_urls(self, file_path, out_dir):
+    def download_urls(self, file_path):
         with open(file_path) as f:
             data = json.load(f)
-        
-        if not os.path.exists(out_dir):
-            os.makedirs(out_dir)
-            os.makedirs(out_dir + '/img')
-            os.makedirs(out_dir + '/text')
-        
         thread_args = []
 
-        print(f'Loading {file_path} for download on {self.max_threads} threads...')
+        delimiter = '\\' if os.name == 'nt' else '/'
+
+        self.uuid = (file_path.split(delimiter)[-1]).split('.')[0]
+        
+        if not os.path.exists(f'./{self.uuid}'):
+            os.mkdir(f'{self.uuid}')
+
+        print(f'Loading {file_path} for downloading on {self.max_threads} threads... Writing to dataset {self.uuid}')
 
         # create initial thread_args
         for k, v in tqdm.tqdm(data.items()):
-            thread_args.append((k, v, out_dir + 'img/', out_dir + 'text/'))
+            thread_args.append((k, v['file_url'], v))
         
         # divide thread_args into chunks divisible by max_threads
         chunks = []
@@ -57,7 +76,7 @@ class DownloadManager():
 
         # download chunks synchronously
         for chunk in tqdm.tqdm(chunks):
-            with multiprocessing.Pool(self.max_threads) as p:
+            with futures.ThreadPoolExecutor(args.threads) as p:
                 p.map(self.download, chunk)
 
         if len(self.failed_downloads) > 0:
@@ -65,16 +84,19 @@ class DownloadManager():
             for i in self.failed_downloads:
                 print(i[0])
             print("\n")
-        """        
-        # attempt to download any remaining failed downloads
-        print('\nAttempting to download any failed downloads...')
-        print('Failed downloads:', len(self.failed_downloads))
-        if len(self.failed_downloads) > 0:
-            for url in tqdm.tqdm(self.failed_downloads):
-                self.download((url[0], url[1], out_dir + 'img/', out_dir + 'text/'))
-        """
-    
+        
+        # put things into tar
+        print(f'Writing webdataset to {self.uuid}')
+        archive = tarfile.open(f'{self.uuid}.tar', 'w')
+        files = glob.glob(f'{self.uuid}/*')
+        for f in tqdm.tqdm(files):
+            archive.add(f, f.split(delimiter)[-1])
+        
+        archive.close()
+        
+        print('Cleaning up...')
+        shutil.rmtree(self.uuid)
         
 if __name__ == '__main__':
     dm = DownloadManager(max_threads=args.threads)
-    dm.download_urls(args.file, args.out_dir)
+    dm.download_urls(args.file)
