@@ -25,9 +25,7 @@ To illustrate, consider this image generated with the prompt "fantasy
 portrait of eleven princess." It's nice, but rather annoying that the
 top of the head has been cropped off.
 
-    <figure markdown>
-    ![elven_princess]](../assets/outpainting/elven_princess.png)
-    </figure>
+![elven_princess](../assets/outpainting/elven_princess.png)
 
 We can fix that using the `!fix` command!
 
@@ -38,9 +36,7 @@ dream> !fix my_images/elven_princess.png -D top 50
 This is telling dream.py to open up a rectangle 50 pixels high at the
 top of the image and outpaint into it. The result is:
 
-    <figure markdown>
-    ![elven_princess.fixed]](../assets/outpainting/elven_princess.fixed.png)
-    </figure>
+![elven_princess.fixed](../assets/outpainting/elven_princess.outpainted.png)
 
 Viola! You can similarly specify `bottom`, `left` or `right` to
 outpaint into these margins.
