@@ -125,7 +125,7 @@ ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" \
     === "Intel x86_64"
 
         ```bash
-        PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-x86_64 \
+        PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-64 \
           conda env create \
           -f environment-mac.yaml \
           && conda activate ldm
