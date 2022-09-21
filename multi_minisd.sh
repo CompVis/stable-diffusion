@@ -30,7 +30,7 @@ do
     #sentinel=${RANDOM}
     #touch SD_image_${sentinel}.png
     #touch SD_latent_${sentinel}.txt
-    lambda=7
+    lambda=4
     echo "GENERATING $lambda IMAGES ================================"
     cat goodbad.py | awk '!x[$0]++' > goodbad2.py
     mv goodbad2.py goodbad.py
@@ -38,20 +38,27 @@ do
     echo "`grep -c 'bad +=' goodbad.py` negative examples"
     for kk in `seq $lambda`
     do
+      echo "generating image $kk / $lambda"
       python minisd.py
     done
     list_of_four_images="`ls -ctr SD*_image_*.png | tail -n $lambda`"
-    my_new_list=""
-    # We stop at 19 so that it becomes 20 with the new one
-    for k in `seq 19`
-    do
-       my_new_list="$my_new_list `echo $mylist | cut -d ' ' -f $k`"
-    done
+#    my_new_list=""
+#    my_new_ranks=""
+#    # We stop at 19 so that it becomes 20 with the new one
+#    for k in `seq 19`
+#    do
+#       my_new_list="$my_new_list `echo $mylist | cut -d ' ' -f $k`"
+#       my_new_ranks="$my_new_ranks `echo $myranks | cut -d ' ' -f $k`"
+#    done
+#    mylist=`echo $my_new_list | sed 's/[ ]*$//g'`
+#    myranks=`echo $my_new_ranks | sed 's/[ ]*$//g'`
+#    echo "After limiting to 19, we get $mylist and $myranks "
     for img in $list_of_four_images
     do
         echo We add image $img =======================
         montage $mylist $img -mode Concatenate -tile 5x output.png
         open --wait output.png  
+        # read -t 1 prout
         read -p "Rank of the last image ?" rank
         echo "Provided rank: $rank"
         mylist="$mylist $img"
@@ -77,7 +84,9 @@ do
         mynewranks=""
         sed -i.backup 's/good +=.*//g' goodbad.py
         num_good=`cat goodbad.py | grep 'good +=' | wc -l `
+        echo "Num goods in file: $num_good"
         num_good=$(( $num_good / 2 + 5 ))
+        echo "Num goods after update: $num_good"
         echo "We keep the $num_good best."
         for r in `seq 20`
         do

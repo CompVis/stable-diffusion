@@ -30,7 +30,7 @@ name = random.choice(["Mark Zuckerbeg", "Zendaya", "Yann LeCun", "Scarlett Johan
 name = "Zendaya"
 prompt = f"Photo of {name} as a sumo-tori."
 
-prompt = "A close up photographic portrait of a young woman."
+prompt = "A close up photographic portrait of a young woman with colored hair."
 with autocast("cuda"):
     image = pipe(prompt, guidance_scale=7.5)["sample"][0]  
       
