@@ -132,6 +132,7 @@ const SeedVariationOptions = () => {
         step={0.01}
         min={0}
         max={1}
+        isDisabled={!shouldGenerateVariations}
         onChange={handleChangevariationAmount}
       />
       <FormControl

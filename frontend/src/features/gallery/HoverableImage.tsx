@@ -53,8 +53,6 @@ const HoverableImage = memo((props: HoverableImageProps) => {
 
   const handleClickSetSeed = (e: SyntheticEvent) => {
     e.stopPropagation();
-    // Non-null assertion: this button is not rendered unless this exists
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     dispatch(setSeed(image.metadata.image.seed));
   };
 
@@ -109,7 +107,7 @@ const HoverableImage = memo((props: HoverableImageProps) => {
                 />
               </DeleteImageModal>
             </Tooltip>
-            {['txt2img', 'img2img'].includes(image.metadata.image.type) && (
+            {['txt2img', 'img2img'].includes(image?.metadata?.image?.type) && (
               <Tooltip label="Use all parameters">
                 <IconButton
                   aria-label="Use all parameters"
@@ -121,7 +119,7 @@ const HoverableImage = memo((props: HoverableImageProps) => {
                 />
               </Tooltip>
             )}
-            {image.metadata.image.seed && (
+            {image?.metadata?.image?.seed && (
               <Tooltip label="Use seed">
                 <IconButton
                   aria-label="Use seed"

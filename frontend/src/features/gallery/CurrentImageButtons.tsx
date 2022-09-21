@@ -92,7 +92,7 @@ const CurrentImageButtons = ({
         colorScheme={'gray'}
         flexGrow={1}
         variant={'outline'}
-        isDisabled={!['txt2img', 'img2img'].includes(image.metadata.image.type)}
+        isDisabled={!['txt2img', 'img2img'].includes(image?.metadata?.image?.type)}
         onClick={handleClickUseAllParameters}
       />
 
@@ -101,7 +101,7 @@ const CurrentImageButtons = ({
         colorScheme={'gray'}
         flexGrow={1}
         variant={'outline'}
-        isDisabled={!image.metadata.image.seed}
+        isDisabled={!image?.metadata?.image?.seed}
         onClick={handleClickUseSeed}
       />
 
