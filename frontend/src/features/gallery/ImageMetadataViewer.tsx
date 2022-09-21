@@ -95,7 +95,7 @@ const ImageMetadataViewer = memo(({ image }: ImageMetadataViewerProps) => {
   const dispatch = useAppDispatch();
   const jsonBgColor = useColorModeValue('blackAlpha.100', 'whiteAlpha.100');
 
-  const metadata = image.metadata.image;
+  const metadata = image?.metadata?.image || {};
   const {
     type,
     postprocessing,
@@ -119,12 +119,7 @@ const ImageMetadataViewer = memo(({ image }: ImageMetadataViewerProps) => {
   const metadataJSON = JSON.stringify(metadata, null, 2);
 
   return (
-    <Flex
-      gap={1}
-      direction={'column'}
-      overflowY={'scroll'}
-      width={'100%'}
-    >
+    <Flex gap={1} direction={'column'} overflowY={'scroll'} width={'100%'}>
       <Flex gap={2}>
         <Text fontWeight={'semibold'}>File:</Text>
         <Link href={image.url} isExternal>
@@ -132,7 +127,7 @@ const ImageMetadataViewer = memo(({ image }: ImageMetadataViewerProps) => {
           <ExternalLinkIcon mx="2px" />
         </Link>
       </Flex>
-      {Object.keys(metadata).length ? (
+      {Object.keys(metadata).length > 0 ? (
         <>
           {type && <MetadataItem label="Type" value={type} />}
           {['esrgan', 'gfpgan'].includes(type) && (
@@ -288,9 +283,9 @@ const ImageMetadataViewer = memo(({ image }: ImageMetadataViewerProps) => {
             )}
           <Flex gap={2} direction={'column'}>
             <Flex gap={2}>
-              <Tooltip label={`Copy JSON`}>
+              <Tooltip label={`Copy metadata JSON`}>
                 <IconButton
-                  aria-label="Copy JSON"
+                  aria-label="Copy metadata JSON"
                   icon={<FaCopy />}
                   size={'xs'}
                   variant={'ghost'}
@@ -298,7 +293,7 @@ const ImageMetadataViewer = memo(({ image }: ImageMetadataViewerProps) => {
                   onClick={() => navigator.clipboard.writeText(metadataJSON)}
                 />
               </Tooltip>
-              <Text fontWeight={'semibold'}>JSON:</Text>
+              <Text fontWeight={'semibold'}>Metadata JSON:</Text>
             </Flex>
             <Box
               // maxHeight={200}
