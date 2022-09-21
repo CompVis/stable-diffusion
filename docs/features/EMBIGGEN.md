@@ -121,19 +121,34 @@ tiles:
 dream> a photo of puffy clouds over a forest at sunset -s 100 -W 512 -H 512 -I outputs/000002.seed.png -f 0.5 -embiggen_tiles 1 2 3
 ```
 
-!!! note
+## Fixing Previously-Generated Images
 
-    Because the same prompt is used on all the tiled images, and the model
-    doesn't have the context of anything outside the tile being run - it
-    can end up creating repeated pattern (also called 'motifs') across all
-    the tiles based on that prompt. The best way to combat this is
-    lowering the `--strength` (`-f`) to stay more true to the init image,
-    and increasing the number of steps so there is more compute-time to
-    create the detail.  Anecdotally `--strength` 0.35-0.45 works pretty
-    well on most things. It may also work great in some examples even with
-    the `--strength` set high for patterns, landscapes, or subjects that
-    are more abstract. Because this is (relatively) fast, you can also
-    always create a few Embiggen'ed images and manually composite them to
-    preserve the best parts from each.
+It is easy to apply embiggen to any previously-generated file without having to
+look up the original prompt and provide an initial image. Just use the
+syntax `!fix path/to/file.png <embiggen>`. For example, you can rewrite the
+previous command to look like this:
+
+~~~~
+dream> !fix ./outputs/000002.seed.png -embiggen_tiles 1 2 3
+~~~~
+
+A new file named `000002.seed.fixed.png` will be created in the output directory. Note that
+the `!fix` command does not replace the original file, unlike the behavior at generate time.
+You do not need to provide the prompt, and `!fix` automatically selects a good strength for
+embiggen-ing.
+
+
+**Note**
+Because the same prompt is used on all the tiled images, and the model
+doesn't have the context of anything outside the tile being run - it
+can end up creating repeated pattern (also called 'motifs') across all
+the tiles based on that prompt. The best way to combat this is
+lowering the `--strength` (`-f`) to stay more true to the init image,
+and increasing the number of steps so there is more compute-time to
+create the detail.  Anecdotally `--strength` 0.35-0.45 works pretty
+well on most things. It may also work great in some examples even with
+the `--strength` set high for patterns, landscapes, or subjects that
+are more abstract. Because this is (relatively) fast, you can also
+preserve the best parts from each.
 
 Author: [Travco](https://github.com/travco)
