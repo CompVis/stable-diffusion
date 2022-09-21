@@ -26,6 +26,15 @@ model:
         f_max: [ 1. ]
         f_min: [ 1. ]
 
+    personalization_config:
+      target: ldm.modules.embedding_manager.EmbeddingManager
+      params:
+        placeholder_strings: ["*"]
+        initializer_words: ["sculpture"]
+        per_image_tokens: false
+        num_vectors_per_token: 100
+        progressive_words: False
+
     unet_config:
       target: ldm.modules.diffusionmodules.openaimodel.UNetModel
       params:
@@ -51,7 +60,7 @@ model:
         ddconfig:
           double_z: true
           z_channels: 4
-          resolution: 256
+          resolution: 512
           in_channels: 3
           out_ch: 3
           ch: 128
