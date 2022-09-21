@@ -2,6 +2,7 @@
 title: Upscale
 ---
 
+
 # :material-image-size-select-large: Upscale 
 
 ## **Intro**
@@ -10,8 +11,6 @@ The script provides the ability to restore faces and upscale.
 
 You can enable these features by passing `--restore` and `--esrgan` to your launch script to enable
 face restoration modules and upscaling modules respectively.
-
-## **GFPGAN and Real-ESRGAN Support**
 
 The default face restoration module is GFPGAN and the default upscaling module is ESRGAN.
 
@@ -46,11 +45,11 @@ other GFPGAN related boot arguments if you wish to customize further._
     may run `python3 scripts/preload_models.py` after you have installed GFPGAN and all its
     dependencies.
 
-## **Usage**
+## Usage
 
 You will now have access to two new prompt arguments.
 
-### **Upscaling**
+### Upscaling
 
 `-U : <upscaling_factor> <upscaling_strength>`
 
@@ -64,7 +63,7 @@ retain some of those for natural looking results, we recommend using values betw
 
 If you do not explicitly specify an upscaling_strength, it will default to 0.75.
 
-### **Face Restoration**
+### Face Restoration
 
 `-G : <gfpgan_strength>`
 
@@ -81,7 +80,7 @@ When you use either `-U` or `-G`, the final result you get is upscaled or face m
 to save the original Stable Diffusion generation, you can use the `-save_orig` prompt argument to
 save the original unaffected version too.
 
-### **Example Usage**
+### Example Usage
 
 ```bash
 dream> superman dancing with a panda bear -U 2 0.6 -G 0.4
@@ -121,13 +120,13 @@ saving it to `ldm/restoration/codeformer/weights` folder.
 You can use `-ft` prompt argument to swap between CodeFormer and the default GFPGAN. The above
 mentioned `-G` prompt argument will allow you to control the strength of the restoration effect.
 
-### **Usage:**
+### Usage:
 
 The following command will perform face restoration with CodeFormer instead of the default gfpgan.
 
 `<prompt> -G 0.8 -ft codeformer`
 
-**Other Options:**
+### Other Options:
 
 - `-cf` - cf or CodeFormer Fidelity takes values between `0` and `1`. 0 produces high quality
   results but low accuracy and 1 produces lower quality results but higher accuacy to your original
@@ -143,3 +142,25 @@ that is the best restoration possible. This may deviate slightly from the origin
 excellent option to use in situations when there is very little facial data to work with.
 
 `<prompt> -G 1.0 -ft codeformer -cf 0.1`
+<<<<<<< HEAD
+=======
+
+## Fixing Previously-Generated Images
+
+It is easy to apply face restoration and/or upscaling to any previously-generated file. Just use the
+syntax `!fix path/to/file.png <options>`. For example, to apply GFPGAN at strength 0.8 and upscale 2X
+for a file named `./outputs/img-samples/000044.2945021133.png`, just run:
+
+~~~~
+dream> !fix ./outputs/img-samples/000044.2945021133.png -G 0.8 -U 2
+~~~~
+
+A new file named `000044.2945021133.fixed.png` will be created in the output directory. Note that
+the `!fix` command does not replace the original file, unlike the behavior at generate time.
+
+### Disabling:
+
+If, for some reason, you do not wish to load the GFPGAN and/or ESRGAN libraries, you can disable them 
+on the dream.py command line with the `--no_restore` and `--no_upscale` options, respectively.
+
+>>>>>>> Update UPSCALE.md
