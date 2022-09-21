@@ -13,6 +13,7 @@ parser.add_argument('--danbooru_key', '-key', type=str, required=False)
 parser.add_argument('--tags', '-t', required=False, default="solo -comic -animated -touhou -rating:general order:score age:<1month")
 parser.add_argument('--posts', '-p', required=False, type=int, default=10000)
 parser.add_argument('--output', '-o', required=False, default='links.json')
+parser.add_argument('--start_page', '-s', required=False, default=0, type=int)
 args = parser.parse_args()
 
 import re
@@ -49,7 +50,11 @@ class DanbooruScraper():
             print("Error: num_posts must be divisible by batch_size")
             return
         for i in tqdm(range(num_posts//batch_size)):
-            urls = self.dbclient.post_list(tags=tags, limit=batch_size, random=False, page=i)
+            try:
+                urls = self.dbclient.post_list(tags=tags, limit=batch_size, random=False, page=i+args.start_page)
+            except Exception as e:
+                print(f'Skipping page {i} - {e}')
+                continue
             if not urls:
                 print(f'Empty results at {i}')
                 break

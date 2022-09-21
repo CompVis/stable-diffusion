@@ -1,3 +1,4 @@
+from inspect import trace
 import os
 import json
 import requests
@@ -10,7 +11,7 @@ import tarfile
 import glob
 import uuid
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 # downloads URLs from JSON
 
@@ -22,7 +23,26 @@ parser.add_argument('--file', '-f', type=str, required=False, default='links.jso
 parser.add_argument('--out_file', '-o', type=str, required=False, default='dataset-%06d.tar')
 parser.add_argument('--max_size', '-m', type=int, required=False, default=4294967296)
 parser.add_argument('--threads', '-p', required=False, default=16)
+parser.add_argument('--resize', '-r', required=False, default=768)
 args = parser.parse_args()
+
+def resize_image(image: Image, max_size=(768,768)):
+    image = ImageOps.contain(image, max_size, Image.LANCZOS)
+    # resize to integer multiple of 64
+    w, h = image.size
+    w, h = map(lambda x: x - x % 64, (w, h))
+
+    ratio = w / h
+    src_ratio = image.width / image.height
+
+    src_w = w if ratio > src_ratio else image.width * h // image.height
+    src_h = h if ratio <= src_ratio else image.height * w // image.width
+
+    resized = image.resize((src_w, src_h), resample=Image.LANCZOS)
+    res = Image.new("RGB", (w, h))
+    res.paste(resized, box=(w // 2 - src_w // 2, h // 2 - src_h // 2))
+
+    return res
 
 class DownloadManager():
     def __init__(self, max_threads: int = 32):
@@ -31,14 +51,16 @@ class DownloadManager():
         self.uuid = str(uuid.uuid1())
     
     # args = (post_id, link, caption_data)
-    def download(self, args):
+    def download(self, args_thread):
         try:
-            image = Image.open(requests.get(args[1], stream=True).raw).convert('RGB')
+            image = Image.open(requests.get(args_thread[1], stream=True).raw).convert('RGB')
+            if args.resize:
+                image = resize_image(image, max_size=(args.resize, args.resize))
             image_bytes = io.BytesIO()
             image.save(image_bytes, format='PNG')
-            __key__ = '%07d' % int(args[0])
+            __key__ = '%07d' % int(args_thread[0])
             image = image_bytes.getvalue()
-            caption = str(json.dumps(args[2]))
+            caption = str(json.dumps(args_thread[2]))
 
             with open(f'{self.uuid}/{__key__}.image', 'wb') as f:
                 f.write(image)
@@ -46,8 +68,9 @@ class DownloadManager():
                 f.write(caption)
 
         except Exception as e:
-            print(e)
-            self.failed_downloads.append((args[0], args[1], args[2]))
+            import traceback
+            print(e, traceback.print_exc())
+            self.failed_downloads.append((args_thread[0], args_thread[1], args_thread[2]))
     
     def download_urls(self, file_path):
         with open(file_path) as f:

@@ -21,7 +21,6 @@ class LocalBase(Dataset):
                  shuffle=False,
                  mode='train',
                  val_split=64,
-                 
                  ):
         super().__init__()
 

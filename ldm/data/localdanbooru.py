@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import PIL
-from PIL import Image
+from PIL import Image, ImageOps
 import random
 
 PIL.Image.MAX_IMAGE_PIXELS = 933120000
@@ -17,8 +17,26 @@ import re
 import json
 import io
 
+def resize_image(image: Image, max_size=(768,768)):
+    image = ImageOps.contain(image, max_size, Image.LANCZOS)
+    # resize to integer multiple of 64
+    w, h = image.size
+    w, h = map(lambda x: x - x % 64, (w, h))
+
+    ratio = w / h
+    src_ratio = image.width / image.height
+
+    src_w = w if ratio > src_ratio else image.width * h // image.height
+    src_h = h if ratio <= src_ratio else image.height * w // image.width
+
+    resized = image.resize((src_w, src_h), resample=Image.LANCZOS)
+    res = Image.new("RGB", (w, h))
+    res.paste(resized, box=(w // 2 - src_w // 2, h // 2 - src_h // 2))
+
+    return res
+
 class CaptionProcessor(object):
-    def __init__(self, copyright_rate, character_rate, general_rate, artist_rate, normalize, caption_shuffle, transforms):
+    def __init__(self, copyright_rate, character_rate, general_rate, artist_rate, normalize, caption_shuffle, transforms, max_size, resize):
         self.copyright_rate = copyright_rate
         self.character_rate = character_rate
         self.general_rate = general_rate
@@ -26,6 +44,8 @@ class CaptionProcessor(object):
         self.normalize = normalize
         self.caption_shuffle = caption_shuffle
         self.transforms = transforms
+        self.max_size = max_size
+        self.resize = resize
     
     def clean(self, text: str):
         text = ' '.join(set([i.lstrip('_').rstrip('_') for i in re.sub(r'\([^)]*\)', '', text).split(' ')])).lstrip().rstrip()
@@ -59,16 +79,9 @@ class CaptionProcessor(object):
 
         # preprocess image
         image = sample['image']
-
         image = Image.open(io.BytesIO(image))
-        
-        img = np.array(image).astype(np.uint8)
-        crop = min(img.shape[0], img.shape[1])
-        h, w, = img.shape[0], img.shape[1]
-        img = img[(h - crop) // 2:(h + crop) // 2,
-            (w - crop) // 2:(w + crop) // 2]
-        image = Image.fromarray(img)
-
+        if self.resize:
+            image = resize_image(image, max_size=(self.max_size, self.max_size))
         image = self.transforms(image)
         image = np.array(image).astype(np.uint8)
         sample['image'] = (image / 127.5 - 1.0).astype(np.float32)
@@ -107,7 +120,7 @@ def dict_collation_fn(samples, combine_tensors=True, combine_scalars=True):
 
 class DanbooruWebDataModuleFromConfig(pl.LightningDataModule):
     def __init__(self, tar_base, batch_size, train=None, validation=None,
-                 test=None, num_workers=4, size=512, flip_p=0.5, image_key='image', copyright_rate=0.9, character_rate=0.9, general_rate=0.9, artist_rate=0.9, normalize=True, caption_shuffle=True, 
+                 test=None, num_workers=4, max_size=768, resize=False, flip_p=0.5, image_key='image', copyright_rate=0.9, character_rate=0.9, general_rate=0.9, artist_rate=0.9, normalize=True, caption_shuffle=True, random_order=True,
                  **kwargs):
         super().__init__(self)
         print(f'Setting tar base to {tar_base}')
@@ -117,7 +130,8 @@ class DanbooruWebDataModuleFromConfig(pl.LightningDataModule):
         self.train = train
         self.validation = validation
         self.test = test
-        self.size = size
+        self.max_size = max_size
+        self.resize = resize
         self.flip_p = flip_p
         self.image_key = image_key
         self.copyright_rate = copyright_rate
@@ -126,16 +140,17 @@ class DanbooruWebDataModuleFromConfig(pl.LightningDataModule):
         self.artist_rate = artist_rate
         self.normalize = normalize
         self.caption_shuffle = caption_shuffle
+        self.random_order = random_order
 
     def make_loader(self, dataset_config, train=True):
         image_transforms = []
-        image_transforms.extend([torchvision.transforms.Resize(self.size), torchvision.transforms.RandomHorizontalFlip(self.flip_p)],)
+        image_transforms.extend([torchvision.transforms.RandomHorizontalFlip(self.flip_p)],)
         image_transforms = torchvision.transforms.Compose(image_transforms)
 
         transform_dict = {}
         transform_dict.update({self.image_key: image_transforms})
 
-        postprocess = CaptionProcessor(copyright_rate=self.copyright_rate, character_rate=self.character_rate, general_rate=self.general_rate, artist_rate=self.artist_rate, normalize=self.normalize, caption_shuffle=self.caption_shuffle, transforms=image_transforms)
+        postprocess = CaptionProcessor(copyright_rate=self.copyright_rate, character_rate=self.character_rate, general_rate=self.general_rate, artist_rate=self.artist_rate, normalize=self.normalize, caption_shuffle=self.caption_shuffle, transforms=image_transforms, max_size=self.max_size, resize=self.resize)
         
 
         tars = os.path.join(self.tar_base)

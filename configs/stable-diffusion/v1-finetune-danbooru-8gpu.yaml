@@ -74,7 +74,8 @@ data:
     tar_base: "links.tar"
     batch_size: 1
     num_workers: 1
-    size: 512
+    max_size: 768
+    resize: false
     flip_p: 0.5
     image_key: "image"
     copyright_rate: 0.9
