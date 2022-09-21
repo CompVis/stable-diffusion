@@ -76,7 +76,7 @@ def main():
             gfpgan=gfpgan,
             codeformer=codeformer,
             esrgan=esrgan
-        )
+            )
     except (FileNotFoundError, IOError, KeyError) as e:
         print(f'{e}. Aborting.')
         sys.exit(-1)
@@ -414,20 +414,5 @@ def dream_server_loop(gen, host, port, outdir, gfpgan):
 
     dream_server.server_close()
 
-
-<<<<<<< HEAD
-=======
-def write_log_message(results, log_path):
-    """logs the name of the output image, prompt, and prompt args to the terminal and log file"""
-    global output_cntr
-    log_lines = [f'{path}: {prompt}\n' for path, prompt in results]
-    for l in log_lines:
-        output_cntr += 1
-        print(f'[{output_cntr}] {l}', end='')
-
-    with open(log_path, 'a', encoding='utf-8') as file:
-        file.writelines(log_lines)
-
->>>>>>> GFPGAN and Real ESRGAN Implementation Refactor
 if __name__ == '__main__':
     main()

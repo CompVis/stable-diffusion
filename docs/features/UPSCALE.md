@@ -2,17 +2,16 @@
 title: Upscale
 ---
 
+## Intro
 
-# :material-image-size-select-large: Upscale 
+The script provides the ability to restore faces and upscale. You can apply these operations
+at the time you generate the images, or at any time to a previously-generated PNG file, using 
+the [!fix](#fixing-previously-generated-images) command.
 
-## **Intro**
+## Face Fixing
 
-The script provides the ability to restore faces and upscale.
-
-You can enable these features by passing `--restore` and `--esrgan` to your launch script to enable
-face restoration modules and upscaling modules respectively.
-
-The default face restoration module is GFPGAN and the default upscaling module is ESRGAN.
+The default face restoration module is GFPGAN. The default upscale is Real-ESRGAN. For an alternative
+face restoration module, see [CodeFormer Support] below.
 
 As of version 1.14, environment.yaml will install the Real-ESRGAN package into the standard install
 location for python packages, and will put GFPGAN into a subdirectory of "src" in the
@@ -142,8 +141,6 @@ that is the best restoration possible. This may deviate slightly from the origin
 excellent option to use in situations when there is very little facial data to work with.
 
 `<prompt> -G 1.0 -ft codeformer -cf 0.1`
-<<<<<<< HEAD
-=======
 
 ## Fixing Previously-Generated Images
 
@@ -162,5 +159,3 @@ the `!fix` command does not replace the original file, unlike the behavior at ge
 
 If, for some reason, you do not wish to load the GFPGAN and/or ESRGAN libraries, you can disable them 
 on the dream.py command line with the `--no_restore` and `--no_upscale` options, respectively.
-
->>>>>>> Update UPSCALE.md
