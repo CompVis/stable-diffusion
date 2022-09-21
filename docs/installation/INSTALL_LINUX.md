@@ -27,7 +27,7 @@ title: Linux
 3. Copy the stable-diffusion source code from GitHub:
 
     ```bash
-    (base) ~$ git clone https://github.com/lstein/stable-diffusion.git
+    (base) ~$ git clone https://github.com/invoke-ai/InvokeAI.git
     ```
 
     This will create stable-diffusion folder where you will follow the rest of the
