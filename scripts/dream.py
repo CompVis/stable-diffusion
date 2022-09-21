@@ -54,7 +54,7 @@ def main():
         else:
             print('>> Face restoration disabled')
         if opt.esrgan:
-            esrgan = restoration.load_ersgan()
+            esrgan = restoration.load_esrgan()
         else:
             print('>> Upscaling disabled')
     except (ModuleNotFoundError, ImportError):
