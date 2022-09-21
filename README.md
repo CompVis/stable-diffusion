@@ -24,7 +24,7 @@ _Note: This fork is rapidly evolving. Please use the
 report bugs and make feature requests. Be sure to use the provided
 templates. They will help aid diagnose issues faster._
 
-_This repository was formally known as /stable-diffusion_
+_This repository was formally known as lstein/stable-diffusion_
 
 # **Table of Contents**
 
