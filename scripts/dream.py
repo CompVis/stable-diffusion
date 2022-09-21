@@ -170,9 +170,10 @@ def main_loop(gen, opt, infile):
 
         if opt.init_img:
             try:
-                oldargs    = metadata_from_png(opt.init_img)
-                opt.prompt = oldargs.prompt
-                print(f'>> Retrieved old prompt "{opt.prompt}" from {opt.init_img}')
+                if not opt.prompt:
+                    oldargs    = metadata_from_png(opt.init_img)
+                    opt.prompt = oldargs.prompt
+                    print(f'>> Retrieved old prompt "{opt.prompt}" from {opt.init_img}')
             except AttributeError:
                 pass
             except KeyError:
