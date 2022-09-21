@@ -27,7 +27,7 @@ class Restoration():
         return CodeFormerRestoration()
 
     # Upscale Models
-    def load_ersgan(self):
+    def load_esrgan(self):
         from ldm.dream.restoration.realesrgan import ESRGAN
         esrgan = ESRGAN(self.esrgan_bg_tile)
         print('>> ESRGAN Initialized')
