@@ -74,9 +74,10 @@ To retrieve a (series of) opt objects corresponding to the metadata, do this:
  opt_list = metadata_loads(metadata)
 
 The metadata should be pulled out of the PNG image. pngwriter has a method
-retrieve_metadata that will do this.
+retrieve_metadata that will do this, or you can do it in one swell foop
+with metadata_from_png():
 
-
+ opt_list = metadata_from_png('/path/to/image_file.png')
 """
 
 import argparse
@@ -87,6 +88,7 @@ import hashlib
 import os
 import copy
 import base64
+import ldm.dream.pngwriter
 from ldm.dream.conditioning import split_weighted_subprompts
 
 SAMPLER_CHOICES = [
@@ -208,10 +210,16 @@ class Args(object):
         # esrgan-specific parameters
         if a['upscale']:
             switches.append(f'-U {" ".join([str(u) for u in a["upscale"]])}')
+
+        # embiggen parameters
         if a['embiggen']:
             switches.append(f'--embiggen {" ".join([str(u) for u in a["embiggen"]])}')
         if a['embiggen_tiles']:
             switches.append(f'--embiggen_tiles {" ".join([str(u) for u in a["embiggen_tiles"]])}')
+
+        # outpainting parameters
+        if a['out_direction']:
+            switches.append(f'-D {" ".join([str(u) for u in a["out_direction"]])}')
         if a['with_variations']:
             formatted_variations = ','.join(f'{seed}:{weight}' for seed, weight in (a["with_variations"]))
             switches.append(f'-V {formatted_variations}')
@@ -546,6 +554,14 @@ class Args(object):
             help='Strength for noising/unnoising. 0.0 preserves image exactly, 1.0 replaces it completely',
             default=0.75,
         )
+        img2img_group.add_argument(
+            '-D',
+            '--out_direction',
+            nargs='+',
+            type=str,
+            metavar=('direction', 'pixels'),
+            help='Direction to extend the given image (left|right|top|bottom). If a distance pixel value is not specified it defaults to half the image size'
+        )
         postprocessing_group.add_argument(
             '-ft',
             '--facetool',
@@ -709,6 +725,15 @@ def metadata_dumps(opt,
         metadata['image'] = rfc_dict
 
     return metadata
+
+def metadata_from_png(png_file_path):
+    '''
+    Given the path to a PNG file created by dream.py, retrieves
+    an Args object containing the image metadata
+    '''
+    meta = ldm.dream.pngwriter.retrieve_metadata(png_file_path)
+    opts = metadata_loads(meta)
+    return opts[0]
 
 def metadata_loads(metadata):
     '''

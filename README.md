@@ -98,6 +98,7 @@ you can try starting `dream.py` with the `--precision=float32` flag:
 - [Interactive Command Line Interface](docs/features/CLI.md)
 - [Image To Image](docs/features/IMG2IMG.md)
 - [Inpainting Support](docs/features/INPAINTING.md)
+- [Outpainting Support](docs/features/OUTPAINTING.md)
 - [GFPGAN and Real-ESRGAN Support](docs/features/UPSCALE.md)
 - [Seamless Tiling](docs/features/OTHER.md#seamless-tiling)
 - [Google Colab](docs/features/OTHER.md#google-colab)
@@ -157,7 +158,7 @@ For older changelogs, please visit the **[CHANGELOG](docs/features/CHANGELOG.md)
 Please check out our **[Q&A](docs/help/TROUBLESHOOT.md)** to get solutions for common installation
 problems and other issues.
 
-### Contributing
+# Contributing
 
 Anyone who wishes to contribute to this project, whether documentation, features, bug fixes, code
 cleanup, testing, or code reviews, is very much encouraged to do so. If you are unfamiliar with how

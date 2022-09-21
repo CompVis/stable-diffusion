@@ -27,8 +27,8 @@ from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 from ldm.models.diffusion.ksampler import KSampler
-from ldm.dream.pngwriter import PngWriter, retrieve_metadata
-from ldm.dream.args import metadata_loads
+from ldm.dream.pngwriter import PngWriter
+from ldm.dream.args import metadata_from_png
 from ldm.dream.image_util import InitImageResizer
 from ldm.dream.devices import choose_torch_device, choose_precision
 from ldm.dream.conditioning import get_uc_and_c
@@ -276,8 +276,9 @@ class Generate:
             strength         = None,
             init_color       = None,
             # these are specific to embiggen (which also relies on img2img args)
-            embiggen=None,
-            embiggen_tiles=None,
+            embiggen       =    None,
+            embiggen_tiles =    None,
+            out_direction  =    None,
             # these are specific to GFPGAN/ESRGAN
             facetool         = None,
             gfpgan_strength  = 0,
@@ -388,9 +389,14 @@ class Generate:
                 log_tokens    =self.log_tokenization
             )
 
-            (init_image, mask_image) = self._make_images(
-                init_img, init_mask, width, height, fit)
-
+            init_image,mask_image = self._make_images(
+                init_img,
+                init_mask,
+                width,
+                height,
+                fit=fit,
+                out_direction=out_direction,
+            )
             if (init_image is not None) and (mask_image is not None):
                 generator = self._make_inpaint()
             elif (embiggen != None or embiggen_tiles != None):
@@ -469,16 +475,17 @@ class Generate:
             )
         return results
 
-    # this needs to be generalized to all sorts of postprocessors, but for now
-    # sufficient to support most use cases
+    # this needs to be generalized to all sorts of postprocessors, which should be wrapped
+    # in a nice harmonized call signature. For now we have a bunch of if/elses!
     def apply_postprocessor(
             self,
             image_path,
-            tool                = 'gfpgan',  # one of 'upscale', 'gfpgan', 'codeformer', or 'embiggen'
+            tool                = 'gfpgan',  # one of 'upscale', 'gfpgan', 'codeformer', 'outpaint', or 'embiggen'
             gfpgan_strength     = 0.0,
             codeformer_fidelity = 0.75,
-            save_original       = True, # to get new name
             upscale             = None,
+            out_direction       = None,
+            save_original       = True, # to get new name
             callback            = None,
             opt                 = None,
             ):
@@ -489,8 +496,7 @@ class Generate:
         image_metadata = None
         prompt = None
         try:
-            meta = retrieve_metadata(image_path)
-            args = metadata_loads(meta)
+            args = metadata_from_png(image_path)
             if len(args) > 1:
                 print("* Can't postprocess a grid")
                 return
@@ -556,22 +562,56 @@ class Generate:
                 embiggen_tiles = opt.embiggen_tiles,
                 image_callback = callback,
             )
-
+        elif tool == 'outpaint':
+            oldargs      = metadata_from_png(image_path)
+            opt.strength = 0.83
+            opt.init_img = image_path
+            return self.prompt2image(
+                oldargs.prompt,
+                out_direction  = opt.out_direction,
+                sampler     = self.sampler,
+                steps       = opt.steps,
+                cfg_scale   = opt.cfg_scale,
+                ddim_eta    = self.ddim_eta,
+                conditioning= get_uc_and_c(
+                    oldargs.prompt, model =self.model,
+                    skip_normalize=opt.skip_normalize,
+                    log_tokens    =opt.log_tokenization
+                ),
+                width       = opt.width,
+                height      = opt.height,
+                init_img    = image_path,  # not the Image! (sigh)
+                strength    = opt.strength,
+                image_callback = callback,
+                )
         else:
             print(f'* postprocessing tool {tool} is not yet supported')
             return None
 
 
-    def _make_images(self, img_path, mask_path, width, height, fit=False):
-        init_image = None
-        init_mask = None
+    def _make_images(
+            self,
+            img_path,
+            mask_path,
+            width,
+            height,
+            fit=False,
+            out_direction=None,
+    ):
+        init_image      = None
+        init_mask       = None
         if not img_path:
             return None, None
 
-        image = self._load_img(img_path, width, height,
-                               fit=fit)  # this returns an Image
-        # this returns a torch tensor
-        init_image = self._create_init_image(image)
+        image = self._load_img(
+            img_path,
+            width,
+            height,
+            fit=fit
+        ) # this returns an Image
+        if out_direction:
+            image    = self._create_outpaint_image(image, out_direction)
+        init_image   = self._create_init_image(image)                   # this returns a torch tensor
 
         # if image has a transparent area and no mask was provided, then try to generate mask
         if self._has_transparency(image) and not mask_path:
@@ -789,6 +829,7 @@ class Generate:
         return model
 
     def _load_img(self, path, width, height, fit=False):
+        print(f'DEBUG: path = {path}')
         assert os.path.exists(path), f'>> {path}: File not found'
 
         #        with Image.open(path) as img:
@@ -814,6 +855,66 @@ class Generate:
         image = torch.from_numpy(image)
         image = 2.0 * image - 1.0
         return image.to(self.device)
+
+    #  TODO: outpainting is a post-processing application and should be made to behave
+    # like the other ones.
+    def _create_outpaint_image(self, image, direction_args):
+        assert len(direction_args) in [1, 2], 'Direction (-D) must have exactly one or two arguments.'
+
+        if len(direction_args) == 1:
+            direction = direction_args[0]
+            pixels = None
+        elif len(direction_args) == 2:
+            direction = direction_args[0]
+            pixels = int(direction_args[1])
+
+        assert direction in ['top', 'left', 'bottom', 'right'], 'Direction (-D) must be one of "top", "left", "bottom", "right"'
+
+        image = image.convert("RGBA")
+        # we always extend top, but rotate to extend along the requested side
+        if direction == 'left':
+            image = image.transpose(Image.Transpose.ROTATE_270)
+        elif direction == 'bottom':
+            image = image.transpose(Image.Transpose.ROTATE_180)
+        elif direction == 'right':
+            image = image.transpose(Image.Transpose.ROTATE_90)
+
+        pixels = image.height//2 if pixels is None else int(pixels)
+        assert 0 < pixels < image.height, 'Direction (-D) pixels length must be in the range 0 - image.size'
+
+        # the top part of the image is taken from the source image mirrored
+        # coordinates (0,0) are the upper left corner of an image
+        top = image.transpose(Image.Transpose.FLIP_TOP_BOTTOM).convert("RGBA")
+        top = top.crop((0, top.height - pixels, top.width, top.height))
+
+        # setting all alpha of the top part to 0
+        alpha = top.getchannel("A")
+        alpha.paste(0, (0, 0, top.width, top.height))
+        top.putalpha(alpha)
+
+        # taking the bottom from the original image
+        bottom = image.crop((0, 0, image.width, image.height - pixels))
+
+        new_img = image.copy()
+        new_img.paste(top, (0, 0))
+        new_img.paste(bottom, (0, pixels))
+
+        # create a 10% dither in the middle
+        dither = min(image.height//10, pixels)
+        for x in range(0, image.width, 2):
+            for y in range(pixels - dither, pixels + dither):
+                (r, g, b, a) = new_img.getpixel((x, y))
+                new_img.putpixel((x, y), (r, g, b, 0))
+
+        # let's rotate back again
+        if direction == 'left':
+            new_img = new_img.transpose(Image.Transpose.ROTATE_90)
+        elif direction == 'bottom':
+            new_img = new_img.transpose(Image.Transpose.ROTATE_180)
+        elif direction == 'right':
+            new_img = new_img.transpose(Image.Transpose.ROTATE_270)
+
+        return new_img
 
     def _create_init_mask(self, image):
         # convert into a black/white mask

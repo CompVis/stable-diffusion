@@ -4,11 +4,12 @@
 import os
 import re
 import sys
+import shlex
 import copy
 import warnings
 import time
 import ldm.dream.readline
-from ldm.dream.args import Args, metadata_dumps
+from ldm.dream.args import Args, metadata_dumps, metadata_from_png
 from ldm.dream.pngwriter import PngWriter
 from ldm.dream.server import DreamServer, ThreadingDreamServer
 from ldm.dream.image_util import make_grid
@@ -166,6 +167,17 @@ def main_loop(gen, opt, infile):
             
         if opt.parse_cmd(command) is None:
             continue
+
+        if opt.init_img:
+            try:
+                oldargs    = metadata_from_png(opt.init_img)
+                opt.prompt = oldargs.prompt
+                print(f'>> Retrieved old prompt "{opt.prompt}" from {opt.init_img}')
+            except AttributeError:
+                pass
+            except KeyError:
+                pass
+
         if len(opt.prompt) == 0:
             print('\nTry again with a prompt!')
             continue
@@ -197,7 +209,9 @@ def main_loop(gen, opt, infile):
                 opt.seed = None
                 continue
 
-        # TODO - move this into a module
+        if opt.strength is None:
+            opt.strength = 0.75 if opt.out_direction is None else 0.83
+
         if opt.with_variations is not None:
             # shotgun parsing, woo
             parts = []
@@ -347,7 +361,15 @@ def do_postprocess (gen, opt, callback):
         print(f'* file {file_path} does not exist')
         return
 
-    tool = opt.facetool if opt.gfpgan_strength > 0 else ('embiggen' if opt.embiggen else 'upscale')
+    tool=None
+    if opt.gfpgan_strength > 0:
+        tool = opt.facetool
+    elif opt.embiggen:
+        tool = 'embiggen'
+    elif opt.upscale:
+        tool = 'upscale'
+    elif opt.out_direction:
+        tool = 'outpaint'
     opt.save_original = True # do not overwrite old image!
     return gen.apply_postprocessor(
         image_path      = opt.prompt,
@@ -356,6 +378,7 @@ def do_postprocess (gen, opt, callback):
         codeformer_fidelity = opt.codeformer_fidelity,
         save_original       = opt.save_original,
         upscale             = opt.upscale,
+        out_direction       = opt.out_direction,
         callback            = callback,
         opt                 = opt,
         )
@@ -414,6 +437,17 @@ def dream_server_loop(gen, host, port, outdir, gfpgan):
         pass
 
     dream_server.server_close()
+
+def write_log_message(results, log_path):
+    """logs the name of the output image, prompt, and prompt args to the terminal and log file"""
+    global output_cntr
+    log_lines = [f'{path}: {prompt}\n' for path, prompt in results]
+    for l in log_lines:
+        output_cntr += 1
+        print(f'[{output_cntr}] {l}',end='')
+
+    with open(log_path, 'a', encoding='utf-8') as file:
+        file.writelines(log_lines)
 
 if __name__ == '__main__':
     main()
