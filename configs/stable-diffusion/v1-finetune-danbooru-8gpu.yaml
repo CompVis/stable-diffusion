@@ -78,12 +78,13 @@ data:
     resize: false
     flip_p: 0.5
     image_key: "image"
-    copyright_rate: 0.9
-    character_rate: 0.9
-    general_rate: 0.9
-    artist_rate: 0.9
+    copyright_rate: 1.0
+    character_rate: 1.0
+    general_rate: 1.0
+    artist_rate: 1.0
     normalize: true
     caption_shuffle: true
+    random_order: true
 
 lightning:
   modelcheckpoint:
