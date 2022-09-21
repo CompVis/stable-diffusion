@@ -49,40 +49,28 @@ We are hoping to get rid of the need for this workaround in an upcoming release.
 
 1. Open image in Photoshop
 
-    <figure markdown>
-    ![step1](../assets/step1.png)
-    </figure>
+![step1](../assets/step1.png)
 
 2. Use any of the selection tools (Marquee, Lasso, or Wand) to select the area you desire to inpaint.
 
-    <figure markdown>
-    ![step2](../assets/step2.png)
-    </figure>
+![step2](../assets/step2.png)
 
 3. Because we'll be applying a mask over the area we want to preserve, you should now select the inverse by using the ++shift+ctrl+i++ shortcut, or right clicking and using the "Select Inverse" option.
 
 4. You'll now create a mask by selecting the image layer, and Masking the selection. Make sure that you don't delete any of the undrlying image, or your inpainting results will be dramatically impacted.
 
-    <figure markdown>
-    ![step4](../assets/step4.png)
-    </figure>
+![step4](../assets/step4.png)
 
 5. Make sure to hide any background layers that are present. You should see the mask applied to your image layer, and the image on your canvas should display the checkered background.
 
-    <figure markdown>
-    ![step5](../assets/step5.png)
-    </figure>
+![step5](../assets/step5.png)
 
 6. Save the image as a transparent PNG by using the "Save a Copy" option in the File menu, or using the Alt + Ctrl + S keyboard shortcut
 
-    <figure markdown>
-    ![step6](../assets/step6.png)
-    </figure>
+![step6](../assets/step6.png)
 
 7. After following the inpainting instructions above (either through the CLI or the Web UI), marvel at your newfound ability to selectively dream. Lookin' good!
 
-    <figure markdown>
-    ![step7](../assets/step7.png)
-    </figure>
+![step7](../assets/step7.png)
 
 8. In the export dialogue, Make sure the "Save colour values from transparent pixels" checkbox is selected.  
