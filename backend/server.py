@@ -702,7 +702,7 @@ def generate_images(generation_parameters, esrgan_parameters, gfpgan_parameters)
             postprocessing = True
             all_parameters["gfpgan_strength"] = gfpgan_parameters["strength"]
 
-        all_parameters["seed"] = first_seed
+        all_parameters["seed"] = seed
         progress["currentStatus"] = "Saving image"
         socketio.emit("progressUpdate", progress)
         eventlet.sleep(0)
