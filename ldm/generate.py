@@ -30,7 +30,7 @@ from ldm.models.diffusion.ksampler import KSampler
 from ldm.dream.pngwriter import PngWriter, retrieve_metadata
 from ldm.dream.args import metadata_loads
 from ldm.dream.image_util import InitImageResizer
-from ldm.dream.devices import choose_torch_device
+from ldm.dream.devices import choose_torch_device, choose_precision
 from ldm.dream.conditioning import get_uc_and_c
 
 def fix_func(orig):
