@@ -1,14 +1,9 @@
-<h1 align='center'><b>InvokeAI: A Stable Diffusion Toolkit</b></h1>
+<div align="center">
 
-# Stable Diffusion Dream Script
+# InvokeAI: A Stable Diffusion Toolkit
 
 ![project logo](docs/assets/logo.png)
 
-<p align='center'>
-  <a href="https://discord.gg/ZmtBAhwWhy"><img src="docs/assets/join-us-on-discord-image.png"/></a>
-</p>
-
-# **InvokeAI - A Stable Diffusion Toolkit**
 [![discord badge]][discord link]
 
 [![latest release badge]][latest release link] [![github stars badge]][github stars link] [![github forks badge]][github forks link]
@@ -22,7 +17,7 @@
 [CI checks on main badge]: https://flat.badgen.net/github/checks/lstein/stable-diffusion/main?label=CI%20status%20on%20main&cache=900&icon=github
 [CI checks on main link]: https://github.com/lstein/stable-diffusion/actions/workflows/test-dream-conda.yml
 [discord badge]: https://flat.badgen.net/discord/members/htRgbc7e?icon=discord
-[discord link]: https://discord.com/invite/htRgbc7e
+[discord link]: https://discord.gg/ZmtBAhwWhy
 [github forks badge]: https://flat.badgen.net/github/forks/lstein/stable-diffusion?icon=github
 [github forks link]: https://useful-forks.github.io/?repo=lstein%2Fstable-diffusion
 [github open issues badge]: https://flat.badgen.net/github/open-issues/lstein/stable-diffusion?icon=github
