@@ -39,6 +39,8 @@ def build_opt(post_data, seed, gfpgan_model_exists):
     setattr(opt, 'perlin', float(post_data['perlin']))
     setattr(opt, 'variation_amount', float(post_data['variation_amount']) if int(post_data['seed']) != -1 else 0)
     setattr(opt, 'with_variations', [])
+    setattr(opt, 'embiggen', None)
+    setattr(opt, 'embiggen_tiles', None)
 
     broken = False
     if int(post_data['seed']) != -1 and post_data['with_variations'] != '':
@@ -82,12 +84,11 @@ class DreamServer(BaseHTTPRequestHandler):
                 self.wfile.write(content.read())
         elif self.path == "/config.js":
             # unfortunately this import can't be at the top level, since that would cause a circular import
-            from ldm.gfpgan.gfpgan_tools import gfpgan_model_exists
             self.send_response(200)
             self.send_header("Content-type", "application/javascript")
             self.end_headers()
             config = {
-                'gfpgan_model_exists': gfpgan_model_exists
+                'gfpgan_model_exists': self.gfpgan_model_exists
             }
             self.wfile.write(bytes("let config = " + json.dumps(config) + ";\n", "utf-8"))
         elif self.path == "/run_log.json":
@@ -140,11 +141,10 @@ class DreamServer(BaseHTTPRequestHandler):
         self.end_headers()
 
         # unfortunately this import can't be at the top level, since that would cause a circular import
-        from ldm.gfpgan.gfpgan_tools import gfpgan_model_exists
 
         content_length = int(self.headers['Content-Length'])
         post_data = json.loads(self.rfile.read(content_length))
-        opt = build_opt(post_data, self.model.seed, gfpgan_model_exists)
+        opt = build_opt(post_data, self.model.seed, self.gfpgan_model_exists)
 
         self.canceled.clear()
         # In order to handle upscaled images, the PngWriter needs to maintain state

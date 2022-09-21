@@ -56,6 +56,7 @@ We thank them for all of their time and hard work.
 - [Matthias Wild](https://github.com/mauwii)
 - [Kyle Schouviller](https://github.com/kyle0654)
 - [rabidcopy](https://github.com/rabidcopy)
+- [Dominic Letz](https://github.com/dominicletz)
 
 ## **Original CompVis Authors:**
 

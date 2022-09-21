@@ -4,11 +4,12 @@
 import os
 import re
 import sys
+import shlex
 import copy
 import warnings
 import time
 import ldm.dream.readline
-from ldm.dream.args import Args, metadata_dumps
+from ldm.dream.args import Args, metadata_dumps, metadata_from_png
 from ldm.dream.pngwriter import PngWriter
 from ldm.dream.server import DreamServer, ThreadingDreamServer
 from ldm.dream.image_util import make_grid
@@ -43,7 +44,25 @@ def main():
     import transformers
     transformers.logging.set_verbosity_error()
 
-    # creating a simple Generate object with a handful of
+    # Loading Face Restoration and ESRGAN Modules
+    try:
+        gfpgan, codeformer, esrgan = None, None, None
+        from ldm.dream.restoration import Restoration
+        restoration = Restoration(opt.gfpgan_dir, opt.gfpgan_model_path, opt.esrgan_bg_tile)
+        if opt.restore:
+            gfpgan, codeformer = restoration.load_face_restore_models()
+        else:
+            print('>> Face restoration disabled')
+        if opt.esrgan:
+            esrgan = restoration.load_ersgan()
+        else:
+            print('>> Upscaling disabled')
+    except (ModuleNotFoundError, ImportError):
+        import traceback
+        print(traceback.format_exc(), file=sys.stderr)
+        print('>> You may need to install the ESRGAN and/or GFPGAN modules')
+
+    # creating a simple text2image object with a handful of
     # defaults passed on the command line.
     # additional parameters will be added (or overriden) during
     # the user input loop
@@ -55,7 +74,10 @@ def main():
             embedding_path = opt.embedding_path,
             full_precision = opt.full_precision,
             precision      = opt.precision,
-        )
+            gfpgan=gfpgan,
+            codeformer=codeformer,
+            esrgan=esrgan
+            )
     except (FileNotFoundError, IOError, KeyError) as e:
         print(f'{e}. Aborting.')
         sys.exit(-1)
@@ -91,7 +113,7 @@ def main():
 
     # web server loops forever
     if opt.web:
-        dream_server_loop(gen, opt.host, opt.port, opt.outdir)
+        dream_server_loop(gen, opt.host, opt.port, opt.outdir, gfpgan)
         sys.exit(0)
 
     main_loop(gen, opt, infile)
@@ -113,6 +135,8 @@ def main_loop(gen, opt, infile):
         name_max = 255
 
     while not done:
+        operation = 'generate'   # default operation, alternative is 'postprocess'
+        
         try:
             command = get_next_command(infile)
         except EOFError:
@@ -133,10 +157,27 @@ def main_loop(gen, opt, infile):
         if command.startswith(
             '!dream'
         ):   # in case a stored prompt still contains the !dream command
-            command.replace('!dream','',1)
+            command = command.replace('!dream ','',1)
 
+        if command.startswith(
+                '!fix'
+        ):
+            command = command.replace('!fix ','',1)
+            operation = 'postprocess'
+            
         if opt.parse_cmd(command) is None:
             continue
+
+        if opt.init_img:
+            try:
+                oldargs    = metadata_from_png(opt.init_img)
+                opt.prompt = oldargs.prompt
+                print(f'>> Retrieved old prompt "{opt.prompt}" from {opt.init_img}')
+            except AttributeError:
+                pass
+            except KeyError:
+                pass
+
         if len(opt.prompt) == 0:
             print('\nTry again with a prompt!')
             continue
@@ -147,7 +188,7 @@ def main_loop(gen, opt, infile):
         if not opt.height:
             opt.height = model_config.height
         
-        # retrieve previous value!
+        # retrieve previous value of init image if requested
         if opt.init_img is not None and re.match('^-\\d+$', opt.init_img):
             try:
                 opt.init_img = last_results[int(opt.init_img)][0]
@@ -158,7 +199,8 @@ def main_loop(gen, opt, infile):
                 opt.init_img = None
                 continue
 
-        if opt.seed is not None and opt.seed < 0:   # retrieve previous value!
+        # retrieve previous valueof seed if requested
+        if opt.seed is not None and opt.seed < 0:   
             try:
                 opt.seed = last_results[opt.seed][1]
                 print(f'>> Reusing previous seed {opt.seed}')
@@ -167,7 +209,9 @@ def main_loop(gen, opt, infile):
                 opt.seed = None
                 continue
 
-        # TODO - move this into a module
+        if opt.strength is None:
+            opt.strength = 0.75 if opt.out_direction is None else 0.83
+
         if opt.with_variations is not None:
             # shotgun parsing, woo
             parts = []
@@ -215,21 +259,24 @@ def main_loop(gen, opt, infile):
         # Here is where the images are actually generated!
         last_results = []
         try:
-            file_writer = PngWriter(current_outdir)
-            prefix = file_writer.unique_prefix()
-            results = []  # list of filename, prompt pairs
+            file_writer      = PngWriter(current_outdir)
+            prefix           = file_writer.unique_prefix()
+            results          = []  # list of filename, prompt pairs
             grid_images      = dict()  # seed -> Image, only used if `opt.grid`
             prior_variations = opt.with_variations or []
-            first_seed       = opt.seed
 
-            def image_writer(image, seed, upscaled=False):
+            def image_writer(image, seed, upscaled=False, first_seed=None):
+                # note the seed is the seed of the current image
+                # the first_seed is the original seed that noise is added to
+                # when the -v switch is used to generate variations
                 path = None
-                nonlocal first_seed
                 nonlocal prior_variations
                 if opt.grid:
                     grid_images[seed] = image
                 else:
-                    if upscaled and opt.save_original:
+                    if operation == 'postprocess':
+                        filename = choose_postprocess_name(opt.prompt)
+                    elif upscaled and opt.save_original:
                         filename = f'{prefix}.{seed}.postprocessed.png'
                     else:
                         filename = f'{prefix}.{seed}.png'
@@ -240,6 +287,8 @@ def main_loop(gen, opt, infile):
                         formatted_dream_prompt = opt.dream_prompt_str(seed=first_seed)
                     elif len(prior_variations) > 0:
                         formatted_dream_prompt = opt.dream_prompt_str(seed=first_seed)
+                    elif operation == 'postprocess':
+                        formatted_dream_prompt = '!fix '+opt.dream_prompt_str(seed=seed)
                     else:
                         formatted_dream_prompt = opt.dream_prompt_str(seed=seed)
                     path = file_writer.save_image_and_prompt_to_png(
@@ -257,12 +306,16 @@ def main_loop(gen, opt, infile):
                         results.append([path, formatted_dream_prompt])
                 last_results.append([path, seed])
 
-            catch_ctrl_c = infile is None # if running interactively, we catch keyboard interrupts
-            gen.prompt2image(
-                image_callback=image_writer,
-                catch_interrupts=catch_ctrl_c,
-                **vars(opt)
-            )
+            if operation == 'generate':
+                catch_ctrl_c = infile is None # if running interactively, we catch keyboard interrupts
+                gen.prompt2image(
+                    image_callback=image_writer,
+                    catch_interrupts=catch_ctrl_c,
+                    **vars(opt)
+                )
+            elif operation == 'postprocess':
+                print(f'>> fixing {opt.prompt}')
+                do_postprocess(gen,opt,image_writer)
 
             if opt.grid and len(grid_images) > 0:
                 grid_img   = make_grid(list(grid_images.values()))
@@ -300,6 +353,47 @@ def main_loop(gen, opt, infile):
 
     print('goodbye!')
 
+def do_postprocess (gen, opt, callback):
+    file_path = opt.prompt     # treat the prompt as the file pathname
+    if os.path.dirname(file_path) == '': #basename given
+        file_path = os.path.join(opt.outdir,file_path)
+    if not os.path.exists(file_path):
+        print(f'* file {file_path} does not exist')
+        return
+
+    tool=None
+    if opt.gfpgan_strength > 0:
+        tool = opt.facetool
+    elif opt.embiggen:
+        tool = 'embiggen'
+    elif opt.upscale:
+        tool = 'upscale'
+    elif opt.out_direction:
+        tool = 'outpaint'
+    opt.save_original = True # do not overwrite old image!
+    return gen.apply_postprocessor(
+        image_path      = opt.prompt,
+        tool            = tool,
+        gfpgan_strength = opt.gfpgan_strength,
+        codeformer_fidelity = opt.codeformer_fidelity,
+        save_original       = opt.save_original,
+        upscale             = opt.upscale,
+        out_direction       = opt.out_direction,
+        callback            = callback,
+        opt                 = opt,
+        )
+    
+def choose_postprocess_name(original_filename):
+    basename,_ = os.path.splitext(os.path.basename(original_filename))
+    if re.search('\d+\.\d+$',basename):
+        return f'{basename}.fixed.png'
+    match = re.search('(\d+\.\d+)\.fixed(-(\d+))?$',basename) 
+    if match:
+        counter  = match.group(3) or 0
+        return '{prefix}-{counter:02d}.png'.format(prefix=match.group(1), counter=int(counter)+1)
+    else:
+        return f'{basename}.fixed.png'
+        
 
 def get_next_command(infile=None) -> str:  # command string
     if infile is None:
@@ -314,7 +408,7 @@ def get_next_command(infile=None) -> str:  # command string
             print(f'#{command}')
     return command
 
-def dream_server_loop(gen, host, port, outdir):
+def dream_server_loop(gen, host, port, outdir, gfpgan):
     print('\n* --web was specified, starting web server...')
     # Change working directory to the stable-diffusion directory
     os.chdir(
@@ -324,6 +418,10 @@ def dream_server_loop(gen, host, port, outdir):
     # Start server
     DreamServer.model  = gen # misnomer in DreamServer - this is not the model you are looking for
     DreamServer.outdir = outdir
+    DreamServer.gfpgan_model_exists = False
+    if gfpgan is not None:
+        DreamServer.gfpgan_model_exists = gfpgan.gfpgan_model_exists
+
     dream_server = ThreadingDreamServer((host, port))
     print(">> Started Stable Diffusion dream server!")
     if host == '0.0.0.0':
@@ -340,6 +438,16 @@ def dream_server_loop(gen, host, port, outdir):
 
     dream_server.server_close()
 
+def write_log_message(results, log_path):
+    """logs the name of the output image, prompt, and prompt args to the terminal and log file"""
+    global output_cntr
+    log_lines = [f'{path}: {prompt}\n' for path, prompt in results]
+    for l in log_lines:
+        output_cntr += 1
+        print(f'[{output_cntr}] {l}',end='')
+
+    with open(log_path, 'a', encoding='utf-8') as file:
+        file.writelines(log_lines)
 
 if __name__ == '__main__':
     main()

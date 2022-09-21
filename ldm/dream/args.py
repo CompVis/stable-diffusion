@@ -74,9 +74,10 @@ To retrieve a (series of) opt objects corresponding to the metadata, do this:
  opt_list = metadata_loads(metadata)
 
 The metadata should be pulled out of the PNG image. pngwriter has a method
-retrieve_metadata that will do this.
+retrieve_metadata that will do this, or you can do it in one swell foop
+with metadata_from_png():
 
-
+ opt_list = metadata_from_png('/path/to/image_file.png')
 """
 
 import argparse
@@ -87,6 +88,7 @@ import hashlib
 import os
 import copy
 import base64
+import ldm.dream.pngwriter
 from ldm.dream.conditioning import split_weighted_subprompts
 
 SAMPLER_CHOICES = [
@@ -208,10 +210,16 @@ class Args(object):
         # esrgan-specific parameters
         if a['upscale']:
             switches.append(f'-U {" ".join([str(u) for u in a["upscale"]])}')
+
+        # embiggen parameters
         if a['embiggen']:
             switches.append(f'--embiggen {" ".join([str(u) for u in a["embiggen"]])}')
         if a['embiggen_tiles']:
             switches.append(f'--embiggen_tiles {" ".join([str(u) for u in a["embiggen_tiles"]])}')
+
+        # outpainting parameters
+        if a['out_direction']:
+            switches.append(f'-D {" ".join([str(u) for u in a["out_direction"]])}')
         if a['with_variations']:
             formatted_variations = ','.join(f'{seed}:{weight}' for seed, weight in (a["with_variations"]))
             switches.append(f'-V {formatted_variations}')
@@ -370,16 +378,21 @@ class Args(object):
             type=str,
             help='Path to a pre-trained embedding manager checkpoint - can only be set on command line',
         )
-        # GFPGAN related args
+        # Restoration related args
         postprocessing_group.add_argument(
-            '--gfpgan_bg_upsampler',
-            type=str,
-            default='realesrgan',
-            help='Background upsampler. Default: realesrgan. Options: realesrgan, none.',
-
+            '--no_restore',
+            dest='restore',
+            action='store_false',
+            help='Disable face restoration with GFPGAN or codeformer',
         )
         postprocessing_group.add_argument(
-            '--gfpgan_bg_tile',
+            '--no_upscale',
+            dest='esrgan',
+            action='store_false',
+            help='Disable upscaling with ESRGAN',
+        )
+        postprocessing_group.add_argument(
+            '--esrgan_bg_tile',
             type=int,
             default=400,
             help='Tile size for background sampler, 0 for no tile during testing. Default: 400.',
@@ -419,7 +432,10 @@ class Args(object):
     # This creates the parser that processes commands on the dream> command line
     def _create_dream_cmd_parser(self):
         parser = argparse.ArgumentParser(
-            description='Example: dream> a fantastic alien landscape -W1024 -H960 -s100 -n12'
+            description="""
+            Generate example: dream> a fantastic alien landscape -W576 -H512 -s60 -n4
+            Postprocess example: dream> !pp 0000045.4829112.png -G1 -U4 -ft codeformer
+            """
         )
         render_group     = parser.add_argument_group('General rendering')
         img2img_group    = parser.add_argument_group('Image-to-image and inpainting')
@@ -538,10 +554,19 @@ class Args(object):
             help='Strength for noising/unnoising. 0.0 preserves image exactly, 1.0 replaces it completely',
             default=0.75,
         )
+        img2img_group.add_argument(
+            '-D',
+            '--out_direction',
+            nargs='+',
+            type=str,
+            metavar=('direction', 'pixels'),
+            help='Direction to extend the given image (left|right|top|bottom). If a distance pixel value is not specified it defaults to half the image size'
+        )
         postprocessing_group.add_argument(
             '-ft',
             '--facetool',
             type=str,
+            default='gfpgan',
             help='Select the face restoration AI to use: gfpgan, codeformer',
         )
         postprocessing_group.add_argument(
@@ -549,7 +574,7 @@ class Args(object):
             '--gfpgan_strength',
             type=float,
             help='The strength at which to apply the GFPGAN model to the result, in order to improve faces.',
-            default=0,
+            default=0.0,
         )
         postprocessing_group.add_argument(
             '-cf',
@@ -701,6 +726,15 @@ def metadata_dumps(opt,
 
     return metadata
 
+def metadata_from_png(png_file_path):
+    '''
+    Given the path to a PNG file created by dream.py, retrieves
+    an Args object containing the image metadata
+    '''
+    meta = ldm.dream.pngwriter.retrieve_metadata(png_file_path)
+    opts = metadata_loads(meta)
+    return opts[0]
+
 def metadata_loads(metadata):
     '''
     Takes the dictionary corresponding to RFC266 (https://github.com/lstein/stable-diffusion/issues/266)
@@ -714,8 +748,10 @@ def metadata_loads(metadata):
             images = [metadata['sd-metadata']['image']]
         for image in images:
             # repack the prompt and variations
-            image['prompt']     = ','.join([':'.join([x['prompt'],   str(x['weight'])]) for x in image['prompt']])
-            image['variations'] = ','.join([':'.join([str(x['seed']),str(x['weight'])]) for x in image['variations']])
+            if 'prompt' in image:
+                image['prompt']     = ','.join([':'.join([x['prompt'],   str(x['weight'])]) for x in image['prompt']])
+            if 'variations' in image:
+                image['variations'] = ','.join([':'.join([str(x['seed']),str(x['weight'])]) for x in image['variations']])
             # fix a bit of semantic drift here
             image['sampler_name']=image.pop('sampler')
             opt = Args()
