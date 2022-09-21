@@ -22,7 +22,7 @@ def log_txt_as_img(wh, xc, size=10):
     for bi in range(b):
         txt = Image.new("RGB", wh, color="white")
         draw = ImageDraw.Draw(txt)
-        font = ImageFont.truetype('data/DejaVuSans.ttf', size=size)
+        font = ImageFont.load_default()
         nc = int(40 * (wh[0] / 256))
         lines = "\n".join(xc[bi][start:start + nc] for start in range(0, len(xc[bi]), nc))
 
@@ -75,14 +75,14 @@ def count_params(model, verbose=False):
     return total_params
 
 
-def instantiate_from_config(config):
+def instantiate_from_config(config, **kwargs):
     if not "target" in config:
         if config == '__is_first_stage__':
             return None
         elif config == "__is_unconditional__":
             return None
         raise KeyError("Expected key `target` to instantiate.")
-    return get_obj_from_str(config["target"])(**config.get("params", dict()))
+    return get_obj_from_str(config["target"])(**config.get("params", dict()), **kwargs)
 
 
 def get_obj_from_str(string, reload=False):
