@@ -94,7 +94,7 @@ While that is downloading, open a Terminal and run the following commands:
 
 ```{.bash .annotate title="local repo setup"}
 # clone the repo
-git clone https://github.com/lstein/stable-diffusion.git
+git clone https://github.com/invoke-ai/InvokeAI.git
 cd stable-diffusion
 
 # wait until the checkpoint file has downloaded, then proceed
@@ -186,7 +186,7 @@ what I did until I switched to miniforge. However, I have another Mac that works
 just fine with Anaconda. If you can't get it to work, please search a little
 first because many of the errors will get posted and solved. If you can't find a
 solution please
-[create an issue](https://github.com/lstein/stable-diffusion/issues).
+[create an issue](https://github.com/invoke-ai/InvokeAI/issues).
 
 One debugging step is to update to the latest version of PyTorch nightly.
 
@@ -395,7 +395,7 @@ python scripts/preload_models.py
     ```
 
 This fork already includes a fix for this in
-[environment-mac.yaml](https://github.com/lstein/stable-diffusion/blob/main/environment-mac.yaml).
+[environment-mac.yaml](https://github.com/invoke-ai/InvokeAI/blob/main/environment-mac.yaml).
 
 ---
 
@@ -480,9 +480,9 @@ C.
 ### I just got Rickrolled! Do I have a virus?
 
 You don't have a virus. It's part of the project. Here's
-[Rick](https://github.com/lstein/stable-diffusion/blob/main/assets/rick.jpeg)
+[Rick](https://github.com/invoke-ai/InvokeAI/blob/main/assets/rick.jpeg)
 and here's
-[the code](https://github.com/lstein/stable-diffusion/blob/69ae4b35e0a0f6ee1af8bb9a5d0016ccb27e36dc/scripts/txt2img.py#L79)
+[the code](https://github.com/invoke-ai/InvokeAI/blob/69ae4b35e0a0f6ee1af8bb9a5d0016ccb27e36dc/scripts/txt2img.py#L79)
 that swaps him in. It's a NSFW filter, which IMO, doesn't work very good (and we
 call this "computer vision", sheesh).
 
@@ -510,7 +510,7 @@ return torch.layer_norm(input, normalized_shape, weight, bias, eps, torch.backen
 RuntimeError: view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead.
 ```
 
-Update to the latest version of lstein/stable-diffusion. We were patching
+Update to the latest version of invoke-ai/InvokeAI. We were patching
 pytorch but we found a file in stable-diffusion that we could change instead.
 This is a 32-bit vs 16-bit problem.
 

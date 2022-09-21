@@ -7,7 +7,7 @@ title: Windows
 ## **Notebook install (semi-automated)**
 
 We have a
-[Jupyter notebook](https://github.com/lstein/stable-diffusion/blob/main/notebooks/Stable-Diffusion-local-Windows.ipynb)
+[Jupyter notebook](https://github.com/invoke-ai/InvokeAI/blob/main/notebooks/Stable-Diffusion-local-Windows.ipynb)
 with cell-by-cell installation steps. It will download the code in this repo as
 one of the steps, so instead of cloning this repo, simply download the notebook
 from the link above and load it up in VSCode (with the appropriate extensions
@@ -15,7 +15,7 @@ installed)/Jupyter/JupyterLab and start running the cells one-by-one.
 
 Note that you will need NVIDIA drivers, Python 3.10, and Git installed
 beforehand - simplified
-[step-by-step instructions](https://github.com/lstein/stable-diffusion/wiki/Easy-peasy-Windows-install)
+[step-by-step instructions](https://github.com/invoke-ai/InvokeAI/wiki/Easy-peasy-Windows-install)
 are available in the wiki (you'll only need steps 1, 2, & 3 ).
 
 ## **Manual Install**
@@ -23,7 +23,7 @@ are available in the wiki (you'll only need steps 1, 2, & 3 ).
 ### **pip**
 
 See
-[Easy-peasy Windows install](https://github.com/lstein/stable-diffusion/wiki/Easy-peasy-Windows-install)
+[Easy-peasy Windows install](https://github.com/invoke-ai/InvokeAI/wiki/Easy-peasy-Windows-install)
 in the wiki
 
 ---
@@ -40,7 +40,7 @@ in the wiki
 4. Run the command:
 
     ```batch
-    git clone https://github.com/lstein/stable-diffusion.git
+    git clone https://github.com/invoke-ai/InvokeAI.git
     ```
 
     This will create stable-diffusion folder where you will follow the rest of
@@ -117,7 +117,7 @@ in the wiki
     then launch the dream script (step 9).
 
     **Note:** Tildebyte has written an alternative
-    ["Easy peasy Windows install"](https://github.com/lstein/stable-diffusion/wiki/Easy-peasy-Windows-install)
+    ["Easy peasy Windows install"](https://github.com/invoke-ai/InvokeAI/wiki/Easy-peasy-Windows-install)
     which uses the Windows Powershell and pew. If you are having trouble with
     Anaconda on Windows, give this a try (or try it first!)
 

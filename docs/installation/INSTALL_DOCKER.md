@@ -26,7 +26,7 @@ wget https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pt
 ```
 
 ### Install [Docker](https://github.com/santisbon/guides#docker)  
-On the Docker Desktop app, go to Preferences, Resources, Advanced. Increase the CPUs and Memory to avoid this [Issue](https://github.com/lstein/stable-diffusion/issues/342). You may need to increase Swap and Disk image size too.  
+On the Docker Desktop app, go to Preferences, Resources, Advanced. Increase the CPUs and Memory to avoid this [Issue](https://github.com/invoke-ai/InvokeAI/issues/342). You may need to increase Swap and Disk image size too.  
 
 ## Setup
 
