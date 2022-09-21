@@ -250,11 +250,12 @@ def main_loop(gen, opt, infile):
             results          = []  # list of filename, prompt pairs
             grid_images      = dict()  # seed -> Image, only used if `opt.grid`
             prior_variations = opt.with_variations or []
-            first_seed       = opt.seed
 
-            def image_writer(image, seed, upscaled=False):
+            def image_writer(image, seed, upscaled=False, first_seed=None):
+                # note the seed is the seed of the current image
+                # the first_seed is the original seed that noise is added to
+                # when the -v switch is used to generate variations
                 path = None
-                nonlocal first_seed
                 nonlocal prior_variations
                 if opt.grid:
                     grid_images[seed] = image

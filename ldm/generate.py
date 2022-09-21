@@ -765,10 +765,10 @@ class Generate:
         m, u  = model.load_state_dict(sd, strict=False)
 
         if self.precision == 'float16':
-            print('Using faster float16 precision')
+            print('>> Using faster float16 precision')
             model.to(torch.float16)
         else:
-            print('Using more accurate float32 precision')
+            print('>> Using more accurate float32 precision')
 
         model.to(self.device)
         model.eval()

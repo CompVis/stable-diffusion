@@ -51,6 +51,7 @@ class Generator():
 
         results             = []
         seed                = seed if seed else self.new_seed()
+        first_seed          = seed
         seed, initial_noise = self.generate_initial_noise(seed, width, height)
         with scope(self.model.device.type), self.model.ema_scope():
             for n in trange(iterations, desc='Generating'):
@@ -71,7 +72,7 @@ class Generator():
                 image = make_image(x_T)
                 results.append([image, seed])
                 if image_callback is not None:
-                    image_callback(image, seed)
+                    image_callback(image, seed, first_seed=first_seed)
                 seed = self.new_seed()
         return results
     
