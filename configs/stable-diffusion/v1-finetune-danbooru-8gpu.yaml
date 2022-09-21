@@ -84,7 +84,6 @@ data:
     normalize: true
     caption_shuffle: true
 
-
 lightning:
   modelcheckpoint:
     params:
