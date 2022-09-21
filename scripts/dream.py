@@ -8,6 +8,7 @@ import shlex
 import copy
 import warnings
 import time
+sys.path.append('.')    # corrects a weird problem on Macs
 import ldm.dream.readline
 from ldm.dream.args import Args, metadata_dumps, metadata_from_png
 from ldm.dream.pngwriter import PngWriter
@@ -36,7 +37,6 @@ def main():
         sys.exit(-1)
 
     print('* Initializing, be patient...\n')
-    sys.path.append('.')
     from ldm.generate import Generate
 
     # these two lines prevent a horrible warning message from appearing
