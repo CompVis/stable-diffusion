@@ -47,7 +47,7 @@ def main():
     # Loading Face Restoration and ESRGAN Modules
     try:
         gfpgan, codeformer, esrgan = None, None, None
-        from ldm.dream.restoration.base import Restoration
+        from ldm.dream.restoration import Restoration
         restoration = Restoration(opt.gfpgan_dir, opt.gfpgan_model_path, opt.esrgan_bg_tile)
         if opt.restore:
             gfpgan, codeformer = restoration.load_face_restore_models()
