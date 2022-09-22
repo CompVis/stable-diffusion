@@ -1,10 +1,13 @@
 #!/bin/bash
 
-set -e
+echo Parametrization and initialization.
+#export prompt="A close up photographic portrait of a young woman with uniformly colored hair."
+export prompt="An armored Mark Zuckerberg fighting off bloody tentacles in the jungle."
+lambda=18
+cp basic_inoculation_uniformly/SD*.* inoculations/ 
 
-#export prompt="A woman with many eyes."
-export prompt="A close up photographic portrait of a young woman with uniformly colored hair."
-lambda=14
+
+set -e
 
 touch empty_file
 rm empty_file
@@ -19,7 +22,8 @@ rm goodbad.py
 touch goodbad.py
 echo "good = []" >> goodbad.py
 echo "bad = []" >> goodbad.py
-python minisd.py
+#python minisd.py
+./minisd.sh
     #sentinel=${RANDOM}
     #touch SD_image_${sentinel}.png
     #touch SD_latent_${sentinel}.txt
@@ -42,7 +46,8 @@ do
     for kk in `seq $lambda`
     do
       echo "generating image $kk / $lambda"
-      python minisd.py
+      #python minisd.py
+      ./minisd.sh
     done
     list_of_four_images="`ls -ctr SD*_image_*.png | tail -n $lambda`"
 #    my_new_list=""
