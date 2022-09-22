@@ -10,6 +10,14 @@ Then
 and follow requests.
 The code is not very user-friendly, if there are users I'll do better.
 
+Scripts:
+- archimulti_minisd.sh  runs a selection of prompts, for testing purpose.
+- edit.sh               will not work on your install: this is a convenience script for editing the code inside the conda environment, you have to update the path.
+- inoculate_evo_sd.sh   same as multi_minisd.sh, but not from scratch. You have to check the code for understanding, or ping me.
+- minisd.sh             runs stable diffusion,
+- multi_minisd.sh       main script. Run stable diffusion multiple times, and asks for your feedback.
+- multiminisd.sh:       run plenty of tests with various genetic methods. Used for tuning. Takes forever to run.
+- view_history.sh:      view what is in progress and put the last generated images in a single output.png
 
 
 
