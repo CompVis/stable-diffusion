@@ -3,7 +3,7 @@
 # !!   "id": "c442uQJ_gUgy"
 # !! }}
 """
-# **Deforum Stable Diffusion v0.4 (DEV)**
+# **Deforum Stable Diffusion v0.4**
 [Stable Diffusion](https://github.com/CompVis/stable-diffusion) by Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer and the [Stability.ai](https://stability.ai/) Team. [K Diffusion](https://github.com/crowsonkb/k-diffusion) by [Katherine Crowson](https://twitter.com/RiversHaveWings). You need to get the ckpt file and put it on your Google Drive first to use this. It can be downloaded from [HuggingFace](https://huggingface.co/CompVis/stable-diffusion).
 
 Notebook by [deforum](https://discord.gg/upmXXsrwZc)
@@ -29,8 +29,8 @@ print(sub_p_res)
 
 # %%
 # !! {"metadata":{
-# !!   "id": "TxIOPT0G5Lx1",
-# !!   "cellView": "form"
+# !!   "cellView": "form",
+# !!   "id": "TxIOPT0G5Lx1"
 # !! }}
 #@markdown **Model and Output Paths**
 # ask for the link
@@ -80,7 +80,7 @@ if setup_environment:
     all_process = [
         ['pip', 'install', 'torch==1.12.1+cu113', 'torchvision==0.13.1+cu113', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'],
         ['pip', 'install', 'omegaconf==2.2.3', 'einops==0.4.1', 'pytorch-lightning==1.7.4', 'torchmetrics==0.9.3', 'torchtext==0.13.1', 'transformers==4.21.2', 'kornia==0.6.7'],
-        ['git', 'clone', 'https://github.com/deforum/stable-diffusion/tree/dev'],
+        ['git', 'clone', '-b', 'dev', 'https://github.com/deforum/stable-diffusion'],
         ['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'],
         ['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'],
         ['pip', 'install', 'accelerate', 'ftfy', 'jsonmerge', 'matplotlib', 'resize-right', 'timm', 'torchdiffeq'],
@@ -147,13 +147,6 @@ from k_diffusion.external import CompVisDenoiser
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
-
-def patch_conv(cls):
-        init = cls.__init__
-        def __init__(self, *args, **kwargs):
-                return init(self, *args, **kwargs, padding_mode='circular')
-        cls.__init__ = __init__
-        
 
 def sanitize(prompt):
     whitelist = set('abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ')
@@ -431,9 +424,7 @@ def make_callback(sampler_name, dynamic_threshold=None, static_threshold=None, m
         s = np.max(np.append(s,1.0))
         torch.clamp_(img, -1*s, s)
         torch.FloatTensor.div_(img, s)
-        #if seamless:
-            #print(">> changed to seamless tiling mode")
-           # patch_conv(torch.nn.Conv2d)
+
     # Callback for samplers in the k-diffusion repo, called thus:
     #   callback({'x': x, 'i': i, 'sigma': sigmas[i], 'sigma_hat': sigmas[i], 'denoised': denoised})
     def k_callback_(args_dict):
@@ -446,9 +437,6 @@ def make_callback(sampler_name, dynamic_threshold=None, static_threshold=None, m
             is_masked = torch.logical_and(mask >= mask_schedule[args_dict['i']], mask != 0 )
             new_img = init_noise * torch.where(is_masked,1,0) + args_dict['x'] * torch.where(is_masked,0,1)
             args_dict['x'].copy_(new_img)
-        #if seamless:
-            #print(">> changed to seamless tiling mode")
-            #patch_conv(torch.nn.Conv2d)
 
     # Function that is called on the image (img) and step (i) at each step
     def img_callback_(img, i):
@@ -540,8 +528,6 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
     os.makedirs(args.outdir, exist_ok=True)
 
     sampler = PLMSSampler(model) if args.sampler == 'plms' else DDIMSampler(model)
-    if seamless:
-        print(">> changed to seamless tiling mode")
     model_wrap = CompVisDenoiser(model)
     batch_size = args.n_samples
     prompt = args.prompt
@@ -680,29 +666,19 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
 
 # %%
 # !! {"metadata":{
-# !!   "id": "CIUJ7lWI4v53",
-# !!   "cellView": "form"
+# !!   "cellView": "form",
+# !!   "id": "CIUJ7lWI4v53"
 # !! }}
-#@markdown **Select Model**
-model_config = "custom" #@param ["custom","v1-inference.yaml"]
+#@markdown **Select and Load Model**
+
+model_config = "v1-inference.yaml" #@param ["custom","v1-inference.yaml"]
 model_checkpoint =  "sd-v1-4.ckpt" #@param ["custom","sd-v1-4-full-ema.ckpt","sd-v1-4.ckpt","sd-v1-3-full-ema.ckpt","sd-v1-3.ckpt","sd-v1-2-full-ema.ckpt","sd-v1-2.ckpt","sd-v1-1-full-ema.ckpt","sd-v1-1.ckpt"]
-custom_config_path = "/content/stable-diffusion/configs/stable-diffusion/v1-inference.yaml" #@param {type:"string"}
+custom_config_path = "" #@param {type:"string"}
 custom_checkpoint_path = "" #@param {type:"string"}
 
 load_on_run_all = True #@param {type: 'boolean'}
 half_precision = True # check
 check_sha256 = True #@param {type:"boolean"}
-
-#@markdown **Textual Inversion**
-use_textual_inversion = 
-embedding_type = ".bin" #@param [".bin",".pt"]
-embedding_path= "/content/drive/MyDrive/AI/models/character-pingu.bin" #@param {type:"string"}
-
-#@markdown **Enable Seamless Animations**
-seamless = False #@param {type:"boolean"}
-if seamless:
-  #print(">> changed to seamless tiling mode")
-  patch_conv(torch.nn.Conv2d)
 
 model_map = {
     "sd-v1-4-full-ema.ckpt": {'sha256': '14749efc0ae8ef0329391ad4436feb781b402f4fece4883c7ad8d10556d8a36a'},
@@ -714,25 +690,6 @@ model_map = {
     "sd-v1-1-full-ema.ckpt": {'sha256': 'efdeb5dc418a025d9a8cc0a8617e106c69044bc2925abecc8a254b2910d69829'},
     "sd-v1-1.ckpt": {'sha256': '86cd1d3ccb044d7ba8db743d717c9bac603c4043508ad2571383f954390f3cea'}
 }
-
-
-import shutil
-
-originalpt = r'/content/stable-diffusion/ldm/modules/embedding_managerpt.py'
-originalbin = r'/content/stable-diffusion/ldm/modules/embedding_managerbin.py'
-
-if embedding_type == ".pt":
-  file_path = "/content/stable-diffusion/ldm/modules/embedding_manager.py"
-  if os.path.isfile(file_path):
-    os.remove(file_path)
-    shutil.copyfile(originalpt, file_path)
-    print('using .pt embedding')
-elif embedding_type == ".bin":
-  file_path = "/content/stable-diffusion/ldm/modules/embedding_manager.py"
-  if os.path.isfile(file_path):
-    os.remove(file_path)
-    shutil.copyfile(originalbin, file_path)
-    print('using .bin embedding')
 
 # config path
 ckpt_config_path = custom_config_path if model_config == "custom" else os.path.join(models_path, model_config)
@@ -767,8 +724,6 @@ if check_sha256 and model_checkpoint != "custom" and ckpt_valid:
 if ckpt_valid:
     print(f"Using ckpt: {ckpt_path}")
 
-#@markdown **Load Model**
-
 def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_precision=True):
     map_location = "cuda" #@param ["cpu", "cuda"]
     print(f"Loading model from {ckpt}")
@@ -777,9 +732,6 @@ def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_prec
         print(f"Global Step: {pl_sd['global_step']}")
     sd = pl_sd["state_dict"]
     model = instantiate_from_config(config.model)
-    if embedding_path is not None:
-        model.embedding_manager.load(embedding_path)
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     m, u = model.load_state_dict(sd, strict=False)
     if len(m) > 0 and verbose:
         print("missing keys:")
@@ -796,13 +748,8 @@ def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_prec
     return model
 
 if load_on_run_all and ckpt_valid:
-    if seamless:
-          print(">> changed to seamless tiling mode")
-          patch_conv.__init__(torch.nn.Conv2d)
     local_config = OmegaConf.load(f"{ckpt_config_path}")
     model = load_model_from_config(local_config, f"{ckpt_path}", half_precision=half_precision)
-    if embedding_path is not None:
-        model.embedding_manager.load(embedding_path)
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
 
@@ -824,14 +771,14 @@ if load_on_run_all and ckpt_valid:
 
 # %%
 # !! {"metadata":{
-# !!   "id": "8HJN2TE3vh-J",
-# !!   "cellView": "form"
+# !!   "cellView": "form",
+# !!   "id": "8HJN2TE3vh-J"
 # !! }}
 
 def DeforumAnimArgs():
 
     #@markdown ####**Animation:**
-    animation_mode = '3D' #@param ['None', '2D', '3D', 'Video Input', 'Interpolation'] {type:'string'}
+    animation_mode = 'None' #@param ['None', '2D', '3D', 'Video Input', 'Interpolation'] {type:'string'}
     max_frames = 1000 #@param {type:"number"}
     border = 'wrap' #@param ['wrap', 'replicate'] {type:'string'}
 
@@ -870,6 +817,7 @@ def DeforumAnimArgs():
     #@markdown ####**Video Input:**
     video_init_path ='/content/video_in.mp4'#@param {type:"string"}
     extract_nth_frame = 1#@param {type:"number"}
+    overwrite_extracted_frames = True #@param {type:"boolean"}
 
     #@markdown ####**Interpolation:**
     interpolate_key_frames = False #@param {type:"boolean"}
@@ -934,6 +882,7 @@ def parse_key_frames(string, prompt_parser=None):
         raise RuntimeError('Key Frame string not correctly formatted')
     return frames
 
+
 # %%
 # !! {"metadata":{
 # !!   "id": "63UOJvU3xdPS"
@@ -949,16 +898,16 @@ def parse_key_frames(string, prompt_parser=None):
 # !! }}
 
 prompts = [
-    "a beautiful forest by Asher Brown Durand, * trending on Artstation", #the first prompt I want
-    "a beautiful portrait of a woman by Artgerm, * trending on Artstation", #the second prompt I want
+    "a beautiful forest by Asher Brown Durand, trending on Artstation", #the first prompt I want
+    "a beautiful portrait of a woman by Artgerm, trending on Artstation", #the second prompt I want
     #"the third prompt I don't want it I commented it with an",
 ]
 
 animation_prompts = {
-    0: " * ",
-    20: "a beautiful banana * , trending on Artstation",
-    30: "a beautiful coconut * , trending on Artstation",
-    40: "a beautiful durian * , trending on Artstation",
+    0: "a beautiful apple, trending on Artstation",
+    20: "a beautiful banana, trending on Artstation",
+    30: "a beautiful coconut, trending on Artstation",
+    40: "a beautiful durian, trending on Artstation",
 }
 
 # %%
@@ -974,7 +923,6 @@ animation_prompts = {
 # !!   "id": "qH74gBWDd2oq",
 # !!   "cellView": "form"
 # !! }}
-#@markdown **Load Settings**
 override_settings_with_file = False #@param {type:"boolean"}
 custom_settings_file = "/content/drive/MyDrive/Settings.txt"#@param {type:"string"}
 
@@ -1004,7 +952,7 @@ def DeforumArgs():
     filename_format = "{timestring}_{index}_{prompt}.png" #@param ["{timestring}_{index}_{seed}.png","{timestring}_{index}_{prompt}.png"]
     seed_behavior = "iter" #@param ["iter","fixed","random"]
     make_grid = False #@param {type:"boolean"}
-    grid_rows = 1 #@param 
+    grid_rows = 2 #@param 
     outdir = get_output_folder(output_path, batch_name)
 
     #@markdown **Init Settings**
@@ -1273,6 +1221,9 @@ def render_animation(args, anim_args):
         # grab prompt for current frame
         args.prompt = prompt_series[frame_idx]
         print(f"{args.prompt} {args.seed}")
+        print(f"Angle: {keys.angle_series[frame_idx]} Zoom: {keys.zoom_series[frame_idx]}")
+        print(f"Tx: {keys.translation_x_series[frame_idx]} Ty: {keys.translation_y_series[frame_idx]} Tz: {keys.translation_z_series[frame_idx]}")
+        print(f"Rx: {keys.rotation_3d_x_series[frame_idx]} Ry: {keys.rotation_3d_y_series[frame_idx]} Rz: {keys.rotation_3d_z_series[frame_idx]}")
 
         # grab init image for current frame
         if using_vid_init:
@@ -1303,6 +1254,28 @@ def render_animation(args, anim_args):
 
         args.seed = next_seed(args)
 
+def vid2frames(video_path, frames_path, n=1, overwrite=True):      
+    if not os.path.exists(frames_path) or overwrite: 
+      try:
+          for f in pathlib.Path(video_in_frame_path).glob('*.jpg'):
+              f.unlink()
+      except:
+          pass
+          
+      vidcap = cv2.VideoCapture(video_path)
+      success,image = vidcap.read()
+      count = 0
+      t=1
+      success = True
+      while success:
+        if count % n == 0:
+            cv2.imwrite(frames_path + os.path.sep + f"{t:05}.jpg" , image)     # save frame as JPEG file
+            t += 1
+        success,image = vidcap.read()
+        count += 1
+      print("Converted %d frames" % count)
+    else: print("Frames already unpacked")
+
 def render_input_video(args, anim_args):
     # create a folder for the video input frames to live in
     video_in_frame_path = os.path.join(args.outdir, 'inputframes') 
@@ -1310,22 +1283,10 @@ def render_input_video(args, anim_args):
     
     # save the video frames from input video
     print(f"Exporting Video Frames (1 every {anim_args.extract_nth_frame}) frames to {video_in_frame_path}...")
-    try:
-        for f in pathlib.Path(video_in_frame_path).glob('*.jpg'):
-            f.unlink()
-    except:
-        pass
-    vf = r'select=not(mod(n\,'+str(anim_args.extract_nth_frame)+'))'
-    subprocess.run([
-        'ffmpeg', '-i', f'{anim_args.video_init_path}', 
-        '-vf', f'{vf}', '-vsync', 'vfr', '-q:v', '2', 
-        '-loglevel', 'error', '-stats',  
-        os.path.join(video_in_frame_path, '%04d.jpg')
-    ], stdout=subprocess.PIPE).stdout.decode('utf-8')
+    vid2frames(anim_args.video_init_path, video_in_frame_path, anim_args.extract_nth_frame, anim_args.overwrite_extracted_frames)
 
     # determine max frames from length of input frames
     anim_args.max_frames = len([f for f in pathlib.Path(video_in_frame_path).glob('*.jpg')])
-
     args.use_init = True
     print(f"Loading {anim_args.max_frames} input frames from {video_in_frame_path} and saving video frames to {args.outdir}")
     render_animation(args, anim_args)
@@ -1500,8 +1461,8 @@ else:
 
 # %%
 # !! {"metadata":{
-# !!   "id": "no2jP8HTMBM0",
-# !!   "cellView": "form"
+# !!   "cellView": "form",
+# !!   "id": "no2jP8HTMBM0"
 # !! }}
 skip_video_for_run_all = True #@param {type: 'boolean'}
 fps = 12 #@param {type:"number"}
