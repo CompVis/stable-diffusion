@@ -281,21 +281,23 @@ class StableDiffusionPipeline(DiffusionPipeline):
                         #    z[u] = random.choice([z1[u],z2[u],z3[u],z4[u],z5[u]])
                         nevergrad_optimizer.suggest(z)
 
-                    
+                    z0 = z
                     for i in range(budget):
                         x = nevergrad_optimizer.ask()
-                        z = x.value * np.sqrt(len(x.value)) / np.linalg.norm(x.value)
+                        z = z0 + float(os.environ.get("epsilon", "0.001")) * x.value
+                        z = np.sqrt(len(z)) * z / np.linalg.norm(z)
                         l = loss(z)
                         nevergrad_optimizer.tell(x, l)
                         if np.log2(i+1) == int(np.log2(i+1)):
                           print(f"iteration {i} --> {l}")
                           print("var/variable = ", sum(z**2)/len(z))
                         #z = (1.-epsilon) * z + epsilon * x / np.sqrt(np.sum(x ** 2))
-                        if l < 0.0000001 and os.environ.get("earlystop", "True") in ["true", "True"]:
+                        if l < 0.0000001 and os.environ.get("earlystop", "False") in ["true", "True"]:
                                 print(f"we find proba(bad)={l}")
                                 break
                     x = nevergrad_optimizer.recommend().value
-                    z = x * np.sqrt(len(x)) / np.linalg.norm(x)
+                    z = z0 + float(os.environ.get("epsilon", "0.001")) * x
+                    z = np.sqrt(len(z)) * z / np.linalg.norm(z)
                     latents = torch.from_numpy(z.reshape(latents_intermediate_shape)).float() #.half()
         else:
             if latents.shape != latents_intermediate_shape:

@@ -4,7 +4,16 @@ set -e
 
 #export prompt="A woman with many eyes."
 export prompt="A close up photographic portrait of a young woman with uniformly colored hair."
+# We generate groups of lambda images.
 lambda=14
+# 4 parents are selected.
+export mu=4
+# Do we use early stopping in Nevergrad ?
+export earlystop=True
+# Which Scikit-Learn surrogate model ?
+export skl=tree
+# Which initial range for modifications ?
+export epsilon=0.0001
 
 touch empty_file
 rm empty_file
