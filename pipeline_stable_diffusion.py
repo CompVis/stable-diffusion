@@ -291,7 +291,7 @@ class StableDiffusionPipeline(DiffusionPipeline):
                           print(f"iteration {i} --> {l}")
                           print("var/variable = ", sum(z**2)/len(z))
                         #z = (1.-epsilon) * z + epsilon * x / np.sqrt(np.sum(x ** 2))
-                        if l < 0.0000001 and os.environ.get("earlystop") in ["true", "True"]:
+                        if l < 0.0000001 and os.environ.get("earlystop", "True") in ["true", "True"]:
                                 print(f"we find proba(bad)={l}")
                                 break
                     x = nevergrad_optimizer.recommend().value
