@@ -35,5 +35,6 @@
     "checkpoint": "./models/sd-v1-4.ckpt",
     "use_jpg": false, // set this to save your output in JPG format to save space
     "hide_metadata": false, // set to true if you don"t want your prompt and seed in the PNG output metadata
-    "save_settings": false // set to true if you want a settings file like this saved with every image
+    "save_settings": false, // set to true if you want a settings file like this saved with every image
+    "improve_composition": false // improve images larger than 512x512 by first rendering at 512x512 and then using that result as an init
 }

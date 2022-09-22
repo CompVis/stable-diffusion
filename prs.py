@@ -202,8 +202,11 @@ def do_run(device, model, opt):
     # grid is a leftover from stable, but we use it to give our output file a unique name
     grid_count = thats_numberwang(outpath, opt.batch_name)
 
-    progress_image = "progress.jpg" if opt.filetype == ".jpg" else "progress.png" 
-   
+    progress_image = "progress.jpg" if opt.filetype == ".jpg" else "progress.png"
+
+    if opt.improve_composition == True:
+        opt.n_iter = 1 # TODO: allow multiple iterations when doing improved composition
+    
     if opt.method in K_DIFF_SAMPLERS:
         model_k_wrapped = CompVisDenoiser(model, quantize=True)
         model_k_guidance = KCFGDenoiser(model_k_wrapped)
@@ -223,184 +226,202 @@ def do_run(device, model, opt):
         latent: Tensor = model.get_first_stage_encoding(model.encode_first_stage(image))  # move to latent space
         return latent
     
-    if opt.init_image is not None:
-        init_latent = img_to_latent(opt.W, opt.H, opt.init_image)
-        assert 0. <= opt.strength <= 1., 'can only work with strength in [0.0, 1.0]'
-        t_enc = int(opt.strength * opt.ddim_steps)
-    else:
-        init_latent = None
+    render_left_to_do = True
+    compositional_init = None
+    target_w = opt.W
+    target_h = opt.H
+    while render_left_to_do:
+        if compositional_init != None:
+            opt.init_image = compositional_init
+            opt.W = target_w
+            opt.H = target_h
+            #opt.strength = 0.65 # might make this a separate variable later
+        elif opt.improve_composition == True:
+            opt.W = 512
+            opt.H = 512
+        if opt.init_image is not None:
+            init_latent = img_to_latent(opt.W, opt.H, opt.init_image)
+            assert 0. <= opt.strength <= 1., 'can only work with strength in [0.0, 1.0]'
+            t_enc = int(opt.strength * opt.ddim_steps)
+        else:
+            init_latent = None
 
-    shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
+        shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
 
-    precision_scope = autocast if opt.precision=="autocast" else nullcontext
-    # apple silicon support
-    if device.type == 'mps':
-        precision_scope = nullcontext
+        precision_scope = autocast if opt.precision=="autocast" else nullcontext
+        # apple silicon support
+        if device.type == 'mps':
+            precision_scope = nullcontext
 
-    rand_size = [batch_size, *shape]
-    og_start_code = torch.randn(rand_size, device='cpu').to(device) if device.type == 'mps' else torch.randn(rand_size, device=device)
-    start_code = og_start_code
+        rand_size = [batch_size, *shape]
+        og_start_code = torch.randn(rand_size, device='cpu').to(device) if device.type == 'mps' else torch.randn(rand_size, device=device)
+        start_code = og_start_code
 
-    with torch.no_grad():
-        with precision_scope(device.type):
-            with model.ema_scope():
-                for n in trange(opt.n_iter, desc="Sampling"):
-                    for prompts in tqdm(data, desc="data"):
-                        uc = None
-                        if opt.scale != 1.0:
-                            uc = model.get_learned_conditioning(batch_size * [""])
+        with torch.no_grad():
+            with precision_scope(device.type):
+                with model.ema_scope():
+                    for n in trange(opt.n_iter, desc="Sampling"):
+                        for prompts in tqdm(data, desc="data"):
+                            uc = None
+                            if opt.scale != 1.0:
+                                uc = model.get_learned_conditioning(batch_size * [""])
 
-                        # process the prompt for randomizers and dynamic values
-                        newprompts = []
-                        for prompt in prompts:
-                            prompt = randomize_prompt(prompt)
-                            prompt = dynamic_value(prompt)
-                            newprompts.append(prompt)
-                        prompts = newprompts
+                            # process the prompt for randomizers and dynamic values
+                            newprompts = []
+                            for prompt in prompts:
+                                prompt = randomize_prompt(prompt)
+                                prompt = dynamic_value(prompt)
+                                newprompts.append(prompt)
+                            prompts = newprompts
 
-                        print(f'\nPrompt for this image:\n   {prompts}\n')
-                        # split the prompt if it has : for weighting
-                        normalize_prompt_weights = True
-                        weighted_subprompts = split_weighted_subprompts(prompts[0], normalize_prompt_weights)
+                            print(f'\nPrompt for this image:\n   {prompts}\n')
+                            # split the prompt if it has : for weighting
+                            normalize_prompt_weights = True
+                            weighted_subprompts = split_weighted_subprompts(prompts[0], normalize_prompt_weights)
 
-                        # save a settings file for this image
-                        if opt.save_settings:
-                            save_settings(opt, prompts[0], grid_count)
+                            # save a settings file for this image
+                            if opt.save_settings:
+                                save_settings(opt, prompts[0], grid_count)
 
-                        # sub-prompt weighting used if more than 1
-                        if len(weighted_subprompts) > 1:
-                            c = torch.zeros_like(uc) # i dont know if this is correct.. but it works
-                            for i in range(0, len(weighted_subprompts)):
-                                # note if alpha negative, it functions same as torch.sub
-                                c = torch.add(c, model.get_learned_conditioning(weighted_subprompts[i][0]), alpha=weighted_subprompts[i][1])
-                        else: # just behave like usual
-                            c = model.get_learned_conditioning(prompts)
-                        
-                        if opt.variance != 0.0 and n != 0:
-                            # add a little extra random noise to get varying output with same seed
-                            base_x = og_start_code # torch.randn(rand_size, device=device) * sigmas[0]
-                            torch.manual_seed(opt.variance_seed + n)
-                            target_x = torch.randn(rand_size, device='cpu').to(device) if device.type == 'mps' else torch.randn(rand_size, device=device)
-                            start_code = slerp(device, max(0.0, min(1.0, opt.variance)), base_x, target_x)
-
-                        karras_noise = False
-
-                        if opt.method in NOT_K_DIFF_SAMPLERS:
-                            if init_latent is None:
-                                samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
-                                                                conditioning=c,
-                                                                batch_size=batch_size,
-                                                                shape=shape,
-                                                                verbose=False,
-                                                                unconditional_guidance_scale=opt.scale,
-                                                                unconditional_conditioning=uc,
-                                                                eta=opt.ddim_eta,
-                                                                x_T=start_code)
-                                sigmas = None
-                            else:
-                                # encode (scaled latent)
-                                z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
-                                # decode it
-                                samples_ddim = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
-                                                        unconditional_conditioning=uc,)
-
-                        else:
-                            if opt.method == 'k_dpm_2':
-                                sampling_fn = sample_dpm_2
-                                karras_noise = True
-                            elif opt.method == 'k_dpm_2_ancestral':
-                                sampling_fn = sample_dpm_2_ancestral
-                            elif opt.method == 'k_heun':
-                                sampling_fn = sample_heun
-                                karras_noise = True
-                            elif opt.method == 'k_euler':
-                                sampling_fn = sample_euler
-                                karras_noise = True
-                            elif opt.method == 'k_euler_ancestral':
-                                sampling_fn = sample_euler_ancestral
-                            else:
-                                sampling_fn = sample_lms
-
-                            noise_schedule_sampler_args = {}
-
-                            if karras_noise:
-                                end_karras_ramp_early = False # this is only needed for really low step counts, not going to bother with it right now
-                                def get_premature_sigma_min(
-                                    steps: int,
-                                    sigma_max: float,
-                                    sigma_min_nominal: float,
-                                    rho: float
-                                ) -> float:
-                                    min_inv_rho = sigma_min_nominal ** (1 / rho)
-                                    max_inv_rho = sigma_max ** (1 / rho)
-                                    ramp = (steps-2) * 1/(steps-1)
-                                    sigma_min = (max_inv_rho + ramp * (min_inv_rho - max_inv_rho)) ** rho
-                                    return sigma_min
-
-                                rho = 7.
-                                sigma_max=model_k_wrapped.sigmas[-1].item()
-                                sigma_min_nominal=model_k_wrapped.sigmas[0].item()
-                                premature_sigma_min = get_premature_sigma_min(
-                                    steps=opt.ddim_steps+1,
-                                    sigma_max=sigma_max,
-                                    sigma_min_nominal=sigma_min_nominal,
-                                    rho=rho
-                                )
-                                sigmas = get_sigmas_karras(
-                                    n=opt.ddim_steps,
-                                    sigma_min=premature_sigma_min if end_karras_ramp_early else sigma_min_nominal,
-                                    sigma_max=sigma_max,
-                                    rho=rho,
-                                    device=device,
-                                )
-
-                            else:
-                                sigmas = model_k_wrapped.get_sigmas(opt.ddim_steps)
+                            # sub-prompt weighting used if more than 1
+                            if len(weighted_subprompts) > 1:
+                                c = torch.zeros_like(uc) # i dont know if this is correct.. but it works
+                                for i in range(0, len(weighted_subprompts)):
+                                    # note if alpha negative, it functions same as torch.sub
+                                    c = torch.add(c, model.get_learned_conditioning(weighted_subprompts[i][0]), alpha=weighted_subprompts[i][1])
+                            else: # just behave like usual
+                                c = model.get_learned_conditioning(prompts)
                             
-                            if init_latent is not None:
-                                sigmas = sigmas[len(sigmas) - t_enc - 1 :]
+                            if opt.variance != 0.0 and n != 0:
+                                # add a little extra random noise to get varying output with same seed
+                                base_x = og_start_code # torch.randn(rand_size, device=device) * sigmas[0]
+                                torch.manual_seed(opt.variance_seed + n)
+                                target_x = torch.randn(rand_size, device='cpu').to(device) if device.type == 'mps' else torch.randn(rand_size, device=device)
+                                start_code = slerp(device, max(0.0, min(1.0, opt.variance)), base_x, target_x)
 
-                            x = start_code * sigmas[0] # for GPU draw
-                            if init_latent is not None:
-                                x = init_latent + x
+                            karras_noise = False
 
-                            extra_args = {
-                                'conditions': (c,),
-                                'uncond': uc,
-                                'cond_scale': opt.scale,
-                            }
-                            samples_ddim = sampling_fn(
-                                model_k_guidance,
-                                x,
-                                sigmas,
-                                extra_args=extra_args,
-                                **noise_schedule_sampler_args)
+                            if opt.method in NOT_K_DIFF_SAMPLERS:
+                                if init_latent is None:
+                                    samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
+                                                                    conditioning=c,
+                                                                    batch_size=batch_size,
+                                                                    shape=shape,
+                                                                    verbose=False,
+                                                                    unconditional_guidance_scale=opt.scale,
+                                                                    unconditional_conditioning=uc,
+                                                                    eta=opt.ddim_eta,
+                                                                    x_T=start_code)
+                                    sigmas = None
+                                else:
+                                    # encode (scaled latent)
+                                    z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
+                                    # decode it
+                                    samples_ddim = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
+                                                            unconditional_conditioning=uc,)
+
+                            else:
+                                if opt.method == 'k_dpm_2':
+                                    sampling_fn = sample_dpm_2
+                                    karras_noise = True
+                                elif opt.method == 'k_dpm_2_ancestral':
+                                    sampling_fn = sample_dpm_2_ancestral
+                                elif opt.method == 'k_heun':
+                                    sampling_fn = sample_heun
+                                    karras_noise = True
+                                elif opt.method == 'k_euler':
+                                    sampling_fn = sample_euler
+                                    karras_noise = True
+                                elif opt.method == 'k_euler_ancestral':
+                                    sampling_fn = sample_euler_ancestral
+                                else:
+                                    sampling_fn = sample_lms
+
+                                noise_schedule_sampler_args = {}
+
+                                if karras_noise:
+                                    end_karras_ramp_early = False # this is only needed for really low step counts, not going to bother with it right now
+                                    def get_premature_sigma_min(
+                                        steps: int,
+                                        sigma_max: float,
+                                        sigma_min_nominal: float,
+                                        rho: float
+                                    ) -> float:
+                                        min_inv_rho = sigma_min_nominal ** (1 / rho)
+                                        max_inv_rho = sigma_max ** (1 / rho)
+                                        ramp = (steps-2) * 1/(steps-1)
+                                        sigma_min = (max_inv_rho + ramp * (min_inv_rho - max_inv_rho)) ** rho
+                                        return sigma_min
+
+                                    rho = 7.
+                                    sigma_max=model_k_wrapped.sigmas[-1].item()
+                                    sigma_min_nominal=model_k_wrapped.sigmas[0].item()
+                                    premature_sigma_min = get_premature_sigma_min(
+                                        steps=opt.ddim_steps+1,
+                                        sigma_max=sigma_max,
+                                        sigma_min_nominal=sigma_min_nominal,
+                                        rho=rho
+                                    )
+                                    sigmas = get_sigmas_karras(
+                                        n=opt.ddim_steps,
+                                        sigma_min=premature_sigma_min if end_karras_ramp_early else sigma_min_nominal,
+                                        sigma_max=sigma_max,
+                                        rho=rho,
+                                        device=device,
+                                    )
+
+                                else:
+                                    sigmas = model_k_wrapped.get_sigmas(opt.ddim_steps)
+                                
+                                if init_latent is not None:
+                                    sigmas = sigmas[len(sigmas) - t_enc - 1 :]
+
+                                x = start_code * sigmas[0] # for GPU draw
+                                if init_latent is not None:
+                                    x = init_latent + x
+
+                                extra_args = {
+                                    'conditions': (c,),
+                                    'uncond': uc,
+                                    'cond_scale': opt.scale,
+                                }
+                                samples_ddim = sampling_fn(
+                                    model_k_guidance,
+                                    x,
+                                    sigmas,
+                                    extra_args=extra_args,
+                                    **noise_schedule_sampler_args)
 
 
-                        x_samples_ddim = model.decode_first_stage(samples_ddim)
-                        x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
+                            x_samples_ddim = model.decode_first_stage(samples_ddim)
+                            x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
 
-                        metadata = PngInfo()
-                        if opt.hide_metadata == False:
-                            metadata.add_text("prompt", str(prompts))
-                            metadata.add_text("seed", str(opt.seed))
-                            metadata.add_text("steps", str(opt.ddim_steps))
-                            metadata.add_text("scale", str(opt.scale))
-                            metadata.add_text("ETA", str(opt.ddim_eta))
-                            metadata.add_text("method", str(opt.method))
-                            metadata.add_text("init_image", str(opt.init_image))
+                            metadata = PngInfo()
+                            if opt.hide_metadata == False:
+                                metadata.add_text("prompt", str(prompts))
+                                metadata.add_text("seed", str(opt.seed))
+                                metadata.add_text("steps", str(opt.ddim_steps))
+                                metadata.add_text("scale", str(opt.scale))
+                                metadata.add_text("ETA", str(opt.ddim_eta))
+                                metadata.add_text("method", str(opt.method))
+                                metadata.add_text("init_image", str(opt.init_image))
 
-                        for x_sample in x_samples_ddim:
-                            x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                            output_filename = os.path.join(outpath, f'{opt.batch_name}{opt.device_id}-{grid_count:04}{opt.filetype}')
-                            output_image = Image.fromarray(x_sample.astype(np.uint8))
-                            output_image.save(progress_image, pnginfo=metadata, quality = opt.quality)
-                            shutil.copy2(progress_image, output_filename)
-                            output_image.close()
-                            print(f'\nOutput saved as "{output_filename}"\n')
-                            grid_count += 1
-
-                toc = time.time()
+                            for x_sample in x_samples_ddim:
+                                x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
+                                output_filename = os.path.join(outpath, f'{opt.batch_name}{opt.device_id}-{grid_count:04}{opt.filetype}')
+                                output_image = Image.fromarray(x_sample.astype(np.uint8))
+                                output_image.save(progress_image, pnginfo=metadata, quality = opt.quality)
+                                if opt.improve_composition == False: # this is our actual output, so save it accordingly
+                                    shutil.copy2(progress_image, output_filename)
+                                    print(f'\nOutput saved as "{output_filename}"\n')
+                                    render_left_to_do = False
+                                else: #otherwise, we use this output as an init for another run
+                                    compositional_init = progress_image
+                                    opt.improve_composition = False
+                                    print('\nImprove Composition enabled! Re-rendering at the desired size.')
+                                output_image.close()
+                                grid_count += 1
+                    toc = time.time()
     return output_filename
 
 #functions for GO BIG
@@ -620,6 +641,12 @@ def parse_args():
         required=False,
         help='Advanced option for bots and such. Wait for a job file, render it, then wait some more.'
     )
+    my_parser.add_argument(
+        '--improve',
+        action='store_true',
+        required=False,
+        help='Improve quality on larger images by first rendering a compositional 512x512 image.'
+    )
 
     return my_parser.parse_args()
 
@@ -723,6 +750,7 @@ class Settings:
     hide_metadata = False
     method = "k_lms"
     save_settings = False
+    improve_composition = False
     
     def apply_settings_file(self, filename, settings_file):
         print(f'Applying settings file: {filename}')
@@ -792,6 +820,8 @@ class Settings:
             self.method = (settings_file["method"])
         if is_json_key_present(settings_file, 'save_settings'):
             self.save_settings = (settings_file["save_settings"])
+        if is_json_key_present(settings_file, 'improve_composition'):
+            self.improve_composition = (settings_file["improve_composition"])
 
 def save_settings(options, prompt, filenum):
     setting_list = {
@@ -819,7 +849,8 @@ def save_settings(options, prompt, filenum):
         'esrgan_model': options.esrgan_model,
         'use_jpg' : "true" if options.filetype == ".jpg" else "false",
         'hide_metadata' : options.hide_metadata,
-        'method' : options.method
+        'method' : options.method,
+        'improve_composition': options.improve_composition
     }
     with open(f"{options.outdir}/{options.batch_name}-{filenum:04}.json",  "w+", encoding="utf-8") as f:
         json.dump(setting_list, f, ensure_ascii=False, indent=4)
@@ -991,6 +1022,8 @@ def main():
         torch.set_num_threads(cores)
         settings.method = "ddim" # k_diffusion currently not working on anything other than cuda
 
+    starting_settings = settings # save our initial setup so we can get back to it if needed
+
     print('Pytorch is using device:', device)
 
     if "cuda" in str(device):
@@ -1013,6 +1046,7 @@ def main():
             while job_ready == False:
                 if os.path.exists(job_json):
                     print(f'Job file found! Processing.')
+                    settings = starting_settings
                     try:
                         with open(job_json, 'r', encoding="utf-8") as json_file:
                             settings_file = json.load(json_file)
@@ -1079,6 +1113,7 @@ def main():
                     "device_id": device_id,
                     "method": settings.method,
                     "save_settings": settings.save_settings,
+                    "improve_composition": settings.improve_composition,
                 }
                 opt = SimpleNamespace(**opt)
 
