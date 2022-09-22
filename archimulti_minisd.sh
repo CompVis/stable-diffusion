@@ -2,7 +2,7 @@
 
 for u in `seq 25`
 do
-export prompt="A photographic portrait of a young woman, tilted head, from below, red hair, green eyes, cleavage, smiling."
+export prompt="A photographic portrait of a young woman, tilted head, from below, red hair, green eyes, smiling."
 python minisd.py
 export prompt="A photo of a cute armoured bloody red panda fighting off tentacles with daggers."
 python minisd.py

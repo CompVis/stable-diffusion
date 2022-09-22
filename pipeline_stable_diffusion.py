@@ -1,5 +1,6 @@
 import inspect
 import os
+import numpy as np
 import random
 import warnings
 from typing import List, Optional, Union
@@ -207,9 +208,10 @@ class StableDiffusionPipeline(DiffusionPipeline):
         # However this currently doesn't work in `mps`.
         latents_device = "cpu" if self.device.type == "mps" else self.device
         latents_shape = (batch_size, self.unet.in_channels, height // 8, width // 8)
+        latents_intermediate_shape = (batch_size, self.unet.in_channels, height // 8, width // 8)
         if latents is None:
             latents = torch.randn(
-                latents_shape,
+                latents_intermediate_shape,
                 generator=generator,
                 device=latents_device,
             )
@@ -217,20 +219,22 @@ class StableDiffusionPipeline(DiffusionPipeline):
             from goodbad import good
             from goodbad import bad
             i_believe_in_evolution = len(good) > 0 and len(bad) > 0
+            #i_believe_in_evolution = False
             print(f"I believe in evolution = {i_believe_in_evolution}")
             if i_believe_in_evolution: 
                 from sklearn import tree
                 from sklearn.neural_network import MLPClassifier
                 #from sklearn.neighbors import NearestCentroid
                 from sklearn.linear_model import LogisticRegression
-                import numpy as np
                 #z = (np.random.randn(4*64*64))
                 z = latents.cpu().numpy().flatten()
-
-                #clf=tree.DecisionTreeClassifier()#min_samples_split=0.1)
-                clf = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(5, 2), random_state=1)
+                if os.environ.get("skl", "tree") == "tree":
+                    clf = tree.DecisionTreeClassifier()#min_samples_split=0.1)
+                elif os.environ.get("skl", "tree") == "logit":
+                    clf = LogisticRegression()
+                else:
+                    clf = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(5, 2), random_state=1)
                 #clf = NearestCentroid()
-                #clf = LogisticRegression()
                 
                 
                 
@@ -241,7 +245,8 @@ class StableDiffusionPipeline(DiffusionPipeline):
                 epsilon = 1.0
                 
                 def loss(x):
-                        return clf.predict_proba([(1-epsilon)*z+epsilon*x])[0][0]  # for astronauts
+                        return clf.predict_proba([x])[0][0]  # for astronauts
+                        #return clf.predict_proba([(1-epsilon)*z+epsilon*x])[0][0]  # for astronauts
                         #return clf.predict_proba([z+epsilon*x])[0][0]
                 
                 
@@ -250,7 +255,9 @@ class StableDiffusionPipeline(DiffusionPipeline):
                     budget = 300
                     #nevergrad_optimizer = ng.optimizers.RandomSearch(len(z), budget)
                     #nevergrad_optimizer = ng.optimizers.RandomSearch(len(z), budget)
-                    nevergrad_optimizer = ng.optimizers.DiscreteLenglerOnePlusOne(len(z), budget)
+                    optim_class = ng.optimizers.registry[os.environ.get("ngoptim", "DiscreteLenglerOnePlusOne")]
+                    #nevergrad_optimizer = ng.optimizers.DiscreteLenglerOnePlusOne(len(z), budget)
+                    nevergrad_optimizer = optim_class(len(z), budget)
                     #nevergrad_optimizer = ng.optimizers.DiscreteOnePlusOne(len(z), budget)
                     for k in range(5):
                         z1 = np.array(random.choice(good))
@@ -258,29 +265,44 @@ class StableDiffusionPipeline(DiffusionPipeline):
                         z3 = np.array(random.choice(good))
                         z4 = np.array(random.choice(good))
                         z5 = np.array(random.choice(good))
-                        z = z1
-                        for u in range(len(z)):
-                            z[u] = random.choice([z1[u],z2[u],z3[u],z4[u],z5[u]])
+                        #z = 0.99 * z1 + 0.01 * (z2+z3+z4+z5)/4.
+                        z = 0.2 * (z1 + z2 + z3 + z4 + z5)
+                        mu = int(os.environ.get("mu", "5"))
+                        parents = [z1, z2, z3, z4, z5]
+                        weights = [np.exp(np.random.randn() - i * float(os.environ.get("decay", "1."))) for i in range(5)]
+                        z = weights[0] * z1
+                        for u in range(mu):
+                            if u > 0:
+                                z += weights[u] * parents[u]
+                        z = (1. / sum(weights[:mu])) * z
+                        z = np.sqrt(len(z)) * z / np.linalg.norm(z)
+
+                        #for u in range(len(z)):
+                        #    z[u] = random.choice([z1[u],z2[u],z3[u],z4[u],z5[u]])
                         nevergrad_optimizer.suggest(z)
 
                     
                     for i in range(budget):
                         x = nevergrad_optimizer.ask()
-                        l = loss(x.value)
+                        z = x.value * np.sqrt(len(x.value)) / np.linalg.norm(x.value)
+                        l = loss(z)
                         nevergrad_optimizer.tell(x, l)
                         if np.log2(i+1) == int(np.log2(i+1)):
                           print(f"iteration {i} --> {l}")
-                          print("var/variable = ", sum(((1-epsilon)*z + epsilon * x.value)**2)/len(x.value))
-                        x = nevergrad_optimizer.recommend().value
-                        z = (1.-epsilon) * z + epsilon * x
-                        #if l < 0.0000001:
-                        #        print(f"we find proba(bad)={l}")
-                        #        break
-                    latents = torch.from_numpy(z.reshape(latents_shape)).float() #.half()
+                          print("var/variable = ", sum(z**2)/len(z))
+                        #z = (1.-epsilon) * z + epsilon * x / np.sqrt(np.sum(x ** 2))
+                        if l < 0.0000001 and os.environ.get("earlystop") in ["true", "True"]:
+                                print(f"we find proba(bad)={l}")
+                                break
+                    x = nevergrad_optimizer.recommend().value
+                    z = x * np.sqrt(len(x)) / np.linalg.norm(x)
+                    latents = torch.from_numpy(z.reshape(latents_intermediate_shape)).float() #.half()
         else:
-            if latents.shape != latents_shape:
-                raise ValueError(f"Unexpected latents shape, got {latents.shape}, expected {latents_shape}")
+            if latents.shape != latents_intermediate_shape:
+                raise ValueError(f"Unexpected latents shape, got {latents.shape}, expected {latents_intermediate_shape}")
         os.environ["latent_sd"] = str(list(latents.flatten().cpu().numpy()))
+        for i in [2, 3]:
+            latents = torch.repeat_interleave(latents, repeats=latents_shape[i] // latents_intermediate_shape[i], dim=i) #/ np.sqrt(np.sqrt(latents_shape[i] // latents_intermediate_shape[i]))
         latents = latents.to(self.device)
 
         # set timesteps

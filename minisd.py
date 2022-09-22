@@ -30,13 +30,26 @@ name = random.choice(["Mark Zuckerbeg", "Zendaya", "Yann LeCun", "Scarlett Johan
 name = "Zendaya"
 prompt = f"Photo of {name} as a sumo-tori."
 
-prompt = "A close up photographic portrait of a young woman with colored hair."
+prompt = "Full length portrait of Mark Zuckerberg as a Sumo-Tori."
+prompt = "Full length portrait of Scarlett Johansson as a Sumo-Tori."
+prompt = "A close up photographic portrait of a young woman with uniformly colored hair."
+prompt = "Zombies raising and worshipping a flying human."
+prompt = "Zombies trying to kill Meg Myers."
+prompt = "Meg Myers with an Egyptian dress killing a vampire with a gun."
+prompt = "Meg Myers grabbing a vampire by the scruff of the neck."
+prompt = "Mark Zuckerberg chokes a vampire to death."
+prompt = "Mark Zuckerberg riding an animal."
+prompt = "A giant cute animal worshipped by zombies."
+
+
+
+import os
+prompt = os.environ.get("prompt", prompt)
 with autocast("cuda"):
     image = pipe(prompt, guidance_scale=7.5)["sample"][0]  
       
 sentinel = random.randint(0,100000)
 image.save(f"SD_{prompt.replace(' ','_')}_image_{sentinel}.png")
-import os
 latent = eval((os.environ["latent_sd"]))
 with open(f"SD_{prompt.replace(' ','_')}_latent_{sentinel}.txt", 'w') as f:
     f.write(f"{latent}")
