@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import PIL
-from PIL import Image
+from PIL import Image, ImageOps
 from torch.utils.data import Dataset
 from torchvision import transforms
 
@@ -10,7 +10,6 @@ import glob
 import random
 
 PIL.Image.MAX_IMAGE_PIXELS = 933120000
-
 import torchvision
 
 import pytorch_lightning as pl
@@ -100,7 +99,7 @@ class CaptionProcessor(object):
         sample['image'] = (image / 127.5 - 1.0).astype(np.float32)
         return sample
 
-class LocalBase(Dataset):
+class LocalDanbooruBase(Dataset):
     def __init__(self,
                  data_root='./danbooru-aesthetic',
                  size=768,
@@ -118,21 +117,21 @@ class LocalBase(Dataset):
 
         print('Fetching data.')
 
-        ext = ['png', 'jpg', 'jpeg', 'bmp']
+        ext = ['image']
         self.image_files = []
-        [self.image_files.extend(glob.glob(f'{data_root}/img/' + '*.' + e)) for e in ext]
+        [self.image_files.extend(glob.glob(f'{data_root}' + '/*.' + e)) for e in ext]
         if mode == 'val':
             self.image_files = self.image_files[:len(self.image_files)//val_split]
 
-        print('Constructing image-caption map.')
+        print(f'Constructing image-caption map. Found {len(self.image_files)} images')
 
         self.examples = {}
         self.hashes = []
         for i in self.image_files:
-            hash = i[len(f'{data_root}/img/'):].split('.')[0]
+            hash = i[len(f'{data_root}/'):].split('.')[0]
             self.examples[hash] = {
                 'image': i,
-                'text': f'{data_root}/txt/{hash}.txt'
+                'text': f'{data_root}/{hash}.caption'
             }
             self.hashes.append(hash)
 
@@ -146,6 +145,12 @@ class LocalBase(Dataset):
                               }[interpolation]
         self.flip = transforms.RandomHorizontalFlip(p=flip_p)
 
+        image_transforms = []
+        image_transforms.extend([torchvision.transforms.RandomHorizontalFlip(flip_p)],)
+        image_transforms = torchvision.transforms.Compose(image_transforms)
+
+        self.captionprocessor = CaptionProcessor(1.0, 1.0, 1.0, 1.0, True, True, image_transforms, 768, False, True)
+
     def random_sample(self):
         return self.__getitem__(random.randint(0, self.__len__() - 1))
     
@@ -157,76 +162,26 @@ class LocalBase(Dataset):
     def skip_sample(self, i):
         return None
 
-    def get_caption(self, i):
-        example = self.examples[self.hashes[i]]
-        caption = open(example['text'], 'r').read()
-        caption = caption.replace('  ', ' ').replace('\n', ' ').lstrip().rstrip()
-        return caption
-
     def __len__(self):
         return len(self.image_files)
 
     def __getitem__(self, i):
-        example_ret = {}
-        try:
-            image_file = self.examples[self.hashes[i]]['image']
-            image = Image.open(image_file)
-            if not image.mode == "RGB":
-                image = image.convert("RGB")
-        except (OSError, ValueError) as e:
-            print(f'Error with {image_file} -- skipping {i}')
-            return None
-        
-        try:
-            caption = self.get_caption(i)
-            if caption == None:
-                raise ValueError
-        except (OSError, ValueError) as e:
-            print(f'Error with caption of {image_file} -- skipping {i}')
-            return self.skip_sample(i)
-
-        example_ret['caption'] = caption
-
-        # default to score-sde preprocessing
-        if self.crop:
-            img = np.array(image).astype(np.uint8)
-            crop = min(img.shape[0], img.shape[1])
-            h, w, = img.shape[0], img.shape[1]
-            img = img[(h - crop) // 2:(h + crop) // 2,
-                (w - crop) // 2:(w + crop) // 2]
-            image = Image.fromarray(img)
-        
-        if self.size is not None:
-            image = image.resize((self.size, self.size), resample=self.interpolation)
-
-        image = self.flip(image)
-        image = np.array(image).astype(np.uint8)
-        example_ret["image"] = (image / 127.5 - 1.0).astype(np.float32)
-        return example_ret
+        return self.get_image(i)
     
     def get_image(self, i):
+        image = {}
         try:
             image_file = self.examples[self.hashes[i]]['image']
-            image = Image.open(image_file)
-            if not image.mode == "RGB":
-                image = image.convert("RGB")
+            with open(image_file, 'rb') as f:
+                image['image'] = f.read()
+            text_file = self.examples[self.hashes[i]]['text']
+            with open(text_file, 'rb') as f:
+                image['caption'] = f.read()
+            image = self.captionprocessor(image)
         except Exception as e:
-            print(f'Error with {image_file} -- skipping {i}')
+            print(f'Error with {self.examples[self.hashes[i]]["image"]} -- {e} -- skipping {i}')
             return self.skip_sample(i)
 
-        # default to score-sde preprocessing
-        if self.crop:
-            img = np.array(image).astype(np.uint8)
-            crop = min(img.shape[0], img.shape[1])
-            h, w, = img.shape[0], img.shape[1]
-            img = img[(h - crop) // 2:(h + crop) // 2,
-                (w - crop) // 2:(w + crop) // 2]
-            image = Image.fromarray(img)
-        
-        if self.size is not None:
-            image = image.resize((self.size, self.size), resample=self.interpolation)
-
-        image = self.flip(image)
         return image
 
 """
@@ -241,12 +196,18 @@ if __name__ == "__main__":
     image = Image.fromarray(image)
     image.save('example.png')
 """
-
+"""
 from tqdm import tqdm
 if __name__ == "__main__":
-    dataset = LocalBase('./danbooru-aesthetic', size=512)
+    dataset = LocalDanbooruBase('./links', size=768)
     import time
     a = time.process_time()
     for i in range(8):
-        dataset.get_image(i)
+        example = dataset.get_image(i)
+        image = example['image']
+        image = ((image + 1) * 127.5).astype(np.uint8)
+        image = Image.fromarray(image)
+        image.save(f'example-{i}.png')
+        print(example['caption'])
     print('time:', time.process_time()-a)
+"""
