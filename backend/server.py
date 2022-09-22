@@ -670,6 +670,11 @@ def generate_images(generation_parameters, esrgan_parameters, gfpgan_parameters)
             first_seed = first_seed or seed
             this_variation = [[seed, all_parameters["variation_amount"]]]
             all_parameters["with_variations"] = prior_variations + this_variation
+            all_parameters["seed"] = first_seed
+        elif ("with_variations" in all_parameters):
+            all_parameters["seed"] = first_seed
+        else:
+            all_parameters["seed"] = seed
 
         if esrgan_parameters:
             progress["currentStatus"] = "Upscaling"
@@ -702,7 +707,6 @@ def generate_images(generation_parameters, esrgan_parameters, gfpgan_parameters)
             postprocessing = True
             all_parameters["gfpgan_strength"] = gfpgan_parameters["strength"]
 
-        all_parameters["seed"] = seed
         progress["currentStatus"] = "Saving image"
         socketio.emit("progressUpdate", progress)
         eventlet.sleep(0)
