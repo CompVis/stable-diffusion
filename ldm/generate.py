@@ -633,6 +633,12 @@ class Generate:
 
         return init_image, init_mask
 
+    def _make_base(self):
+        if not self.generators.get('base'):
+            from ldm.dream.generator import Generator
+            self.generators['base'] = Generator(self.model, self.precision)
+        return self.generators['base']
+
     def _make_img2img(self):
         if not self.generators.get('img2img'):
             from ldm.dream.generator.img2img import Img2Img
@@ -751,13 +757,7 @@ class Generate:
 
     # to help WebGUI - front end to generator util function
     def sample_to_image(self, samples):
-        return self._sample_to_image(samples)
-
-    def _sample_to_image(self, samples):
-        if not self.base_generator:
-            from ldm.dream.generator import Generator
-            self.base_generator = Generator(self.model)
-        return self.base_generator.sample_to_image(samples)
+        return self._make_base().sample_to_image(samples)
 
     def _set_sampler(self):
         msg = f'>> Setting Sampler to {self.sampler_name}'
