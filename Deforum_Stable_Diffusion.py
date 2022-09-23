@@ -783,9 +783,10 @@ def DeforumAnimArgs():
     border = 'wrap' #@param ['wrap', 'replicate'] {type:'string'}
 
     #@markdown ####**Motion Parameters:**
+    evaluate_only_keyframes = False#@param {type:"boolean"}
     angle = "0:(0)"#@param {type:"string"}
     zoom = "0:(1.04)"#@param {type:"string"}
-    translation_x = "0:(0)"#@param {type:"string"}
+    translation_x = "0:(10*sin(2*3.14*t/10))"#@param {type:"string"}
     translation_y = "0:(0)"#@param {type:"string"}
     translation_z = "0:(10)"#@param {type:"string"}
     rotation_3d_x = "0:(0)"#@param {type:"string"}
@@ -793,7 +794,7 @@ def DeforumAnimArgs():
     rotation_3d_z = "0:(0)"#@param {type:"string"}
     flip_2d_perspective = True #@param {type:"boolean"}
     perspective_flip_theta = "0:(0)"#@param {type:"string"}
-    perspective_flip_phi = "0:(3)"#@param {type:"string"}
+    perspective_flip_phi = "0:(t%15)"#@param {type:"string"}
     perspective_flip_gamma = "0:(0)"#@param {type:"string"}
     perspective_flip_fv = "0:(53)"#@param {type:"string"}
     noise_schedule = "0: (0.02)"#@param {type:"string"}
@@ -831,28 +832,37 @@ def DeforumAnimArgs():
 
 class DeformAnimKeys():
     def __init__(self, anim_args):
-        self.angle_series = get_inbetweens(parse_key_frames(anim_args.angle), anim_args.max_frames)
-        self.zoom_series = get_inbetweens(parse_key_frames(anim_args.zoom), anim_args.max_frames)
-        self.translation_x_series = get_inbetweens(parse_key_frames(anim_args.translation_x), anim_args.max_frames)
-        self.translation_y_series = get_inbetweens(parse_key_frames(anim_args.translation_y), anim_args.max_frames)
-        self.translation_z_series = get_inbetweens(parse_key_frames(anim_args.translation_z), anim_args.max_frames)
-        self.rotation_3d_x_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_x), anim_args.max_frames)
-        self.rotation_3d_y_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_y), anim_args.max_frames)
-        self.rotation_3d_z_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_z), anim_args.max_frames)
-        self.perspective_flip_theta_series = get_inbetweens(parse_key_frames(anim_args.perspective_flip_theta), anim_args.max_frames)
-        self.perspective_flip_phi_series = get_inbetweens(parse_key_frames(anim_args.perspective_flip_phi), anim_args.max_frames)
-        self.perspective_flip_gamma_series = get_inbetweens(parse_key_frames(anim_args.perspective_flip_gamma), anim_args.max_frames)
-        self.perspective_flip_fv_series = get_inbetweens(parse_key_frames(anim_args.perspective_flip_fv), anim_args.max_frames)
-        self.noise_schedule_series = get_inbetweens(parse_key_frames(anim_args.noise_schedule), anim_args.max_frames)
-        self.strength_schedule_series = get_inbetweens(parse_key_frames(anim_args.strength_schedule), anim_args.max_frames)
-        self.contrast_schedule_series = get_inbetweens(parse_key_frames(anim_args.contrast_schedule), anim_args.max_frames)
+        self.angle_series = get_inbetweens(parse_key_frames(anim_args.angle), anim_args.max_frames, anim_args.evaluate_only_keyframes)
+        self.zoom_series = get_inbetweens(parse_key_frames(anim_args.zoom), anim_args.max_frames, anim_args.evaluate_only_keyframes)
+        self.translation_x_series = get_inbetweens(parse_key_frames(anim_args.translation_x), anim_args.max_frames, anim_args.evaluate_only_keyframes)
+        self.translation_y_series = get_inbetweens(parse_key_frames(anim_args.translation_y), anim_args.max_frames, anim_args.evaluate_only_keyframes)
+        self.translation_z_series = get_inbetweens(parse_key_frames(anim_args.translation_z), anim_args.max_frames, anim_args.evaluate_only_keyframes)
+        self.rotation_3d_x_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_x), anim_args.max_frames, anim_args.evaluate_only_keyframes)
+        self.rotation_3d_y_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_y), anim_args.max_frames, anim_args.evaluate_only_keyframes)
+        self.rotation_3d_z_series = get_inbetweens(parse_key_frames(anim_args.rotation_3d_z), anim_args.max_frames, anim_args.evaluate_only_keyframes)
+        self.perspective_flip_theta_series = get_inbetweens(parse_key_frames(anim_args.perspective_flip_theta), anim_args.max_frames, anim_args.evaluate_only_keyframes)
+        self.perspective_flip_phi_series = get_inbetweens(parse_key_frames(anim_args.perspective_flip_phi), anim_args.max_frames, anim_args.evaluate_only_keyframes)
+        self.perspective_flip_gamma_series = get_inbetweens(parse_key_frames(anim_args.perspective_flip_gamma), anim_args.max_frames, anim_args.evaluate_only_keyframes)
+        self.perspective_flip_fv_series = get_inbetweens(parse_key_frames(anim_args.perspective_flip_fv), anim_args.max_frames, anim_args.evaluate_only_keyframes)
+        self.noise_schedule_series = get_inbetweens(parse_key_frames(anim_args.noise_schedule), anim_args.max_frames, anim_args.evaluate_only_keyframes)
+        self.strength_schedule_series = get_inbetweens(parse_key_frames(anim_args.strength_schedule), anim_args.max_frames, anim_args.evaluate_only_keyframes)
+        self.contrast_schedule_series = get_inbetweens(parse_key_frames(anim_args.contrast_schedule), anim_args.max_frames, anim_args.evaluate_only_keyframes)
 
 
-def get_inbetweens(key_frames, max_frames, integer=False, interp_method='Linear'):
+def get_inbetweens(key_frames, max_frames, evaluate_only_keys = True, integer=False, interp_method='Linear'):
+    import numexpr
     key_frame_series = pd.Series([np.nan for a in range(max_frames)])
-
-    for i, value in key_frames.items():
-        key_frame_series[i] = value
+    
+    for i in range(0, max_frames):
+        if i in key_frames:
+            value = key_frames[i]
+            # if not all, leave the rest for the default interpolation
+            if evaluate_only_keys:
+                t = i
+                key_frame_series[i] = numexpr.evaluate(value)
+        if not evaluate_only_keys:
+            t = i
+            key_frame_series[i] = numexpr.evaluate(value)
     key_frame_series = key_frame_series.astype(float)
     
     if interp_method == 'Cubic' and len(key_frames.items()) <= 3:
@@ -869,7 +879,10 @@ def get_inbetweens(key_frames, max_frames, integer=False, interp_method='Linear'
 
 def parse_key_frames(string, prompt_parser=None):
     import re
-    pattern = r'((?P<frame>[0-9]+):[\s]*[\(](?P<param>[\S\s]*?)[\)])'
+    # because math functions (i.e. sin(t)) can utilize brackets 
+    # it extracts the value in form of some stuff enclosed by brackets
+    # with a comma or end of line existing after the closing one
+    pattern = r'((?P<frame>[0-9]+):[\s]*(?P<param>[\S\s]*?)([,][\s]|[\s]?$))'
     frames = dict()
     for match_object in re.finditer(pattern, string):
         frame = int(match_object.groupdict()['frame'])
