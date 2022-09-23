@@ -161,7 +161,7 @@ class DreamServer(BaseHTTPRequestHandler):
         # is complete. The upscaling replaces the original file, so the second
         # entry should not be inserted into the image list.
         # LS: This repeats code in dream.py
-        def image_done(image, seed, upscaled=False):
+        def image_done(image, seed, upscaled=False, first_seed=None):
             name = f'{prefix}.{seed}.png'
             iter_opt  = copy.copy(opt)
             if opt.variation_amount > 0:
