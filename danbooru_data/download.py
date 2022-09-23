@@ -17,13 +17,14 @@ from PIL import Image, ImageOps
 
 import argparse
 import shutil
+import numpy as np
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--file', '-f', type=str, required=False, default='links.json')
 parser.add_argument('--out_file', '-o', type=str, required=False, default='dataset-%06d.tar')
 parser.add_argument('--max_size', '-m', type=int, required=False, default=4294967296)
 parser.add_argument('--threads', '-p', required=False, default=16, type=int)
-parser.add_argument('--resize', '-r', required=False, default=768, type=int)
+parser.add_argument('--resize', '-r', required=False, default=512, type=int)
 args = parser.parse_args()
 
 def resize_image(image: Image, max_size=(512,512), center_crop=True):
@@ -45,7 +46,6 @@ def resize_image(image: Image, max_size=(512,512), center_crop=True):
     else:
         if not image.mode == "RGB":
             image = image.convert("RGB")
-        if center_crop:
         img = np.array(image).astype(np.uint8)
         crop = min(img.shape[0], img.shape[1])
         h, w, = img.shape[0], img.shape[1]
