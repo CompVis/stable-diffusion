@@ -35,6 +35,7 @@ prompt = random.choice([
      "Photo of Schwarzy as a ballet dancer",
     ])
 
+
 name = random.choice(["Mark Zuckerbeg", "Zendaya", "Yann LeCun", "Scarlett Johansson", "Superman", "Meg Myers"])
 name = "Zendaya"
 prompt = f"Photo of {name} as a sumo-tori."
@@ -51,6 +52,13 @@ prompt = "Mark Zuckerberg riding an animal."
 prompt = "A giant cute animal worshipped by zombies."
 
 
+prompt = "Several faces."
+
+prompt = "An armoured Yann LeCun fighting tentacles in the jungle."
+prompt = "Tentacles everywhere."
+prompt = "A photo of a smiling Medusa."
+prompt = "Medusa."
+prompt = "Meg Myers in bloody armor fending off tentacles with a sword."
 
 import os
 import pygame
@@ -61,21 +69,31 @@ sentinel = str(random.randint(0,100000)) + "XX" +  str(random.randint(0,100000))
 
 all_files = []
 
-llambda = 2
+llambda = 15
 
 assert llambda < 16, "lambda < 16 for convenience in pygame."
 
 bad = []
+five_best = []
+latent = []
+images = []
 for iteration in range(30):
     onlyfiles = []
-    latent = []
+    latent = [latent[f] for f in five_best]
+    images = [images[f] for f in five_best]
     for k in range(llambda):
-        os.environ["earlystop"] = "False" if k > 0 else "True"
-        os.environ["epsilon"] = str(0. if k == 0 else 0.1 / k)
-        os.environ["budget"] = str(300 if k > 0 else 3)
+        if k < len(five_best):
+            continue
+        os.environ["earlystop"] = "False" if k > len(five_best) else "True"
+        os.environ["epsilon"] = str(0. if k == len(five_best) else (k - len(five_best)) / llambda)
+        os.environ["budget"] = str(300 if k > len(five_best) else 2)
+        os.environ["skl"] = {0: "nn", 1: "tree", 2: "logit"}[k % 3]
+        if iteration > 0:
+            os.environ["forcedlatent"] = str(list(forcedlatents[k].flatten()))            
         with autocast("cuda"):
             image = pipe(prompt, guidance_scale=7.5)["sample"][0]
-        filename = f"SD_{prompt.replace(' ','_')}_image_{sentinel}_{k}.png"  
+            images += [image]
+        filename = f"SD_{prompt.replace(' ','_')}_image_{sentinel}_{iteration}_{k}.png"  
         image.save(filename)
         onlyfiles += [filename]
         str_latent = eval((os.environ["latent_sd"]))
@@ -100,12 +118,13 @@ for iteration in range(30):
     # of specific dimension..e(X, Y).
     scrn = pygame.display.set_mode((X, Y))
     
-    for idx in range(min(15, len(onlyfiles))):
+    for idx in range(llambda):
         # set the pygame window name
         pygame.display.set_caption('images')
          
         # create a surface object, image is drawn on it.
-        imp = pygame.transform.scale(pygame.image.load(onlyfiles[idx]).convert(), (300, 300))
+        imp = pygame.transform.scale(images[idx].convert(), (300, 300))
+        #imp = pygame.transform.scale(pygame.image.load(onlyfiles[idx]).convert(), (300, 300))
          
         # Using blit to copy content from one surface to other
         scrn.blit(imp, (300 * (idx // 3), 300 * (idx % 3)))
@@ -115,6 +134,7 @@ for iteration in range(30):
     status = True
     indices = []
     good = []
+    five_best = []
     while (status):
      
       # iterate over the list of Event objects
@@ -124,6 +144,8 @@ for iteration in range(30):
                 pos = pygame.mouse.get_pos() 
                 print(pos)
                 index = 3 * (pos[0] // 300) + (pos[1] // 300)
+                if index not in five_best and len(five_best) < 5:
+                    five_best += [index]
                 indices += [[index, (pos[0] - (pos[0] // 300) * 300) / 300, (pos[1] - (pos[1] // 300) * 300) / 300]]
                 good += [list(latent[index].flatten())]
     
@@ -137,30 +159,35 @@ for iteration in range(30):
     pygame.quit()
     print(indices)
     os.environ["mu"] = str(len(indices))
-    forcedlatent = np.zeros((4, 64, 64))
+    forcedlatents = []
     bad += [list(latent[u].flatten()) for u in range(len(onlyfiles)) if u not in [i[0] for i in indices]]
-    os.environ["good"] = str(good)
-    os.environ["bad"] = str(bad)
-    for i in range(64):
-        x = i / 63.
-        for j in range(64):
-            y = j / 63
-            mindistances = 10000000000.
-            for u in range(len(indices)):
-                distance = np.linalg.norm( np.array((x, y)) - np.array((indices[u][1], indices[u][2])) )
-                if distance < mindistances:
-                    mindistances = distance
-                    uu = indices[u][0]
-            for k in range(4):
-                assert k < len(forcedlatent), k
-                assert i < len(forcedlatent[k]), i
-                assert j < len(forcedlatent[k][i]), j
-                assert uu < len(latent)
-                assert k < len(latent[uu]), k
-                assert i < len(latent[uu][k]), i
-                assert j < len(latent[uu][k][i]), j
-                forcedlatent[k][i][j] = latent[uu][k][i][j]
-    os.environ["forcedlatent"] = str(list(forcedlatent.flatten()))            
+    for a in range(llambda):
+        forcedlatent = np.zeros((4, 64, 64))
+        os.environ["good"] = str(good)
+        os.environ["bad"] = str(bad)
+        coefficients = np.zeros(len(indices))
+        for i in range(len(indices)):
+            coefficients[i] = np.exp(np.random.randn())
+        for i in range(64):
+            x = i / 63.
+            for j in range(64):
+                y = j / 63
+                mindistances = 10000000000.
+                for u in range(len(indices)):
+                    distance = coefficients[u] * np.linalg.norm( np.array((x, y)) - np.array((indices[u][1], indices[u][2])) )
+                    if distance < mindistances:
+                        mindistances = distance
+                        uu = indices[u][0]
+                for k in range(4):
+                    assert k < len(forcedlatent), k
+                    assert i < len(forcedlatent[k]), i
+                    assert j < len(forcedlatent[k][i]), j
+                    assert uu < len(latent)
+                    assert k < len(latent[uu]), k
+                    assert i < len(latent[uu][k]), i
+                    assert j < len(latent[uu][k][i]), j
+                    forcedlatent[k][i][j] = latent[uu][k][i][j]
+        forcedlatents += [forcedlatent]
     #for uu in range(len(latent)):
     #    print(f"--> latent[{uu}] sum of sq / variable = {np.sum(latent[uu].flatten()**2) / len(latent[uu].flatten())}")
             
