@@ -47,16 +47,19 @@ def main():
     # Loading Face Restoration and ESRGAN Modules
     try:
         gfpgan, codeformer, esrgan = None, None, None
-        from ldm.dream.restoration.base import Restoration
-        restoration = Restoration(opt.gfpgan_dir, opt.gfpgan_model_path, opt.esrgan_bg_tile)
-        if opt.restore:
-            gfpgan, codeformer = restoration.load_face_restore_models()
+        if opt.restore or opt.esrgan:
+            from ldm.dream.restoration import Restoration
+            restoration = Restoration()
+            if opt.restore:
+                gfpgan, codeformer = restoration.load_face_restore_models(opt.gfpgan_dir, opt.gfpgan_model_path)
+            else:
+                print('>> Face restoration disabled')
+            if opt.esrgan:
+                esrgan = restoration.load_esrgan(opt.esrgan_bg_tile)
+            else:
+                print('>> Upscaling disabled')
         else:
-            print('>> Face restoration disabled')
-        if opt.esrgan:
-            esrgan = restoration.load_esrgan()
-        else:
-            print('>> Upscaling disabled')
+            print('>> Face restoration and upscaling disabled')
     except (ModuleNotFoundError, ImportError):
         import traceback
         print(traceback.format_exc(), file=sys.stderr)
