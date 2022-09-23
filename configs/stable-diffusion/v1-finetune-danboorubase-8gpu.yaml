@@ -89,15 +89,16 @@ data:
         val_split: 64
 
 lightning:
+  find_unused_parameters: False
   modelcheckpoint:
     params:
-      every_n_train_steps: 500
+      every_n_train_steps: 2000
   callbacks:
     image_logger:
       target: main.ImageLogger
       params:
-        batch_frequency: 500
-        max_images: 4
+        batch_frequency: 2000
+        max_images: 2
         increase_log_steps: False
         log_first_step: False
         log_images_kwargs:
