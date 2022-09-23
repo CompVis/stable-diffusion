@@ -1,0 +1,3 @@
+To use codeformer face reconstruction, you will need to copy
+https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth
+into this directory.

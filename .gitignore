@@ -1,6 +1,10 @@
 # ignore default image save location and model symbolic link
 outputs/
 models/ldm/stable-diffusion-v1/model.ckpt
+ldm/dream/restoration/codeformer/weights
+
+# ignore the Anaconda/Miniconda installer used while building Docker image
+anaconda.sh
 
 # ignore a directory which serves as a place for initial images
 inputs/
@@ -76,9 +80,6 @@ db.sqlite3-journal
 # Flask stuff:
 instance/
 .webassets-cache
-
-# WebUI temp files:
-img2img-tmp.png
 
 # Scrapy stuff:
 .scrapy
@@ -186,3 +187,12 @@ testtube
 checkpoints
 # If it's a Mac
 .DS_Store
+
+# Let the frontend manage its own gitignore
+!frontend/*
+
+# Scratch folder
+.scratch/
+.vscode/
+gfpgan/
+models/ldm/stable-diffusion-v1/model.sha256

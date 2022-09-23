@@ -13,7 +13,20 @@ import re
 import torch
 
 def get_uc_and_c(prompt, model, log_tokens=False, skip_normalize=False):
-    uc = model.get_learned_conditioning([''])
+    # Extract Unconditioned Words From Prompt
+    unconditioned_words = ''
+    unconditional_regex = r'\[(.*?)\]'
+    unconditionals = re.findall(unconditional_regex, prompt)
+
+    if len(unconditionals) > 0:
+        unconditioned_words = ' '.join(unconditionals)
+
+        # Remove Unconditioned Words From Prompt
+        unconditional_regex_compile = re.compile(unconditional_regex)
+        clean_prompt = unconditional_regex_compile.sub(' ', prompt)
+        prompt = re.sub(' +', ' ', clean_prompt)
+
+    uc = model.get_learned_conditioning([unconditioned_words])
 
     # get weighted sub-prompts
     weighted_subprompts = split_weighted_subprompts(
@@ -25,15 +38,16 @@ def get_uc_and_c(prompt, model, log_tokens=False, skip_normalize=False):
         c = torch.zeros_like(uc)
         # normalize each "sub prompt" and add it
         for subprompt, weight in weighted_subprompts:
-            log_tokenization(subprompt, model, log_tokens)
+            log_tokenization(subprompt, model, log_tokens, weight)
             c = torch.add(
                 c,
                 model.get_learned_conditioning([subprompt]),
                 alpha=weight,
             )
     else:   # just standard 1 prompt
-        log_tokenization(prompt, model, log_tokens)
+        log_tokenization(prompt, model, log_tokens, 1)
         c = model.get_learned_conditioning([prompt])
+        uc = model.get_learned_conditioning([unconditioned_words])
     return (uc, c)
 
 def split_weighted_subprompts(text, skip_normalize=False)->list:
@@ -72,7 +86,7 @@ def split_weighted_subprompts(text, skip_normalize=False)->list:
 # shows how the prompt is tokenized
 # usually tokens have '</w>' to indicate end-of-word,
 # but for readability it has been replaced with ' '
-def log_tokenization(text, model, log=False):
+def log_tokenization(text, model, log=False, weight=1):
     if not log:
         return
     tokens    = model.cond_stage_model.tokenizer._tokenize(text)
@@ -89,8 +103,8 @@ def log_tokenization(text, model, log=False):
             usedTokens += 1
         else:  # over max token length
             discarded = discarded + f"\x1b[0;3{s};40m{token}"
-        print(f"\n>> Tokens ({usedTokens}):\n{tokenized}\x1b[0m")
-        if discarded != "":
-            print(
-                f">> Tokens Discarded ({totalTokens-usedTokens}):\n{discarded}\x1b[0m"
-            )
+    print(f"\n>> Tokens ({usedTokens}), Weight ({weight:.2f}):\n{tokenized}\x1b[0m")
+    if discarded != "":
+        print(
+            f">> Tokens Discarded ({totalTokens-usedTokens}):\n{discarded}\x1b[0m"
+        )

@@ -1,0 +1,73 @@
+openapi: 3.0.3
+info:
+  title: Stable Diffusion
+  description: |-
+    TODO: Description Here
+    
+    Some useful links:
+    - [Stable Diffusion Dream Server](https://github.com/lstein/stable-diffusion)
+    
+  license:
+    name: MIT License
+    url: https://github.com/lstein/stable-diffusion/blob/main/LICENSE
+  version: 1.0.0
+servers:
+  - url: http://localhost:9090/api
+tags:
+  - name: images
+    description: Retrieve and manage generated images
+paths:
+  /images/{imageId}:
+    get:
+      tags:
+        - images
+      summary: Get image by ID
+      description: Returns a single image
+      operationId: getImageById
+      parameters:
+        - name: imageId
+          in: path
+          description: ID of image to return
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            image/png:
+              schema: 
+                type: string
+                format: binary
+        '404':
+          description: Image not found
+  /intermediates/{intermediateId}/{step}:
+    get:
+      tags:
+        - images
+      summary: Get intermediate image by ID
+      description: Returns a single intermediate image
+      operationId: getIntermediateById
+      parameters:
+        - name: intermediateId
+          in: path
+          description: ID of intermediate to return
+          required: true
+          schema:
+            type: string
+        - name: step
+          in: path
+          description: The generation step of the intermediate
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            image/png:
+              schema: 
+                type: string
+                format: binary
+        '404':
+          description: Intermediate not found

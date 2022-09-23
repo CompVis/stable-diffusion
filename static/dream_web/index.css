@@ -1,3 +1,8 @@
+:root {
+  --fields-dark:#DCDCDC;
+  --fields-light:#F5F5F5;
+}
+
 * {
     font-family: 'Arial';
     font-size: 100%;
@@ -18,15 +23,26 @@ fieldset {
     border: none;
     line-height: 2.2em;
 }
+fieldset > legend {
+  width: auto;
+  margin-left: 0;
+  margin-right: auto;
+  font-weight:bold;
+}
 select, input {
     margin-right: 10px;
     padding: 2px;
 }
+input:disabled {
+  cursor:auto;
+}
 input[type=submit] {
+    cursor: pointer;
     background-color: #666;
     color: white;
 }
 input[type=checkbox] {
+    cursor: pointer;
     margin-right: 0px;
     width: 20px;
     height: 20px;
@@ -87,7 +103,8 @@ header h1 {
 }
 #results img {
     border-radius: 5px;
-    object-fit: cover;
+    object-fit: contain;
+    background-color: var(--fields-dark);
 }
 #fieldset-config {
     line-height:2em;
@@ -117,28 +134,46 @@ label {
 #progress-image {
     width: 30vh;
     height: 30vh;
+    object-fit: contain;
+    background-color: var(--fields-dark);
 }
 #cancel-button {
     cursor: pointer;
     color: red;
 }
 #txt2img {
-    background-color: #DCDCDC;
+    background-color: var(--fields-dark);
 }
 #variations {
-    background-color: #EEEEEE;
+    background-color: var(--fields-light);
+}
+#initimg {
+    background-color: var(--fields-dark);
 }
 #img2img {
-    background-color: #F5F5F5;
+    background-color: var(--fields-light);
 }
-#gfpgan {
-    background-color: #DCDCDC;
-}
-#progress-section {
-    background-color: #F5F5F5;
+#initimg > :not(legend) {
+  background-color: var(--fields-light);
+  margin: .5em;
 }
 
+#postprocess, #initimg {
+    display:flex;
+    flex-wrap:wrap;
+    padding: 0;
+    margin-top: 1em;
+    background-color: var(--fields-dark);
+}
+#postprocess > fieldset, #initimg > * {
+    flex-grow: 1;
+}
+#postprocess > fieldset {
+  background-color: var(--fields-dark);
+}
+#progress-section {
+    background-color: var(--fields-light);
+}
 #no-results-message:not(:only-child) {
     display: none;
 }
-

@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 # Copyright (c) 2022 Lincoln D. Stein (https://github.com/lstein)
 
-import argparse
-import shlex
 import os
 import re
 import sys
+import shlex
 import copy
 import warnings
 import time
+sys.path.append('.')    # corrects a weird problem on Macs
 import ldm.dream.readline
-from ldm.dream.pngwriter import PngWriter, PromptFormatter
+from ldm.dream.args import Args, metadata_dumps, metadata_from_png
+from ldm.dream.pngwriter import PngWriter
 from ldm.dream.server import DreamServer, ThreadingDreamServer
 from ldm.dream.image_util import make_grid
+from ldm.dream.log import write_log
 from omegaconf import OmegaConf
 
 # Placeholder to be replaced with proper class that tracks the
@@ -20,65 +22,69 @@ from omegaconf import OmegaConf
 # Just want to get the formatting look right for now.
 output_cntr = 0
 
-
 def main():
     """Initialize command-line parsers and the diffusion model"""
-    arg_parser = create_argv_parser()
-    opt = arg_parser.parse_args()
+    opt  = Args()
+    args = opt.parse_args()
+    if not args:
+        sys.exit(-1)
 
-    if opt.laion400m:
+    if args.laion400m:
         print('--laion400m flag has been deprecated. Please use --model laion400m instead.')
         sys.exit(-1)
-    if opt.weights != 'model':
-        print('--weights argument has been deprecated. Please configure ./configs/models.yaml, and call it using --model instead.')
-        sys.exit(-1)
-
-    try:
-        models = OmegaConf.load(opt.config)
-        width = models[opt.model].width
-        height = models[opt.model].height
-        config = models[opt.model].config
-        weights = models[opt.model].weights
-    except (FileNotFoundError, IOError, KeyError) as e:
-        print(f'{e}. Aborting.')
+    if args.weights:
+        print('--weights argument has been deprecated. Please edit ./configs/models.yaml, and select the weights using --model instead.')
         sys.exit(-1)
 
     print('* Initializing, be patient...\n')
-    sys.path.append('.')
-    from pytorch_lightning import logging
     from ldm.generate import Generate
 
     # these two lines prevent a horrible warning message from appearing
     # when the frozen CLIP tokenizer is imported
     import transformers
-
     transformers.logging.set_verbosity_error()
+
+    # Loading Face Restoration and ESRGAN Modules
+    try:
+        gfpgan, codeformer, esrgan = None, None, None
+        from ldm.dream.restoration import Restoration
+        restoration = Restoration(opt.gfpgan_dir, opt.gfpgan_model_path, opt.esrgan_bg_tile)
+        if opt.restore:
+            gfpgan, codeformer = restoration.load_face_restore_models()
+        else:
+            print('>> Face restoration disabled')
+        if opt.esrgan:
+            esrgan = restoration.load_esrgan()
+        else:
+            print('>> Upscaling disabled')
+    except (ModuleNotFoundError, ImportError):
+        import traceback
+        print(traceback.format_exc(), file=sys.stderr)
+        print('>> You may need to install the ESRGAN and/or GFPGAN modules')
 
     # creating a simple text2image object with a handful of
     # defaults passed on the command line.
     # additional parameters will be added (or overriden) during
     # the user input loop
-    t2i = Generate(
-        width=width,
-        height=height,
-        sampler_name=opt.sampler_name,
-        weights=weights,
-        full_precision=opt.full_precision,
-        config=config,
-        grid=opt.grid,
-        # this is solely for recreating the prompt
-        seamless=opt.seamless,
-        embedding_path=opt.embedding_path,
-        device_type=opt.device,
-        ignore_ctrl_c=opt.infile is None,
-    )
+    try:
+        gen = Generate(
+            conf           = opt.conf,
+            model          = opt.model,
+            sampler_name   = opt.sampler_name,
+            embedding_path = opt.embedding_path,
+            full_precision = opt.full_precision,
+            precision      = opt.precision,
+            gfpgan=gfpgan,
+            codeformer=codeformer,
+            esrgan=esrgan
+            )
+    except (FileNotFoundError, IOError, KeyError) as e:
+        print(f'{e}. Aborting.')
+        sys.exit(-1)
 
     # make sure the output directory exists
     if not os.path.exists(opt.outdir):
         os.makedirs(opt.outdir)
-
-    # gets rid of annoying messages about random seed
-    logging.getLogger('pytorch_lightning').setLevel(logging.ERROR)
 
     # load the infile as a list of lines
     infile = None
@@ -98,41 +104,42 @@ def main():
         print(">> changed to seamless tiling mode")
 
     # preload the model
-    t2i.load_model()
+    gen.load_model()
 
     if not infile:
         print(
             "\n* Initialization done! Awaiting your command (-h for help, 'q' to quit)"
         )
 
-    cmd_parser = create_cmd_parser()
+    # web server loops forever
     if opt.web:
-        dream_server_loop(t2i, opt.host, opt.port, opt.outdir)
-    else:
-        main_loop(t2i, opt.outdir, opt.prompt_as_dir, cmd_parser, infile)
+        dream_server_loop(gen, opt.host, opt.port, opt.outdir, gfpgan)
+        sys.exit(0)
 
+    main_loop(gen, opt, infile)
 
-def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
+# TODO: main_loop() has gotten busy. Needs to be refactored.
+def main_loop(gen, opt, infile):
     """prompt/read/execute loop"""
     done = False
     path_filter = re.compile(r'[<>:"/\\|?*]')
     last_results = list()
+    model_config = OmegaConf.load(opt.conf)[opt.model]
 
     # os.pathconf is not available on Windows
     if hasattr(os, 'pathconf'):
-        path_max = os.pathconf(outdir, 'PC_PATH_MAX')
-        name_max = os.pathconf(outdir, 'PC_NAME_MAX')
+        path_max = os.pathconf(opt.outdir, 'PC_PATH_MAX')
+        name_max = os.pathconf(opt.outdir, 'PC_NAME_MAX')
     else:
         path_max = 260
         name_max = 255
 
     while not done:
+        operation = 'generate'   # default operation, alternative is 'postprocess'
+        
         try:
             command = get_next_command(infile)
         except EOFError:
-            done = True
-            continue
-        except KeyboardInterrupt:
             done = True
             continue
 
@@ -143,48 +150,46 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
         if command.startswith(('#', '//')):
             continue
 
-        # before splitting, escape single quotes so as not to mess
-        # up the parser
-        command = command.replace("'", "\\'")
-
-        try:
-            elements = shlex.split(command)
-        except ValueError as e:
-            print(str(e))
-            continue
-
-        if elements[0] == 'q':
+        if len(command.strip()) == 1 and command.startswith('q'):
             done = True
             break
 
-        if elements[0].startswith(
+        if command.startswith(
             '!dream'
         ):   # in case a stored prompt still contains the !dream command
-            elements.pop(0)
+            command = command.replace('!dream ','',1)
 
-        # rearrange the arguments to mimic how it works in the Dream bot.
-        switches = ['']
-        switches_started = False
-
-        for el in elements:
-            if el[0] == '-' and not switches_started:
-                switches_started = True
-            if switches_started:
-                switches.append(el)
-            else:
-                switches[0] += el
-                switches[0] += ' '
-        switches[0] = switches[0][: len(switches[0]) - 1]
-
-        try:
-            opt = parser.parse_args(switches)
-        except SystemExit:
-            parser.print_help()
+        if command.startswith(
+                '!fix'
+        ):
+            command = command.replace('!fix ','',1)
+            operation = 'postprocess'
+            
+        if opt.parse_cmd(command) is None:
             continue
+
+        if opt.init_img:
+            try:
+                if not opt.prompt:
+                    oldargs    = metadata_from_png(opt.init_img)
+                    opt.prompt = oldargs.prompt
+                    print(f'>> Retrieved old prompt "{opt.prompt}" from {opt.init_img}')
+            except AttributeError:
+                pass
+            except KeyError:
+                pass
+
         if len(opt.prompt) == 0:
-            print('Try again with a prompt!')
+            print('\nTry again with a prompt!')
             continue
-        # retrieve previous value!
+
+        # width and height are set by model if not specified
+        if not opt.width:
+            opt.width = model_config.width
+        if not opt.height:
+            opt.height = model_config.height
+        
+        # retrieve previous value of init image if requested
         if opt.init_img is not None and re.match('^-\\d+$', opt.init_img):
             try:
                 opt.init_img = last_results[int(opt.init_img)][0]
@@ -195,7 +200,8 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
                 opt.init_img = None
                 continue
 
-        if opt.seed is not None and opt.seed < 0:   # retrieve previous value!
+        # retrieve previous valueof seed if requested
+        if opt.seed is not None and opt.seed < 0:   
             try:
                 opt.seed = last_results[opt.seed][1]
                 print(f'>> Reusing previous seed {opt.seed}')
@@ -204,7 +210,8 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
                 opt.seed = None
                 continue
 
-        do_grid = opt.grid or t2i.grid
+        if opt.strength is None:
+            opt.strength = 0.75 if opt.out_direction is None else 0.83
 
         if opt.with_variations is not None:
             # shotgun parsing, woo
@@ -231,18 +238,14 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
             else:
                 opt.with_variations = None
 
-        if opt.outdir:
-            if not os.path.exists(opt.outdir):
-                os.makedirs(opt.outdir)
-            current_outdir = opt.outdir
-        elif prompt_as_dir:
+        if opt.prompt_as_dir:
             # sanitize the prompt to a valid folder name
             subdir = path_filter.sub('_', opt.prompt)[:name_max].rstrip(' .')
 
             # truncate path to maximum allowed length
             # 27 is the length of '######.##########.##.png', plus two separators and a NUL
-            subdir = subdir[:(path_max - 27 - len(os.path.abspath(outdir)))]
-            current_outdir = os.path.join(outdir, subdir)
+            subdir = subdir[:(path_max - 27 - len(os.path.abspath(opt.outdir)))]
+            current_outdir = os.path.join(opt.outdir, subdir)
 
             print('Writing files to directory: "' + current_outdir + '"')
 
@@ -250,67 +253,90 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
             if not os.path.exists(current_outdir):
                 os.makedirs(current_outdir)
         else:
-            current_outdir = outdir
+            if not os.path.exists(opt.outdir):
+                os.makedirs(opt.outdir)
+            current_outdir = opt.outdir
 
         # Here is where the images are actually generated!
         last_results = []
         try:
-            file_writer = PngWriter(current_outdir)
-            prefix = file_writer.unique_prefix()
-            results = []  # list of filename, prompt pairs
-            grid_images = dict()  # seed -> Image, only used if `do_grid`
+            file_writer      = PngWriter(current_outdir)
+            prefix           = file_writer.unique_prefix()
+            results          = []  # list of filename, prompt pairs
+            grid_images      = dict()  # seed -> Image, only used if `opt.grid`
+            prior_variations = opt.with_variations or []
 
-            def image_writer(image, seed, upscaled=False):
+            def image_writer(image, seed, upscaled=False, first_seed=None):
+                # note the seed is the seed of the current image
+                # the first_seed is the original seed that noise is added to
+                # when the -v switch is used to generate variations
                 path = None
-                if do_grid:
+                nonlocal prior_variations
+                if opt.grid:
                     grid_images[seed] = image
                 else:
-                    if upscaled and opt.save_original:
+                    if operation == 'postprocess':
+                        filename = choose_postprocess_name(opt.prompt)
+                    elif upscaled and opt.save_original:
                         filename = f'{prefix}.{seed}.postprocessed.png'
                     else:
                         filename = f'{prefix}.{seed}.png'
                     if opt.variation_amount > 0:
-                        iter_opt = argparse.Namespace(**vars(opt))  # copy
-                        this_variation = [[seed, opt.variation_amount]]
-                        if opt.with_variations is None:
-                            iter_opt.with_variations = this_variation
-                        else:
-                            iter_opt.with_variations = opt.with_variations + this_variation
-                        iter_opt.variation_amount = 0
-                        normalized_prompt = PromptFormatter(
-                            t2i, iter_opt).normalize_prompt()
-                        metadata_prompt = f'{normalized_prompt} -S{iter_opt.seed}'
-                    elif opt.with_variations is not None:
-                        normalized_prompt = PromptFormatter(
-                            t2i, opt).normalize_prompt()
-                        # use the original seed - the per-iteration value is the last variation-seed
-                        metadata_prompt = f'{normalized_prompt} -S{opt.seed}'
+                        first_seed             = first_seed or seed
+                        this_variation         = [[seed, opt.variation_amount]]
+                        opt.with_variations    = prior_variations + this_variation
+                        formatted_dream_prompt = opt.dream_prompt_str(seed=first_seed)
+                    elif len(prior_variations) > 0:
+                        formatted_dream_prompt = opt.dream_prompt_str(seed=first_seed)
+                    elif operation == 'postprocess':
+                        formatted_dream_prompt = '!fix '+opt.dream_prompt_str(seed=seed)
                     else:
-                        normalized_prompt = PromptFormatter(
-                            t2i, opt).normalize_prompt()
-                        metadata_prompt = f'{normalized_prompt} -S{seed}'
+                        formatted_dream_prompt = opt.dream_prompt_str(seed=seed)
                     path = file_writer.save_image_and_prompt_to_png(
-                        image, metadata_prompt, filename)
+                        image           = image,
+                        dream_prompt    = formatted_dream_prompt,
+                        metadata        = metadata_dumps(
+                            opt,
+                            seeds      = [seed],
+                            model_hash = gen.model_hash,
+                        ),
+                        name      = filename,
+                    )
                     if (not upscaled) or opt.save_original:
                         # only append to results if we didn't overwrite an earlier output
-                        results.append([path, metadata_prompt])
+                        results.append([path, formatted_dream_prompt])
                 last_results.append([path, seed])
 
-            t2i.prompt2image(image_callback=image_writer, **vars(opt))
+            if operation == 'generate':
+                catch_ctrl_c = infile is None # if running interactively, we catch keyboard interrupts
+                gen.prompt2image(
+                    image_callback=image_writer,
+                    catch_interrupts=catch_ctrl_c,
+                    **vars(opt)
+                )
+            elif operation == 'postprocess':
+                print(f'>> fixing {opt.prompt}')
+                do_postprocess(gen,opt,image_writer)
 
-            if do_grid and len(grid_images) > 0:
+            if opt.grid and len(grid_images) > 0:
                 grid_img   = make_grid(list(grid_images.values()))
                 grid_seeds = list(grid_images.keys())
                 first_seed = last_results[0][1]
-                filename = f'{prefix}.{first_seed}.png'
-                # TODO better metadata for grid images
-                normalized_prompt = PromptFormatter(
-                    t2i, opt).normalize_prompt()
-                metadata_prompt = f'{normalized_prompt} -S{first_seed} --grid -n{len(grid_images)} # {grid_seeds}'
+                filename   = f'{prefix}.{first_seed}.png'
+                formatted_dream_prompt  = opt.dream_prompt_str(seed=first_seed,grid=True,iterations=len(grid_images))
+                formatted_dream_prompt += f' # {grid_seeds}'
+                metadata = metadata_dumps(
+                    opt,
+                    seeds      = grid_seeds,
+                    model_hash = gen.model_hash
+                    )
                 path = file_writer.save_image_and_prompt_to_png(
-                    grid_img, metadata_prompt, filename
+                    image        = grid_img,
+                    dream_prompt = formatted_dream_prompt,
+                    metadata     = metadata,
+                    name         = filename
                 )
-                results = [[path, metadata_prompt]]
+                results = [[path, formatted_dream_prompt]]
 
         except AssertionError as e:
             print(e)
@@ -321,12 +347,54 @@ def main_loop(t2i, outdir, prompt_as_dir, parser, infile):
             continue
 
         print('Outputs:')
-        log_path = os.path.join(current_outdir, 'dream_log.txt')
-        write_log_message(results, log_path)
+        log_path = os.path.join(current_outdir, 'dream_log')
+        global output_cntr
+        output_cntr = write_log(results, log_path ,('txt', 'md'), output_cntr)
         print()
 
     print('goodbye!')
 
+def do_postprocess (gen, opt, callback):
+    file_path = opt.prompt     # treat the prompt as the file pathname
+    if os.path.dirname(file_path) == '': #basename given
+        file_path = os.path.join(opt.outdir,file_path)
+    if not os.path.exists(file_path):
+        print(f'* file {file_path} does not exist')
+        return
+
+    tool=None
+    if opt.gfpgan_strength > 0:
+        tool = opt.facetool
+    elif opt.embiggen:
+        tool = 'embiggen'
+    elif opt.upscale:
+        tool = 'upscale'
+    elif opt.out_direction:
+        tool = 'outpaint'
+    opt.save_original = True # do not overwrite old image!
+    return gen.apply_postprocessor(
+        image_path      = opt.prompt,
+        tool            = tool,
+        gfpgan_strength = opt.gfpgan_strength,
+        codeformer_fidelity = opt.codeformer_fidelity,
+        save_original       = opt.save_original,
+        upscale             = opt.upscale,
+        out_direction       = opt.out_direction,
+        callback            = callback,
+        opt                 = opt,
+        )
+    
+def choose_postprocess_name(original_filename):
+    basename,_ = os.path.splitext(os.path.basename(original_filename))
+    if re.search('\d+\.\d+$',basename):
+        return f'{basename}.fixed.png'
+    match = re.search('(\d+\.\d+)\.fixed(-(\d+))?$',basename) 
+    if match:
+        counter  = match.group(3) or 0
+        return '{prefix}-{counter:02d}.png'.format(prefix=match.group(1), counter=int(counter)+1)
+    else:
+        return f'{basename}.fixed.png'
+        
 
 def get_next_command(infile=None) -> str:  # command string
     if infile is None:
@@ -337,11 +405,11 @@ def get_next_command(infile=None) -> str:  # command string
             raise EOFError
         else:
             command = command.strip()
-        print(f'#{command}')
+        if len(command)>0:
+            print(f'#{command}')
     return command
 
-
-def dream_server_loop(t2i, host, port, outdir):
+def dream_server_loop(gen, host, port, outdir, gfpgan):
     print('\n* --web was specified, starting web server...')
     # Change working directory to the stable-diffusion directory
     os.chdir(
@@ -349,8 +417,12 @@ def dream_server_loop(t2i, host, port, outdir):
     )
 
     # Start server
-    DreamServer.model = t2i
+    DreamServer.model  = gen # misnomer in DreamServer - this is not the model you are looking for
     DreamServer.outdir = outdir
+    DreamServer.gfpgan_model_exists = False
+    if gfpgan is not None:
+        DreamServer.gfpgan_model_exists = gfpgan.gfpgan_model_exists
+
     dream_server = ThreadingDreamServer((host, port))
     print(">> Started Stable Diffusion dream server!")
     if host == '0.0.0.0':
@@ -367,7 +439,6 @@ def dream_server_loop(t2i, host, port, outdir):
 
     dream_server.server_close()
 
-
 def write_log_message(results, log_path):
     """logs the name of the output image, prompt, and prompt args to the terminal and log file"""
     global output_cntr
@@ -376,310 +447,8 @@ def write_log_message(results, log_path):
         output_cntr += 1
         print(f'[{output_cntr}] {l}',end='')
 
-
     with open(log_path, 'a', encoding='utf-8') as file:
         file.writelines(log_lines)
-
-
-SAMPLER_CHOICES = [
-    'ddim',
-    'k_dpm_2_a',
-    'k_dpm_2',
-    'k_euler_a',
-    'k_euler',
-    'k_heun',
-    'k_lms',
-    'plms',
-]
-
-
-def create_argv_parser():
-    parser = argparse.ArgumentParser(
-        description="""Generate images using Stable Diffusion.
-        Use --web to launch the web interface. 
-        Use --from_file to load prompts from a file path or standard input ("-").
-        Otherwise you will be dropped into an interactive command prompt (type -h for help.)
-        Other command-line arguments are defaults that can usually be overridden
-        prompt the command prompt.
-"""
-    )
-    parser.add_argument(
-        '--laion400m',
-        '--latent_diffusion',
-        '-l',
-        dest='laion400m',
-        action='store_true',
-        help='Fallback to the latent diffusion (laion400m) weights and config',
-    )
-    parser.add_argument(
-        '--from_file',
-        dest='infile',
-        type=str,
-        help='If specified, load prompts from this file',
-    )
-    parser.add_argument(
-        '-n',
-        '--iterations',
-        type=int,
-        default=1,
-        help='Number of images to generate',
-    )
-    parser.add_argument(
-        '-F',
-        '--full_precision',
-        dest='full_precision',
-        action='store_true',
-        help='Use more memory-intensive full precision math for calculations',
-    )
-    parser.add_argument(
-        '-g',
-        '--grid',
-        action='store_true',
-        help='Generate a grid instead of individual images',
-    )
-    parser.add_argument(
-        '-A',
-        '-m',
-        '--sampler',
-        dest='sampler_name',
-        choices=SAMPLER_CHOICES,
-        metavar='SAMPLER_NAME',
-        default='k_lms',
-        help=f'Set the initial sampler. Default: k_lms. Supported samplers: {", ".join(SAMPLER_CHOICES)}',
-    )
-    parser.add_argument(
-        '--outdir',
-        '-o',
-        type=str,
-        default='outputs/img-samples',
-        help='Directory to save generated images and a log of prompts and seeds. Default: outputs/img-samples',
-    )
-    parser.add_argument(
-        '--seamless',
-        action='store_true',
-        help='Change the model to seamless tiling (circular) mode',
-    )
-    parser.add_argument(
-        '--embedding_path',
-        type=str,
-        help='Path to a pre-trained embedding manager checkpoint - can only be set on command line',
-    )
-    parser.add_argument(
-        '--prompt_as_dir',
-        '-p',
-        action='store_true',
-        help='Place images in subdirectories named after the prompt.',
-    )
-    # GFPGAN related args
-    parser.add_argument(
-        '--gfpgan_bg_upsampler',
-        type=str,
-        default='realesrgan',
-        help='Background upsampler. Default: realesrgan. Options: realesrgan, none.',
-
-    )
-    parser.add_argument(
-        '--gfpgan_bg_tile',
-        type=int,
-        default=400,
-        help='Tile size for background sampler, 0 for no tile during testing. Default: 400.',
-    )
-    parser.add_argument(
-        '--gfpgan_model_path',
-        type=str,
-        default='experiments/pretrained_models/GFPGANv1.3.pth',
-        help='Indicates the path to the GFPGAN model, relative to --gfpgan_dir.',
-    )
-    parser.add_argument(
-        '--gfpgan_dir',
-        type=str,
-        default='./src/gfpgan',
-        help='Indicates the directory containing the GFPGAN code.',
-    )
-    parser.add_argument(
-        '--web',
-        dest='web',
-        action='store_true',
-        help='Start in web server mode.',
-    )
-    parser.add_argument(
-        '--host',
-        type=str,
-        default='127.0.0.1',
-        help='Web server: Host or IP to listen on. Set to 0.0.0.0 to accept traffic from other devices on your network.'
-    )
-    parser.add_argument(
-        '--port',
-        type=int,
-        default='9090',
-        help='Web server: Port to listen on'
-    )
-    parser.add_argument(
-        '--weights',
-        default='model',
-        help='Indicates the Stable Diffusion model to use.',
-    )
-    parser.add_argument(
-        '--device',
-        '-d',
-        type=str,
-        default='cuda',
-        help="device to run stable diffusion on. defaults to cuda `torch.cuda.current_device()` if available"
-    )
-    parser.add_argument(
-        '--model',
-        default='stable-diffusion-1.4',
-        help='Indicates which diffusion model to load. (currently "stable-diffusion-1.4" (default) or "laion400m")',
-    )
-    parser.add_argument(
-        '--config',
-        default='configs/models.yaml',
-        help='Path to configuration file for alternate models.',
-    )
-    return parser
-
-
-def create_cmd_parser():
-    parser = argparse.ArgumentParser(
-        description='Example: dream> a fantastic alien landscape -W1024 -H960 -s100 -n12'
-    )
-    parser.add_argument('prompt')
-    parser.add_argument('-s', '--steps', type=int, help='Number of steps')
-    parser.add_argument(
-        '-S',
-        '--seed',
-        type=int,
-        help='Image seed; a +ve integer, or use -1 for the previous seed, -2 for the one before that, etc',
-    )
-    parser.add_argument(
-        '-n',
-        '--iterations',
-        type=int,
-        default=1,
-        help='Number of samplings to perform (slower, but will provide seeds for individual images)',
-    )
-    parser.add_argument(
-        '-W', '--width', type=int, help='Image width, multiple of 64'
-    )
-    parser.add_argument(
-        '-H', '--height', type=int, help='Image height, multiple of 64'
-    )
-    parser.add_argument(
-        '-C',
-        '--cfg_scale',
-        default=7.5,
-        type=float,
-        help='Classifier free guidance (CFG) scale - higher numbers cause generator to "try" harder.',
-    )
-    parser.add_argument(
-        '-g', '--grid', action='store_true', help='generate a grid'
-    )
-    parser.add_argument(
-        '--outdir',
-        '-o',
-        type=str,
-        default=None,
-        help='Directory to save generated images and a log of prompts and seeds',
-    )
-    parser.add_argument(
-        '--seamless',
-        action='store_true',
-        help='Change the model to seamless tiling (circular) mode',
-    )
-    parser.add_argument(
-        '-i',
-        '--individual',
-        action='store_true',
-        help='Generate individual files (default)',
-    )
-    parser.add_argument(
-        '-I',
-        '--init_img',
-        type=str,
-        help='Path to input image for img2img mode (supersedes width and height)',
-    )
-    parser.add_argument(
-        '-M',
-        '--init_mask',
-        type=str,
-        help='Path to input mask for inpainting mode (supersedes width and height)',
-    )
-    parser.add_argument(
-        '-T',
-        '-fit',
-        '--fit',
-        action='store_true',
-        help='If specified, will resize the input image to fit within the dimensions of width x height (512x512 default)',
-    )
-    parser.add_argument(
-        '-f',
-        '--strength',
-        default=0.75,
-        type=float,
-        help='Strength for noising/unnoising. 0.0 preserves image exactly, 1.0 replaces it completely',
-    )
-    parser.add_argument(
-        '-G',
-        '--gfpgan_strength',
-        default=0,
-        type=float,
-        help='The strength at which to apply the GFPGAN model to the result, in order to improve faces.',
-    )
-    parser.add_argument(
-        '-U',
-        '--upscale',
-        nargs='+',
-        default=None,
-        type=float,
-        help='Scale factor (2, 4) for upscaling followed by upscaling strength (0-1.0). If strength not specified, defaults to 0.75'
-    )
-    parser.add_argument(
-        '-save_orig',
-        '--save_original',
-        action='store_true',
-        help='Save original. Use it when upscaling to save both versions.',
-    )
-    # variants is going to be superseded by a generalized "prompt-morph" function
-    #    parser.add_argument('-v','--variants',type=int,help="in img2img mode, the first generated image will get passed back to img2img to generate the requested number of variants")
-    parser.add_argument(
-        '-x',
-        '--skip_normalize',
-        action='store_true',
-        help='Skip subprompt weight normalization',
-    )
-    parser.add_argument(
-        '-A',
-        '-m',
-        '--sampler',
-        dest='sampler_name',
-        default=None,
-        type=str,
-        choices=SAMPLER_CHOICES,
-        metavar='SAMPLER_NAME',
-        help=f'Switch to a different sampler. Supported samplers: {", ".join(SAMPLER_CHOICES)}',
-    )
-    parser.add_argument(
-        '-t',
-        '--log_tokenization',
-        action='store_true',
-        help='shows how the prompt is split into tokens'
-    )
-    parser.add_argument(
-        '-v',
-        '--variation_amount',
-        default=0.0,
-        type=float,
-        help='If > 0, generates variations on the initial seed instead of random seeds per iteration. Must be between 0 and 1. Higher values will be more different.'
-    )
-    parser.add_argument(
-        '-V',
-        '--with_variations',
-        default=None,
-        type=str,
-        help='list of variations to apply, in the format `seed:weight,seed:weight,...'
-    )
-    return parser
-
 
 if __name__ == '__main__':
     main()
