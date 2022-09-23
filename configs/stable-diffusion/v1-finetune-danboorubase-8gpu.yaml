@@ -71,17 +71,17 @@ model:
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 4
-    num_workers: 4
+    batch_size: 1
+    num_workers: 1
     wrap: false
     train:
-      target: ldm.data.local.LocalDanbooruBase
+      target: ldm.data.localdanboorubase.LocalDanbooruBase
       params:
         data_root: "./dataset"
         size: 768
         mode: "train"
     validation:
-      target: ldm.data.local.LocalDanbooruBase
+      target: ldm.data.localdanboorubase.LocalDanbooruBase
       params:
         data_root: "./dataset"
         size: 768
