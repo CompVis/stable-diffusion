@@ -215,7 +215,7 @@ docker run --it guestros/stable-diffusion:latest --gpus all -v $PWD/weights/:/ap
 
 An interactive session where you can type in your own commands and arguments
 ```
-docker run --it guestros/stable-diffusion:latest --gpus all -v ./weights/:/app/weights/ -v ./outputs/:/app/outputs/
+docker run --it guestros/stable-diffusion:latest --gpus all -v $PWD/weights/:/app/weights/ -v $PWD/outputs/:/app/outputs/
 ```
 
 ## Comments 
