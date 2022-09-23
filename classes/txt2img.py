@@ -1,6 +1,6 @@
 import time
 import torch
-from classes.base import BaseModel
+from stablediffusion.classes.base import BaseModel
 from torch import autocast
 from tqdm import tqdm, trange
 from contextlib import nullcontext
