@@ -215,9 +215,9 @@ class StableDiffusionPipeline(DiffusionPipeline):
                 generator=generator,
                 device=latents_device,
             )
-
-            from goodbad import good
-            from goodbad import bad
+            good = eval(os.environ["good"])
+            bad = eval(os.environ["bad"])
+            print(f"{len(good)} good and {len(bad)} bad")
             i_believe_in_evolution = len(good) > 0 and len(bad) > 0
             #i_believe_in_evolution = False
             print(f"I believe in evolution = {i_believe_in_evolution}")
@@ -252,36 +252,40 @@ class StableDiffusionPipeline(DiffusionPipeline):
                 
                 if i_believe_in_evolution:
                     import nevergrad as ng
-                    budget = 300
+                    budget = int(os.environ.get("budget", "300"))
                     #nevergrad_optimizer = ng.optimizers.RandomSearch(len(z), budget)
                     #nevergrad_optimizer = ng.optimizers.RandomSearch(len(z), budget)
                     optim_class = ng.optimizers.registry[os.environ.get("ngoptim", "DiscreteLenglerOnePlusOne")]
                     #nevergrad_optimizer = ng.optimizers.DiscreteLenglerOnePlusOne(len(z), budget)
                     nevergrad_optimizer = optim_class(len(z), budget)
                     #nevergrad_optimizer = ng.optimizers.DiscreteOnePlusOne(len(z), budget)
-                    for k in range(5):
-                        z1 = np.array(random.choice(good))
-                        z2 = np.array(random.choice(good))
-                        z3 = np.array(random.choice(good))
-                        z4 = np.array(random.choice(good))
-                        z5 = np.array(random.choice(good))
-                        #z = 0.99 * z1 + 0.01 * (z2+z3+z4+z5)/4.
-                        z = 0.2 * (z1 + z2 + z3 + z4 + z5)
-                        mu = int(os.environ.get("mu", "5"))
-                        parents = [z1, z2, z3, z4, z5]
-                        weights = [np.exp(np.random.randn() - i * float(os.environ.get("decay", "1."))) for i in range(5)]
-                        z = weights[0] * z1
-                        for u in range(mu):
-                            if u > 0:
-                                z += weights[u] * parents[u]
-                        z = (1. / sum(weights[:mu])) * z
-                        z = np.sqrt(len(z)) * z / np.linalg.norm(z)
-
-                        #for u in range(len(z)):
-                        #    z[u] = random.choice([z1[u],z2[u],z3[u],z4[u],z5[u]])
-                        nevergrad_optimizer.suggest(z)
-
-                    z0 = z
+#                    for k in range(5):
+#                        z1 = np.array(random.choice(good))
+#                        z2 = np.array(random.choice(good))
+#                        z3 = np.array(random.choice(good))
+#                        z4 = np.array(random.choice(good))
+#                        z5 = np.array(random.choice(good))
+#                        #z = 0.99 * z1 + 0.01 * (z2+z3+z4+z5)/4.
+#                        z = 0.2 * (z1 + z2 + z3 + z4 + z5)
+#                        mu = int(os.environ.get("mu", "5"))
+#                        parents = [z1, z2, z3, z4, z5]
+#                        weights = [np.exp(np.random.randn() - i * float(os.environ.get("decay", "1."))) for i in range(5)]
+#                        z = weights[0] * z1
+#                        for u in range(mu):
+#                            if u > 0:
+#                                z += weights[u] * parents[u]
+#                        z = (1. / sum(weights[:mu])) * z
+#                        z = np.sqrt(len(z)) * z / np.linalg.norm(z)
+#
+#                        #for u in range(len(z)):
+#                        #    z[u] = random.choice([z1[u],z2[u],z3[u],z4[u],z5[u]])
+#                        nevergrad_optimizer.suggest
+                    if len(os.environ["forcedlatent"]) > 0:
+                        print("we get a forcing for the latent z.")
+                        z0 = eval(os.environ["forcedlatent"])
+                        #nevergrad_optimizer.suggest(eval(os.environ["forcedlatent"]))
+                    else:
+                        z0 = z
                     for i in range(budget):
                         x = nevergrad_optimizer.ask()
                         z = z0 + float(os.environ.get("epsilon", "0.001")) * x.value
@@ -302,6 +306,7 @@ class StableDiffusionPipeline(DiffusionPipeline):
         else:
             if latents.shape != latents_intermediate_shape:
                 raise ValueError(f"Unexpected latents shape, got {latents.shape}, expected {latents_intermediate_shape}")
+        print(f"latent ==> {sum(latents.flatten()**2) / len(latents.flatten())}")
         os.environ["latent_sd"] = str(list(latents.flatten().cpu().numpy()))
         for i in [2, 3]:
             latents = torch.repeat_interleave(latents, repeats=latents_shape[i] // latents_intermediate_shape[i], dim=i) #/ np.sqrt(np.sqrt(latents_shape[i] // latents_intermediate_shape[i]))

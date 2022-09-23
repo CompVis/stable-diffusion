@@ -1,24 +1,22 @@
 # Modified evolutionary version.
 
-Install as usual (below).
-Then use the "pipeline_stable_diffusion.py" in lieu of the original pipeline_stable_diffusion.py found at 
-<< python -c "import diffusers ; print(diffusers.__file__)" >>.
-Then edit the prompt in multi_minisd.sh.
-Then
- ./multi_minisd.sh
+1. Install StableDiffusion as usual, plus a few more stuff.  Basically:
 
-and follow requests.
-The code is not very user-friendly, if there are users I'll do better.
+conda env create -f environment.yaml
+conda activate ldm    # you can change that name in the environment.yaml file...
+conda install pytorch torchvision -c pytorch
+pip install transformers diffusers invisible-watermark
+pip install pygame
+pip install -e .
 
-Scripts:
-- archimulti_minisd.sh  runs a selection of prompts, for testing purpose.
-- edit.sh               will not work on your install: this is a convenience script for editing the code inside the conda environment, you have to update the path.
-- inoculate_evo_sd.sh   same as multi_minisd.sh, but not from scratch. You have to check the code for understanding, or ping me.
-- minisd.sh             runs stable diffusion,
-- multi_minisd.sh       main script. Run stable diffusion multiple times, and asks for your feedback.
-- multiminisd.sh:       run plenty of tests with various genetic methods. Used for tuning. Takes forever to run.
-- view_history.sh:      view what is in progress and put the last generated images in a single output.png
 
+2. Then use the file "pipeline_stable_diffusion.py" in lieu of the original pipeline_stable_diffusion.py found at 
+<< python -c "import diffusers ; print(diffusers.__file__)" >>. This is done as follows:
+cp pipeline_stable_diffusion.py <<that_directory>>/pipeline_stable_diffusion.py
+
+3.  Then edit the prompt in minisd.py, and possibly other variables.
+
+Then run << python minisd.py >>.
 
 
 # Stable Diffusion

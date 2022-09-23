@@ -1,5 +1,7 @@
 import random
+import os
 import torch
+import numpy as np
 from torch import autocast
 from diffusers import StableDiffusionPipeline
 
@@ -7,6 +9,13 @@ model_id = "CompVis/stable-diffusion-v1-4"
 #device = "cuda"
 device = "mps" #torch.device("mps")
 
+os.environ["skl"] = "nn"
+os.environ["epsilon"] = "0.005"
+os.environ["decay"] = "0."
+os.environ["ngoptim"] = "DiscreteLenglerOnePlusOne"
+os.environ["forcedlatent"] = ""
+os.environ["good"] = "[]"
+os.environ["bad"] = "[]"
 
 pipe = StableDiffusionPipeline.from_pretrained(model_id, use_auth_token="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")
 pipe = pipe.to(device)
@@ -44,13 +53,114 @@ prompt = "A giant cute animal worshipped by zombies."
 
 
 import os
-prompt = os.environ.get("prompt", prompt)
-with autocast("cuda"):
-    image = pipe(prompt, guidance_scale=7.5)["sample"][0]  
+import pygame
+from os import listdir
+from os.path import isfile, join
       
-sentinel = random.randint(0,100000)
-image.save(f"SD_{prompt.replace(' ','_')}_image_{sentinel}.png")
-latent = eval((os.environ["latent_sd"]))
-with open(f"SD_{prompt.replace(' ','_')}_latent_{sentinel}.txt", 'w') as f:
-    f.write(f"{latent}")
+sentinel = str(random.randint(0,100000)) + "XX" +  str(random.randint(0,100000))
 
+all_files = []
+
+llambda = 2
+
+assert llambda < 16, "lambda < 16 for convenience in pygame."
+
+bad = []
+for iteration in range(30):
+    onlyfiles = []
+    latent = []
+    for k in range(llambda):
+        os.environ["earlystop"] = "False" if k > 0 else "True"
+        os.environ["epsilon"] = str(0. if k == 0 else 0.1 / k)
+        os.environ["budget"] = str(300 if k > 0 else 3)
+        with autocast("cuda"):
+            image = pipe(prompt, guidance_scale=7.5)["sample"][0]
+        filename = f"SD_{prompt.replace(' ','_')}_image_{sentinel}_{k}.png"  
+        image.save(filename)
+        onlyfiles += [filename]
+        str_latent = eval((os.environ["latent_sd"]))
+        array_latent = eval(f"np.array(str_latent).reshape(4, 64, 64)")
+        print(f"array_latent sumsq/var {sum(array_latent.flatten() ** 2) / len(array_latent.flatten())}")
+        latent += [array_latent]
+        with open(f"SD_{prompt.replace(' ','_')}_latent_{sentinel}_{k}.txt", 'w') as f:
+            f.write(f"{latent}")
+    
+    # importing required library
+    
+    #mypath = "./"
+    #onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
+    #onlyfiles = [str(f) for f in onlyfiles if "SD_" in str(f) and ".png" in str(f) and str(f) not in all_files and sentinel in str(f)]
+    #print()
+    # activate the pygame library .
+    pygame.init()
+    X = 1500
+    Y = 900
+     
+    # create the display surface object
+    # of specific dimension..e(X, Y).
+    scrn = pygame.display.set_mode((X, Y))
+    
+    for idx in range(min(15, len(onlyfiles))):
+        # set the pygame window name
+        pygame.display.set_caption('images')
+         
+        # create a surface object, image is drawn on it.
+        imp = pygame.transform.scale(pygame.image.load(onlyfiles[idx]).convert(), (300, 300))
+         
+        # Using blit to copy content from one surface to other
+        scrn.blit(imp, (300 * (idx // 3), 300 * (idx % 3)))
+     
+    # paint screen one time
+    pygame.display.flip()
+    status = True
+    indices = []
+    good = []
+    while (status):
+     
+      # iterate over the list of Event objects
+      # that was returned by pygame.event.get() method.
+        for i in pygame.event.get():
+            if i.type == pygame.MOUSEBUTTONUP:
+                pos = pygame.mouse.get_pos() 
+                print(pos)
+                index = 3 * (pos[0] // 300) + (pos[1] // 300)
+                indices += [[index, (pos[0] - (pos[0] // 300) * 300) / 300, (pos[1] - (pos[1] // 300) * 300) / 300]]
+                good += [list(latent[index].flatten())]
+    
+            # if event object type is QUIT
+            # then quitting the pygame
+            # and program both.
+            if i.type == pygame.QUIT:
+                status = False
+     
+    # deactivates the pygame library
+    pygame.quit()
+    print(indices)
+    os.environ["mu"] = str(len(indices))
+    forcedlatent = np.zeros((4, 64, 64))
+    bad += [list(latent[u].flatten()) for u in range(len(onlyfiles)) if u not in [i[0] for i in indices]]
+    os.environ["good"] = str(good)
+    os.environ["bad"] = str(bad)
+    for i in range(64):
+        x = i / 63.
+        for j in range(64):
+            y = j / 63
+            mindistances = 10000000000.
+            for u in range(len(indices)):
+                distance = np.linalg.norm( np.array((x, y)) - np.array((indices[u][1], indices[u][2])) )
+                if distance < mindistances:
+                    mindistances = distance
+                    uu = indices[u][0]
+            for k in range(4):
+                assert k < len(forcedlatent), k
+                assert i < len(forcedlatent[k]), i
+                assert j < len(forcedlatent[k][i]), j
+                assert uu < len(latent)
+                assert k < len(latent[uu]), k
+                assert i < len(latent[uu][k]), i
+                assert j < len(latent[uu][k][i]), j
+                forcedlatent[k][i][j] = latent[uu][k][i][j]
+    os.environ["forcedlatent"] = str(list(forcedlatent.flatten()))            
+    #for uu in range(len(latent)):
+    #    print(f"--> latent[{uu}] sum of sq / variable = {np.sum(latent[uu].flatten()**2) / len(latent[uu].flatten())}")
+            
