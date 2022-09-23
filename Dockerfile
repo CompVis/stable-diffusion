@@ -18,7 +18,7 @@ RUN mkdir /app/outputs/
 RUN mkdir /app/weights/
 # RUN git clone https://github.com/CompVis/stable-diffusion.git /app/
 WORKDIR /app/
-RUN conda env create -f /app/environment.yaml -n ldm
+RUN conda env create -f environment.yaml -n ldm
 # conda env trick
 RUN rm /usr/local/bin/python
 RUN ln -s /root/miniconda3/envs/ldm/bin/python /usr/local/bin/python
