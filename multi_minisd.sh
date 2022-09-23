@@ -3,17 +3,22 @@
 set -e
 
 #export prompt="A woman with many eyes."
-export prompt="A close up photographic portrait of a young woman with uniformly colored hair."
+#export prompt="A close up photographic portrait of a young woman with uniformly colored hair."
+#export prompt="Yann Lecun with a bloody armor and a sword, fighting tentacles in the jungle."
+#export prompt="Many tentacles attacking Yann Lecun, equipped with a bloody armor and a sword."
+#export prompt="An_armored_Mark_Zuckerberg_fighting_off_bloody_tentacles_in_the_jungle."
+#export prompt="A cute monster in a city."
+export prompt="A scary woman with tatoos, many arms, many weapons, flashy hair, sitting on a throne."
 # We generate groups of lambda images.
-lambda=14
+lambda=20
 # 4 parents are selected.
 export mu=4
 # Do we use early stopping in Nevergrad ?
-export earlystop=True
+export earlystop=False
 # Which Scikit-Learn surrogate model ?
 export skl=tree
 # Which initial range for modifications ?
-export epsilon=0.0001
+export epsilon=0.01
 
 touch empty_file
 rm empty_file
@@ -52,6 +57,7 @@ do
     do
       echo "generating image $kk / $lambda"
       python minisd.py
+      ./view_history.sh
     done
     list_of_four_images="`ls -ctr SD*_image_*.png | tail -n $lambda`"
 #    my_new_list=""
