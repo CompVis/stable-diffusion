@@ -58,6 +58,8 @@ def main():
                 esrgan = restoration.load_esrgan(opt.esrgan_bg_tile)
             else:
                 print('>> Upscaling disabled')
+        else:
+            print('>> Face restoration and upscaling disabled')
     except (ModuleNotFoundError, ImportError):
         import traceback
         print(traceback.format_exc(), file=sys.stderr)
