@@ -30,6 +30,7 @@ dependencies:
   - nomkl
   - numpy==1.23.2
   - omegaconf==2.1.1
+  - openh264==2.3.0
   - onnx==1.12.0
   - onnxruntime==1.12.1
   - protobuf==3.20.1
