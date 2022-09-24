@@ -928,7 +928,7 @@ class Generate:
         # BUG: We need to use the model's downsample factor rather than hardcoding "8"
         from ldm.dream.generator.base import downsampling
         image = image.resize((image.width//downsampling, image.height //
-                             downsampling), resample=Image.Resampling.LANCZOS)
+                              downsampling), resample=Image.Resampling.NEAREST)
         # print(
         #     f'>> DEBUG: writing the mask to mask.png'
         #     )
