@@ -742,7 +742,8 @@ class Generate:
                             if self.codeformer is None:
                                 print('>> CodeFormer not found. Face restoration is disabled.')
                             else:
-                                image = self.codeformer.process(image=image, strength=strength, device=self.device, seed=seed, fidelity=codeformer_fidelity)                                
+                                cf_device = 'cpu' if str(self.device) == 'mps' else self.device
+                                image = self.codeformer.process(image=image, strength=strength, device=cf_device, seed=seed, fidelity=codeformer_fidelity)
                     else:
                         print(">> Face Restoration is disabled.")
             except Exception as e:
