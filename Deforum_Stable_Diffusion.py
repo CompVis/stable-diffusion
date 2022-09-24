@@ -785,7 +785,7 @@ def DeforumAnimArgs():
     #@markdown ####**Motion Parameters:**
     angle = "0:(0)"#@param {type:"string"}
     zoom = "0:(1.04)"#@param {type:"string"}
-    translation_x = "0:(0)"#@param {type:"string"}
+    translation_x = "0:(10*sin(2*3.14*t/10))"#@param {type:"string"}
     translation_y = "0:(0)"#@param {type:"string"}
     translation_z = "0:(10)"#@param {type:"string"}
     rotation_3d_x = "0:(0)"#@param {type:"string"}
@@ -793,7 +793,7 @@ def DeforumAnimArgs():
     rotation_3d_z = "0:(0)"#@param {type:"string"}
     flip_2d_perspective = True #@param {type:"boolean"}
     perspective_flip_theta = "0:(0)"#@param {type:"string"}
-    perspective_flip_phi = "0:(3)"#@param {type:"string"}
+    perspective_flip_phi = "0:(t%15)"#@param {type:"string"}
     perspective_flip_gamma = "0:(0)"#@param {type:"string"}
     perspective_flip_fv = "0:(53)"#@param {type:"string"}
     noise_schedule = "0: (0.02)"#@param {type:"string"}
@@ -849,10 +849,22 @@ class DeformAnimKeys():
 
 
 def get_inbetweens(key_frames, max_frames, integer=False, interp_method='Linear'):
+    import numexpr
+    import re
+    float_pattern = r'^(?=.)([+-]?([0-9]*)(\.([0-9]+))?)$'
     key_frame_series = pd.Series([np.nan for a in range(max_frames)])
-
-    for i, value in key_frames.items():
-        key_frame_series[i] = value
+    
+    for i in range(0, max_frames):
+        if i in key_frames:
+            value = key_frames[i]
+            value_is_number = re.match(float_pattern, value)
+            # if it's only a number, leave the rest for the default interpolation
+            if value_is_number:
+                t = i
+                key_frame_series[i] = value
+        if not value_is_number:
+            t = i
+            key_frame_series[i] = numexpr.evaluate(value)
     key_frame_series = key_frame_series.astype(float)
     
     if interp_method == 'Cubic' and len(key_frames.items()) <= 3:
@@ -869,7 +881,11 @@ def get_inbetweens(key_frames, max_frames, integer=False, interp_method='Linear'
 
 def parse_key_frames(string, prompt_parser=None):
     import re
-    pattern = r'((?P<frame>[0-9]+):[\s]*[\(](?P<param>[\S\s]*?)[\)])'
+    # because math functions (i.e. sin(t)) can utilize brackets 
+    # it extracts the value in form of some stuff
+    # which has previously been enclosed with brackets and
+    # with a comma or end of line existing after the closing one
+    pattern = r'((?P<frame>[0-9]+):[\s]*\((?P<param>[\S\s]*?)\)([,][\s]?|[\s]?$))'
     frames = dict()
     for match_object in re.finditer(pattern, string):
         frame = int(match_object.groupdict()['frame'])
