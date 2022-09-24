@@ -727,16 +727,16 @@ class Generate:
                         print(">> ESRGAN is disabled. Image not upscaled.")
                 if strength > 0:
                     if self.gfpgan is not None or self.codeformer is not None:
-                        if self.gfpgan is None:
-                            if facetool == 'codeformer':
-                                if self.codeformer is not None:
-                                    image = self.codeformer.process(image=image, strength=strength, device=self.device, seed=seed, fidelity=codeformer_fidelity)
-                                else:
-                                    print('>> CodeFormer not found. Face restoration is disabled.')
-                            else:    
+                        if facetool == 'gfpgan':
+                            if self.gfpgan is None:
                                 print('>> GFPGAN not found. Face restoration is disabled.')
-                        else:
-                            image = self.gfpgan.process(image, strength, seed)                            
+                            else:
+                              image = self.gfpgan.process(image, strength, seed)                              
+                        if facetool == 'codeformer':
+                            if self.codeformer is None:
+                                print('>> CodeFormer not found. Face restoration is disabled.')
+                            else:
+                                image = self.codeformer.process(image=image, strength=strength, device=self.device, seed=seed, fidelity=codeformer_fidelity)                                
                     else:
                         print(">> Face Restoration is disabled.")
             except Exception as e:
