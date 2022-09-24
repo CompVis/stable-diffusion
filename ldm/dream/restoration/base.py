@@ -2,7 +2,7 @@ class Restoration():
     def __init__(self) -> None:
         pass
 
-    def load_face_restore_models(self, gfpgan_dir='./src/gfpgan', gfpgan_model_path='experiments/pretrained_models/GFPGANv1.3.pth'):
+    def load_face_restore_models(self, gfpgan_dir='./src/gfpgan', gfpgan_model_path='experiments/pretrained_models/GFPGANv1.4.pth'):
         # Load GFPGAN
         gfpgan = self.load_gfpgan(gfpgan_dir, gfpgan_model_path)
         if gfpgan.gfpgan_model_exists:
