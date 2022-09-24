@@ -840,7 +840,7 @@ class Generate:
             print(
                 f'>> using provided input image of size {image.width}x{image.height}'
             )
-        elif isinstance(image, str):
+        elif isinstance(img, str):
             assert os.path.exists(img), f'>> {img}: File not found'
 
             image = Image.open(img)
