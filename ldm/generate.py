@@ -655,6 +655,7 @@ class Generate:
         if not self.generators.get('txt2img'):
             from ldm.dream.generator.txt2img import Txt2Img
             self.generators['txt2img'] = Txt2Img(self.model, self.precision)
+            self.generators['txt2img'].free_gpu_mem = self.free_gpu_mem
         return self.generators['txt2img']
 
     def _make_inpaint(self):
