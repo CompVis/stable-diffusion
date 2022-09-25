@@ -115,7 +115,8 @@ class BaseModel:
 
     def initialize_logging(self):
         # create path and file if not exist
-        path = f"{os.path.dirname(os.path.realpath(__file__))}/../log/stablediffusiond.log"
+        HOME = os.path.expanduser("~")
+        path = f"{HOME}/stablediffusion/stablediffusiond.log"
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
         if not os.path.exists(path):
