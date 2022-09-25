@@ -638,7 +638,7 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
     else:
         mask = None
 
-    assert not (args.overlay_mask == True and (args.init_sample is None and init_image is None)), "Need an init image when overlay_mask == True"
+    assert not ( (args.use_mask and args.overlay_mask) and (args.init_sample is None and init_image is None)), "Need an init image when use_mask == True and overlay_mask == True"
         
     t_enc = int((1.0-args.strength) * args.steps)
 
