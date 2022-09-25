@@ -8,20 +8,23 @@ hide:
 
 ## **Interactive Command Line Interface**
 
-The `dream.py` script, located in `scripts/dream.py`, provides an interactive interface to image
-generation similar to the "dream mothership" bot that Stable AI provided on its Discord server.
+The `dream.py` script, located in `scripts/dream.py`, provides an interactive
+interface to image generation similar to the "dream mothership" bot that Stable
+AI provided on its Discord server.
 
 Unlike the `txt2img.py` and `img2img.py` scripts provided in the original
-[CompVis/stable-diffusion](https://github.com/CompVis/stable-diffusion) source code repository, the
-time-consuming initialization of the AI model initialization only happens once. After that image
-generation from the command-line interface is very fast.
+[CompVis/stable-diffusion](https://github.com/CompVis/stable-diffusion) source
+code repository, the time-consuming initialization of the AI model
+initialization only happens once. After that image generation from the
+command-line interface is very fast.
 
-The script uses the readline library to allow for in-line editing, command history (++up++ and
-++down++), autocompletion, and more. To help keep track of which prompts generated which images, the
-script writes a log file of image names and prompts to the selected output directory.
+The script uses the readline library to allow for in-line editing, command
+history (++up++ and ++down++), autocompletion, and more. To help keep track of
+which prompts generated which images, the script writes a log file of image
+names and prompts to the selected output directory.
 
-In addition, as of version 1.02, it also writes the prompt into the PNG file's metadata where it can
-be retrieved using `scripts/images2prompt.py`
+In addition, as of version 1.02, it also writes the prompt into the PNG file's
+metadata where it can be retrieved using `scripts/images2prompt.py`
 
 The script is confirmed to work on Linux, Windows and Mac systems.
 
@@ -56,21 +59,24 @@ dream> q
 
 ![dream-py-demo](../assets/dream-py-demo.png)
 
-The `dream>` prompt's arguments are pretty much identical to those used in the Discord bot, except
-you don't need to type "!dream" (it doesn't hurt if you do). A significant change is that creation
-of individual images is now the default unless `--grid` (`-g`) is given. A full list is given in
+The `dream>` prompt's arguments are pretty much identical to those used in the
+Discord bot, except you don't need to type "!dream" (it doesn't hurt if you do).
+A significant change is that creation of individual images is now the default
+unless `--grid` (`-g`) is given. A full list is given in
 [List of prompt arguments](#list-of-prompt-arguments).
 
 ## Arguments
 
-The script itself also recognizes a series of command-line switches that will change important
-global defaults, such as the directory for image outputs and the location of the model weight files.
+The script itself also recognizes a series of command-line switches that will
+change important global defaults, such as the directory for image outputs and
+the location of the model weight files.
 
 ### List of arguments recognized at the command line
 
-These command-line arguments can be passed to `dream.py` when you first run it from the Windows, Mac
-or Linux command line. Some set defaults that can be overridden on a per-prompt basis (see [List of
-prompt arguments] (#list-of-prompt-arguments). Others
+These command-line arguments can be passed to `dream.py` when you first run it
+from the Windows, Mac or Linux command line. Some set defaults that can be
+overridden on a per-prompt basis (see [List of prompt arguments]
+(#list-of-prompt-arguments). Others
 
 | Argument <img width="240" align="right"/> | Shortcut <img width="100" align="right"/> | Default <img width="320" align="right"/>       | Description                                                                                          |
 | ----------------------------------------- | ----------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
@@ -90,7 +96,7 @@ prompt arguments] (#list-of-prompt-arguments). Others
 | `--seamless`                              |                                           | `False`                                        | Create interesting effects by tiling elements of the image.                                          |
 | `--embedding_path <path>`                 |                                           | `None`                                         | Path to pre-trained embedding manager checkpoints, for custom models                                 |
 | `--gfpgan_dir`                            |                                           | `src/gfpgan`                                   | Path to where GFPGAN is installed.                                                                   |
-| `--gfpgan_model_path`                     |                                           | `experiments/pretrained_models/GFPGANv1.3.pth` | Path to GFPGAN model file, relative to `--gfpgan_dir`.                                               |
+| `--gfpgan_model_path`                     |                                           | `experiments/pretrained_models/GFPGANv1.4.pth` | Path to GFPGAN model file, relative to `--gfpgan_dir`.                                               |
 | `--device <device>`                       | `-d<device>`                              | `torch.cuda.current_device()`                  | Device to run SD on, e.g. "cuda:0"                                                                   |
 
 #### deprecated
@@ -115,9 +121,10 @@ These arguments are deprecated but still work:
 
 ### List of prompt arguments
 
-After the `dream.py` script initializes, it will present you with a **`dream>`** prompt. Here you
-can enter information to generate images from text (txt2img), to embellish an existing image or
-sketch (img2img), or to selectively alter chosen regions of the image (inpainting).
+After the `dream.py` script initializes, it will present you with a **`dream>`**
+prompt. Here you can enter information to generate images from text (txt2img),
+to embellish an existing image or sketch (img2img), or to selectively alter
+chosen regions of the image (inpainting).
 
 #### txt2img
 
@@ -171,12 +178,13 @@ Those are the `dream` commands that apply to txt2img:
     than 640x480. Otherwise the image size will be identical to the provided photo and you may run out
     of memory if it is large.
 
-Repeated chaining of img2img on an image can result in significant color shifts in the output,
-especially if run with lower strength. Color correction can be run against a reference image to fix
-this issue. Use the original input image to the chain as the the reference image for each step in
-the chain.
+Repeated chaining of img2img on an image can result in significant color shifts
+in the output, especially if run with lower strength. Color correction can be
+run against a reference image to fix this issue. Use the original input image to
+the chain as the the reference image for each step in the chain.
 
-In addition to the command-line options recognized by txt2img, img2img accepts additional options:
+In addition to the command-line options recognized by txt2img, img2img accepts
+additional options:
 
 | Argument <img width="160" align="right"/> | Shortcut    | Default | Description                                                                                                                                |
 | ----------------------------------------- | ----------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -198,8 +206,8 @@ In addition to the command-line options recognized by txt2img, img2img accepts a
     the areas to overpaint made transparent, but you must be careful not to destroy the pixels
     underneath when you create the transparent areas. See [Inpainting](./INPAINTING.md) for details.
 
-Inpainting accepts all the arguments used for txt2img and img2img, as well as the `--mask` (`-M`)
-argument:
+Inpainting accepts all the arguments used for txt2img and img2img, as well as
+the `--mask` (`-M`) argument:
 
 | Argument <img width="100" align="right"/> | Shortcut   | Default | Description                                                                                      |
 | ----------------------------------------- | ---------- | ------- | ------------------------------------------------------------------------------------------------ |
@@ -207,37 +215,42 @@ argument:
 
 ## Command-line editing and completion
 
-If you are on a Macintosh or Linux machine, the command-line offers convenient history tracking,
-editing, and command completion.
+If you are on a Macintosh or Linux machine, the command-line offers convenient
+history tracking, editing, and command completion.
 
-- To scroll through previous commands and potentially edit/reuse them, use the ++up++ and ++down++
-  cursor keys.
-- To edit the current command, use the ++left++ and ++right++ cursor keys to position the cursor,
-  and then ++backspace++, ++delete++ or ++insert++ characters.
-- To move to the very beginning of the command, type ++ctrl+a++ (or ++command+a++ on the Mac)
+- To scroll through previous commands and potentially edit/reuse them, use the
+  ++up++ and ++down++ cursor keys.
+- To edit the current command, use the ++left++ and ++right++ cursor keys to
+  position the cursor, and then ++backspace++, ++delete++ or ++insert++
+  characters.
+- To move to the very beginning of the command, type ++ctrl+a++ (or
+  ++command+a++ on the Mac)
 - To move to the end of the command, type ++ctrl+e++.
-- To cut a section of the command, position the cursor where you want to start cutting and type
-  ++ctrl+k++.
-- To paste a cut section back in, position the cursor where you want to paste, and type ++ctrl+y++
+- To cut a section of the command, position the cursor where you want to start
+  cutting and type ++ctrl+k++.
+- To paste a cut section back in, position the cursor where you want to paste,
+  and type ++ctrl+y++
 
-Windows users can get similar, but more limited, functionality if they launch `dream.py` with the
-"winpty" program:
+Windows users can get similar, but more limited, functionality if they launch
+`dream.py` with the "winpty" program:
 
 ```batch
 winpty python scripts\dream.py
 ```
 
-On the Mac and Linux platforms, when you exit `dream.py`, the last 1000 lines of your command-line
-history will be saved. When you restart `dream.py`, you can access the saved history using the
-++up++ key.
+On the Mac and Linux platforms, when you exit `dream.py`, the last 1000 lines of
+your command-line history will be saved. When you restart `dream.py`, you can
+access the saved history using the ++up++ key.
 
-In addition, limited command-line completion is installed. In various contexts, you can start typing
-your command and press tab. A list of potential completions will be presented to you. You can then
-type a little more, hit tab again, and eventually autocomplete what you want.
+In addition, limited command-line completion is installed. In various contexts,
+you can start typing your command and press tab. A list of potential completions
+will be presented to you. You can then type a little more, hit tab again, and
+eventually autocomplete what you want.
 
-When specifying file paths using the one-letter shortcuts, the CLI will attempt to complete
-pathnames for you. This is most handy for the `-I` (init image) and `-M` (init mask) paths. To
-initiate completion, start the path with a slash `/` or `./`, for example:
+When specifying file paths using the one-letter shortcuts, the CLI will attempt
+to complete pathnames for you. This is most handy for the `-I` (init image) and
+`-M` (init mask) paths. To initiate completion, start the path with a slash `/`
+or `./`, for example:
 
 ```bash
 dream> "zebra with a mustache" -I./test-pictures<TAB>

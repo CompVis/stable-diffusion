@@ -87,8 +87,8 @@ if gfpgan:
 
     try:
         import urllib.request
-        model_url  = 'https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth'
-        model_dest = 'src/gfpgan/experiments/pretrained_models/GFPGANv1.3.pth'
+        model_url  = 'https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.4.pth'
+        model_dest = 'src/gfpgan/experiments/pretrained_models/GFPGANv1.4.pth'
 
         if not os.path.exists(model_dest):
             print('downloading gfpgan model file...')
