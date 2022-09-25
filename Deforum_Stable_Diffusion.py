@@ -129,6 +129,7 @@ from torchvision.utils import make_grid
 from tqdm import tqdm, trange
 from types import SimpleNamespace
 from torch import autocast
+from scipy.ndimage import gaussian_filter
 
 sys.path.extend([
     'src/taming-transformers',
@@ -623,6 +624,7 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
         assert args.use_init, "use_mask==True: use_init is required for a mask"
         assert init_latent is not None, "use_mask==True: An latent init image is required for a mask"
 
+
         mask = prepare_mask(args.mask_file if mask_image is None else mask_image, 
                             init_latent.shape, 
                             args.mask_contrast_adjust, 
@@ -635,6 +637,8 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
         mask = repeat(mask, '1 ... -> b ...', b=batch_size)
     else:
         mask = None
+
+    assert not (args.overlay_mask == True and (args.init_sample is None and init_image is None)), "Need an init image when overlay_mask == True"
         
     t_enc = int((1.0-args.strength) * args.steps)
 
@@ -705,10 +709,35 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
                         else:
                             raise Exception(f"Sampler {args.sampler} not recognised.")
 
+                    
                     if return_latent:
                         results.append(samples.clone())
 
                     x_samples = model.decode_first_stage(samples)
+
+                    if args.use_mask and args.overlay_mask:
+                        # Overlay the masked image after the image is generated
+                        if args.init_sample is not None:
+                            img_original = args.init_sample
+                        elif init_image is not None:
+                            img_original = init_image
+                        else:
+                            raise Exception("Cannot overlay the masked image without an init image to overlay")
+
+                        mask_fullres = prepare_mask(args.mask_file if mask_image is None else mask_image, 
+                                                    img_original.shape, 
+                                                    args.mask_contrast_adjust, 
+                                                    args.mask_brightness_adjust)
+                        mask_fullres = mask_fullres[:,:3,:,:]
+                        mask_fullres = repeat(mask_fullres, '1 ... -> b ...', b=batch_size)
+
+                        mask_fullres[mask_fullres < mask_fullres.max()] = 0
+                        mask_fullres = gaussian_filter(mask_fullres, args.mask_overlay_blur)
+                        mask_fullres = torch.Tensor(mask_fullres).to(device)
+
+                        x_samples = img_original * mask_fullres + x_samples * ((mask_fullres * -1.0) + 1)
+
+
                     if return_sample:
                         results.append(x_samples.clone())
 
@@ -1029,6 +1058,10 @@ def DeforumArgs():
     # Adjust mask image, 1.0 is no adjustment. Should be positive numbers.
     mask_brightness_adjust = 1.0  #@param {type:"number"}
     mask_contrast_adjust = 1.0  #@param {type:"number"}
+    # Overlay the masked image at the end of the generation so it does not get degraded by encoding and decoding
+    overlay_mask = True  #@param {type:"boolean"}
+    # Blur edges of final overlay mask, if used. Minimum = 0 (no blur)
+    mask_overlay_blur = 5 #@param {type:"number"}
 
     n_samples = 1 # doesnt do anything
     precision = 'autocast' 
