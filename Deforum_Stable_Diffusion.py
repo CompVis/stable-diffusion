@@ -865,7 +865,7 @@ def DeforumAnimArgs():
     #@markdown ####**Animation:**
     animation_mode = 'None' #@param ['None', '2D', '3D', 'Video Input', 'Interpolation'] {type:'string'}
     max_frames = 1000 #@param {type:"number"}
-    border = 'wrap' #@param ['wrap', 'replicate'] {type:'string'}
+    border = 'replicate' #@param ['wrap', 'replicate'] {type:'string'}
 
     #@markdown ####**Motion Parameters:**
     angle = "0:(0)"#@param {type:"string"}
