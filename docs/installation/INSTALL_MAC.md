@@ -61,8 +61,8 @@ curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o Mi
 # continue from here
 
 # clone the repo
-git clone https://github.com/lstein/stable-diffusion.git
-cd stable-diffusion
+git clone https://github.com/invoke-ai/InvokeAI.git
+cd InvokeAI
 
 #
 # wait until the checkpoint file has downloaded, then proceed
