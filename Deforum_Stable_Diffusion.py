@@ -582,6 +582,108 @@ def transform_image_3d(prev_img_cv2, depth_tensor, rot_mat, translate, anim_args
     ).cpu().numpy().astype(prev_img_cv2.dtype)
     return result
 
+# prompt weighting with colons and number coefficients (like 'bacon:0.75 eggs:0.25')
+# borrowed from https://github.com/kylewlacy/stable-diffusion/blob/0a4397094eb6e875f98f9d71193e350d859c4220/ldm/dream/conditioning.py
+def get_uc_and_c(prompts, model, args, log_tokens=True, skip_normalize=False):
+    import re
+    # Extract Unconditioned Words From Prompt
+    unconditioned_words = ''
+    unconditional_regex = r'\[(.*?)\]'
+    prompt = prompts[0] # they are the same in a batch anyway
+    unconditionals = re.findall(unconditional_regex, prompt)
+
+    if len(unconditionals) > 0:
+        unconditioned_words = ' '.join(unconditionals)
+
+        # Remove Unconditioned Words From Prompt
+        unconditional_regex_compile = re.compile(unconditional_regex)
+        clean_prompt = unconditional_regex_compile.sub(' ', prompt)
+        prompt = re.sub(' +', ' ', clean_prompt)
+
+    uc = model.get_learned_conditioning(args.n_samples * [unconditioned_words])
+
+    # get weighted sub-prompts
+    weighted_subprompts = split_weighted_subprompts(
+        prompt, skip_normalize
+    )
+
+    if len(weighted_subprompts) > 1:
+        # i dont know if this is correct.. but it works
+        c = torch.zeros_like(uc)
+        # normalize each "sub prompt" and add it
+        for subprompt, weight in weighted_subprompts:
+            log_tokenization(subprompt, model, log_tokens, weight)
+            c = torch.add(
+                c,
+                model.get_learned_conditioning(args.n_samples * [subprompt]),
+                alpha=weight,
+            )
+    else:   # just standard 1 prompt
+        log_tokenization(prompt, model, log_tokens, 1)
+        c = model.get_learned_conditioning(args.n_samples * [prompt])
+        uc = model.get_learned_conditioning(args.n_samples * [unconditioned_words])
+    return (uc, c)
+
+def split_weighted_subprompts(text, skip_normalize=False)->list:
+    import re
+    """
+    grabs all text up to the first occurrence of ':'
+    uses the grabbed text as a sub-prompt, and takes the value following ':' as weight
+    if ':' has no value defined, defaults to 1.0
+    repeats until no text remaining
+    """
+    prompt_parser = re.compile("""
+            (?P<prompt>     # capture group for 'prompt'
+            (?:\\\:|[^:])+  # match one or more non ':' characters or escaped colons '\:'
+            )               # end 'prompt'
+            (?:             # non-capture group
+            :+              # match one or more ':' characters
+            (?P<weight>     # capture group for 'weight'
+            -?\d+(?:\.\d+)? # match positive or negative integer or decimal number
+            )?              # end weight capture group, make optional
+            \s*             # strip spaces after weight
+            |               # OR
+            $               # else, if no ':' then match end of line
+            )               # end non-capture group
+            """, re.VERBOSE)
+    parsed_prompts = [(match.group("prompt").replace("\\:", ":"), float(
+        match.group("weight") or 1)) for match in re.finditer(prompt_parser, text)]
+    if skip_normalize:
+        return parsed_prompts
+    weight_sum = sum(map(lambda x: x[1], parsed_prompts))
+    if weight_sum == 0:
+        print(
+            "Warning: Subprompt weights add up to zero. Discarding and using even weights instead.")
+        equal_weight = 1 / max(len(parsed_prompts), 1)
+        return [(x[0], equal_weight) for x in parsed_prompts]
+    return [(x[0], x[1] / weight_sum) for x in parsed_prompts]
+
+# shows how the prompt is tokenized
+# usually tokens have '</w>' to indicate end-of-word,
+# but for readability it has been replaced with ' '
+def log_tokenization(text, model, log=False, weight=1):
+    if not log:
+        return
+    tokens    = model.cond_stage_model.tokenizer._tokenize(text)
+    tokenized = ""
+    discarded = ""
+    usedTokens = 0
+    totalTokens = len(tokens)
+    for i in range(0, totalTokens):
+        token = tokens[i].replace('</w>', ' ')
+        # alternate color
+        s = (usedTokens % 6) + 1
+        if i < model.cond_stage_model.max_length:
+            tokenized = tokenized + f"\x1b[0;3{s};40m{token}"
+            usedTokens += 1
+        else:  # over max token length
+            discarded = discarded + f"\x1b[0;3{s};40m{token}"
+    print(f"\n>> Tokens ({usedTokens}), Weight ({weight:.2f}):\n{tokenized}\x1b[0m")
+    if discarded != "":
+        print(
+            f">> Tokens Discarded ({totalTokens-usedTokens}):\n{discarded}\x1b[0m"
+        )
+
 def generate(args, return_latent=False, return_sample=False, return_c=False):
     seed_everything(args.seed)
     os.makedirs(args.outdir, exist_ok=True)
@@ -659,13 +761,12 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
         with precision_scope("cuda"):
             with model.ema_scope():
                 for prompts in data:
-                    uc = None
-                    if args.scale != 1.0:
-                        uc = model.get_learned_conditioning(batch_size * [""])
                     if isinstance(prompts, tuple):
                         prompts = list(prompts)
-                    c = model.get_learned_conditioning(prompts)
+                    uc, c = get_uc_and_c(prompts, model, args)
 
+                    if args.scale == 1.0:
+                        uc = None
                     if args.init_c != None:
                         c = args.init_c
 
@@ -1002,8 +1103,8 @@ def parse_key_frames(string, prompt_parser=None):
 # !! }}
 
 prompts = [
-    "a beautiful forest by Asher Brown Durand, trending on Artstation", #the first prompt I want
-    "a beautiful portrait of a woman by Artgerm, trending on Artstation", #the second prompt I want
+    "a beautiful portrait of a woman:0.75 in forest:0.25, green dress, by Artgerm, Asher Brown Durand, trending on Artstation", #the first prompt I want
+    "a beautiful portrait of a woman:0.25 in forest:0.75, green dress, by Artgerm, Asher Brown Durand, trending on Artstation", #the second prompt I want
     #"the third prompt I don't want it I commented it with an",
 ]
 
