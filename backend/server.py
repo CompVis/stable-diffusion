@@ -103,6 +103,8 @@ socketio = SocketIO(
     engineio_logger=engineio_logger,
     max_http_buffer_size=max_http_buffer_size,
     cors_allowed_origins=cors_allowed_origins,
+    ping_interval=(50,50),
+    ping_timeout=60
 )
 
 
