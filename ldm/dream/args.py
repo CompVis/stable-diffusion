@@ -193,7 +193,7 @@ class Args(object):
         # img2img generations have parameters relevant only to them and have special handling
         if a['init_img'] and len(a['init_img'])>0:
             switches.append(f'-I {a["init_img"]}')
-            switches.append(f'-A ddim') # TODO: FIX ME WHEN IMG2IMG SUPPORTS ALL SAMPLERS
+            switches.append(f'-A {a["sampler_name"]}')
             if a['fit']:
                 switches.append(f'--fit')
             if a['init_mask'] and len(a['init_mask'])>0:

@@ -30,6 +30,8 @@ class Txt2Img(Generator):
 
             if self.free_gpu_mem and self.model.model.device != self.model.device:
                 self.model.model.to(self.model.device)
+                                
+            sampler.make_schedule(ddim_num_steps=steps, ddim_eta=ddim_eta, verbose=True)
 
             samples, _ = sampler.sample(
                 batch_size                   = 1,

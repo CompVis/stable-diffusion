@@ -1065,3 +1065,15 @@ class Generate:
             f.write(hash)
         return hash
 
+    def write_intermediate_images(self,modulus,path):
+        counter = -1
+        if not os.path.exists(path):
+            os.makedirs(path)
+        def callback(img):
+            nonlocal counter
+            counter += 1
+            if counter % modulus != 0:
+                return;
+            image = self.sample_to_image(img)
+            image.save(os.path.join(path,f'{counter:03}.png'),'PNG')
+        return callback
