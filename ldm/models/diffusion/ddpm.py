@@ -701,7 +701,7 @@ class LatentDiffusion(DDPM):
 
     @rank_zero_only
     @torch.no_grad()
-    def on_train_batch_start(self, batch, batch_idx, dataloader_idx):
+    def on_train_batch_start(self, batch, batch_idx, dataloader_idx=None):
         # only for very first batch
         if (
             self.scale_by_std
@@ -1890,7 +1890,7 @@ class LatentDiffusion(DDPM):
         N=8,
         n_row=4,
         sample=True,
-        ddim_steps=200,
+        ddim_steps=50,
         ddim_eta=1.0,
         return_keys=None,
         quantize_denoised=True,
