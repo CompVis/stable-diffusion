@@ -160,14 +160,13 @@ class Txt2Img(BaseModel):
                 with model.ema_scope():
                     tic = time.time()
                     uc = None
+                    if opt.scale != 1.0:
+                        uc = model.get_learned_conditioning(
+                            batch_size * [""]
+                        )
+                        self.log.info("sample")
                     for _n in trange(opt.n_iter, desc="Sampling"):
                         for prompts in tqdm(data, desc="data"):
-                            uc = None
-                            if opt.scale != 1.0:
-                                uc = model.get_learned_conditioning(
-                                    batch_size * [""]
-                                )
-                                self.log.info("sample")
                             if isinstance(prompts, tuple):
                                 prompts = list(prompts)
                             c = model.get_learned_conditioning(prompts)
