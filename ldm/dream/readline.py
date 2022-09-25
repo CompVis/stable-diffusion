@@ -22,11 +22,12 @@ class Completer:
     def complete(self, text, state):
         buffer = readline.get_line_buffer()
 
-        if text.startswith(('-I', '--init_img','-M','--init_mask')):
+        if text.startswith(('-I', '--init_img','-M','--init_mask',
+                            '--init_color')):
             return self._path_completions(text, state, ('.png','.jpg','.jpeg'))
 
-        if buffer.strip().endswith('cd') or text.startswith(('.', '/')):
-            return self._path_completions(text, state, ())
+        if buffer.strip().endswith('pp') or text.startswith(('.', '/')):
+            return self._path_completions(text, state, ('.png','.jpg','.jpeg'))
 
         response = None
         if state == 0:
@@ -57,6 +58,8 @@ class Completer:
             path = text.replace('--init_mask=', '', 1).lstrip()
         elif text.startswith('-M'):
             path = text.replace('-M', '', 1).lstrip()
+        elif text.startswith('--init_color='):
+            path = text.replace('--init_color=', '', 1).lstrip()
         else:
             path = text
 
@@ -100,6 +103,7 @@ if readline_available:
                 '--individual','-i',
                 '--init_img','-I',
                 '--init_mask','-M',
+                '--init_color',
                 '--strength','-f',
                 '--variants','-v',
                 '--outdir','-o',

@@ -1,0 +1,7 @@
+-r requirements.txt
+
+# Get hardware-appropriate torch/torchvision 
+--extra-index-url https://download.pytorch.org/whl/cu116 --trusted-host https://download.pytorch.org
+torch
+torchvision
+-e .
