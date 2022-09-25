@@ -906,6 +906,8 @@ def DeforumAnimArgs():
     video_init_path ='/content/video_in.mp4'#@param {type:"string"}
     extract_nth_frame = 1#@param {type:"number"}
     overwrite_extracted_frames = True #@param {type:"boolean"}
+    use_mask_video = False #@param {type:"boolean"}
+    video_mask_path ='/content/video_in.mp4'#@param {type:"string"}
 
     #@markdown ####**Interpolation:**
     interpolate_key_frames = False #@param {type:"boolean"}
@@ -1315,15 +1317,19 @@ def render_animation(args, anim_args):
         # grab prompt for current frame
         args.prompt = prompt_series[frame_idx]
         print(f"{args.prompt} {args.seed}")
-        print(f"Angle: {keys.angle_series[frame_idx]} Zoom: {keys.zoom_series[frame_idx]}")
-        print(f"Tx: {keys.translation_x_series[frame_idx]} Ty: {keys.translation_y_series[frame_idx]} Tz: {keys.translation_z_series[frame_idx]}")
-        print(f"Rx: {keys.rotation_3d_x_series[frame_idx]} Ry: {keys.rotation_3d_y_series[frame_idx]} Rz: {keys.rotation_3d_z_series[frame_idx]}")
+        if not using_vid_init:
+            print(f"Angle: {keys.angle_series[frame_idx]} Zoom: {keys.zoom_series[frame_idx]}")
+            print(f"Tx: {keys.translation_x_series[frame_idx]} Ty: {keys.translation_y_series[frame_idx]} Tz: {keys.translation_z_series[frame_idx]}")
+            print(f"Rx: {keys.rotation_3d_x_series[frame_idx]} Ry: {keys.rotation_3d_y_series[frame_idx]} Rz: {keys.rotation_3d_z_series[frame_idx]}")
 
         # grab init image for current frame
         if using_vid_init:
-            init_frame = os.path.join(args.outdir, 'inputframes', f"{frame_idx+1:04}.jpg")            
+            init_frame = os.path.join(args.outdir, 'inputframes', f"{frame_idx+1:05}.jpg")            
             print(f"Using video init frame {init_frame}")
             args.init_image = init_frame
+            if anim_args.use_mask_video:
+                mask_frame = os.path.join(args.outdir, 'maskframes', f"{frame_idx+1:05}.jpg")
+                args.mask_file = mask_frame
 
         # sample the diffusion model
         sample, image = generate(args, return_latent=False, return_sample=True)
@@ -1355,6 +1361,7 @@ def vid2frames(video_path, frames_path, n=1, overwrite=True):
               f.unlink()
       except:
           pass
+      assert os.path.exists(video_path), f"Video input {video_path} does not exist"
           
       vidcap = cv2.VideoCapture(video_path)
       success,image = vidcap.read()
@@ -1383,6 +1390,18 @@ def render_input_video(args, anim_args):
     anim_args.max_frames = len([f for f in pathlib.Path(video_in_frame_path).glob('*.jpg')])
     args.use_init = True
     print(f"Loading {anim_args.max_frames} input frames from {video_in_frame_path} and saving video frames to {args.outdir}")
+
+    if anim_args.use_mask_video:
+        # create a folder for the mask video input frames to live in
+        mask_in_frame_path = os.path.join(args.outdir, 'maskframes') 
+        os.makedirs(mask_in_frame_path, exist_ok=True)
+
+        # save the video frames from mask video
+        print(f"Exporting Video Frames (1 every {anim_args.extract_nth_frame}) frames to {mask_in_frame_path}...")
+        vid2frames(anim_args.video_mask_path, mask_in_frame_path, anim_args.extract_nth_frame, anim_args.overwrite_extracted_frames)
+        args.use_mask = True
+        args.overlay_mask = True
+
     render_animation(args, anim_args)
 
 def render_interpolation(args, anim_args):
