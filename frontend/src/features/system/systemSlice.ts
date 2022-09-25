@@ -31,6 +31,8 @@ export interface SystemState extends InvokeAI.SystemStatus, InvokeAI.SystemConfi
   totalIterations: number;
   currentStatus: string;
   currentStatusHasSteps: boolean;
+  
+  shouldDisplayGuides: boolean;
 }
 
 const initialSystemState = {
@@ -39,6 +41,7 @@ const initialSystemState = {
   log: [],
   shouldShowLogViewer: false,
   shouldDisplayInProgress: false,
+  shouldDisplayGuides: true,
   isGFPGANAvailable: true,
   isESRGANAvailable: true,
   socketId: '',
@@ -117,6 +120,9 @@ export const systemSlice = createSlice({
     setSystemConfig: (state, action: PayloadAction<InvokeAI.SystemConfig>) => {
       return { ...state, ...action.payload };
     },
+    setShouldDisplayGuides: (state, action: PayloadAction<boolean>) => {
+      state.shouldDisplayGuides = action.payload;
+    },
   },
 });
 
@@ -132,6 +138,7 @@ export const {
   setSystemStatus,
   setCurrentStatus,
   setSystemConfig,
+  setShouldDisplayGuides,
 } = systemSlice.actions;
 
 export default systemSlice.reducer;

@@ -24,40 +24,40 @@ title: Linux
     the installation worked, your command prompt will be prefixed by the name of the
     current anaconda environment - `(base)`.
 
-3. Copy the stable-diffusion source code from GitHub:
+3. Copy the InvokeAI source code from GitHub:
 
-    ```bash
-    (base) ~$ git clone https://github.com/invoke-ai/InvokeAI.git
-    ```
+```
+(base) ~$ git clone https://github.com/invoke-ai/InvokeAI.git
+```
 
-    This will create stable-diffusion folder where you will follow the rest of the
-    steps.
+This will create InvokeAI folder where you will follow the rest of the steps.
 
-4. Enter the newly-created stable-diffusion folder. From this step forward make
-   sure that you are working in the stable-diffusion directory!
+4. Enter the newly-created InvokeAI folder. From this step forward make sure that you are working in the InvokeAI directory!
 
-    ```bash
-    (base) ~$ cd stable-diffusion
-    (base) ~/stable-diffusion$
-    ```
+```
+(base) ~$ cd InvokeAI
+(base) ~/InvokeAI$
+```
 
 5. Use anaconda to copy necessary python packages, create a new python
    environment named `ldm` and activate the environment.
 
-    ```bash
-    (base) ~/stable-diffusion$ conda env create -f environment.yaml
-    (base) ~/stable-diffusion$ conda activate ldm
-    (ldm) ~/stable-diffusion$
-    ```
+
+```
+(base) ~/InvokeAI$ conda env create -f environment.yaml
+(base) ~/InvokeAI$ conda activate ldm
+(ldm) ~/InvokeAI$
+```
 
     After these steps, your command prompt will be prefixed by `(ldm)` as shown
     above.
 
 6. Load a couple of small machine-learning models required by stable diffusion:
 
-    ```bash
-    (ldm) ~/stable-diffusion$ python3 scripts/preload_models.py
-    ```
+
+```
+(ldm) ~/InvokeAI$ python3 scripts/preload_models.py
+```
 
     !!! note
 
@@ -79,38 +79,34 @@ title: Linux
       This will create a symbolic link from the stable-diffusion model.ckpt file, to
       the true location of the `sd-v1-4.ckpt` file.
 
-    ```bash
-    (ldm) ~/stable-diffusion$ mkdir -p models/ldm/stable-diffusion-v1
-    (ldm) ~/stable-diffusion$ ln -sf /path/to/sd-v1-4.ckpt models/ldm/stable-diffusion-v1/model.ckpt
-    ```
+
+```
+(ldm) ~/InvokeAI$ mkdir -p models/ldm/stable-diffusion-v1
+(ldm) ~/InvokeAI$ ln -sf /path/to/sd-v1-4.ckpt models/ldm/stable-diffusion-v1/model.ckpt
+```
 
 8. Start generating images!
 
-    ```bash
-    # for the pre-release weights use the -l or --liaon400m switch
-    (ldm) ~/stable-diffusion$ python3 scripts/dream.py -l
+```
+# for the pre-release weights use the -l or --liaon400m switch
+(ldm) ~/InvokeAI$ python3 scripts/dream.py -l
 
-    # for the post-release weights do not use the switch
-    (ldm) ~/stable-diffusion$ python3 scripts/dream.py
+# for the post-release weights do not use the switch
+(ldm) ~/InvokeAI$ python3 scripts/dream.py
 
-    # for additional configuration switches and arguments, use -h or --help
-    (ldm) ~/stable-diffusion$ python3 scripts/dream.py -h
-    ```
+# for additional configuration switches and arguments, use -h or --help
+(ldm) ~/InvokeAI$ python3 scripts/dream.py -h
+```
 
-9. Subsequently, to relaunch the script, be sure to run "conda activate ldm"
-   (step 5, second command), enter the `stable-diffusion` directory, and then
-   launch the dream script (step 8). If you forget to activate the ldm
-   environment, the script will fail with multiple `ModuleNotFound` errors.
+9. Subsequently, to relaunch the script, be sure to run "conda activate ldm" (step 5, second command), enter the `InvokeAI` directory, and then launch the dream script (step 8). If you forget to activate the ldm environment, the script will fail with multiple `ModuleNotFound` errors.
 
 ## Updating to newer versions of the script
 
-This distribution is changing rapidly. If you used the `git clone` method
-(step 5) to download the stable-diffusion directory, then to update to the
-latest and greatest version, launch the Anaconda window, enter
-`stable-diffusion` and type:
 
-```bash
-(ldm) ~/stable-diffusion$ git pull
+This distribution is changing rapidly. If you used the `git clone` method (step 5) to download the InvokeAI directory, then to update to the latest and greatest version, launch the Anaconda window, enter `InvokeAI` and type:
+
+```
+(ldm) ~/InvokeAI$ git pull
 ```
 
 This will bring your local copy into sync with the remote one.

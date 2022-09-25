@@ -47,7 +47,7 @@ RUN         git clone https://github.com/TencentARC/GFPGAN.git
 WORKDIR     /GFPGAN 
 RUN         pip3 install -r requirements.txt \
             && python3 setup.py develop \
-            && ln -s "/data/GFPGANv1.3.pth" experiments/pretrained_models/GFPGANv1.3.pth
+            && ln -s "/data/GFPGANv1.4.pth" experiments/pretrained_models/GFPGANv1.4.pth
 
 WORKDIR     /stable-diffusion 
 RUN         python3 scripts/preload_models.py         

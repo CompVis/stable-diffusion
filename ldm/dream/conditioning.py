@@ -79,10 +79,10 @@ def split_weighted_subprompts(text, skip_normalize=False)->list:
     if weight_sum == 0:
         print(
             "Warning: Subprompt weights add up to zero. Discarding and using even weights instead.")
-        equal_weight = 1 / len(parsed_prompts)
+        equal_weight = 1 / max(len(parsed_prompts), 1)
         return [(x[0], equal_weight) for x in parsed_prompts]
     return [(x[0], x[1] / weight_sum) for x in parsed_prompts]
-        
+
 # shows how the prompt is tokenized
 # usually tokens have '</w>' to indicate end-of-word,
 # but for readability it has been replaced with ' '
