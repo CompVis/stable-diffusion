@@ -1,0 +1,152 @@
+* {
+    font-family: 'Arial';
+    font-size: 100%;
+}
+body {
+    font-size: 1em;
+}
+textarea {
+    font-size: 0.95em;
+}
+header, form, #progress-section {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 1024px;
+    text-align: center;
+}
+fieldset {
+    border: none;
+    line-height: 2.2em;
+}
+select, input {
+    margin-right: 10px;
+    padding: 2px;
+}
+input[type=submit] {
+    background-color: #666;
+    color: white;
+}
+input[type=checkbox] {
+    margin-right: 0px;
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+}
+input#seed {
+    margin-right: 0px;
+}
+div {
+    padding: 10px 10px 10px 10px;
+}
+header {
+    margin-bottom: 16px;
+}
+header h1 {
+    margin-bottom: 0;
+    font-size: 2em;
+}
+#search-box {
+    display: flex;
+}
+#scaling-inprocess-message {
+    font-weight: bold;
+    font-style: italic;
+    display: none;
+}
+#prompt {
+    flex-grow: 1;
+    padding: 5px 10px 5px 10px;
+    border: 1px solid #999;
+    outline: none;
+}
+#submit {
+    padding: 5px 10px 5px 10px;
+    border: 1px solid #999;
+}
+#reset-all, #remove-image {
+    margin-top: 12px;
+    font-size: 0.8em;
+    background-color: pink;
+    border: 1px solid #999;
+    border-radius: 4px;
+}
+#results {
+    text-align: center;
+    margin: auto;
+    padding-top: 10px;
+}
+#results figure {
+    display: inline-block;
+    margin: 10px;
+}
+#results figcaption {
+    font-size: 0.8em;
+    padding: 3px;
+    color: #888;
+    cursor: pointer;
+}
+#results img {
+    border-radius: 5px;
+    object-fit: cover;
+}
+#fieldset-config {
+    line-height:2em;
+    background-color: #F0F0F0;
+}
+input[type="number"] {
+    width: 60px;
+}
+#seed {
+    width: 150px;
+}
+button#reset-seed {
+    font-size: 1.7em;
+    background: #efefef;
+    border: 1px solid #999;
+    border-radius: 4px;
+    line-height: 0.8;
+    margin: 0 10px 0 0;
+    padding: 0 5px 3px;
+    vertical-align: middle;
+}
+label {
+    white-space: nowrap;
+}
+#progress-section {
+    display: none;
+}
+#progress-image {
+    width: 30vh;
+    height: 30vh;
+}
+#cancel-button {
+    cursor: pointer;
+    color: red;
+}
+#basic-parameters {
+    background-color: #EEEEEE;
+}
+#txt2img {
+    background-color: #DCDCDC;
+}
+#variations {
+    background-color: #EEEEEE;
+}
+#img2img {
+    background-color: #DCDCDC;
+}
+#gfpgan {
+    background-color: #EEEEEE;
+}
+#progress-section {
+    background-color: #F5F5F5;
+}
+.section-header {
+    text-align: left;
+    font-weight: bold;
+    padding: 0 0 0 0;
+}
+#no-results-message:not(:only-child) {
+    display: none;
+}
+

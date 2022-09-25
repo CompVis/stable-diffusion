@@ -82,7 +82,9 @@ class EmbeddingManager(nn.Module):
                 get_embedding_for_clip_token,
                 embedder.transformer.text_model.embeddings,
             )
-            token_dim = 1280
+            # per bug report #572
+            #token_dim = 1280
+            token_dim = 768
         else:   # using LDM's BERT encoder
             self.is_clip = False
             get_token_for_string = partial(

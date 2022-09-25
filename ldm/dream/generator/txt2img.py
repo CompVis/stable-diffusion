@@ -7,9 +7,9 @@ import numpy as  np
 from ldm.dream.generator.base import Generator
 
 class Txt2Img(Generator):
-    def __init__(self,model):
-        super().__init__(model)
-    
+    def __init__(self, model, precision):
+        super().__init__(model, precision)
+
     @torch.no_grad()
     def get_make_image(self,prompt,sampler,steps,cfg_scale,ddim_eta,
                        conditioning,width,height,step_callback=None,**kwargs):

@@ -1,14 +1,17 @@
 import argparse
 import json
+import copy
 import base64
 import mimetypes
 import os
+from ldm.dream.args import Args, metadata_dumps
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from ldm.dream.pngwriter import PngWriter, PromptFormatter
+from ldm.dream.pngwriter import PngWriter
 from threading import Event
 
 def build_opt(post_data, seed, gfpgan_model_exists):
-    opt = argparse.Namespace()
+    opt = Args()
+    opt.parse_args()  # initialize defaults
     setattr(opt, 'prompt', post_data['prompt'])
     setattr(opt, 'init_img', post_data['initimg'])
     setattr(opt, 'strength', float(post_data['strength']))
@@ -22,19 +25,27 @@ def build_opt(post_data, seed, gfpgan_model_exists):
     setattr(opt, 'invert_mask', 'invert_mask' in post_data)
     setattr(opt, 'cfg_scale', float(post_data['cfg_scale']))
     setattr(opt, 'sampler_name', post_data['sampler_name'])
+
+    # embiggen not practical at this point because we have no way of feeding images back into img2img
+    # however, this code is here against that eventuality
+    setattr(opt, 'embiggen', None)
+    setattr(opt, 'embiggen_tiles', None)
+
     setattr(opt, 'gfpgan_strength', float(post_data['gfpgan_strength']) if gfpgan_model_exists else 0)
     setattr(opt, 'upscale', [int(post_data['upscale_level']), float(post_data['upscale_strength'])] if post_data['upscale_level'] != '' else None)
     setattr(opt, 'progress_images', 'progress_images' in post_data)
     setattr(opt, 'seed', None if int(post_data['seed']) == -1 else int(post_data['seed']))
     setattr(opt, 'variation_amount', float(post_data['variation_amount']) if int(post_data['seed']) != -1 else 0)
     setattr(opt, 'with_variations', [])
+    setattr(opt, 'embiggen', None)
+    setattr(opt, 'embiggen_tiles', None)
 
     broken = False
     if int(post_data['seed']) != -1 and post_data['with_variations'] != '':
         for part in post_data['with_variations'].split(','):
             seed_and_weight = part.split(':')
             if len(seed_and_weight) != 2:
-                print(f'could not parse with_variation part "{part}"')
+                print(f'could not parse WITH_variation part "{part}"')
                 broken = True
                 break
             try:
@@ -67,16 +78,15 @@ class DreamServer(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "text/html")
             self.end_headers()
-            with open("./static/dream_web/index.html", "rb") as content:
+            with open("./static/legacy_web/index.html", "rb") as content:
                 self.wfile.write(content.read())
         elif self.path == "/config.js":
             # unfortunately this import can't be at the top level, since that would cause a circular import
-            from ldm.gfpgan.gfpgan_tools import gfpgan_model_exists
             self.send_response(200)
             self.send_header("Content-type", "application/javascript")
             self.end_headers()
             config = {
-                'gfpgan_model_exists': gfpgan_model_exists
+                'gfpgan_model_exists': self.gfpgan_model_exists
             }
             self.wfile.write(bytes("let config = " + json.dumps(config) + ";\n", "utf-8"))
         elif self.path == "/run_log.json":
@@ -85,7 +95,7 @@ class DreamServer(BaseHTTPRequestHandler):
             self.end_headers()
             output = []
             
-            log_file = os.path.join(self.outdir, "dream_web_log.txt")
+            log_file = os.path.join(self.outdir, "legacy_web_log.txt")
             if os.path.exists(log_file):
                 with open(log_file, "r") as log:
                     for line in log:
@@ -103,10 +113,14 @@ class DreamServer(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(bytes('{}', 'utf8'))
         else:
-            path = "." + self.path
-            cwd = os.path.realpath(os.getcwd())
-            is_in_cwd = os.path.commonprefix((os.path.realpath(path), cwd)) == cwd
-            if not (is_in_cwd and os.path.exists(path)):
+            path_dir = os.path.dirname(self.path)
+            out_dir  = os.path.realpath(self.outdir.rstrip('/'))
+            if self.path.startswith('/static/legacy_web/'):
+                path = '.' + self.path
+            elif out_dir.replace('\\', '/').endswith(path_dir):
+                file = os.path.basename(self.path)
+                path = os.path.join(self.outdir,file)
+            else:
                 self.send_response(404)
                 return
             mime_type = mimetypes.guess_type(path)[0]
@@ -114,7 +128,7 @@ class DreamServer(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header("Content-type", mime_type)
                 self.end_headers()
-                with open("." + self.path, "rb") as content:
+                with open(path, "rb") as content:
                     self.wfile.write(content.read())
             else:
                 self.send_response(404)
@@ -125,14 +139,12 @@ class DreamServer(BaseHTTPRequestHandler):
         self.end_headers()
 
         # unfortunately this import can't be at the top level, since that would cause a circular import
-        from ldm.gfpgan.gfpgan_tools import gfpgan_model_exists
 
         content_length = int(self.headers['Content-Length'])
         post_data = json.loads(self.rfile.read(content_length))
-        opt = build_opt(post_data, self.model.seed, gfpgan_model_exists)
+        opt = build_opt(post_data, self.model.seed, self.gfpgan_model_exists)
 
         self.canceled.clear()
-        print(f">> Request to generate with prompt: {opt.prompt}")
         # In order to handle upscaled images, the PngWriter needs to maintain state
         # across images generated by each call to prompt2img(), so we define it in
         # the outer scope of image_done()
@@ -148,9 +160,10 @@ class DreamServer(BaseHTTPRequestHandler):
         # the images are first generated, and then again when after upscaling
         # is complete. The upscaling replaces the original file, so the second
         # entry should not be inserted into the image list.
-        def image_done(image, seed, upscaled=False):
+        # LS: This repeats code in dream.py
+        def image_done(image, seed, upscaled=False, first_seed=None):
             name = f'{prefix}.{seed}.png'
-            iter_opt = argparse.Namespace(**vars(opt)) # copy
+            iter_opt  = copy.copy(opt)
             if opt.variation_amount > 0:
                 this_variation = [[seed, opt.variation_amount]]
                 if opt.with_variations is None:
@@ -158,16 +171,22 @@ class DreamServer(BaseHTTPRequestHandler):
                 else:
                     iter_opt.with_variations = opt.with_variations + this_variation
                 iter_opt.variation_amount = 0
-            elif opt.with_variations is None:
-                iter_opt.seed = seed
-            normalized_prompt = PromptFormatter(self.model, iter_opt).normalize_prompt()
-            path = pngwriter.save_image_and_prompt_to_png(image, f'{normalized_prompt} -S{iter_opt.seed}', name)
+            formatted_prompt  = opt.dream_prompt_str(seed=seed)
+            path = pngwriter.save_image_and_prompt_to_png(
+                image,
+                dream_prompt   = formatted_prompt,
+                metadata = metadata_dumps(iter_opt,
+                                          seeds      = [seed],
+                                          model_hash = self.model.model_hash
+                ),
+                name     = name,
+            )
 
             if int(config['seed']) == -1:
                 config['seed'] = seed
             # Append post_data to log, but only once!
             if not upscaled:
-                with open(os.path.join(self.outdir, "dream_web_log.txt"), "a") as log:
+                with open(os.path.join(self.outdir, "legacy_web_log.txt"), "a") as log:
                     log.write(f"{path}: {json.dumps(config)}\n")
 
                 self.wfile.write(bytes(json.dumps(
@@ -207,9 +226,10 @@ class DreamServer(BaseHTTPRequestHandler):
             nonlocal step_index
             if opt.progress_images and step % 5 == 0 and step < opt.steps - 1:
                 image = self.model.sample_to_image(sample)
-                name = f'{prefix}.{opt.seed}.{step_index}.png'
+                step_index_padded = str(step_index).rjust(len(str(opt.steps)), '0')
+                name = f'{prefix}.{opt.seed}.{step_index_padded}.png'
                 metadata = f'{opt.prompt} -S{opt.seed} [intermediate]'
-                path = step_writer.save_image_and_prompt_to_png(image, metadata, name)
+                path = step_writer.save_image_and_prompt_to_png(image, dream_prompt=metadata, name=name)
                 step_index += 1
             self.wfile.write(bytes(json.dumps(
                 {'event': 'step', 'step': step + 1, 'url': path}
@@ -236,6 +256,15 @@ class DreamServer(BaseHTTPRequestHandler):
         except CanceledException:
             print(f"Canceled.")
             return
+        except Exception as e:
+            print("Error happened")
+            print(e)
+            self.wfile.write(bytes(json.dumps(
+                {'event': 'error',
+                 'message': str(e),
+                 'type': e.__class__.__name__}
+            ) + '\n',"utf-8"))
+            raise e
 
 
 class ThreadingDreamServer(ThreadingHTTPServer):
