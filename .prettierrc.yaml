@@ -1,0 +1,13 @@
+endOfLine: lf
+tabWidth: 2
+useTabs: false
+singleQuote: true
+quoteProps: as-needed
+embeddedLanguageFormatting: auto
+overrides:
+  - files: '*.md'
+    options:
+      proseWrap: always
+      printWidth: 80
+      parser: markdown
+      cursorOffset: -1
