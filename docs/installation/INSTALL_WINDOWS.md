@@ -33,15 +33,15 @@ in the wiki
 4. Run the command:
 
 ```
-git clone https://github.com/lstein/stable-diffusion.git
+git clone https://github.com/invoke-ai/InvokeAI.git
 ```
 
 This will create stable-diffusion folder where you will follow the rest of the steps.
 
-5. Enter the newly-created stable-diffusion folder. From this step forward make sure that you are working in the stable-diffusion directory!
+5. Enter the newly-created InvokeAI folder. From this step forward make sure that you are working in the InvokeAI directory!
 
 ```
-cd stable-diffusion
+cd InvokeAI
 ```
 
 6. Run the following two commands:
@@ -74,7 +74,7 @@ Note: This step is required. This was done because some users may might be block
 - The weight file is >4 GB in size, so
   downloading may take a while.
 
-Now run the following commands from **within the stable-diffusion directory** to copy the weights file to the right place:
+Now run the following commands from **within the InvokeAI directory** to copy the weights file to the right place:
 
 ```
 mkdir -p models\ldm\stable-diffusion-v1
@@ -94,7 +94,7 @@ python scripts\dream.py -l
 python scripts\dream.py
 ```
 
-10. Subsequently, to relaunch the script, first activate the Anaconda command window (step 3),enter the stable-diffusion directory (step 5, `cd \path\to\stable-diffusion`), run `conda activate ldm` (step 6b), and then launch the dream script (step 9).
+10. Subsequently, to relaunch the script, first activate the Anaconda command window (step 3),enter the InvokeAI directory (step 5, `cd \path\to\InvokeAI`), run `conda activate ldm` (step 6b), and then launch the dream script (step 9).
 
 **Note:** Tildebyte has written an alternative ["Easy peasy Windows
 install"](https://github.com/lstein/stable-diffusion/wiki/Easy-peasy-Windows-install)
@@ -102,7 +102,7 @@ which uses the Windows Powershell and pew. If you are having trouble with Anacon
 
 ### Updating to newer versions of the script
 
-This distribution is changing rapidly. If you used the `git clone` method (step 5) to download the stable-diffusion directory, then to update to the latest and greatest version, launch the Anaconda window, enter `stable-diffusion`, and type:
+This distribution is changing rapidly. If you used the `git clone` method (step 5) to download the InvokeAI directory, then to update to the latest and greatest version, launch the Anaconda window, enter `InvokeAI`, and type:
 
 ```
 git pull
