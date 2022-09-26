@@ -32,8 +32,16 @@ import { cloneElement, ReactElement } from 'react';
 const systemSelector = createSelector(
   (state: RootState) => state.system,
   (system: SystemState) => {
-    const { shouldDisplayInProgress, shouldConfirmOnDelete, shouldDisplayGuides } = system;
-    return { shouldDisplayInProgress, shouldConfirmOnDelete, shouldDisplayGuides };
+    const {
+      shouldDisplayInProgress,
+      shouldConfirmOnDelete,
+      shouldDisplayGuides,
+    } = system;
+    return {
+      shouldDisplayInProgress,
+      shouldConfirmOnDelete,
+      shouldDisplayGuides,
+    };
   },
   {
     memoizeOptions: { resultEqualityCheck: isEqual },
@@ -64,8 +72,11 @@ const SettingsModal = ({ children }: SettingsModalProps) => {
     onClose: onRefreshModalClose,
   } = useDisclosure();
 
-  const { shouldDisplayInProgress, shouldConfirmOnDelete, shouldDisplayGuides } =
-    useAppSelector(systemSelector);
+  const {
+    shouldDisplayInProgress,
+    shouldConfirmOnDelete,
+    shouldDisplayGuides,
+  } = useAppSelector(systemSelector);
 
   const dispatch = useAppDispatch();
 

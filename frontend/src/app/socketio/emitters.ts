@@ -83,8 +83,17 @@ const makeSocketIOEmitters = (
       const { url, uuid } = imageToDelete;
       socketio.emit('deleteImage', url, uuid);
     },
-    emitRequestAllImages: () => {
-      socketio.emit('requestAllImages');
+    emitRequestImages: () => {
+      const { nextPage, offset } = getState().gallery;
+      socketio.emit('requestImages', nextPage, offset);
+    },
+    emitRequestNewImages: () => {
+      const { nextPage, offset, images } = getState().gallery;
+      if (images.length > 0) {
+        socketio.emit('requestImages', nextPage, offset, images[0].mtime);
+      } else {
+        socketio.emit('requestImages', nextPage, offset);
+      }
     },
     emitCancelProcessing: () => {
       socketio.emit('cancel');
@@ -96,8 +105,8 @@ const makeSocketIOEmitters = (
       socketio.emit('uploadMaskImage', file, file.name);
     },
     emitRequestSystemConfig: () => {
-      socketio.emit('requestSystemConfig')
-    }
+      socketio.emit('requestSystemConfig');
+    },
   };
 };
 

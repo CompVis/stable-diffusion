@@ -12,8 +12,11 @@ export const generateImage = createAction<undefined>('socketio/generateImage');
 export const runESRGAN = createAction<InvokeAI.Image>('socketio/runESRGAN');
 export const runGFPGAN = createAction<InvokeAI.Image>('socketio/runGFPGAN');
 export const deleteImage = createAction<InvokeAI.Image>('socketio/deleteImage');
-export const requestAllImages = createAction<undefined>(
-  'socketio/requestAllImages'
+export const requestImages = createAction<undefined>(
+  'socketio/requestImages'
+);
+export const requestNewImages = createAction<undefined>(
+  'socketio/requestNewImages'
 );
 export const cancelProcessing = createAction<undefined>(
   'socketio/cancelProcessing'
@@ -23,4 +26,6 @@ export const uploadInitialImage = createAction<File>(
 );
 export const uploadMaskImage = createAction<File>('socketio/uploadMaskImage');
 
-export const requestSystemConfig = createAction<undefined>('socketio/requestSystemConfig');
+export const requestSystemConfig = createAction<undefined>(
+  'socketio/requestSystemConfig'
+);

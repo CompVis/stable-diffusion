@@ -24,7 +24,9 @@ import * as InvokeAI from '../invokeai';
 export const socketioMiddleware = () => {
   const { hostname, port } = new URL(window.location.href);
 
-  const socketio = io(`http://${hostname}:9090`);
+  const socketio = io(`http://${hostname}:9090`, {
+    timeout: 60000,
+  });
 
   let areListenersSet = false;
 
@@ -51,7 +53,8 @@ export const socketioMiddleware = () => {
       emitRunESRGAN,
       emitRunGFPGAN,
       emitDeleteImage,
-      emitRequestAllImages,
+      emitRequestImages,
+      emitRequestNewImages,
       emitCancelProcessing,
       emitUploadInitialImage,
       emitUploadMaskImage,
@@ -140,10 +143,16 @@ export const socketioMiddleware = () => {
         break;
       }
 
-      case 'socketio/requestAllImages': {
-        emitRequestAllImages();
+      case 'socketio/requestImages': {
+        emitRequestImages();
         break;
       }
+
+      case 'socketio/requestNewImages': {
+        emitRequestNewImages();
+        break;
+      }
+
 
       case 'socketio/cancelProcessing': {
         emitCancelProcessing();
