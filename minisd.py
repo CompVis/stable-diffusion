@@ -77,7 +77,7 @@ if len(user_prompt) > 2:
     prompt = user_prompt
 
 # On the fly translation.
-english_prompt = GoogleTranslator(source='auto', target='en').translate
+english_prompt = GoogleTranslator(source='auto', target='en').translate(prompt)
 
 
 import os
