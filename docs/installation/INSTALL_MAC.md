@@ -95,7 +95,8 @@ While that is downloading, open a Terminal and run the following commands:
 ```{.bash .annotate title="local repo setup"}
 # clone the repo
 git clone https://github.com/invoke-ai/InvokeAI.git
-cd stable-diffusion
+
+cd InvokeAI
 
 # wait until the checkpoint file has downloaded, then proceed
 
