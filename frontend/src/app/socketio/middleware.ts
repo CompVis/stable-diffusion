@@ -53,7 +53,8 @@ export const socketioMiddleware = () => {
       emitRunESRGAN,
       emitRunGFPGAN,
       emitDeleteImage,
-      emitRequestAllImages,
+      emitRequestImages,
+      emitRequestNewImages,
       emitCancelProcessing,
       emitUploadInitialImage,
       emitUploadMaskImage,
@@ -142,10 +143,16 @@ export const socketioMiddleware = () => {
         break;
       }
 
-      case 'socketio/requestAllImages': {
-        emitRequestAllImages();
+      case 'socketio/requestImages': {
+        emitRequestImages();
         break;
       }
+
+      case 'socketio/requestNewImages': {
+        emitRequestNewImages();
+        break;
+      }
+
 
       case 'socketio/cancelProcessing': {
         emitCancelProcessing();

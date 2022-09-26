@@ -10,15 +10,13 @@ import PromptInput from '../features/options/PromptInput';
 import LogViewer from '../features/system/LogViewer';
 import Loading from '../Loading';
 import { useAppDispatch } from './store';
-import { requestAllImages, requestSystemConfig } from './socketio/actions';
+import { requestSystemConfig } from './socketio/actions';
 
 const App = () => {
   const dispatch = useAppDispatch();
   const [isReady, setIsReady] = useState<boolean>(false);
 
-  // Load images from the gallery once
   useEffect(() => {
-    dispatch(requestAllImages());
     dispatch(requestSystemConfig());
     setIsReady(true);
   }, [dispatch]);

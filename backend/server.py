@@ -103,8 +103,8 @@ socketio = SocketIO(
     engineio_logger=engineio_logger,
     max_http_buffer_size=max_http_buffer_size,
     cors_allowed_origins=cors_allowed_origins,
-    ping_interval=(50,50),
-    ping_timeout=60
+    ping_interval=(50, 50),
+    ping_timeout=60,
 )
 
 
@@ -188,17 +188,50 @@ def handle_request_capabilities():
     socketio.emit("systemConfig", config)
 
 
-@socketio.on("requestAllImages")
-def handle_request_all_images():
-    print(f">> All images requested")
-    paths = list(filter(os.path.isfile, glob.glob(result_path + "*.png")))
-    paths.sort(key=lambda x: os.path.getmtime(x))
+@socketio.on("requestImages")
+def handle_request_images(page=1, offset=0, last_mtime=None):
+    chunk_size = 50
+
+    if last_mtime:
+        print(f">> Latest images requested")
+    else:
+        print(
+            f">> Page {page} of images requested (page size {chunk_size} offset {offset})"
+        )
+
+    paths = glob.glob(os.path.join(result_path, "*.png"))
+    sorted_paths = sorted(paths, key=lambda x: os.path.getmtime(x), reverse=True)
+
+    if last_mtime:
+        image_paths = filter(lambda x: os.path.getmtime(x) > last_mtime, sorted_paths)
+    else:
+
+        image_paths = sorted_paths[
+            slice(chunk_size * (page - 1) + offset, chunk_size * page + offset)
+        ]
+        page = page + 1
+
     image_array = []
-    for path in paths:
+
+    for path in image_paths:
         metadata = retrieve_metadata(path)
-        image_array.append({"url": path, "metadata": metadata["sd-metadata"]})
-    socketio.emit("galleryImages", {"images": image_array})
-    eventlet.sleep(0)
+        image_array.append(
+            {
+                "url": path,
+                "mtime": os.path.getmtime(path),
+                "metadata": metadata["sd-metadata"],
+            }
+        )
+
+    socketio.emit(
+        "galleryImages",
+        {
+            "images": image_array,
+            "nextPage": page,
+            "offset": offset,
+            "onlyNewImages": True if last_mtime else False,
+        },
+    )
 
 
 @socketio.on("generateImage")
@@ -277,6 +310,7 @@ def handle_run_esrgan_event(original_image, esrgan_parameters):
         "esrganResult",
         {
             "url": os.path.relpath(path),
+            "mtime": os.path.getmtime(path),
             "metadata": metadata,
         },
     )
@@ -345,6 +379,7 @@ def handle_run_gfpgan_event(original_image, gfpgan_parameters):
         "gfpganResult",
         {
             "url": os.path.relpath(path),
+            "mtime": os.path.mtime(path),
             "metadata": metadata,
         },
     )
@@ -644,7 +679,11 @@ def generate_images(generation_parameters, esrgan_parameters, gfpgan_parameters)
             step_index += 1
             socketio.emit(
                 "intermediateResult",
-                {"url": os.path.relpath(path), "metadata": generation_parameters},
+                {
+                    "url": os.path.relpath(path),
+                    "mtime": os.path.getmtime(path),
+                    "metadata": generation_parameters,
+                },
             )
         socketio.emit("progressUpdate", progress)
         eventlet.sleep(0)
@@ -737,7 +776,11 @@ def generate_images(generation_parameters, esrgan_parameters, gfpgan_parameters)
 
         socketio.emit(
             "generationResult",
-            {"url": os.path.relpath(path), "metadata": metadata},
+            {
+                "url": os.path.relpath(path),
+                "mtime": os.path.getmtime(path),
+                "metadata": metadata,
+            },
         )
         eventlet.sleep(0)
 
