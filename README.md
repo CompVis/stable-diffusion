@@ -1,24 +1,26 @@
-# Modified evolutionary version.
+# Genetic Stable Diffusion
 
-1. Install StableDiffusion as usual, plus a few more stuff.  Basically:
+## Install StableDiffusion as usual, plus a few more stuff.  Basically:
 
+```
 conda env create -f environment.yaml
 conda activate ldm    # you can change that name in the environment.yaml file...
 conda install pytorch torchvision -c pytorch
 pip install transformers diffusers invisible-watermark
 pip install pygame
+pip install webbrowser
 pip install nevergrad
 pip install -e .
+```
 
-
+## Hack diffusers (yes I should do that differently... only solution for now).
 2. Then use the file "pipeline_stable_diffusion.py" in lieu of the original pipeline_stable_diffusion.py found at 
 << python -c "import diffusers ; print(diffusers.__file__)" >>. This is done as follows:
 cp pipeline_stable_diffusion.py <<that_directory>>/pipeline_stable_diffusion.py
 
-3.  Then edit the prompt in minisd.py, and possibly other variables.
+## Then run << python minisd.py >>.
 
-Then run << python minisd.py >>.
-
+## Send feedback to [**Nevergrad Users**](https://www.facebook.com/groups/nevergradusers/)<br/>
 
 # Stable Diffusion
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
