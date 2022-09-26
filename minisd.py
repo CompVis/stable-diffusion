@@ -4,16 +4,23 @@ import torch
 import numpy as np
 from torch import autocast
 from diffusers import StableDiffusionPipeline
+import webbrowser
+
 
 model_id = "CompVis/stable-diffusion-v1-4"
 #device = "cuda"
 device = "mps" #torch.device("mps")
+
+white = (255, 255, 255)
+green = (0, 255, 0)
+blue = (0, 0, 128)
 
 os.environ["skl"] = "nn"
 os.environ["epsilon"] = "0.005"
 os.environ["decay"] = "0."
 os.environ["ngoptim"] = "DiscreteLenglerOnePlusOne"
 os.environ["forcedlatent"] = ""
+os.environ["enforcedlatent"] = ""
 os.environ["good"] = "[]"
 os.environ["bad"] = "[]"
 
@@ -59,6 +66,14 @@ prompt = "Tentacles everywhere."
 prompt = "A photo of a smiling Medusa."
 prompt = "Medusa."
 prompt = "Meg Myers in bloody armor fending off tentacles with a sword."
+prompt = "A red-haired woman with red hair. Her head is tilted."
+prompt = "A bloody heavy-metal zombie with a chainsaw."
+prompt = "Tentacles attacking a bloody Meg Myers in Eyptian dress. Meg Myers has a chainsaw."
+prompt = "Bizarre art."
+print(f"The prompt is {prompt}")
+user_prompt = input("Enter a new prompt if you prefer\n")
+if len(user_prompt) > 2:
+    prompt = user_prompt
 
 import os
 import pygame
@@ -77,19 +92,35 @@ bad = []
 five_best = []
 latent = []
 images = []
+onlyfiles = []
+
+# activate the pygame library .
+pygame.init()
+X = 1900  # > 1500 = buttons
+Y = 900  
+scrn = pygame.display.set_mode((X, Y))
+font = pygame.font.Font('freesansbold.ttf', 32)
+
+
 for iteration in range(30):
-    onlyfiles = []
     latent = [latent[f] for f in five_best]
     images = [images[f] for f in five_best]
+    onlyfiles = [onlyfiles[f] for f in five_best]
     for k in range(llambda):
         if k < len(five_best):
             continue
+        text0 = font.render(f'Please wait !!! {k} / {llambda}', True, green, blue)
+        scrn.blit(text0, ((X*3/4)/2, Y/2))
+        pygame.display.flip()
         os.environ["earlystop"] = "False" if k > len(five_best) else "True"
         os.environ["epsilon"] = str(0. if k == len(five_best) else (k - len(five_best)) / llambda)
         os.environ["budget"] = str(300 if k > len(five_best) else 2)
         os.environ["skl"] = {0: "nn", 1: "tree", 2: "logit"}[k % 3]
         if iteration > 0:
             os.environ["forcedlatent"] = str(list(forcedlatents[k].flatten()))            
+        enforcedlatent = os.environ.get("enforcedlatent", "")
+        if len(enforcedlatent) > 2:
+            os.environ["forcedlatent"] = enforcedlatent
         with autocast("cuda"):
             image = pipe(prompt, guidance_scale=7.5)["sample"][0]
             images += [image]
@@ -98,33 +129,53 @@ for iteration in range(30):
         onlyfiles += [filename]
         str_latent = eval((os.environ["latent_sd"]))
         array_latent = eval(f"np.array(str_latent).reshape(4, 64, 64)")
-        print(f"array_latent sumsq/var {sum(array_latent.flatten() ** 2) / len(array_latent.flatten())}")
+        print(f"Debug info: array_latent sumsq/var {sum(array_latent.flatten() ** 2) / len(array_latent.flatten())}")
         latent += [array_latent]
         with open(f"SD_{prompt.replace(' ','_')}_latent_{sentinel}_{k}.txt", 'w') as f:
             f.write(f"{latent}")
     
+    # Stop the forcing from disk!
+    os.environ["enforcedlatent"] = ""
     # importing required library
     
     #mypath = "./"
     #onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
     #onlyfiles = [str(f) for f in onlyfiles if "SD_" in str(f) and ".png" in str(f) and str(f) not in all_files and sentinel in str(f)]
     #print()
-    # activate the pygame library .
-    pygame.init()
-    X = 1500
-    Y = 900
      
     # create the display surface object
     # of specific dimension..e(X, Y).
-    scrn = pygame.display.set_mode((X, Y))
-    
+
+    # Button for loading a starting point
+    text1 = font.render('Load image', True, green, blue)
+    text1 = pygame.transform.rotate(text1, 90)
+    scrn.blit(text1, (X*3/4, 0))
+    text1 = font.render('& latent', True, green, blue)
+    text1 = pygame.transform.rotate(text1, 90)
+    scrn.blit(text1, (X*3/4+X/16, 0))
+    # Button for creating a meme
+    text2 = font.render('Create', True, green, blue)
+    text2 = pygame.transform.rotate(text2, 90)
+    scrn.blit(text2, (X*3/4, Y/3))
+    text2 = font.render('a meme', True, green, blue)
+    text2 = pygame.transform.rotate(text2, 90)
+    scrn.blit(text2, (X*3/4+X/16, Y/3))
+    # Button for new generation
+    text3 = font.render(f"I don't want to", True, green, blue)
+    text3 = pygame.transform.rotate(text3, 90)
+    scrn.blit(text3, (X*3/4, Y*2/3))
+    text3 = font.render(f"select images! Just rerun.", True, green, blue)
+    text3 = pygame.transform.rotate(text3, 90)
+    scrn.blit(text3, (X*3/4+X/16, Y*2/3))
+
     for idx in range(llambda):
         # set the pygame window name
         pygame.display.set_caption('images')
          
         # create a surface object, image is drawn on it.
-        imp = pygame.transform.scale(images[idx].convert(), (300, 300))
-        #imp = pygame.transform.scale(pygame.image.load(onlyfiles[idx]).convert(), (300, 300))
+        #imp = pygame.transform.scale(images[idx], (300, 300))  
+        #imp = pygame.transform.scale(images[idx].convert(), (300, 300))  # TypeError: argument 1 must be pygame.Surface, not Image
+        imp = pygame.transform.scale(pygame.image.load(onlyfiles[idx]).convert(), (300, 300))
          
         # Using blit to copy content from one surface to other
         scrn.blit(imp, (300 * (idx // 3), 300 * (idx % 3)))
@@ -135,6 +186,9 @@ for iteration in range(30):
     indices = []
     good = []
     five_best = []
+    for i in pygame.event.get():
+        if i.type == pygame.MOUSEBUTTONUP:
+            print("too early for clicking !!!!")
     while (status):
      
       # iterate over the list of Event objects
@@ -142,11 +196,37 @@ for iteration in range(30):
         for i in pygame.event.get():
             if i.type == pygame.MOUSEBUTTONUP:
                 pos = pygame.mouse.get_pos() 
-                print(pos)
+                print(f"Click at {pos}")
+                if pos[0] > 1500:  # Not in the images.
+                    if pos[1] < Y/3:
+                        filename = input("Filename (please provide the latent file, of the format SD*latent*.txt) ?\n")
+                        status = False
+                        with open(filename, 'r') as f:
+                             latent = f.read()
+                        break
+                    if pos[1] < 2*Y/3:
+                        url = 'https://imgflip.com/memegenerator'
+                        onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
+                        onlyfiles = [str(f) for f in onlyfiles if "SD_" in str(f) and ".png" in str(f) and str(f) not in all_files and sentinel in str(f)]
+                        print("Your generated images:")
+                        print(onlyfiles)
+                        webbrowser.open(url)
+                        exit()
+                    status = False
+                    break
                 index = 3 * (pos[0] // 300) + (pos[1] // 300)
                 if index not in five_best and len(five_best) < 5:
                     five_best += [index]
                 indices += [[index, (pos[0] - (pos[0] // 300) * 300) / 300, (pos[1] - (pos[1] // 300) * 300) / 300]]
+                # Update the button for new generation.
+                text3 = font.render(f"  I have chosen {len(indices)} images:", True, green, blue)
+                text3 = pygame.transform.rotate(text3, 90)
+                scrn.blit(text3, (X*3/4, Y*2/3))
+                text3 = font.render(f"  New generation!", True, green, blue)
+                text3 = pygame.transform.rotate(text3, 90)
+                scrn.blit(text3, (X*3/4+X/16, Y*2/3))
+                #text3Rect = text3.get_rect()
+                #text3Rect.center = (750+750*3/4, 1000)
                 good += [list(latent[index].flatten())]
     
             # if event object type is QUIT
@@ -156,11 +236,15 @@ for iteration in range(30):
                 status = False
      
     # deactivates the pygame library
-    pygame.quit()
-    print(indices)
+    if len(indices) == 0:
+        print("The user did not like anything! Rerun :-(")
+        continue
+    print(f"Clicks at {indices}")
     os.environ["mu"] = str(len(indices))
     forcedlatents = []
     bad += [list(latent[u].flatten()) for u in range(len(onlyfiles)) if u not in [i[0] for i in indices]]
+    if len(bad) > 200:
+        bad = bad[(len(bad) - 200):]
     for a in range(llambda):
         forcedlatent = np.zeros((4, 64, 64))
         os.environ["good"] = str(good)
@@ -191,3 +275,4 @@ for iteration in range(30):
     #for uu in range(len(latent)):
     #    print(f"--> latent[{uu}] sum of sq / variable = {np.sum(latent[uu].flatten()**2) / len(latent[uu].flatten())}")
             
+pygame.quit()
