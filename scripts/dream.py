@@ -12,10 +12,11 @@ sys.path.append('.')    # corrects a weird problem on Macs
 import ldm.dream.readline
 from ldm.dream.args import Args, metadata_dumps, metadata_from_png
 from ldm.dream.pngwriter import PngWriter
-from ldm.dream.server import DreamServer, ThreadingDreamServer
 from ldm.dream.image_util import make_grid
 from ldm.dream.log import write_log
 from omegaconf import OmegaConf
+
+from backend.invoke_ai_web_server import InvokeAIWebServer
 
 # Placeholder to be replaced with proper class that tracks the
 # outputs and associates with the prompt that generated them.
@@ -111,15 +112,15 @@ def main():
     #set additional option
     gen.free_gpu_mem = opt.free_gpu_mem
 
+    # web server loops forever
+    if opt.web:
+        invoke_ai_web_server_loop(gen, gfpgan, codeformer, esrgan)
+        sys.exit(0)
+
     if not infile:
         print(
             "\n* Initialization done! Awaiting your command (-h for help, 'q' to quit)"
         )
-
-    # web server loops forever
-    if opt.web:
-        dream_server_loop(gen, opt.host, opt.port, opt.outdir, gfpgan)
-        sys.exit(0)
 
     main_loop(gen, opt, infile)
 
@@ -414,35 +415,20 @@ def get_next_command(infile=None) -> str:  # command string
             print(f'#{command}')
     return command
 
-def dream_server_loop(gen, host, port, outdir, gfpgan):
+def invoke_ai_web_server_loop(gen, gfpgan, codeformer, esrgan):
     print('\n* --web was specified, starting web server...')
     # Change working directory to the stable-diffusion directory
     os.chdir(
         os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     )
-
-    # Start server
-    DreamServer.model  = gen # misnomer in DreamServer - this is not the model you are looking for
-    DreamServer.outdir = outdir
-    DreamServer.gfpgan_model_exists = False
-    if gfpgan is not None:
-        DreamServer.gfpgan_model_exists = gfpgan.gfpgan_model_exists
-
-    dream_server = ThreadingDreamServer((host, port))
-    print(">> Started Stable Diffusion dream server!")
-    if host == '0.0.0.0':
-        print(
-            f"Point your browser at http://localhost:{port} or use the host's DNS name or IP address.")
-    else:
-        print(">> Default host address now 127.0.0.1 (localhost). Use --host 0.0.0.0 to bind any address.")
-        print(f">> Point your browser at http://{host}:{port}")
+    
+    invoke_ai_web_server = InvokeAIWebServer(generate=gen, gfpgan=gfpgan, codeformer=codeformer, esrgan=esrgan)
 
     try:
-        dream_server.serve_forever()
+        invoke_ai_web_server.run()
     except KeyboardInterrupt:
         pass
-
-    dream_server.server_close()
+    
 
 def write_log_message(results, log_path):
     """logs the name of the output image, prompt, and prompt args to the terminal and log file"""

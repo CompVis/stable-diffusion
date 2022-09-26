@@ -423,6 +423,23 @@ class Args(object):
             help='Start in web server mode.',
         )
         web_server_group.add_argument(
+            '--web_develop',
+            dest='web_develop',
+            action='store_true',
+            help='Start in web server development mode.',
+        )
+        web_server_group.add_argument(
+            "--web_verbose",
+            action="store_true",
+            help="Enables verbose logging",
+        )
+        web_server_group.add_argument(
+            "--cors",
+            nargs="*",
+            type=str,
+            help="Additional allowed origins, comma-separated",
+        )
+        web_server_group.add_argument(
             '--host',
             type=str,
             default='127.0.0.1',
