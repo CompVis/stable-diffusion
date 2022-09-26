@@ -2,8 +2,10 @@
 title: Barebones Web Server
 ---
 
+# :material-web: Barebones Web Server
+
 As of version 1.10, this distribution comes with a bare bones web server (see
-screenshot). To use it, run the `dream.py` script by adding the `**--web**`
+screenshot). To use it, run the `dream.py` script by adding the `--web`
 option.
 
 ```bash

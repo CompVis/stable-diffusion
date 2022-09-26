@@ -30,8 +30,10 @@ dependencies:
   - nomkl
   - numpy==1.23.2
   - omegaconf==2.1.1
+  - openh264==2.3.0
   - onnx==1.12.0
   - onnxruntime==1.12.1
+  - protobuf==3.20.1
   - pudb==2022.1
   - pytorch-lightning==1.6.5
   - scipy==1.9.1
@@ -48,6 +50,7 @@ dependencies:
     - opencv-python==4.6.0
     - protobuf==3.20.1
     - realesrgan==0.2.5.0
+    - send2trash==1.8.0
     - test-tube==0.7.5
     - transformers==4.21.2
     - torch-fidelity==0.3.0

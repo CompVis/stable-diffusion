@@ -2,6 +2,8 @@
 title: Changelog
 ---
 
+# :octicons-log-16: Changelog
+
 ## v1.13 <small>(in process)</small>
 
 - Supports a Google Colab notebook for a standalone server running on Google

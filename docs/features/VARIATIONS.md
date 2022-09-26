@@ -2,6 +2,10 @@
 title: Variations
 ---
 
+# :material-tune-variant: Variations
+
+## Intro
+
 Release 1.13 of SD-Dream adds support for image variations.
 
 You are able to do the following:
@@ -29,7 +33,7 @@ This will be indicated as `prompt` in the examples below.
 First we let SD create a series of images in the usual way, in this case
 requesting six iterations:
 
-```
+```bash
 dream> lucy lawless as xena, warrior princess, character portrait, high resolution -n6
 ...
 Outputs:
@@ -40,8 +44,6 @@ Outputs:
 ./outputs/Xena/000001.465250761.png: "prompt" -s50 -W512 -H512 -C7.5 -Ak_lms -S465250761
 ./outputs/Xena/000001.3357757885.png: "prompt" -s50 -W512 -H512 -C7.5 -Ak_lms -S3357757885
 ```
-
-The one with seed 3357757885 looks nice:
 
 ![var1](../assets/variation_walkthru/000001.3357757885.png)
 
@@ -75,7 +77,7 @@ used to generate it.
 This gives us a series of closely-related variations, including the two shown
 here.
 
-![var2](../assets/variation_walkthru/000002.3647897225.png) 
+![var2](../assets/variation_walkthru/000002.3647897225.png)
 
 ![var3](../assets/variation_walkthru/000002.1614299449.png)
 
@@ -83,7 +85,7 @@ I like the expression on Xena's face in the first one (subseed 3647897225), and
 the armor on her shoulder in the second one (subseed 1614299449). Can we combine
 them to get the best of both worlds?
 
-We combine the two variations using `-V` (--with_variations). Again, we must
+We combine the two variations using `-V` (`--with_variations`). Again, we must
 provide the seed for the originally-chosen image in order for this to work.
 
 ```bash
@@ -102,6 +104,7 @@ generate more variations around the almost-but-not-quite image. We do the
 latter, using both the `-V` (combining) and `-v` (variation strength) options.
 Note that we use `-n6` to generate 6 variations:
 
+```bash
 dream> "prompt" -S3357757885 -V3647897225,0.1,1614299449,0.1 -v0.05 -n6
 Outputs:
 ./outputs/Xena/000004.3279757577.png: "prompt" -s50 -W512 -H512 -C7.5 -Ak_lms -V 3647897225:0.1,1614299449:0.1,3279757577:0.05 -S3357757885

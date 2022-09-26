@@ -1,6 +1,8 @@
 # General
 site_name: Dream Script Docs
 site_url: https://lstein.github.io/stable-diffusion/
+site_author: mauwii
+dev_addr: "127.0.0.1:8080"
 
 # Repository
 repo_name: lstein/stable-diffusion
@@ -13,18 +15,16 @@ copyright: Copyright &copy; 2022 Lincoln D. Stein <lincoln.stein@gmail.com>
 # Configuration
 theme:
   name: material
-  features:
-    - toc.integrate
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/file-document-edit-outline
   palette:
     - media: '(prefers-color-scheme: light)'
-      primary: blue
       scheme: default
       toggle:
         icon: material/lightbulb
         name: Switch to dark mode
     - media: '(prefers-color-scheme: dark)'
-      primary: dark-blue
-      accent: white
       scheme: slate
       toggle:
         icon: material/lightbulb-outline
@@ -37,7 +37,6 @@ markdown_extensions:
   - attr_list
   - def_list
   - footnotes
-  - meta
   - md_in_html
   - toc:
       permalink: '#'
@@ -56,7 +55,7 @@ markdown_extensions:
   - pymdownx.keys
   - pymdownx.magiclink:
       repo_url_shorthand: true
-      user: 'Mauwii'
+      user: 'lstein'
       repo: 'stable-diffusion'
   - pymdownx.mark
   - pymdownx.smartsymbols
@@ -75,4 +74,5 @@ markdown_extensions:
 
 plugins:
   - search
-  - git-revision-date
+  - git-revision-date-localized:
+      enable_creation_date: true

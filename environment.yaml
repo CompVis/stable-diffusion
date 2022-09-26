@@ -20,7 +20,8 @@ dependencies:
     - realesrgan==0.2.5.0
     - test-tube>=0.7.5
     - streamlit==1.12.0
-    - pillow==6.2.0
+    - send2trash==1.8.0
+    - pillow==9.2.0
     - einops==0.3.0
     - torch-fidelity==0.3.0
     - transformers==4.19.2

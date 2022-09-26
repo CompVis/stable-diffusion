@@ -2,15 +2,18 @@
 title: Contributors
 ---
 
-The list of all the amazing people who have contributed to the various features that you get to experience in this fork.
+# :octicons-person-24: Contributors
+
+The list of all the amazing people who have contributed to the various features that you get to
+experience in this fork.
 
 We thank them for all of their time and hard work.
 
-## __Original Author:__
+## **Original Author:**
 
 - [Lincoln D. Stein](mailto:lincoln.stein@gmail.com)
 
-## __Contributions by:__
+## **Contributions by:**
 
 - [Sean McLellan](https://github.com/Oceanswave)
 - [Kevin Gibbons](https://github.com/bakkot)
@@ -52,8 +55,10 @@ We thank them for all of their time and hard work.
 - [Doggettx](https://github.com/doggettx)
 - [Matthias Wild](https://github.com/mauwii)
 - [Kyle Schouviller](https://github.com/kyle0654)
+- [rabidcopy](https://github.com/rabidcopy)
+- [Dominic Letz](https://github.com/dominicletz)
 
-## __Original CompVis Authors:__
+## **Original CompVis Authors:**
 
 - [Robin Rombach](https://github.com/rromb)
 - [Patrick von Platen](https://github.com/patrickvonplaten)
@@ -65,4 +70,5 @@ We thank them for all of their time and hard work.
 
 ---
 
-_If you have contributed and don't see your name on the list of contributors, please let one of the collaborators know about the omission, or feel free to make a pull request._
+_If you have contributed and don't see your name on the list of contributors, please let one of the
+collaborators know about the omission, or feel free to make a pull request._

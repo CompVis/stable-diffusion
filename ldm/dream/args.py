@@ -2,7 +2,10 @@
 
 The Args class parses both the command line (shell) arguments, as well as the
 command string passed at the dream> prompt. It serves as the definitive repository
-of all the arguments used by Generate and their default values.
+of all the arguments used by Generate and their default values, and implements the
+preliminary metadata standards discussed here:
+
+https://github.com/lstein/stable-diffusion/issues/266
 
 To use:
   opt = Args()
@@ -52,15 +55,40 @@ you wish to apply logic as to which one to use. For example:
 To add new attributes, edit the _create_arg_parser() and
 _create_dream_cmd_parser() methods.
 
-We also export the function build_metadata
+**Generating and retrieving sd-metadata**
+
+To generate a dict representing RFC266 metadata:
+
+  metadata = metadata_dumps(opt,<seeds,model_hash,postprocesser>)
+
+This will generate an RFC266 dictionary that can then be turned into a JSON
+and written to the PNG file. The optional seeds, weights, model_hash and
+postprocesser arguments are not available to the opt object and so must be
+provided externally. See how dream.py does it.
+
+Note that this function was originally called format_metadata() and a wrapper
+is provided that issues a deprecation notice.
+
+To retrieve a (series of) opt objects corresponding to the metadata, do this:
+
+ opt_list = metadata_loads(metadata)
+
+The metadata should be pulled out of the PNG image. pngwriter has a method
+retrieve_metadata that will do this, or you can do it in one swell foop
+with metadata_from_png():
+
+ opt_list = metadata_from_png('/path/to/image_file.png')
 """
 
 import argparse
+from argparse import Namespace
 import shlex
 import json
 import hashlib
 import os
 import copy
+import base64
+import ldm.dream.pngwriter
 from ldm.dream.conditioning import split_weighted_subprompts
 
 SAMPLER_CHOICES = [
@@ -72,6 +100,13 @@ SAMPLER_CHOICES = [
     'k_heun',
     'k_lms',
     'plms',
+]
+
+PRECISION_CHOICES = [
+    'auto',
+    'float32',
+    'autocast',
+    'float16',
 ]
 
 # is there a way to pick this up during git commits?
@@ -105,6 +140,7 @@ class Args(object):
         try:
             elements = shlex.split(command)
         except ValueError:
+            import sys, traceback
             print(traceback.format_exc(), file=sys.stderr)
             return
         switches = ['']
@@ -141,35 +177,49 @@ class Args(object):
         a = vars(self)
         a.update(kwargs)
         switches = list()
-        switches.append(f'"{a["prompt"]}')
+        switches.append(f'"{a["prompt"]}"')
         switches.append(f'-s {a["steps"]}')
+        switches.append(f'-S {a["seed"]}')
         switches.append(f'-W {a["width"]}')
         switches.append(f'-H {a["height"]}')
         switches.append(f'-C {a["cfg_scale"]}')
-        switches.append(f'-A {a["sampler_name"]}')
-        switches.append(f'-S {a["seed"]}')
         if a['grid']:
             switches.append('--grid')
-        if a['iterations'] and a['iterations']>0:
-            switches.append(f'-n {a["iterations"]}')
         if a['seamless']:
             switches.append('--seamless')
+
+        # img2img generations have parameters relevant only to them and have special handling
         if a['init_img'] and len(a['init_img'])>0:
             switches.append(f'-I {a["init_img"]}')
-        if a['fit']:
-            switches.append(f'--fit')
-        if a['strength'] and a['strength']>0:
-            switches.append(f'-f {a["strength"]}')
+            switches.append(f'-A ddim') # TODO: FIX ME WHEN IMG2IMG SUPPORTS ALL SAMPLERS
+            if a['fit']:
+                switches.append(f'--fit')
+            if a['init_mask'] and len(a['init_mask'])>0:
+                switches.append(f'-M {a["init_mask"]}')
+            if a['init_color'] and len(a['init_color'])>0:
+                switches.append(f'--init_color {a["init_color"]}')
+            if a['strength'] and a['strength']>0:
+                switches.append(f'-f {a["strength"]}')
+        else:
+            switches.append(f'-A {a["sampler_name"]}')
+
+        # gfpgan-specific parameters
         if a['gfpgan_strength']:
             switches.append(f'-G {a["gfpgan_strength"]}')
+
+        # esrgan-specific parameters
         if a['upscale']:
             switches.append(f'-U {" ".join([str(u) for u in a["upscale"]])}')
+
+        # embiggen parameters
         if a['embiggen']:
             switches.append(f'--embiggen {" ".join([str(u) for u in a["embiggen"]])}')
         if a['embiggen_tiles']:
             switches.append(f'--embiggen_tiles {" ".join([str(u) for u in a["embiggen_tiles"]])}')
-        if a['variation_amount'] > 0:
-            switches.append(f'-v {a["variation_amount"]}')
+
+        # outpainting parameters
+        if a['out_direction']:
+            switches.append(f'-D {" ".join([str(u) for u in a["out_direction"]])}')
         if a['with_variations']:
             formatted_variations = ','.join(f'{seed}:{weight}' for seed, weight in (a["with_variations"]))
             switches.append(f'-V {formatted_variations}')
@@ -189,10 +239,10 @@ class Args(object):
             pass
 
         if cmd_switches and arg_switches and name=='__dict__':
-            a = arg_switches.__dict__
-            a.update(cmd_switches.__dict__)
-            return a
-
+            return self._merge_dict(
+                arg_switches.__dict__,
+                cmd_switches.__dict__,
+            )
         try:
             return object.__getattribute__(self,name)
         except AttributeError:
@@ -216,19 +266,22 @@ class Args(object):
         # the arg value. For example, the --grid and --individual options are a little
         # funny because of their push/pull relationship. This is how to handle it.
         if name=='grid':
-            return value_arg or value_cmd  # arg supersedes cmd
-        if name=='individual':
-            return value_cmd or value_arg  # cmd supersedes arg
-        if value_cmd is not None:
-            return value_cmd
-        else:
-            return value_arg
+            return not cmd_switches.individual and value_arg  # arg supersedes cmd
+        return value_cmd if value_cmd is not None else value_arg
 
     def __setattr__(self,name,value):
         if name.startswith('_'):
             object.__setattr__(self,name,value)
         else:
             self._cmd_switches.__dict__[name] = value
+
+    def _merge_dict(self,dict1,dict2):
+        new_dict  = {}
+        for k in set(list(dict1.keys())+list(dict2.keys())):
+            value1 = dict1.get(k,None)
+            value2 = dict2.get(k,None)
+            new_dict[k] = value2 if value2 is not None else value1
+        return new_dict
 
     def _create_arg_parser(self):
         '''
@@ -269,11 +322,37 @@ class Args(object):
             help='Indicates which diffusion model to load. (currently "stable-diffusion-1.4" (default) or "laion400m")',
         )
         model_group.add_argument(
+            '--sampler',
+            '-A',
+            '-m',
+            dest='sampler_name',
+            type=str,
+            choices=SAMPLER_CHOICES,
+            metavar='SAMPLER_NAME',
+            help=f'Switch to a different sampler. Supported samplers: {", ".join(SAMPLER_CHOICES)}',
+            default='k_lms',
+        )
+        model_group.add_argument(
             '-F',
             '--full_precision',
             dest='full_precision',
             action='store_true',
-            help='Use more memory-intensive full precision math for calculations',
+            help='Deprecated way to set --precision=float32',
+        )
+        model_group.add_argument(
+            '--free_gpu_mem',
+            dest='free_gpu_mem',
+            action='store_true',
+            help='Force free gpu memory before final decoding',
+        )
+        model_group.add_argument(
+            '--precision',
+            dest='precision',
+            type=str,
+            choices=PRECISION_CHOICES,
+            metavar='PRECISION',
+            help=f'Set model precision. Defaults to auto selected based on device. Options: {", ".join(PRECISION_CHOICES)}',
+            default='auto',
         )
         file_group.add_argument(
             '--from_file',
@@ -295,11 +374,6 @@ class Args(object):
             help='Place images in subdirectories named after the prompt.',
         )
         render_group.add_argument(
-            '--seamless',
-            action='store_true',
-            help='Change the model to seamless tiling (circular) mode',
-        )
-        render_group.add_argument(
             '--grid',
             '-g',
             action='store_true',
@@ -310,16 +384,21 @@ class Args(object):
             type=str,
             help='Path to a pre-trained embedding manager checkpoint - can only be set on command line',
         )
-        # GFPGAN related args
+        # Restoration related args
         postprocessing_group.add_argument(
-            '--gfpgan_bg_upsampler',
-            type=str,
-            default='realesrgan',
-            help='Background upsampler. Default: realesrgan. Options: realesrgan, none.',
-
+            '--no_restore',
+            dest='restore',
+            action='store_false',
+            help='Disable face restoration with GFPGAN or codeformer',
         )
         postprocessing_group.add_argument(
-            '--gfpgan_bg_tile',
+            '--no_upscale',
+            dest='esrgan',
+            action='store_false',
+            help='Disable upscaling with ESRGAN',
+        )
+        postprocessing_group.add_argument(
+            '--esrgan_bg_tile',
             type=int,
             default=400,
             help='Tile size for background sampler, 0 for no tile during testing. Default: 400.',
@@ -327,7 +406,7 @@ class Args(object):
         postprocessing_group.add_argument(
             '--gfpgan_model_path',
             type=str,
-            default='experiments/pretrained_models/GFPGANv1.3.pth',
+            default='experiments/pretrained_models/GFPGANv1.4.pth',
             help='Indicates the path to the GFPGAN model, relative to --gfpgan_dir.',
         )
         postprocessing_group.add_argument(
@@ -359,7 +438,10 @@ class Args(object):
     # This creates the parser that processes commands on the dream> command line
     def _create_dream_cmd_parser(self):
         parser = argparse.ArgumentParser(
-            description='Example: dream> a fantastic alien landscape -W1024 -H960 -s100 -n12'
+            description="""
+            Generate example: dream> a fantastic alien landscape -W576 -H512 -s60 -n4
+            Postprocess example: dream> !pp 0000045.4829112.png -G1 -U4 -ft codeformer
+            """
         )
         render_group     = parser.add_argument_group('General rendering')
         img2img_group    = parser.add_argument_group('Image-to-image and inpainting')
@@ -393,14 +475,12 @@ class Args(object):
             '--width',
             type=int,
             help='Image width, multiple of 64',
-            default=512
         )
         render_group.add_argument(
             '-H',
             '--height',
             type=int,
             help='Image height, multiple of 64',
-            default=512,
         )
         render_group.add_argument(
             '-C',
@@ -416,8 +496,8 @@ class Args(object):
             help='generate a grid'
         )
         render_group.add_argument(
-            '--individual',
             '-i',
+            '--individual',
             action='store_true',
             help='override command-line --grid setting and generate individual images'
         )
@@ -436,7 +516,6 @@ class Args(object):
             choices=SAMPLER_CHOICES,
             metavar='SAMPLER_NAME',
             help=f'Switch to a different sampler. Supported samplers: {", ".join(SAMPLER_CHOICES)}',
-            default='k_lms',
         )
         render_group.add_argument(
             '-t',
@@ -448,7 +527,6 @@ class Args(object):
             '--outdir',
             '-o',
             type=str,
-            default='outputs/img-samples',
             help='Directory to save generated images and a log of prompts and seeds',
         )
         img2img_group.add_argument(
@@ -464,6 +542,11 @@ class Args(object):
             help='Path to input mask for inpainting mode (supersedes width and height)',
         )
         img2img_group.add_argument(
+            '--init_color',
+            type=str,
+            help='Path to reference image for color correction (used for repeated img2img and inpainting)'
+        )
+        img2img_group.add_argument(
             '-T',
             '-fit',
             '--fit',
@@ -477,12 +560,34 @@ class Args(object):
             help='Strength for noising/unnoising. 0.0 preserves image exactly, 1.0 replaces it completely',
             default=0.75,
         )
+        img2img_group.add_argument(
+            '-D',
+            '--out_direction',
+            nargs='+',
+            type=str,
+            metavar=('direction', 'pixels'),
+            help='Direction to extend the given image (left|right|top|bottom). If a distance pixel value is not specified it defaults to half the image size'
+        )
+        postprocessing_group.add_argument(
+            '-ft',
+            '--facetool',
+            type=str,
+            default='gfpgan',
+            help='Select the face restoration AI to use: gfpgan, codeformer',
+        )
         postprocessing_group.add_argument(
             '-G',
             '--gfpgan_strength',
             type=float,
-            help='The strength at which to apply the GFPGAN model to the result, in order to improve faces.',
-            default=0,
+            help='The strength at which to apply the face restoration to the result.',
+            default=0.0,
+        )
+        postprocessing_group.add_argument(
+            '-cf',
+            '--codeformer_fidelity',
+            type=float,
+            help='Used along with CodeFormer. Takes values between 0 and 1. 0 produces high quality but low accuracy. 1 produces high accuracy but low quality.',
+            default=0.75
         )
         postprocessing_group.add_argument(
             '-U',
@@ -535,36 +640,55 @@ class Args(object):
         )
         return parser
 
-# very partial implementation of https://github.com/lstein/stable-diffusion/issues/266
-# it does not write all the required top-level metadata, writes too much image
-# data, and doesn't support grids yet. But you gotta start somewhere, no?
-def format_metadata(opt,
-                    seeds=[],
-                    weights=None,
-                    model_hash=None,
-                    postprocessing=None):
+def format_metadata(**kwargs):
+    print(f'format_metadata() is deprecated. Please use metadata_dumps()')
+    return metadata_dumps(kwargs)
+
+def metadata_dumps(opt,
+                   seeds=[],
+                   model_hash=None,
+                   postprocessing=None):
     '''
-    Given an Args object, returns a partial implementation of
-    the stable diffusion metadata standard
+    Given an Args object, returns a dict containing the keys and
+    structure of the proposed stable diffusion metadata standard
+    https://github.com/lstein/stable-diffusion/discussions/392
+    This is intended to be turned into JSON and stored in the 
+    "sd
     '''
+
+    # top-level metadata minus `image` or `images`
+    metadata = {
+        'model'       : 'stable diffusion',
+        'model_id'    : opt.model,
+        'model_hash'  : model_hash,
+        'app_id'      : APP_ID,
+        'app_version' : APP_VERSION,
+    }
+
     # add some RFC266 fields that are generated internally, and not as
     # user args
     image_dict = opt.to_dict(
         postprocessing=postprocessing
     )
 
-    # TODO: This is just a hack until postprocessing pipeline work completed
-    image_dict['postprocessing'] = []
-    if image_dict['gfpgan_strength'] and image_dict['gfpgan_strength'] > 0:
-        image_dict['postprocessing'].append('GFPGAN (not RFC compliant)')
-    if image_dict['upscale'] and image_dict['upscale'][0] > 0:
-        image_dict['postprocessing'].append('ESRGAN  (not RFC compliant)')
+    # 'postprocessing' is either null or an array of postprocessing metadatal
+    if postprocessing:
+        # TODO: This is just a hack until postprocessing pipeline work completed
+        image_dict['postprocessing'] = []
+
+        if image_dict['gfpgan_strength'] and image_dict['gfpgan_strength'] > 0:
+            image_dict['postprocessing'].append('GFPGAN (not RFC compliant)')
+        if image_dict['upscale'] and image_dict['upscale'][0] > 0:
+            image_dict['postprocessing'].append('ESRGAN (not RFC compliant)')
+    else:
+        image_dict['postprocessing'] = None
 
     # remove any image keys not mentioned in RFC #266
     rfc266_img_fields = ['type','postprocessing','sampler','prompt','seed','variations','steps',
                          'cfg_scale','step_number','width','height','extra','strength']
 
     rfc_dict ={}
+
     for item in image_dict.items():
         key,value = item
         if key in rfc266_img_fields:
@@ -572,39 +696,95 @@ def format_metadata(opt,
 
     # semantic drift
     rfc_dict['sampler']  = image_dict.get('sampler_name',None)
-        
+
     # display weighted subprompts (liable to change)
     if opt.prompt:
         subprompts = split_weighted_subprompts(opt.prompt)
         subprompts = [{'prompt':x[0],'weight':x[1]} for x in subprompts]
         rfc_dict['prompt'] = subprompts
 
-    # variations
-    if opt.with_variations:
-        variations = [{'seed':x[0],'weight':x[1]} for x in opt.with_variations]
-        rfc_dict['variations'] = variations
+    # 'variations' should always exist and be an array, empty or consisting of {'seed': seed, 'weight': weight} pairs
+    rfc_dict['variations'] = [{'seed':x[0],'weight':x[1]} for x in opt.with_variations] if opt.with_variations else []
 
     if opt.init_img:
         rfc_dict['type']           = 'img2img'
         rfc_dict['strength_steps'] = rfc_dict.pop('strength')
-        rfc_dict['orig_hash']      = sha256(image_dict['init_img'])
-        rfc_dict['sampler']        = 'ddim'  # FIX ME WHEN IMG2IMG SUPPORTS ALL SAMPLERS
+        rfc_dict['orig_hash']      = calculate_init_img_hash(opt.init_img)
+        rfc_dict['sampler']        = 'ddim'  # TODO: FIX ME WHEN IMG2IMG SUPPORTS ALL SAMPLERS
     else:
         rfc_dict['type']  = 'txt2img'
+        rfc_dict.pop('strength')
 
-    images = []
-    for seed in seeds:
-        rfc_dict['seed'] = seed
-        images.append(copy.copy(rfc_dict))
+    if len(seeds)==0 and opt.seed:
+        seeds=[seed]
 
-    return {
-        'model'       : 'stable diffusion',
-        'model_id'    : opt.model,
-        'model_hash'  : model_hash,
-        'app_id'      : APP_ID,
-        'app_version' : APP_VERSION,
-        'images'      : images,
-    }
+    if opt.grid:
+        images = []
+        for seed in seeds:
+            rfc_dict['seed'] = seed
+            images.append(copy.copy(rfc_dict))
+        metadata['images'] = images
+    else:
+        # there should only ever be a single seed if we did not generate a grid
+        assert len(seeds) == 1, 'Expected a single seed'
+        rfc_dict['seed'] = seeds[0]
+        metadata['image'] = rfc_dict
+
+    return metadata
+
+def metadata_from_png(png_file_path):
+    '''
+    Given the path to a PNG file created by dream.py, retrieves
+    an Args object containing the image metadata
+    '''
+    meta = ldm.dream.pngwriter.retrieve_metadata(png_file_path)
+    opts = metadata_loads(meta)
+    return opts[0]
+
+def metadata_loads(metadata):
+    '''
+    Takes the dictionary corresponding to RFC266 (https://github.com/lstein/stable-diffusion/issues/266)
+    and returns a series of opt objects for each of the images described in the dictionary.
+    '''
+    results = []
+    try:
+        if 'grid' in metadata['sd-metadata']:
+            images = metadata['sd-metadata']['images']
+        else:
+            images = [metadata['sd-metadata']['image']]
+        for image in images:
+            # repack the prompt and variations
+            if 'prompt' in image:
+                image['prompt']     = ','.join([':'.join([x['prompt'],   str(x['weight'])]) for x in image['prompt']])
+            if 'variations' in image:
+                image['variations'] = ','.join([':'.join([str(x['seed']),str(x['weight'])]) for x in image['variations']])
+            # fix a bit of semantic drift here
+            image['sampler_name']=image.pop('sampler')
+            opt = Args()
+            opt._cmd_switches = Namespace(**image)
+            results.append(opt)
+    except KeyError as e:
+        import sys, traceback
+        print('>> badly-formatted metadata',file=sys.stderr)
+        print(traceback.format_exc(), file=sys.stderr)
+    return results
+
+# image can either be a file path on disk or a base64-encoded
+# representation of the file's contents
+def calculate_init_img_hash(image_string):
+    prefix = 'data:image/png;base64,'
+    hash   = None
+    if image_string.startswith(prefix):
+        imagebase64 = image_string[len(prefix):]
+        imagedata   = base64.b64decode(imagebase64)
+        with open('outputs/test.png','wb') as file:
+            file.write(imagedata)
+        sha = hashlib.sha256()
+        sha.update(imagedata)
+        hash = sha.hexdigest()
+    else:
+        hash = sha256(image_string)
+    return hash
 
 # Bah. This should be moved somewhere else...
 def sha256(path):

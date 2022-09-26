@@ -1,2 +1,3 @@
-mkdocs-material
-mkdocs-git-revision-date-plugin>=0.3.2
+mkdocs
+mkdocs-material>=8, <9
+mkdocs-git-revision-date-localized-plugin

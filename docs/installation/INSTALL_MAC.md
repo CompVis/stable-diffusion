@@ -2,6 +2,8 @@
 title: macOS
 ---
 
+# :fontawesome-brands-apple: macOS
+
 ## Requirements
 
 - macOS 12.3 Monterey or later
@@ -9,18 +11,21 @@ title: macOS
 - Patience
 - Apple Silicon or Intel Mac
 
-Things have moved really fast and so these instructions change often and are
-often out-of-date. One of the problems is that there are so many different ways
-to run this.
+Things have moved really fast and so these instructions change often which makes
+them outdated pretty fast. One of the problems is that there are so many
+different ways to run this.
 
 We are trying to build a testing setup so that when we make changes it doesn't
 always break.
 
-How to (this hasn't been 100% tested yet):
+## How to
 
-First get the weights checkpoint download started - it's big:
+(this hasn't been 100% tested yet)
 
-1. Sign up at https://huggingface.co
+First get the weights checkpoint download started since it's big and will take
+some time:
+
+1. Sign up at [huggingface.co](https://huggingface.co)
 2. Go to the
    [Stable diffusion diffusion model page](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original)
 3. Accept the terms and click Access Repository:
@@ -28,114 +33,148 @@ First get the weights checkpoint download started - it's big:
    [sd-v1-4.ckpt (4.27 GB)](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/blob/main/sd-v1-4.ckpt)
    and note where you have saved it (probably the Downloads folder)
 
-   While that is downloading, open Terminal and run the following commands one
-   at a time.
+While that is downloading, open a Terminal and run the following commands:
 
-```bash
-# install brew (and Xcode command line tools):
+!!! todo "Homebrew"
 
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    === "no brew installation yet"
 
-# Now there are two different routes to get the Python (miniconda) environment up and running:
-# 1. Alongside pyenv
-# 2. No pyenv
-#
-# If you don't know what we are talking about, choose 2.
-#
-# NOW EITHER DO
-# 1. Installing alongside pyenv
+        ```bash title="install brew (and Xcode command line tools)"
+        /bin/bash -c \
+          "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        ```
 
-  brew install pyenv-virtualenv # you might have this from before, no problem
-  pyenv install anaconda3-2022.05
-  pyenv virtualenv anaconda3-2022.05
-  eval "$(pyenv init -)"
-  pyenv activate anaconda3-2022.05
+    === "brew is already installed"
+    
+        Only if you installed protobuf in a previous version of this tutorial, otherwise skip
 
-# OR,
-# 2. Installing standalone
-# install python 3, git, cmake, protobuf:
-brew install cmake protobuf rust
+        `#!bash brew uninstall protobuf`
 
-# install miniconda for M1 arm64:
-curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o Miniconda3-latest-MacOSX-arm64.sh
-/bin/bash Miniconda3-latest-MacOSX-arm64.sh
+!!! todo "Conda Installation"
 
-# OR install miniconda for Intel:
-curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o Miniconda3-latest-MacOSX-x86_64.sh
-/bin/bash Miniconda3-latest-MacOSX-x86_64.sh
+    Now there are two different ways to set up the Python (miniconda) environment:
+    1. Standalone
+    2. with pyenv
+    If you don't know what we are talking about, choose Standalone
 
+    === "Standalone"
 
-# EITHER WAY,
-# continue from here
+        ```bash
+        # install cmake and rust:
+        brew install cmake rust
+        ```
 
+        === "M1 arm64"
+
+            ```bash title="Install miniconda for M1 arm64"
+            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh \
+              -o Miniconda3-latest-MacOSX-arm64.sh
+            /bin/bash Miniconda3-latest-MacOSX-arm64.sh
+            ```
+
+        === "Intel x86_64"
+
+            ```bash title="Install miniconda for Intel"
+            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh \
+              -o Miniconda3-latest-MacOSX-x86_64.sh
+            /bin/bash Miniconda3-latest-MacOSX-x86_64.sh
+            ```
+
+    === "with pyenv"
+
+        ```{.bash .annotate}
+        brew install rust pyenv-virtualenv # (1)!
+        pyenv install anaconda3-2022.05
+        pyenv virtualenv anaconda3-2022.05
+        eval "$(pyenv init -)"
+        pyenv activate anaconda3-2022.05
+        ```
+        
+        1. You might already have this installed, if that is the case just continue.
+
+```{.bash .annotate title="local repo setup"}
 # clone the repo
-  git clone https://github.com/lstein/stable-diffusion.git
-  cd stable-diffusion
+git clone https://github.com/invoke-ai/InvokeAI.git
 
-#
+cd InvokeAI
+
 # wait until the checkpoint file has downloaded, then proceed
-#
 
 # create symlink to checkpoint
-  mkdir -p models/ldm/stable-diffusion-v1/
+mkdir -p models/ldm/stable-diffusion-v1/
 
-  PATH_TO_CKPT="$HOME/Downloads"  # or wherever you saved sd-v1-4.ckpt
+PATH_TO_CKPT="$HOME/Downloads" # (1)!
 
-  ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
+ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" \
+  models/ldm/stable-diffusion-v1/model.ckpt
+```
 
-# install packages for arm64
-PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
-conda activate ldm
+1. or wherever you saved sd-v1-4.ckpt
 
-# OR install packages for x86_64
-PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-x86_64 conda env create -f environment-mac.yaml
-conda activate ldm
+!!! todo "create Conda Environment"
 
+    === "M1 arm64"
+
+        ```bash
+        PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 \
+          conda env create \
+          -f environment-mac.yaml \
+          && conda activate ldm
+        ```
+
+    === "Intel x86_64"
+
+        ```bash
+        PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-x86_64 \
+          conda env create \
+          -f environment-mac.yaml \
+          && conda activate ldm
+        ```
+
+```{.bash .annotate title="preload models and run script"}
 # only need to do this once
 python scripts/preload_models.py
 
-# run SD!
-python scripts/dream.py --full_precision  # half-precision requires autocast and won't work
+# now you can run SD in CLI mode
+python scripts/dream.py --full_precision  # (1)!
 
 # or run the web interface!
 python scripts/dream.py --web
+
+# The original scripts should work as well.
+python scripts/orig_scripts/txt2img.py \
+  --prompt "a photograph of an astronaut riding a horse" \
+  --plms
 ```
 
-The original scripts should work as well.
+1. half-precision requires autocast which is unfortunatelly incompatible
 
-```bash
-python scripts/orig_scripts/txt2img.py --prompt "a photograph of an astronaut riding a horse" --plms
-```
+!!! note
 
-Note,
+    `#!bash export PIP_EXISTS_ACTION=w` is a precaution to fix a problem where
 
-```bash
-export PIP_EXISTS_ACTION=w
-```
+    ```bash
+    conda env create \
+      -f environment-mac.yaml
+    ```
 
-is a precaution to fix
-
-```bash
-conda env create -f environment-mac.yaml
-```
-
-never finishing in some situations. So it isn't required but wont hurt.
-
-After you follow all the instructions and run dream.py you might get several
-errors. Here's the errors I've seen and found solutions for.
+    did never finish in some situations. So it isn't required but wont hurt.
 
 ---
 
+## Common problems
+
+After you followed all the instructions and try to run dream.py, you might
+get several errors. Here's the errors I've seen and found solutions for.
+
 ### Is it slow?
 
-Be sure to specify 1 sample and 1 iteration.
-
-```bash
+```bash title="Be sure to specify 1 sample and 1 iteration."
 python ./scripts/orig_scripts/txt2img.py \
-      --prompt "ocean" \
-      --ddim_steps 5 \
-      --n_samples 1 \
-      --n_iter 1
+  --prompt "ocean" \
+  --ddim_steps 5 \
+  --n_samples 1 \
+  --n_iter 1
 ```
 
 ---
@@ -148,60 +187,80 @@ what I did until I switched to miniforge. However, I have another Mac that works
 just fine with Anaconda. If you can't get it to work, please search a little
 first because many of the errors will get posted and solved. If you can't find a
 solution please
-[create an issue](https://github.com/lstein/stable-diffusion/issues).
+[create an issue](https://github.com/invoke-ai/InvokeAI/issues).
 
 One debugging step is to update to the latest version of PyTorch nightly.
 
 ```bash
-conda install pytorch torchvision torchaudio -c pytorch-nightly
+conda install \
+  pytorch \
+  torchvision \
+  -c pytorch-nightly \
+  -n ldm
 ```
 
 If it takes forever to run
 
 ```bash
-conda env create -f environment-mac.yaml
+conda env create \
+  -f environment-mac.yaml
 ```
 
-you could try to run `git clean -f` followed by:
+you could try to run:
 
-`conda clean --yes --all`
+```bash
+git clean -f
+conda clean \
+  --yes \
+  --all
+```
 
 Or you could try to completley reset Anaconda:
 
 ```bash
-conda update --force-reinstall -y -n base -c defaults conda
+conda update \
+  --force-reinstall \
+  -y \
+  -n base \
+  -c defaults conda
 ```
 
 ---
 
 ### "No module named cv2", torch, 'ldm', 'transformers', 'taming', etc
 
-There are several causes of these errors.
+There are several causes of these errors:
 
-- First, did you remember to `conda activate ldm`? If your terminal prompt
-  begins with "(ldm)" then you activated it. If it begins with "(base)" or
-  something else you haven't.
+1. Did you remember to `conda activate ldm`? If your terminal prompt begins with
+   "(ldm)" then you activated it. If it begins with "(base)" or something else
+   you haven't.
 
-- Second, you might've run `./scripts/preload_models.py` or `./scripts/dream.py`
-  instead of `python ./scripts/preload_models.py` or
-  `python ./scripts/dream.py`. The cause of this error is long so it's below.
+2. You might've run `./scripts/preload_models.py` or `./scripts/dream.py`
+   instead of `python ./scripts/preload_models.py` or
+   `python ./scripts/dream.py`. The cause of this error is long so it's below.
 
-- Third, if it says you're missing taming you need to rebuild your virtual
-  environment.
+    <!-- I could not find out where the error is, otherwise would have marked it as a footnote -->
 
-````bash
-conda deactivate
+3. if it says you're missing taming you need to rebuild your virtual
+   environment.
 
-conda env remove -n ldm
-PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
-```
+    ```bash
+    conda deactivate
+    conda env remove -n ldm
+    PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 \
+      conda env create \
+      -f environment-mac.yaml
+    ```
 
-Fourth, If you have activated the ldm virtual environment and tried rebuilding
-it, maybe the problem could be that I have something installed that you don't
-and you'll just need to manually install it. Make sure you activate the virtual
-environment so it installs there instead of globally.
+4. If you have activated the ldm virtual environment and tried rebuilding it,
+   maybe the problem could be that I have something installed that you don't and
+   you'll just need to manually install it. Make sure you activate the virtual
+   environment so it installs there instead of globally.
 
-`conda activate ldm pip install _name_`
+    ```bash
+    conda activate ldm
+    pip install <package name>
+    ```
 
 You might also need to install Rust (I mention this again below).
 
@@ -261,21 +320,20 @@ output of `python3 -V` and `python -V`.
 /Users/name/miniforge3/envs/ldm/bin/python
 ```
 
-The above is what you'll see if you have miniforge and you've correctly
-activated the ldm environment, and you used option 2 in the setup instructions
-above ("no pyenv").
+The above is what you'll see if you have miniforge and correctly activated the
+ldm environment, while usingd the standalone setup instructions above.
+
+If you otherwise installed via pyenv, you will get this result:
 
 ```bash
 (anaconda3-2022.05) % which python
 /Users/name/.pyenv/shims/python
 ```
 
-... and the above is what you'll see if you used option 1 ("Alongside pyenv").
-
 It's all a mess and you should know
 [how to modify the path environment variable](https://support.apple.com/guide/terminal/use-environment-variables-apd382cc5fa-4f58-4449-b20a-41c53c006f8f/mac)
-if you want to fix it. Here's a brief hint of all the ways you can modify it
-(don't really have the time to explain it all here).
+if you want to fix it. Here's a brief hint of the most common ways you can
+modify it (don't really have the time to explain it all here).
 
 - ~/.zshrc
 - ~/.bash_profile
@@ -283,16 +341,21 @@ if you want to fix it. Here's a brief hint of all the ways you can modify it
 - /etc/paths.d
 - /etc/path
 
-Which one you use will depend on what you have installed except putting a file
-in /etc/paths.d is what I prefer to do.
+Which one you use will depend on what you have installed, except putting a file
+in /etc/paths.d - which also is the way I prefer to do.
 
 Finally, to answer the question posed by this section's title, it may help to
 list all of the `python` / `python3` things found in `$PATH` instead of just the
-one that will be executed by default. To do that, add the `-a` switch to
-`which`:
+first hit. To do so, add the `-a` switch to `which`:
 
-    % which -a python3
-    ...
+```bash
+% which -a python3
+...
+```
+
+This will show a list of all binaries which are actually available in your PATH.
+
+---
 
 ### Debugging?
 
@@ -300,37 +363,56 @@ Tired of waiting for your renders to finish before you can see if it works?
 Reduce the steps! The image quality will be horrible but at least you'll get
 quick feedback.
 
-    python ./scripts/txt2img.py --prompt "ocean" --ddim_steps 5 --n_samples 1 --n_iter 1
+```bash
+python ./scripts/txt2img.py \
+  --prompt "ocean" \
+  --ddim_steps 5 \
+  --n_samples 1 \
+  --n_iter 1
+```
 
-### OSError: Can't load tokenizer for 'openai/clip-vit-large-patch14'...
+---
 
-    python scripts/preload_models.py
+### OSError: Can't load tokenizer for 'openai/clip-vit-large-patch14'
+
+```bash
+python scripts/preload_models.py
+```
+
+---
 
 ### "The operator [name] is not current implemented for the MPS device." (sic)
 
-Example error.
+!!! example "example error"
 
-```
+    ```bash
+    ... NotImplementedError: The operator 'aten::_index_put_impl_' is not current
+    implemented for the MPS device. If you want this op to be added in priority
+    during the prototype phase of this feature, please comment on
+    https://github.com/pytorch/pytorch/issues/77764.
+    As a temporary fix, you can set the environment variable
+    `PYTORCH_ENABLE_MPS_FALLBACK=1` to use the CPU as a fallback for this op.
+    WARNING: this will be slower than running natively on MPS.
+    ```
 
-... NotImplementedError: The operator 'aten::_index_put_impl_' is not current
-implemented for the MPS device. If you want this op to be added in priority
-during the prototype phase of this feature, please comment on
-[https://github.com/pytorch/pytorch/issues/77764](https://github.com/pytorch/pytorch/issues/77764).
-As a temporary fix, you can set the environment variable
-`PYTORCH_ENABLE_MPS_FALLBACK=1` to use the CPU as a fallback for this op.
-WARNING: this will be slower than running natively on MPS.
+This fork already includes a fix for this in
+[environment-mac.yaml](https://github.com/invoke-ai/InvokeAI/blob/main/environment-mac.yaml).
 
-```
-
-The lstein branch includes this fix in
-[environment-mac.yaml](https://github.com/lstein/stable-diffusion/blob/main/environment-mac.yaml).
+---
 
 ### "Could not build wheels for tokenizers"
 
 I have not seen this error because I had Rust installed on my computer before I
 started playing with Stable Diffusion. The fix is to install Rust.
 
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```bash
+curl \
+  --proto '=https' \
+  --tlsv1.2 \
+  -sSf https://sh.rustup.rs | sh
+```
+
+---
 
 ### How come `--seed` doesn't work?
 
@@ -347,7 +429,9 @@ still working on it.
 
 ### libiomp5.dylib error?
 
-    OMP: Error #15: Initializing libiomp5.dylib, but found libomp.dylib already initialized.
+```bash
+OMP: Error #15: Initializing libiomp5.dylib, but found libomp.dylib already initialized.
+```
 
 You are likely using an Intel package by mistake. Be sure to run conda with the
 environment variable `CONDA_SUBDIR=osx-arm64`, like so:
@@ -363,6 +447,8 @@ is a metapackage designed to prevent this, by making it impossible to install
 Do _not_ use `os.environ['KMP_DUPLICATE_LIB_OK']='True'` or equivalents as this
 masks the underlying issue of using Intel packages.
 
+---
+
 ### Not enough memory
 
 This seems to be a common problem and is probably the underlying problem for a
@@ -373,6 +459,8 @@ from 32-bit to 16-bit and that leaves more RAM for other things. I have no idea
 how that would affect the quality of the images though.
 
 See [this issue](https://github.com/CompVis/stable-diffusion/issues/71).
+
+---
 
 ### "Error: product of dimension sizes > 2\*\*31'"
 
@@ -388,17 +476,21 @@ BTW, 2\*\*31-1 =
 is also 32-bit signed [LONG_MAX](https://en.wikipedia.org/wiki/C_data_types) in
 C.
 
+---
+
 ### I just got Rickrolled! Do I have a virus?
 
 You don't have a virus. It's part of the project. Here's
-[Rick](https://github.com/lstein/stable-diffusion/blob/main/assets/rick.jpeg)
+[Rick](https://github.com/invoke-ai/InvokeAI/blob/main/assets/rick.jpeg)
 and here's
-[the code](https://github.com/lstein/stable-diffusion/blob/69ae4b35e0a0f6ee1af8bb9a5d0016ccb27e36dc/scripts/txt2img.py#L79)
+[the code](https://github.com/invoke-ai/InvokeAI/blob/69ae4b35e0a0f6ee1af8bb9a5d0016ccb27e36dc/scripts/txt2img.py#L79)
 that swaps him in. It's a NSFW filter, which IMO, doesn't work very good (and we
 call this "computer vision", sheesh).
 
 Actually, this could be happening because there's not enough RAM. You could try
 the `model.half()` suggestion or specify smaller output images.
+
+---
 
 ### My images come out black
 
@@ -419,7 +511,7 @@ return torch.layer_norm(input, normalized_shape, weight, bias, eps, torch.backen
 RuntimeError: view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead.
 ```
 
-Update to the latest version of lstein/stable-diffusion. We were patching
+Update to the latest version of invoke-ai/InvokeAI. We were patching
 pytorch but we found a file in stable-diffusion that we could change instead.
 This is a 32-bit vs 16-bit problem.
 
@@ -428,7 +520,10 @@ This is a 32-bit vs 16-bit problem.
 ### The processor must support the Intel bla bla bla
 
 What? Intel? On an Apple Silicon?
-`bash Intel MKL FATAL ERROR: This system does not meet the minimum requirements for use of the Intel(R) Math Kernel Library. The processor must support the Intel(R) Supplemental Streaming SIMD Extensions 3 (Intel(R) SSSE3) instructions. The processor must support the Intel(R) Streaming SIMD Extensions 4.2 (Intel(R) SSE4.2) instructions. The processor must support the Intel(R) Advanced Vector Extensions (Intel(R) AVX) instructions. `
+
+```bash
+Intel MKL FATAL ERROR: This system does not meet the minimum requirements for use of the Intel(R) Math Kernel Library. The processor must support the Intel(R) Supplemental Streaming SIMD Extensions 3 (Intel(R) SSSE3) instructions. The processor must support the Intel(R) Streaming SIMD Extensions 4.2 (Intel(R) SSE4.2) instructions. The processor must support the Intel(R) Advanced Vector Extensions (Intel(R) AVX) instructions.
+```
 
 This is due to the Intel `mkl` package getting picked up when you try to install
 something that depends on it-- Rosetta can translate some Intel instructions but
@@ -453,5 +548,3 @@ Abort trap: 6
   warnings.warn('resource_tracker: There appear to be %d '
 ```
 
-Macs do not support `autocast/mixed-precision`, so you need to supply
-`--full_precision` to use float32 everywhere.

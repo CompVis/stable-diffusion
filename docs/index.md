@@ -1,102 +1,106 @@
 ---
 title: Home
+template: main.html
 ---
 
 <!--
-  The Docs you find here (/docs/*) are built and deployed via mkdocs. If you want to do so from local it is pretty strait forward:
+  The Docs you find here (/docs/*) are built and deployed via mkdocs. If you want to run a local version to verify your changes, it's as simple as::
 
   ```bash
   pip install -r requirements-mkdocs.txt
-  mkdocs serve -a localhost:8080
+  mkdocs serve
   ```
 -->
+<div align="center" markdown>
 
-<h1 align='center'><b>Stable Diffusion Dream Script</b></h1>
+# :material-script-text-outline: Stable Diffusion Dream Script
 
-<p align='center'>
-<img src="./assets/logo.png"/>
-</p>
+![project logo](assets/logo.png)
 
-<p align="center">
-    <img src="https://img.shields.io/github/last-commit/lstein/stable-diffusion?logo=Python&logoColor=green&style=for-the-badge" alt="last-commit"/>
-    <img src="https://img.shields.io/github/stars/lstein/stable-diffusion?logo=GitHub&style=for-the-badge" alt="stars"/>
-    <br>
-    <img src="https://img.shields.io/github/issues/lstein/stable-diffusion?logo=GitHub&style=for-the-badge" alt="issues"/>
-    <img src="https://img.shields.io/github/issues-pr/lstein/stable-diffusion?logo=GitHub&style=for-the-badge" alt="pull-requests"/>
-</p>
+[![discord badge]][discord link]
+
+[![latest release badge]][latest release link] [![github stars badge]][github stars link] [![github forks badge]][github forks link]
+
+[![CI checks on main badge]][CI checks on main link] [![CI checks on dev badge]][CI checks on dev link] [![latest commit to dev badge]][latest commit to dev link]
+
+[![github open issues badge]][github open issues link] [![github open prs badge]][github open prs link]
+
+[CI checks on dev badge]: https://flat.badgen.net/github/checks/lstein/stable-diffusion/development?label=CI%20status%20on%20dev&cache=900&icon=github
+[CI checks on dev link]: https://github.com/lstein/stable-diffusion/actions?query=branch%3Adevelopment
+[CI checks on main badge]: https://flat.badgen.net/github/checks/lstein/stable-diffusion/main?label=CI%20status%20on%20main&cache=900&icon=github
+[CI checks on main link]: https://github.com/lstein/stable-diffusion/actions/workflows/test-dream-conda.yml
+[discord badge]: https://flat.badgen.net/discord/members/htRgbc7e?icon=discord
+[discord link]: https://discord.com/invite/htRgbc7e
+[github forks badge]: https://flat.badgen.net/github/forks/lstein/stable-diffusion?icon=github
+[github forks link]: https://useful-forks.github.io/?repo=lstein%2Fstable-diffusion
+[github open issues badge]: https://flat.badgen.net/github/open-issues/lstein/stable-diffusion?icon=github
+[github open issues link]: https://github.com/lstein/stable-diffusion/issues?q=is%3Aissue+is%3Aopen
+[github open prs badge]: https://flat.badgen.net/github/open-prs/lstein/stable-diffusion?icon=github
+[github open prs link]: https://github.com/lstein/stable-diffusion/pulls?q=is%3Apr+is%3Aopen
+[github stars badge]: https://flat.badgen.net/github/stars/lstein/stable-diffusion?icon=github
+[github stars link]: https://github.com/lstein/stable-diffusion/stargazers
+[latest commit to dev badge]: https://flat.badgen.net/github/last-commit/lstein/stable-diffusion/development?icon=github&color=yellow&label=last%20dev%20commit&cache=900
+[latest commit to dev link]: https://github.com/lstein/stable-diffusion/commits/development
+[latest release badge]: https://flat.badgen.net/github/release/lstein/stable-diffusion/development?icon=github
+[latest release link]: https://github.com/lstein/stable-diffusion/releases
+
+</div>
 
 This is a fork of [CompVis/stable-diffusion](https://github.com/CompVis/stable-diffusion), the open
 source text-to-image generator. It provides a streamlined process with various new features and
 options to aid the image generation process. It runs on Windows, Mac and Linux machines, and runs on
 GPU cards with as little as 4 GB or RAM.
 
-_Note: This fork is rapidly evolving. Please use the
-[Issues](https://github.com/lstein/stable-diffusion/issues) tab to report bugs and make feature
-requests. Be sure to use the provided templates. They will help aid diagnose issues faster._
+!!! note
 
-## Installation
+    This fork is rapidly evolving. Please use the
+    [Issues](https://github.com/lstein/stable-diffusion/issues) tab to report bugs and make feature
+    requests. Be sure to use the provided templates. They will help aid diagnose issues faster.
+
+## :octicons-package-dependencies-24: Installation
 
 This fork is supported across multiple platforms. You can find individual installation instructions
 below.
 
-- [Linux](installation/INSTALL_LINUX.md)
-- [Windows](installation/INSTALL_WINDOWS.md)
-- [Macintosh](installation/INSTALL_MAC.md)
+- :fontawesome-brands-linux: [Linux](installation/INSTALL_LINUX.md)
+- :fontawesome-brands-windows: [Windows](installation/INSTALL_WINDOWS.md)
+- :fontawesome-brands-apple: [Macintosh](installation/INSTALL_MAC.md)
 
-## Hardware Requirements
+## :fontawesome-solid-computer: Hardware Requirements
 
-### System
+### :octicons-cpu-24: System
 
 You wil need one of the following:
 
-- An NVIDIA-based graphics card with 4 GB or more VRAM memory.
-- An Apple computer with an M1 chip.
+- :simple-nvidia: An NVIDIA-based graphics card with 4 GB or more VRAM memory.
+- :fontawesome-brands-apple: An Apple computer with an M1 chip.
 
-### Memory
+### :fontawesome-solid-memory: Memory
 
 - At least 12 GB Main Memory RAM.
 
-### Disk
+### :fontawesome-regular-hard-drive: Disk
 
 - At least 6 GB of free disk space for the machine learning model, Python, and all its dependencies.
 
-### Note
+!!! note
 
-If you are have a Nvidia 10xx series card (e.g. the 1080ti), please run the dream script in
-full-precision mode as shown below.
+    If you are have a Nvidia 10xx series card (e.g. the 1080ti), please run the dream script in
+    full-precision mode as shown below.
 
-Similarly, specify full-precision mode on Apple M1 hardware.
+    Similarly, specify full-precision mode on Apple M1 hardware.
 
-To run in full-precision mode, start `dream.py` with the `--full_precision` flag:
+    To run in full-precision mode, start `dream.py` with the `--full_precision` flag:
 
-```bash
-(ldm) ~/stable-diffusion$ python scripts/dream.py --full_precision
-```
+    ```bash
+    (ldm) ~/stable-diffusion$ python scripts/dream.py --full_precision
+    ```
+## :octicons-log-16: Latest Changes
 
-## Features
+### vNEXT <small>(TODO 2022)</small>
 
-### Major Features
-
-- [Interactive Command Line Interface](features/CLI.md)
-- [Image To Image](features/IMG2IMG.md)
-- [Inpainting Support](features/INPAINTING.md)
-- [GFPGAN and Real-ESRGAN Support](features/UPSCALE.md)
-- [Seamless Tiling](features/OTHER.md#seamless-tiling)
-- [Google Colab](features/OTHER.md#google-colab)
-- [Web Server](features/WEB.md)
-- [Reading Prompts From File](features/OTHER.md#reading-prompts-from-a-file)
-- [Shortcut: Reusing Seeds](features/OTHER.md#shortcuts-reusing-seeds)
-- [Weighted Prompts](features/OTHER.md#weighted-prompts)
-- [Variations](features/VARIATIONS.md)
-- [Personalizing Text-to-Image Generation](features/TEXTUAL_INVERSION.md)
-- [Simplified API for text to image generation](features/OTHER.md#simplified-api)
-
-### Other Features
-
-- [Creating Transparent Regions for Inpainting](features/INPAINTING.md#creating-transparent-regions-for-inpainting)
-- [Preload Models](features/OTHER.md#preload-models)
-
-## Latest Changes
+  - Deprecated `--full_precision` / `-F`. Simply omit it and `dream.py` will auto
+    configure. To switch away from auto use the new flag like `--precision=float32`.
 
 ### v1.14 <small>(11 September 2022)</small>
 
@@ -127,12 +131,12 @@ To run in full-precision mode, start `dream.py` with the `--full_precision` flag
 
 For older changelogs, please visit the **[CHANGELOG](features/CHANGELOG.md)**.
 
-## Troubleshooting
+## :material-target: Troubleshooting
 
-Please check out our **[Q&A](help/TROUBLESHOOT.md)** to get solutions for common installation
+Please check out our **[:material-frequently-asked-questions: Q&A](help/TROUBLESHOOT.md)** to get solutions for common installation
 problems and other issues.
 
-## Contributing
+## :octicons-repo-push-24: Contributing
 
 Anyone who wishes to contribute to this project, whether documentation, features, bug fixes, code
 cleanup, testing, or code reviews, is very much encouraged to do so. If you are unfamiliar with how
@@ -144,13 +148,13 @@ important thing is to **make your pull request against the "development" branch*
 "main". This will help keep public breakage to a minimum and will allow you to propose more radical
 changes.
 
-## Contributors
+## :octicons-person-24: Contributors
 
 This fork is a combined effort of various people from across the world.
 [Check out the list of all these amazing people](other/CONTRIBUTORS.md). We thank them for their
 time, hard work and effort.
 
-## Support
+## :octicons-question-24: Support
 
 For support, please use this repository's GitHub Issues tracking service. Feel free to send me an
 email if you use and like the script.
@@ -158,7 +162,7 @@ email if you use and like the script.
 Original portions of the software are Copyright (c) 2020
 [Lincoln D. Stein](https://github.com/lstein)
 
-## Further Reading
+## :octicons-book-24: Further Reading
 
 Please see the original README for more information on this software and underlying algorithm,
 located in the file [README-CompViz.md](other/README-CompViz.md).
