@@ -29,6 +29,7 @@ How to do this ?
 ```
  python -c "import diffusers ; print(diffusers.__file__)"
 ```
+and pipeline_stable_diffusion should at this location + "/pipelines/stable_diffusion/pipeline_stable_diffusion.py"
 or inside python
 ```
 import diffusers
@@ -37,7 +38,7 @@ print(diffusers.__file__)
 
  Then copy the local file there as follows:
 ```
-cp pipeline_stable_diffusion.py <<that_directory>>/pipeline_stable_diffusion.py
+cp pipeline_stable_diffusion.py <<that_directory/pipelines/stable_diffusion/>>/pipeline_stable_diffusion.py
 ```
 You can also do a symbolic link:
 ```
@@ -47,6 +48,7 @@ ln -s <<the_installation_directory>>/pipeline_stable_diffusion.py .
 ```
 
 ## Then run << python minisd.py >>.
+You should be asked for a prompt (just <<enter>> if you like the proposed hardcoded prompt), and then a window should be opened.
 
 ## Send feedback to [**Nevergrad Users**](https://www.facebook.com/groups/nevergradusers/)<br/>
 
