@@ -14,9 +14,23 @@ pip install -e .
 ```
 
 ## Hack diffusers (yes I should do that differently... only solution for now).
-2. Then use the file "pipeline_stable_diffusion.py" in lieu of the original pipeline_stable_diffusion.py found at 
-<< python -c "import diffusers ; print(diffusers.__file__)" >>. This is done as follows:
+Copy the file "pipeline_stable_diffusion.py" in lieu of the original pipeline_stable_diffusion.py.
+
+How to do this ?
+ First, find where ``diffusers'' is:
+```
+ python -c "import diffusers ; print(diffusers.__file__)"
+```
+or inside python
+```
+import diffusers
+print(diffusers.__file__)
+```
+
+ Then copy the local file there as follows:
+```
 cp pipeline_stable_diffusion.py <<that_directory>>/pipeline_stable_diffusion.py
+```
 
 ## Then run << python minisd.py >>.
 
