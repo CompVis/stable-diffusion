@@ -1,6 +1,7 @@
-# Genetic Stable Diffusion
+# Genetic Stable Diffusion.
 
 This fork of Stable Diffusion uses genetic stuff and a graphical user interface.
+It also works in many languages (tested: French and German, should be ok for many more).
 It generates many images.
 It should work directly on Mac M1.
 It should be easy to adap to a machine with GPU.
@@ -18,6 +19,7 @@ pip install transformers diffusers invisible-watermark
 pip install pygame
 pip install webbrowser
 pip install nevergrad
+pip install deep-translator
 pip install -e .
 ```
 

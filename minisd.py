@@ -5,6 +5,7 @@ import numpy as np
 from torch import autocast
 from diffusers import StableDiffusionPipeline
 import webbrowser
+from deep_translator import GoogleTranslator
 
 
 model_id = "CompVis/stable-diffusion-v1-4"
@@ -122,7 +123,8 @@ for iteration in range(30):
         if len(enforcedlatent) > 2:
             os.environ["forcedlatent"] = enforcedlatent
         with autocast("cuda"):
-            image = pipe(prompt, guidance_scale=7.5)["sample"][0]
+            english_prompt = GoogleTranslator(source='auto', target='en').translate
+            image = pipe(english_prompt, guidance_scale=7.5)["sample"][0]
             images += [image]
         filename = f"SD_{prompt.replace(' ','_')}_image_{sentinel}_{iteration}_{k}.png"  
         image.save(filename)
