@@ -497,11 +497,8 @@ class Generate:
         prompt = None
         try:
             args = metadata_from_png(image_path)
-            if len(args) > 1:
-                print("* Can't postprocess a grid")
-                return
-            seed   = args[0].seed
-            prompt = args[0].prompt
+            seed   = args.seed
+            prompt = args.prompt
             print(f'>> retrieved seed {seed} and prompt "{prompt}" from {image_path}')
         except:
             m    = re.search('(\d+)\.png$',image_path)
