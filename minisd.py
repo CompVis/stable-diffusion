@@ -249,7 +249,16 @@ for iteration in range(30):
             if i.type == pygame.QUIT:
                 status = False
      
-    # deactivates the pygame library
+    # Using draw.rect module of
+    # pygame to draw the solid circle
+    for _ in range(123):
+        x = np.random.randint(1500)
+        y = np.random.randint(900)
+        pygame.draw.circle(scrn, (0, 255, 0),
+                           [x, y], 17, 0)
+     
+    # Draws the surface object to the screen.
+    pygame.display.update()
     if len(indices) == 0:
         print("The user did not like anything! Rerun :-(")
         continue
