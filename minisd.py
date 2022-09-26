@@ -101,9 +101,9 @@ onlyfiles = []
 
 # activate the pygame library .
 pygame.init()
-X = 1900  # > 1500 = buttons
+X = 2000  # > 1500 = buttons
 Y = 900  
-scrn = pygame.display.set_mode((X, Y))
+scrn = pygame.display.set_mode((1600, Y))
 font = pygame.font.Font('freesansbold.ttf', 32)
 
 
@@ -113,6 +113,10 @@ for iteration in range(30):
     onlyfiles = [onlyfiles[f] for f in five_best]
     for k in range(llambda):
         if k < len(five_best):
+            imp = pygame.transform.scale(pygame.image.load(onlyfiles[k]).convert(), (300, 300))
+            # Using blit to copy content from one surface to other
+            scrn.blit(imp, (300 * (k // 3), 300 * (k % 3)))
+            pygame.display.flip()
             continue
         text0 = font.render(f'Please wait !!! {k} / {llambda}', True, green, blue)
         scrn.blit(text0, ((X*3/4)/2, Y/2))
@@ -135,6 +139,7 @@ for iteration in range(30):
         imp = pygame.transform.scale(pygame.image.load(onlyfiles[-1]).convert(), (300, 300))
         # Using blit to copy content from one surface to other
         scrn.blit(imp, (300 * (k // 3), 300 * (k % 3)))
+        pygame.display.flip()
         str_latent = eval((os.environ["latent_sd"]))
         array_latent = eval(f"np.array(str_latent).reshape(4, 64, 64)")
         print(f"Debug info: array_latent sumsq/var {sum(array_latent.flatten() ** 2) / len(array_latent.flatten())}")
@@ -157,24 +162,24 @@ for iteration in range(30):
     # Button for loading a starting point
     text1 = font.render('Load image', True, green, blue)
     text1 = pygame.transform.rotate(text1, 90)
-    scrn.blit(text1, (X*3/4+X/32, 0))
+    scrn.blit(text1, (X*3/4+X/16, 0))
     text1 = font.render('& latent', True, green, blue)
     text1 = pygame.transform.rotate(text1, 90)
-    scrn.blit(text1, (X*3/4+X/16, 0))
+    scrn.blit(text1, (X*3/4+X/16+X/32, 0))
     # Button for creating a meme
     text2 = font.render('Create', True, green, blue)
     text2 = pygame.transform.rotate(text2, 90)
-    scrn.blit(text2, (X*3/4+X/32, Y/3))
+    scrn.blit(text2, (X*3/4+X/16, Y/3))
     text2 = font.render('a meme', True, green, blue)
     text2 = pygame.transform.rotate(text2, 90)
-    scrn.blit(text2, (X*3/4+X/16, Y/3))
+    scrn.blit(text2, (X*3/4+X/16+X/32, Y/3))
     # Button for new generation
     text3 = font.render(f"I don't want to", True, green, blue)
     text3 = pygame.transform.rotate(text3, 90)
-    scrn.blit(text3, (X*3/4+X/32, Y*2/3))
+    scrn.blit(text3, (X*3/4+X/16, Y*2/3))
     text3 = font.render(f"select images! Just rerun.", True, green, blue)
     text3 = pygame.transform.rotate(text3, 90)
-    scrn.blit(text3, (X*3/4+X/16, Y*2/3))
+    scrn.blit(text3, (X*3/4+X/16+X/32, Y*2/3))
 
     for idx in range(llambda):
         # set the pygame window name
@@ -229,10 +234,11 @@ for iteration in range(30):
                 # Update the button for new generation.
                 text3 = font.render(f"  I have chosen {len(indices)} images:", True, green, blue)
                 text3 = pygame.transform.rotate(text3, 90)
-                scrn.blit(text3, (X*3/4, Y*2/3))
+                scrn.blit(text3, (X*3/4+X/16, Y*2/3))
                 text3 = font.render(f"  New generation!", True, green, blue)
                 text3 = pygame.transform.rotate(text3, 90)
-                scrn.blit(text3, (X*3/4+X/16, Y*2/3))
+                scrn.blit(text3, (X*3/4+X/16+X/32, Y*2/3))
+                pygame.display.flip()
                 #text3Rect = text3.get_rect()
                 #text3Rect.center = (750+750*3/4, 1000)
                 good += [list(latent[index].flatten())]
