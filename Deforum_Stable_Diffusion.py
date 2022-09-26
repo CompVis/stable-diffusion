@@ -584,53 +584,66 @@ def transform_image_3d(prev_img_cv2, depth_tensor, rot_mat, translate, anim_args
 
 # prompt weighting with colons and number coefficients (like 'bacon:0.75 eggs:0.25')
 # borrowed from https://github.com/kylewlacy/stable-diffusion/blob/0a4397094eb6e875f98f9d71193e350d859c4220/ldm/dream/conditioning.py
+# and altered to enable negative weights
 def get_uc_and_c(prompts, model, args, log_tokens=True, skip_normalize=False):
-    import re
-    # Extract Unconditioned Words From Prompt
-    unconditioned_words = ''
-    unconditional_regex = r'\[(.*?)\]'
     prompt = prompts[0] # they are the same in a batch anyway
-    unconditionals = re.findall(unconditional_regex, prompt)
-
-    if len(unconditionals) > 0:
-        unconditioned_words = ' '.join(unconditionals)
-
-        # Remove Unconditioned Words From Prompt
-        unconditional_regex_compile = re.compile(unconditional_regex)
-        clean_prompt = unconditional_regex_compile.sub(' ', prompt)
-        prompt = re.sub(' +', ' ', clean_prompt)
-
-    uc = model.get_learned_conditioning(args.n_samples * [unconditioned_words])
 
     # get weighted sub-prompts
-    weighted_subprompts = split_weighted_subprompts(
+    negative_subprompts, positive_subprompts = split_weighted_subprompts(
         prompt, skip_normalize
     )
-
-    if len(weighted_subprompts) > 1:
-        # i dont know if this is correct.. but it works
-        c = torch.zeros_like(uc)
-        # normalize each "sub prompt" and add it
-        for subprompt, weight in weighted_subprompts:
-            log_tokenization(subprompt, model, log_tokens, weight)
-            c = torch.add(
-                c,
-                model.get_learned_conditioning(args.n_samples * [subprompt]),
-                alpha=weight,
-            )
-    else:   # just standard 1 prompt
+    if len(negative_subprompts) > 1:
+        uc = weighted_prompts_cs(negative_subprompts, model, args, log_tokens)
+    else:
+        uc = model.get_learned_conditioning(args.n_samples * [""])
+    
+    if len(positive_subprompts) > 1:
+        c = weighted_prompts_cs(positive_subprompts, model, args, log_tokens, uc)
+    else:
         log_tokenization(prompt, model, log_tokens, 1)
         c = model.get_learned_conditioning(args.n_samples * [prompt])
-        uc = model.get_learned_conditioning(args.n_samples * [unconditioned_words])
+
     return (uc, c)
 
-def split_weighted_subprompts(text, skip_normalize=False)->list:
+def weighted_prompts_cs(weighted_subprompts, model, args, log_tokens=True, negative = None):
+      if negative != None:
+          # (webui author) dont know if this is correct.. but it works
+          cs = torch.zeros_like(negative)
+      # normalize each "sub prompt" and add it
+      for subprompt, weight in weighted_subprompts:
+          log_tokenization(subprompt, model, log_tokens, negative == None ? -weight : weight)
+          cs = torch.add(
+              cs,
+              model.get_learned_conditioning(args.n_samples * [subprompt]),
+              alpha=weight,
+          )
+        
+    return cs
+
+def parse_weight(match):
+    w_raw = match.group("weight")
+    if !w_raw:
+        return 1
+    # TODO numexpr support
+    return float(w_raw)
+
+def normalize_prompt_weights(parsed_prompts):
+    weight_sum = sum(map(lambda x: x[1], parsed_prompts))
+    if weight_sum == 0:
+        print(
+            "Warning: Subprompt weights add up to zero. Discarding and using even weights instead.")
+        equal_weight = 1 / max(len(parsed_prompts), 1)
+        return [(x[0], equal_weight) for x in parsed_prompts]
+    return [(x[0], x[1] / weight_sum) for x in parsed_prompts]
+
+def split_weighted_subprompts(text, skip_normalize=False):
     import re
     """
     grabs all text up to the first occurrence of ':'
     uses the grabbed text as a sub-prompt, and takes the value following ':' as weight
     if ':' has no value defined, defaults to 1.0
     repeats until no text remaining
+    #TODO: add functions parsing
     """
     prompt_parser = re.compile("""
             (?P<prompt>     # capture group for 'prompt'
@@ -646,17 +659,19 @@ def split_weighted_subprompts(text, skip_normalize=False)->list:
             $               # else, if no ':' then match end of line
             )               # end non-capture group
             """, re.VERBOSE)
-    parsed_prompts = [(match.group("prompt").replace("\\:", ":"), float(
-        match.group("weight") or 1)) for match in re.finditer(prompt_parser, text)]
+    negative_prompts = []
+    positive_prompts = []
+    for match in re.finditer(prompt_parser, text):
+        w = parse_weight(match)
+        if w < 0:
+            # negating the sign as we'll feed this to uc
+            negative_prompts.append((match.group("prompt").replace("\\:", ":"), -w))
+        elif w > 0:
+            positive_prompts.append((match.group("prompt").replace("\\:", ":"), w))
+
     if skip_normalize:
-        return parsed_prompts
-    weight_sum = sum(map(lambda x: x[1], parsed_prompts))
-    if weight_sum == 0:
-        print(
-            "Warning: Subprompt weights add up to zero. Discarding and using even weights instead.")
-        equal_weight = 1 / max(len(parsed_prompts), 1)
-        return [(x[0], equal_weight) for x in parsed_prompts]
-    return [(x[0], x[1] / weight_sum) for x in parsed_prompts]
+        return (negative_prompts, positive_prompts)
+    return (normalize_prompt_weights(negative_prompts), normalize_prompt_weights(positive_prompts))
 
 # shows how the prompt is tokenized
 # usually tokens have '</w>' to indicate end-of-word,
