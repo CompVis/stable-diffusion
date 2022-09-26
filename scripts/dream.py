@@ -108,6 +108,8 @@ def main():
 
     # preload the model
     gen.load_model()
+    #set additional option
+    gen.free_gpu_mem = opt.free_gpu_mem
 
     if not infile:
         print(
