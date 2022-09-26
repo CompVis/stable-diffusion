@@ -592,37 +592,36 @@ def get_uc_and_c(prompts, model, args, log_tokens=True, skip_normalize=False):
     negative_subprompts, positive_subprompts = split_weighted_subprompts(
         prompt, skip_normalize
     )
-    if len(negative_subprompts) > 1:
-        uc = weighted_prompts_cs(negative_subprompts, model, args, log_tokens)
-    else:
-        uc = model.get_learned_conditioning(args.n_samples * [""])
+
+    uc = model.get_learned_conditioning(args.n_samples * [""])
+    uc = weighted_prompts_cs(negative_subprompts, model, args, uc, True, log_tokens)
     
-    if len(positive_subprompts) > 1:
-        c = weighted_prompts_cs(positive_subprompts, model, args, log_tokens, uc)
+    if len(positive_subprompts) > 0:
+        c = weighted_prompts_cs(positive_subprompts, model, args, uc, False, log_tokens)
     else:
         log_tokenization(prompt, model, log_tokens, 1)
         c = model.get_learned_conditioning(args.n_samples * [prompt])
 
     return (uc, c)
 
-def weighted_prompts_cs(weighted_subprompts, model, args, log_tokens=True, negative = None):
-      if negative != None:
-          # (webui author) dont know if this is correct.. but it works
-          cs = torch.zeros_like(negative)
-      # normalize each "sub prompt" and add it
-      for subprompt, weight in weighted_subprompts:
-          log_tokenization(subprompt, model, log_tokens, negative == None ? -weight : weight)
-          cs = torch.add(
-              cs,
-              model.get_learned_conditioning(args.n_samples * [subprompt]),
-              alpha=weight,
-          )
+def weighted_prompts_cs(weighted_subprompts, model, args, base, is_negative, log_tokens=True):
+    if base != None:
+        # (webui author) dont know if this is correct.. but it works
+        cs = torch.zeros_like(base)
+    # normalize each "sub prompt" and add it
+    for subprompt, weight in weighted_subprompts:
+        log_tokenization(subprompt, model, log_tokens, -weight if is_negative else weight)
+        cs = torch.add(
+            cs,
+            model.get_learned_conditioning(args.n_samples * [subprompt]),
+            alpha=weight,
+        )
         
     return cs
 
 def parse_weight(match):
     w_raw = match.group("weight")
-    if !w_raw:
+    if w_raw == None:
         return 1
     # TODO numexpr support
     return float(w_raw)
@@ -1118,8 +1117,8 @@ def parse_key_frames(string, prompt_parser=None):
 # !! }}
 
 prompts = [
-    "a beautiful portrait of a woman:0.75 in forest:0.25, green dress, by Artgerm, Asher Brown Durand, trending on Artstation", #the first prompt I want
-    "a beautiful portrait of a woman:0.25 in forest:0.75, green dress, by Artgerm, Asher Brown Durand, trending on Artstation", #the second prompt I want
+    "a beautiful portrait of a woman:0.75 in forest:0.25, hair:-1, green dress, by Artgerm, Asher Brown Durand, trending on Artstation", #the first prompt I want
+    "a beautiful portrait of a woman:0.25 in forest:0.75, hair:2, green dress, by Artgerm, Asher Brown Durand, trending on Artstation", #the second prompt I want
     #"the third prompt I don't want it I commented it with an",
 ]
 
