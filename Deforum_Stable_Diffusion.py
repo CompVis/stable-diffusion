@@ -467,17 +467,18 @@ class SamplerCallback(object):
         self.verbose_print = print if verbose else lambda *args, **kwargs: None
 
     def view_sample_step(self, latents, path_name_modifier=''):
-        samples = model.decode_first_stage(latents)
-        if self.save_sample_per_step:
-            fname = f'{path_name_modifier}_{self.step_index:05}.png'
-            for i, sample in enumerate(samples):
-                sample = sample.double().cpu().add(1).div(2).clamp(0, 1)
-                sample = torch.tensor(np.array(sample))
-                grid = make_grid(sample, 4).cpu()
-                TF.to_pil_image(grid).save(os.path.join(self.paths_to_image_steps[i], fname))
-        if self.show_sample_per_step:
-            print(path_name_modifier)
-            self.display_images(samples)
+        if self.save_sample_per_step or self.show_sample_per_step:
+            samples = model.decode_first_stage(latents)
+            if self.save_sample_per_step:
+                fname = f'{path_name_modifier}_{self.step_index:05}.png'
+                for i, sample in enumerate(samples):
+                    sample = sample.double().cpu().add(1).div(2).clamp(0, 1)
+                    sample = torch.tensor(np.array(sample))
+                    grid = make_grid(sample, 4).cpu()
+                    TF.to_pil_image(grid).save(os.path.join(self.paths_to_image_steps[i], fname))
+            if self.show_sample_per_step:
+                print(path_name_modifier)
+                self.display_images(samples)
         return
 
     def display_images(self, images):
