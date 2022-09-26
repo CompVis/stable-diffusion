@@ -2,6 +2,15 @@
 
 # InvokeAI: A Stable Diffusion Toolkit
 
+_Note: This fork is rapidly evolving. Please use the
+[Issues](https://github.com/invoke-ai/InvokeAI/issues) tab to
+report bugs and make feature requests. Be sure to use the provided
+templates. They will help aid diagnose issues faster._
+
+_This repository was formally known as lstein/stable-diffusion_
+
+# **Table of Contents**
+
 ![project logo](docs/assets/logo.png)
 
 [![discord badge]][discord link]
