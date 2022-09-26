@@ -1,3 +1,5 @@
+# Modification of the original file by O. Teytaud for facilitating genetic stable diffusion.
+
 import inspect
 import os
 import numpy as np
