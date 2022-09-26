@@ -28,6 +28,10 @@ class Txt2Img(Generator):
                 height // self.downsampling_factor,
                 width  // self.downsampling_factor,
             ]
+
+            if self.free_gpu_mem and self.model.model.device != self.model.device:
+                self.model.model.to(self.model.device)
+
             samples, _ = sampler.sample(
                 batch_size                   = 1,
                 S                            = steps,
@@ -41,6 +45,10 @@ class Txt2Img(Generator):
                 img_callback                 = step_callback,
                 threshold                    = threshold,
             )
+
+            if self.free_gpu_mem:
+                self.model.model.to("cpu")
+
             return self.sample_to_image(samples)
 
         return make_image

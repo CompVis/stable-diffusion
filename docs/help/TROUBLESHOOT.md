@@ -15,12 +15,37 @@ incomplete installations or crashes during the install process.
 
 During `conda env create -f environment.yaml`, conda hangs indefinitely.
 
-### **SOLUTION**
+If it is because of the last PIP step (usually stuck in the Git Clone step, you can check the detailed log by this method):
+```bash
+export PIP_LOG="/tmp/pip_log.txt"
+touch ${PIP_LOG}
+tail -f ${PIP_LOG} & 
+conda env create -f environment-mac.yaml --debug --verbose
+killall tail
+rm ${PIP_LOG}
+```
 
-Enter the stable-diffusion directory and completely remove the `src` directory and all its contents.
-The safest way to do this is to enter the stable-diffusion directory and give the command
-`git clean -f`. If this still doesn't fix the problem, try "conda clean -all" and then restart at
-the `conda env create` step.
+**SOLUTION**
+
+Conda sometimes gets stuck  at the last PIP step, in which several git repositories are
+cloned and built.
+
+Enter the stable-diffusion directory and completely remove the `src`
+directory and all its contents.  The safest way to do this is to enter
+the stable-diffusion directory and give the command `git clean -f`. If
+this still doesn't fix the problem, try "conda clean -all" and then
+restart at the `conda env create` step.
+
+To further understand the problem to checking the install lot using this method:
+
+```bash
+export PIP_LOG="/tmp/pip_log.txt"
+touch ${PIP_LOG}
+tail -f ${PIP_LOG} & 
+conda env create -f environment-mac.yaml --debug --verbose
+killall tail
+rm ${PIP_LOG}
+```
 
 ---
 

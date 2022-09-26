@@ -95,7 +95,8 @@ While that is downloading, open a Terminal and run the following commands:
 ```{.bash .annotate title="local repo setup"}
 # clone the repo
 git clone https://github.com/invoke-ai/InvokeAI.git
-cd stable-diffusion
+
+cd InvokeAI
 
 # wait until the checkpoint file has downloaded, then proceed
 
@@ -124,7 +125,7 @@ ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" \
     === "Intel x86_64"
 
         ```bash
-        PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-x86_64 \
+        PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-64 \
           conda env create \
           -f environment-mac.yaml \
           && conda activate ldm

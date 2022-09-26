@@ -108,6 +108,8 @@ def main():
 
     # preload the model
     gen.load_model()
+    #set additional option
+    gen.free_gpu_mem = opt.free_gpu_mem
 
     if not infile:
         print(
@@ -433,7 +435,7 @@ def dream_server_loop(gen, host, port, outdir, gfpgan):
             f"Point your browser at http://localhost:{port} or use the host's DNS name or IP address.")
     else:
         print(">> Default host address now 127.0.0.1 (localhost). Use --host 0.0.0.0 to bind any address.")
-        print(f">> Point your browser at http://{host}:{port}.")
+        print(f">> Point your browser at http://{host}:{port}")
 
     try:
         dream_server.serve_forever()

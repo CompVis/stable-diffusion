@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { ExpandedIndex } from '@chakra-ui/react';
-import * as InvokeAI from '../../app/invokeai'
+import * as InvokeAI from '../../app/invokeai';
 
 export type LogLevel = 'info' | 'warning' | 'error';
 
@@ -15,7 +15,9 @@ export interface Log {
   [index: number]: LogEntry;
 }
 
-export interface SystemState extends InvokeAI.SystemStatus, InvokeAI.SystemConfig {
+export interface SystemState
+  extends InvokeAI.SystemStatus,
+    InvokeAI.SystemConfig {
   shouldDisplayInProgress: boolean;
   log: Array<LogEntry>;
   shouldShowLogViewer: boolean;
@@ -31,7 +33,6 @@ export interface SystemState extends InvokeAI.SystemStatus, InvokeAI.SystemConfi
   totalIterations: number;
   currentStatus: string;
   currentStatusHasSteps: boolean;
-  
   shouldDisplayGuides: boolean;
 }
 
@@ -51,7 +52,7 @@ const initialSystemState = {
   totalSteps: 0,
   currentIteration: 0,
   totalIterations: 0,
-  currentStatus: '',
+  currentStatus: 'Disconnected',
   currentStatusHasSteps: false,
   model: '',
   model_id: '',
@@ -107,6 +108,12 @@ export const systemSlice = createSlice({
     },
     setIsConnected: (state, action: PayloadAction<boolean>) => {
       state.isConnected = action.payload;
+      state.isProcessing = false;
+      state.currentStep = 0;
+      state.totalSteps = 0;
+      state.currentIteration = 0;
+      state.totalIterations = 0;
+      state.currentStatusHasSteps = false;
     },
     setSocketId: (state, action: PayloadAction<string>) => {
       state.socketId = action.payload;

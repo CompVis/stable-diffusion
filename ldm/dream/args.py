@@ -340,6 +340,12 @@ class Args(object):
             help='Deprecated way to set --precision=float32',
         )
         model_group.add_argument(
+            '--free_gpu_mem',
+            dest='free_gpu_mem',
+            action='store_true',
+            help='Force free gpu memory before final decoding',
+        )
+        model_group.add_argument(
             '--precision',
             dest='precision',
             type=str,
@@ -588,7 +594,7 @@ class Args(object):
             '--upscale',
             nargs='+',
             type=float,
-            help='Scale factor (2, 4) for upscaling final output followed by upscaling strength (0-1.0). If strength not specified, defaults to 0.75',
+            help='Scale factor (1, 2, 3, 4, etc..) for upscaling final output followed by upscaling strength (0-1.0). If strength not specified, defaults to 0.75',
             default=None,
         )
         postprocessing_group.add_argument(
