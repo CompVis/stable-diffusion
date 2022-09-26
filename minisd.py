@@ -76,6 +76,10 @@ user_prompt = input("Enter a new prompt if you prefer\n")
 if len(user_prompt) > 2:
     prompt = user_prompt
 
+# On the fly translation.
+english_prompt = GoogleTranslator(source='auto', target='en').translate
+
+
 import os
 import pygame
 from os import listdir
@@ -123,7 +127,6 @@ for iteration in range(30):
         if len(enforcedlatent) > 2:
             os.environ["forcedlatent"] = enforcedlatent
         with autocast("cuda"):
-            english_prompt = GoogleTranslator(source='auto', target='en').translate
             image = pipe(english_prompt, guidance_scale=7.5)["sample"][0]
             images += [image]
         filename = f"SD_{prompt.replace(' ','_')}_image_{sentinel}_{iteration}_{k}.png"  
