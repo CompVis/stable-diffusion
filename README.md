@@ -39,6 +39,12 @@ print(diffusers.__file__)
 ```
 cp pipeline_stable_diffusion.py <<that_directory>>/pipeline_stable_diffusion.py
 ```
+You can also do a symbolic link:
+```
+pushd <<the_directory_of_diffusers_which_contains_pipeline_stable_diffusion.py>>
+mv pipeline_stable_diffusion.py backup_pipeline_stable_diffusion.py
+ln -s <<the_installation_directory>>/pipeline_stable_diffusion.py .
+```
 
 ## Then run << python minisd.py >>.
 
