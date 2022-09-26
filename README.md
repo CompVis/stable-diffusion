@@ -1,5 +1,13 @@
 # Genetic Stable Diffusion
 
+This fork of Stable Diffusion uses genetic stuff and a graphical user interface.
+It generates many images.
+It should work directly on Mac M1.
+It should be easy to adap to a machine with GPU.
+Without GPU it will be more complicated.
+Ping us at the Nevergrad user group if you need help, I'll do my best.
+[**Nevergrad Users**](https://www.facebook.com/groups/nevergradusers/)<br/>
+
 ## Install StableDiffusion as usual, plus a few more stuff.  Basically:
 
 ```
