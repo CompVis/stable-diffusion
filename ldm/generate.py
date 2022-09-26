@@ -497,11 +497,8 @@ class Generate:
         prompt = None
         try:
             args = metadata_from_png(image_path)
-            if len(args) > 1:
-                print("* Can't postprocess a grid")
-                return
-            seed   = args[0].seed
-            prompt = args[0].prompt
+            seed   = args.seed
+            prompt = args.prompt
             print(f'>> retrieved seed {seed} and prompt "{prompt}" from {image_path}')
         except:
             m    = re.search('(\d+)\.png$',image_path)
@@ -724,14 +721,6 @@ class Generate:
         for r in image_list:
             image, seed = r
             try:
-                if upscale is not None:
-                    if self.esrgan is not None:
-                        if len(upscale) < 2:
-                            upscale.append(0.75)
-                        image = self.esrgan.process(
-                            image, upscale[1], seed, int(upscale[0]))
-                    else:
-                        print(">> ESRGAN is disabled. Image not upscaled.")
                 if strength > 0:
                     if self.gfpgan is not None or self.codeformer is not None:
                         if facetool == 'gfpgan':
@@ -747,6 +736,14 @@ class Generate:
                                 image = self.codeformer.process(image=image, strength=strength, device=cf_device, seed=seed, fidelity=codeformer_fidelity)
                     else:
                         print(">> Face Restoration is disabled.")
+                if upscale is not None:
+                    if self.esrgan is not None:
+                        if len(upscale) < 2:
+                            upscale.append(0.75)
+                        image = self.esrgan.process(
+                            image, upscale[1], seed, int(upscale[0]))
+                    else:
+                        print(">> ESRGAN is disabled. Image not upscaled.")
             except Exception as e:
                 print(
                     f'>> Error running RealESRGAN or GFPGAN. Your image was not upscaled.\n{e}'
