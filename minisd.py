@@ -127,6 +127,9 @@ for iteration in range(30):
         filename = f"SD_{prompt.replace(' ','_')}_image_{sentinel}_{iteration}_{k}.png"  
         image.save(filename)
         onlyfiles += [filename]
+        imp = pygame.transform.scale(pygame.image.load(onlyfiles[-1]).convert(), (300, 300))
+        # Using blit to copy content from one surface to other
+        scrn.blit(imp, (300 * (k // 3), 300 * (k % 3)))
         str_latent = eval((os.environ["latent_sd"]))
         array_latent = eval(f"np.array(str_latent).reshape(4, 64, 64)")
         print(f"Debug info: array_latent sumsq/var {sum(array_latent.flatten() ** 2) / len(array_latent.flatten())}")
