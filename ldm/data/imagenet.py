@@ -1,7 +1,6 @@
 import os, yaml, pickle, shutil, tarfile, glob
 import cv2
 import albumentations
-import PIL
 import numpy as np
 import torchvision.transforms.functional as TF
 from omegaconf import OmegaConf
@@ -316,12 +315,12 @@ class ImageNetSR(Dataset):
             "cv_bicubic": cv2.INTER_CUBIC,
             "cv_area": cv2.INTER_AREA,
             "cv_lanczos": cv2.INTER_LANCZOS4,
-            "pil_nearest": PIL.Image.NEAREST,
-            "pil_bilinear": PIL.Image.BILINEAR,
-            "pil_bicubic": PIL.Image.BICUBIC,
-            "pil_box": PIL.Image.BOX,
-            "pil_hamming": PIL.Image.HAMMING,
-            "pil_lanczos": PIL.Image.LANCZOS,
+            "pil_nearest": Image.NEAREST,
+            "pil_bilinear": Image.BILINEAR,
+            "pil_bicubic": Image.BICUBIC,
+            "pil_box": Image.BOX,
+            "pil_hamming": Image.HAMMING,
+            "pil_lanczos": Image.Resampling.LANCZOS,
             }[degradation]
 
             self.pil_interpolation = degradation.startswith("pil_")
@@ -359,7 +358,7 @@ class ImageNetSR(Dataset):
         image = self.image_rescaler(image=image)["image"]
 
         if self.pil_interpolation:
-            image_pil = PIL.Image.fromarray(image)
+            image_pil = Image.fromarray(image)
             LR_image = self.degradation_process(image_pil)
             LR_image = np.array(LR_image).astype(np.uint8)
 
