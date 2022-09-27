@@ -84,7 +84,7 @@ if len(user_prompt) > 2:
 language = detect(prompt)
 english_prompt = GoogleTranslator(source='auto', target='en').translate(prompt)
 
-define to_native(stri):
+def to_native(stri):
     return GoogleTranslator(source='en', target=language).translate(stri)
 
 print(f"Working on {english_prompt}, a.k.a {prompt}.")
@@ -282,6 +282,10 @@ for iteration in range(30):
     os.environ["mu"] = str(len(indices))
     forcedlatents = []
     bad += [list(latent[u].flatten()) for u in range(len(onlyfiles)) if u not in [i[0] for i in indices]]
+    sauron = 0 * latent[0]
+    for u in [u for u in range(len(onlyfiles)) if u not in [i[0] for i in indices]]:
+        sauron += latent[u]
+    sauron = (1 / len([u for u in range(len(onlyfiles)) if u not in [i[0] for i in indices]])) * sauron
     if len(bad) > 200:
         bad = bad[(len(bad) - 200):]
     for a in range(llambda):
@@ -310,6 +314,8 @@ for iteration in range(30):
                     assert i < len(latent[uu][k]), i
                     assert j < len(latent[uu][k][i]), j
                     forcedlatent[k][i][j] = latent[uu][k][i][j]
+        if a % 2 == 0:
+            forcedlatent -= np.random.rand() * sauron
         forcedlatents += [forcedlatent]
     #for uu in range(len(latent)):
     #    print(f"--> latent[{uu}] sum of sq / variable = {np.sum(latent[uu].flatten()**2) / len(latent[uu].flatten())}")
