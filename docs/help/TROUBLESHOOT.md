@@ -13,7 +13,7 @@ incomplete installations or crashes during the install process.
 
 ### **QUESTION**
 
-During `conda env create -f environment.yaml`, conda hangs indefinitely.
+During `conda env create`, conda hangs indefinitely.
 
 If it is because of the last PIP step (usually stuck in the Git Clone step, you can check the detailed log by this method):
 ```bash
@@ -67,8 +67,8 @@ Reinstall the stable diffusion modules. Enter the `stable-diffusion` directory a
 
 ### **SOLUTION**
 
-From within the `stable-diffusion` directory, run `conda env update -f environment.yaml` This is
-also frequently the solution to complaints about an unknown function in a module.
+From within the `InvokeAI` directory, run `conda env update` This is also frequently the solution to
+complaints about an unknown function in a module.
 
 ---
 
@@ -83,8 +83,10 @@ There's a feature or bugfix in the Stable Diffusion GitHub that you want to try 
 If the fix/feature is on the `main` branch, enter the stable-diffusion directory and do a
 `git pull`.
 
-Usually this will be sufficient, but if you start to see errors about missing or incorrect modules,
-use the command
+Usually this will be sufficient, but if you start to see errors about
+missing or incorrect modules, use the command `pip install -e .`
+and/or `conda env update` (These commands won't break anything.)
+
 
 `pip install -e .` and/or
 
@@ -114,3 +116,13 @@ branch that contains the pull request:
 
 You will need to go through the install procedure again, but it should be fast because all the
 dependencies are already loaded.
+
+---
+
+### **QUESTION**
+
+Image generation crashed with CUDA out of memory error after successful sampling. 
+
+### **SOLUTION**
+
+Try to run script with option `--free_gpu_mem` This will free memory before image decoding step.

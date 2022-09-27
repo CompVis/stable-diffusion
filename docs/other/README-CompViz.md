@@ -39,10 +39,13 @@ lightweight and runs on a GPU with at least 10GB VRAM. See
 A suitable [conda](https://conda.io/) environment named `ldm` can be created and
 activated with:
 
-```bash
-conda env create -f environment.yaml
+```
+conda env create -f environment.yml
 conda activate ldm
 ```
+
+Note that the first line may be abbreviated `conda env create`, since conda will
+look for `environment.yml` by default.
 
 You can also update an existing
 [latent diffusion](https://github.com/CompVis/latent-diffusion) environment by
