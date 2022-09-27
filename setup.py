@@ -26,7 +26,10 @@ setup(
         "transformers",
         "torchmetrics",
         "kornia",
-        "natsort"
+        "natsort",
+        "some-pkg @ git+https://github.com/w4ffl35/taming-transformers.git#egg=taming-transformers",
+        "some-pkg @ git+https://github.com/w4ffl35/CLIP.git#egg=clip",
+        "some-pkg @ git+https://github.com/albumentations-team/albumentations#egg=albumentations",
     ],
     include_package_data=True,
     extras_require={'dev': ['pytest']},
