@@ -75,6 +75,7 @@ prompt = "Tentacles attacking a bloody Meg Myers in Eyptian dress. Meg Myers has
 prompt = "Bizarre art."
 
 prompt = "Beautiful bizarre woman."
+prompt = "Yann LeCun as the grim reaper: bizarre art."
 print(f"The prompt is {prompt}")
 user_prompt = input("Enter a new prompt if you prefer\n")
 if len(user_prompt) > 2:
