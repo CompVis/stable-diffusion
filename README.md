@@ -1,4 +1,8 @@
-# Stable Diffusion
+# Stable Diffusion with Aesthetic Gradients (WIP)
+
+Code will be uploaded here over the next days.
+
+
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
 
 [**High-Resolution Image Synthesis with Latent Diffusion Models**](https://ommer-lab.com/research/latent-diffusion-models/)<br/>
