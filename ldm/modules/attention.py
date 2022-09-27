@@ -4,7 +4,6 @@ import torch
 import torch.nn.functional as F
 from torch import nn, einsum
 from einops import rearrange, repeat
-
 from ldm.modules.diffusionmodules.util import checkpoint
 
 

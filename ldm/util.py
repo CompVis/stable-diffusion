@@ -1,17 +1,11 @@
-import importlib
 import torch
 import numpy as np
 from collections import abc
-from einops import rearrange
-from functools import partial
-
 import multiprocessing as mp
 from threading import Thread
 from queue import Queue
-
 from inspect import isfunction
 from PIL import Image, ImageDraw, ImageFont
-
 
 def log_txt_as_img(wh, xc, size=10):
     # wh a tuple of (width, height)
@@ -85,11 +79,34 @@ def instantiate_from_config(config):
 
 
 def get_obj_from_str(string, reload=False):
+    from stablediffusion.ldm.models.diffusion.ddpm import LatentDiffusion
+    from stablediffusion.ldm.lr_scheduler import LambdaLinearScheduler
+    from stablediffusion.ldm.modules.diffusionmodules.openaimodel import UNetModel
+    from stablediffusion.ldm.models.autoencoder import AutoencoderKL
+    from torch.nn import Identity
+    from stablediffusion.ldm.modules.encoders.modules import FrozenCLIPEmbedder
+    ldm_diffusion_models = {
+        "ddpm": {
+            "LatentDiffusion": LatentDiffusion,
+        },
+        "lr_scheduler": {
+            "LambdaLinearScheduler": LambdaLinearScheduler,
+        },
+        "openaimodel": {
+            "UNetModel": UNetModel,
+        },
+        "autoencoder": {
+            "AutoencoderKL": AutoencoderKL,
+        },
+        "nn": {
+            "Identity": Identity,
+        },
+        "frozenclip": {
+            "FrozenCLIPEmbedder": FrozenCLIPEmbedder,
+        },
+    }
     module, cls = string.rsplit(".", 1)
-    if reload:
-        module_imp = importlib.import_module(module)
-        importlib.reload(module_imp)
-    return getattr(importlib.import_module(module, package=None), cls)
+    return ldm_diffusion_models[module][cls]
 
 
 def _do_parallel_data_prefetch(func, Q, data, idx, idx_to_fn=False):

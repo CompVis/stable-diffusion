@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from torch.utils.data import Dataset, ConcatDataset, ChainDataset, IterableDataset
+from torch.utils.data import IterableDataset
 
 
 class Txt2ImgIterableBaseDataset(IterableDataset):
