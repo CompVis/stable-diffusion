@@ -30,6 +30,8 @@ os.environ["bad"] = "[]"
 num_iterations = 50
 gs = 7.5
 
+forcedlatents = []
+
 pipe = StableDiffusionPipeline.from_pretrained(model_id, use_auth_token="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")
 pipe = pipe.to(device)
 
@@ -82,6 +84,7 @@ prompt = "Yann LeCun as the grim reaper: bizarre art."
 prompt = "A star with flashy colors."
 prompt = "Un chat en sang et en armure joue de la batterie."
 prompt = "Judith beheading Holofernes."
+prompt = "Woman beheading a man: cyberpunk style."
 print(f"The prompt is {prompt}")
 
 print(f"Francais: Proposez un nouveau texte si vous ne voulez pas dessiner << {prompt} >>.\n")
@@ -127,10 +130,11 @@ font = pygame.font.Font('freesansbold.ttf', 22)
 
 
 for iteration in range(30):
-    scrn.fill(black)
+    #scrn.fill(black)
     latent = [latent[f] for f in five_best]
     images = [images[f] for f in five_best]
     onlyfiles = [onlyfiles[f] for f in five_best]
+    early_stop = []
     for k in range(llambda):
         if k < len(five_best):
             imp = pygame.transform.scale(pygame.image.load(onlyfiles[k]).convert(), (300, 300))
@@ -139,14 +143,20 @@ for iteration in range(30):
             scrn.blit(imp, (300 * (k // 3), 300 * (k % 3)))
             pygame.display.flip()
             continue
+        if len(early_stop) > 0:
+            break
         text0 = font.render(to_native(f'Please wait !!! {k} / {llambda}'), True, green, blue)
-        scrn.blit(text0, ((X*3/4)/2 - X/32, Y/2))
+        scrn.blit(text0, ((X*3/4)/2 - X/32, Y/2-Y/8))
+        text0 = font.render(to_native(f'Or click on an image (then don''t move the mouse until click received!),'), True, green, blue)
+        scrn.blit(text0, ((X*3/4)/3 - X/32, Y/2))
+        text0 = font.render(to_native(f'for rerunning on a specific image.'), True, green, blue)
+        scrn.blit(text0, ((X*3/4)/2 - X/32, Y/2+Y/8))
         pygame.display.flip()
         os.environ["earlystop"] = "False" if k > len(five_best) else "True"
         os.environ["epsilon"] = str(0. if k == len(five_best) else (k - len(five_best)) / llambda)
         os.environ["budget"] = str(300 if k > len(five_best) else 2)
         os.environ["skl"] = {0: "nn", 1: "tree", 2: "logit"}[k % 3]
-        if iteration > 0:
+        if iteration > 0 and len(forcedlatents) > 0:
             os.environ["forcedlatent"] = str(list(forcedlatents[k].flatten()))            
         enforcedlatent = os.environ.get("enforcedlatent", "")
         if len(enforcedlatent) > 2:
@@ -167,6 +177,15 @@ for iteration in range(30):
         latent += [array_latent]
         with open(f"SD_{prompt.replace(' ','_')}_latent_{sentinel}_{k}.txt", 'w') as f:
             f.write(f"{latent}")
+        # In case of early stopping.
+        for i in pygame.event.get():
+            if i.type == pygame.MOUSEBUTTONUP:
+                pos = pygame.mouse.get_pos() 
+                index = 3 * (pos[0] // 300) + (pos[1] // 300)
+                if index <= k:
+                    print(to_native("You clicked for requesting an early stopping."))
+                    early_stop = [pos]
+                    break
     
     # Stop the forcing from disk!
     os.environ["enforcedlatent"] = ""
@@ -226,14 +245,14 @@ for iteration in range(30):
     five_best = []
     for i in pygame.event.get():
         if i.type == pygame.MOUSEBUTTONUP:
-            print(to_native("too early for clicking !!!!"))
+            print(to_native(".... too early for clicking !!!!"))
     while (status):
      
       # iterate over the list of Event objects
       # that was returned by pygame.event.get() method.
-        for i in pygame.event.get():
-            if i.type == pygame.MOUSEBUTTONUP:
-                pos = pygame.mouse.get_pos() 
+        for i in early_stop + pygame.event.get():
+            if hasattr(i, "type") and i.type == pygame.MOUSEBUTTONUP or len(early_stop) > 0:
+                pos = early_stop[0] if len(early_stop) > 0 else pygame.mouse.get_pos() 
                 print(f"Click at {pos}")
                 if pos[1] > Y:
                     text4 = font.render(to_native(f"ok, go to text window!"), True, green, blue)
