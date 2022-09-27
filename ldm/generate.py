@@ -860,10 +860,6 @@ class Generate:
 
     def _create_init_image(self, image):
         image = image.convert('RGB')
-        # print(
-        #     f'>> DEBUG: writing the image to img.png'
-        # )
-        # image.save('img.png')
         image = np.array(image).astype(np.float32) / 255.0
         image = image[None].transpose(0, 3, 1, 2)
         image = torch.from_numpy(image)
