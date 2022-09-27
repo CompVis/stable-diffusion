@@ -83,8 +83,7 @@ prompt = "Beautiful bizarre woman."
 prompt = "Yann LeCun as the grim reaper: bizarre art."
 prompt = "A star with flashy colors."
 prompt = "Un chat en sang et en armure joue de la batterie."
-prompt = "Judith beheading Holofernes."
-prompt = "Woman beheading a man: cyberpunk style."
+prompt = "Cyberpunk photographic version of Judith beheading Holofernes."
 print(f"The prompt is {prompt}")
 
 print(f"Francais: Proposez un nouveau texte si vous ne voulez pas dessiner << {prompt} >>.\n")
@@ -231,11 +230,12 @@ for iteration in range(30):
     scrn.blit(text4, (300, Y + 30))
     pygame.display.flip()
 
-    for idx in range(llambda):
-        # set the pygame window name
-        pygame.display.set_caption(prompt)
-        imp = pygame.transform.scale(pygame.image.load(onlyfiles[idx]).convert(), (300, 300))
-        scrn.blit(imp, (300 * (idx // 3), 300 * (idx % 3)))
+    if len(early_stop) == 0:
+        for idx in range(llambda):
+            # set the pygame window name
+            pygame.display.set_caption(prompt)
+            imp = pygame.transform.scale(pygame.image.load(onlyfiles[idx]).convert(), (300, 300))
+            scrn.blit(imp, (300 * (idx // 3), 300 * (idx % 3)))
      
     # paint screen one time
     pygame.display.flip()
