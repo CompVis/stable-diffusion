@@ -1,6 +1,6 @@
-pytorch==1.11.0
-cudatoolkit==11.3
-torchvision==0.12.0
+-i https://download.pytorch.org/whl/cu113
+torch
+torchvision
 numpy
 psutil==5.9.2
 tqdm==4.64.1
@@ -23,5 +23,3 @@ transformers==4.19.2
 torchmetrics==0.6.0
 kornia==0.6
 natsort==8.2.0
--e git+https://github.com/w4ffl35/taming-transformers.git#egg=taming-transformers
--e git+https://github.com/w4ffl35/CLIP.git#egg=clip
