@@ -151,6 +151,7 @@ if len(image_name) > 0:
     init_image = repeat(init_image, '1 ... -> b ...', b=1)
     #forced_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))
     forced_latent = model.encode(init_image)
+    os.environ["forcedlatent"] = str(list(forced_latent.flatten()))            
 
 for iteration in range(30):
     #scrn.fill(black)
