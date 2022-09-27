@@ -17,7 +17,7 @@ Support] below.
 
 As of version 1.14, environment.yaml will install the Real-ESRGAN package into
 the standard install location for python packages, and will put GFPGAN into a
-subdirectory of "src" in the stable-diffusion directory. (The reason for this is
+subdirectory of "src" in the InvokeAI directory. (The reason for this is
 that the standard GFPGAN distribution has a minor bug that adversely affects
 image color.) Upscaling with Real-ESRGAN should "just work" without further
 intervention. Simply pass the --upscale (-U) option on the dream> command line,
@@ -33,7 +33,7 @@ here's how you'd do it using **wget**:
 > wget https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.4.pth src/gfpgan/experiments/pretrained_models/
 ```
 
-Make sure that you're in the stable-diffusion directory when you do this.
+Make sure that you're in the InvokeAI directory when you do this.
 
 Alternatively, if you have GFPGAN installed elsewhere, or if you are using an
 earlier version of this package which asked you to install GFPGAN in a sibling
