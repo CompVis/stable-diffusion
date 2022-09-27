@@ -3,7 +3,7 @@
 The script also provides the ability to do face restoration and
 upscaling with the help of GFPGAN and Real-ESRGAN respectively.
 
-As of version 1.14, environment.yaml will install the Real-ESRGAN package into the
+As of version 1.14, environment.yml will install the Real-ESRGAN package into the
 standard install location for python packages, and will put GFPGAN into a subdirectory of "src" 
 in the stable-diffusion directory.
 (The reason for this is that the standard GFPGAN distribution has a minor bug that adversely affects image

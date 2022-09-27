@@ -76,7 +76,7 @@ PATH_TO_CKPT="$HOME/Downloads"  # or wherever you saved sd-v1-4.ckpt
 ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
 
 # install packages
-PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
+PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yml
 conda activate ldm
 
 # only need to do this once
@@ -93,7 +93,7 @@ python scripts/orig_scripts/txt2img.py --prompt "a photograph of an astronaut ri
 ```
 
 Note, `export PIP_EXISTS_ACTION=w` is a precaution to fix `conda env
-create -f environment-mac.yaml` never finishing in some situations. So
+create -f environment-mac.yml` never finishing in some situations. So
 it isn't required but wont hurt.
 
 After you follow all the instructions and run dream.py you might get several errors. Here's the errors I've seen and found solutions for.
@@ -112,7 +112,7 @@ One debugging step is to update to the latest version of PyTorch nightly.
 
     conda install pytorch torchvision torchaudio -c pytorch-nightly
 
-If `conda env create -f environment-mac.yaml` takes forever run this.
+If `conda env create -f environment-mac.yml` takes forever run this.
 
     git clean -f
 
@@ -140,7 +140,7 @@ Third, if it says you're missing taming you need to rebuild your virtual
 environment.
 
     conda env remove -n ldm
-    conda env create -f environment-mac.yaml
+    conda env create -f environment-mac.yml
 
 Fourth, If you have activated the ldm virtual environment and tried rebuilding it, maybe the problem could be that I have something installed that you don't and you'll just need to manually install it. Make sure you activate the virtual environment so it installs there instead of
 globally.
@@ -239,7 +239,7 @@ Example error.
 NotImplementedError: The operator 'aten::_index_put_impl_' is not current implemented for the MPS device. If you want this op to be added in priority during the prototype phase of this feature, please comment on [https://github.com/pytorch/pytorch/issues/77764](https://github.com/pytorch/pytorch/issues/77764). As a temporary fix, you can set the environment variable `PYTORCH_ENABLE_MPS_FALLBACK=1` to use the CPU as a fallback for this op. WARNING: this will be slower than running natively on MPS.
 ```
 
-The lstein branch includes this fix in [environment-mac.yaml](https://github.com/lstein/stable-diffusion/blob/main/environment-mac.yaml).
+The lstein branch includes this fix in [environment-mac.yml](https://github.com/lstein/stable-diffusion/blob/main/environment-mac.yml).
 
 ### "Could not build wheels for tokenizers"
 

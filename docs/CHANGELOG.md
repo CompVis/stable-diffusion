@@ -119,14 +119,14 @@
 - A copy of the prompt and all of its switches and options is now stored in the corresponding
   image in a tEXt metadata field named "Dream". You can read the prompt using scripts/images2prompt.py,
   or an image editor that allows you to explore the full metadata.
-  **Please run "conda env update -f environment.yaml" to load the k_lms dependencies!!**
+  **Please run "conda env update" to load the k_lms dependencies!!**
 
 ---
 
 ## v1.01 (21 August 2022)
 
 - added k_lms sampling.
-  **Please run "conda env update -f environment.yaml" to load the k_lms dependencies!!**
+  **Please run "conda env update" to load the k_lms dependencies!!**
 - use half precision arithmetic by default, resulting in faster execution and lower memory requirements
   Pass argument --full_precision to dream.py to get slower but more accurate image generation
 

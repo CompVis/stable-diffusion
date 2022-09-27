@@ -34,7 +34,7 @@ This will create InvokeAI folder where you will follow the rest of the steps.
 5. Use anaconda to copy necessary python packages, create a new python environment named `ldm` and activate the environment.
 
 ```
-(base) ~/InvokeAI$ conda env create -f environment.yaml
+(base) ~/InvokeAI$ conda env create
 (base) ~/InvokeAI$ conda activate ldm
 (ldm) ~/InvokeAI$
 ```

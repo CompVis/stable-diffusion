@@ -47,8 +47,8 @@ cd InvokeAI
 6. Run the following two commands:
 
 ```
-conda env create -f environment.yaml    (step 6a)
-conda activate ldm                      (step 6b)
+conda env create       (step 6a)
+conda activate ldm     (step 6b)
 ```
 
 This will install all python requirements and activate the "ldm"
@@ -106,7 +106,7 @@ This distribution is changing rapidly. If you used the `git clone` method (step 
 
 ```
 git pull
-conda env update -f environment.yaml
+conda env update
 ```
 
 This will bring your local copy into sync with the remote one.

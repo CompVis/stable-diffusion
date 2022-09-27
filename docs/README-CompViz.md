@@ -28,7 +28,7 @@ A suitable [conda](https://conda.io/) environment named `ldm` can be created
 and activated with:
 
 ```
-conda env create -f environment.yaml
+conda env create
 conda activate ldm
 ```
 
