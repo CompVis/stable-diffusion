@@ -1,25 +1,20 @@
 -i https://download.pytorch.org/whl/cu113
-torch
-torchvision
-numpy
-psutil==5.9.2
-tqdm==4.64.1
-ftfy==6.1.1
-pip-licenses==3.5.4
-albumentations==0.4.3
-diffusers
-opencv-python==4.1.2.30
-pudb==2019.2
+psutil
+opencv-python>=4.6.0
+pudb
 invisible-watermark
-imageio==2.9.0
-imageio-ffmpeg==0.4.2
-pytorch-lightning==1.4.2
-omegaconf==2.1.1
-test-tube>=0.7.5
-streamlit>=0.73.1
-einops==0.3.0
-torch-fidelity==0.3.0
-transformers==4.19.2
-torchmetrics==0.6.0
-kornia==0.6
-natsort==8.2.0
+imageio
+imageio-ffmpeg
+pytorch-lightning
+omegaconf
+test-tube
+streamlit
+einops
+torch-fidelity
+transformers
+torchmetrics
+kornia
+natsort
+-e git+https://github.com/w4ffl35/taming-transformers.git#egg=taming-transformers
+-e git+https://github.com/w4ffl35/CLIP.git#egg=clip
+-e git+https://github.com/albumentations-team/albumentations#egg=albumentations
