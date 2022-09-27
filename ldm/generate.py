@@ -829,7 +829,6 @@ class Generate:
         return model
 
     def _load_img(self, path, width, height, fit=False):
-        print(f'DEBUG: path = {path}')
         assert os.path.exists(path), f'>> {path}: File not found'
 
         #        with Image.open(path) as img:
