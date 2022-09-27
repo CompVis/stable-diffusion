@@ -198,6 +198,11 @@ Thanks for open-sourcing!
 
 - The implementation of the transformer encoder is from [x-transformers](https://github.com/lucidrains/x-transformers) by [lucidrains](https://github.com/lucidrains?tab=repositories). 
 
+## Saving images
+
+The txt2img.py script will now generate a uuid for each prompt and create a folder with that name (uuid) in the output path. Images generated will be saved into that folder.
+
+A new file (prompts.txt) will be saved in the root of the output path. It will contain all generated uuid and the corresponding prompts with all arguments.
 
 ## BibTeX
 

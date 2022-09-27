@@ -1,0 +1,4 @@
+models/ldm/stable-diffusion-v1/model.ckpt
+ldm/*
+outputs/*
+.vscode/*

@@ -20,6 +20,7 @@ from ldm.models.diffusion.plms import PLMSSampler
 
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
+import uuid
 
 
 # load safety model
@@ -236,6 +237,34 @@ def main():
 
     seed_everything(opt.seed)
 
+    os.makedirs(opt.outdir, exist_ok=True)
+    outpath = opt.outdir
+
+    prompts_file = os.path.join(outpath, "prompts.txt")
+    outfolder = ''
+    args = ' '.join(sys.argv)
+    if os.path.exists(prompts_file):
+        with open(prompts_file, "r") as f:
+            prompts = f.readlines()
+        for line in prompts:
+            if opt.prompt in line:
+                outfolder = line[0:36]
+    if len(outfolder) == 0:
+        outfolder = str(uuid.uuid4())
+    promt_text = f"{outfolder} {args}"
+    with open(prompts_file, "a") as f:
+        f.write(promt_text)
+        f.write("\n")
+
+    sample_path = os.path.join(outpath, outfolder)
+    os.makedirs(sample_path, exist_ok=True)
+    prompts_file = os.path.join(sample_path, "prompts.txt")
+    with open(prompts_file, "a") as f:
+        f.write(promt_text)
+        f.write("\n")
+    print(f"saving to folder {sample_path}")
+    outpath = sample_path
+
     config = OmegaConf.load(f"{opt.config}")
     model = load_model_from_config(config, f"{opt.ckpt}")
 
@@ -246,9 +275,6 @@ def main():
         sampler = PLMSSampler(model)
     else:
         sampler = DDIMSampler(model)
-
-    os.makedirs(opt.outdir, exist_ok=True)
-    outpath = opt.outdir
 
     print("Creating invisible watermark encoder (see https://github.com/ShieldMnt/invisible-watermark)...")
     wm = "StableDiffusionV1"
@@ -272,8 +298,6 @@ def main():
                 data = data + pad_length * [data[-1]]
             data = list(chunk(data, batch_size))
 
-    sample_path = os.path.join(outpath, "samples")
-    os.makedirs(sample_path, exist_ok=True)
     base_count = len(os.listdir(sample_path))
     grid_count = len(os.listdir(outpath)) - 1
 
