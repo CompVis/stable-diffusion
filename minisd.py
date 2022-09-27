@@ -2,6 +2,7 @@ import random
 import os
 import torch
 import numpy as np
+import shutil
 from torch import autocast
 from diffusers import StableDiffusionPipeline
 import webbrowser
@@ -14,7 +15,9 @@ device = "mps" #torch.device("mps")
 
 white = (255, 255, 255)
 green = (0, 255, 0)
+red = (255, 0, 0)
 blue = (0, 0, 128)
+black = (0, 0, 0)
 
 os.environ["skl"] = "nn"
 os.environ["epsilon"] = "0.005"
@@ -77,8 +80,12 @@ prompt = "Bizarre art."
 prompt = "Beautiful bizarre woman."
 prompt = "Yann LeCun as the grim reaper: bizarre art."
 prompt = "A star with flashy colors."
+prompt = "Un chat en sang et en armure joue de la batterie."
+prompt = "Judith beheading Holofernes."
 print(f"The prompt is {prompt}")
-user_prompt = input("Enter a new prompt if you prefer\n")
+
+print(f"Francais: Proposez un nouveau texte si vous ne voulez pas dessiner << {prompt} >>.\n")
+user_prompt = input(f"English: Enter a new prompt if you prefer something else than << {prompt} >>.\n")
 if len(user_prompt) > 2:
     prompt = user_prompt
 
@@ -120,12 +127,14 @@ font = pygame.font.Font('freesansbold.ttf', 22)
 
 
 for iteration in range(30):
+    scrn.fill(black)
     latent = [latent[f] for f in five_best]
     images = [images[f] for f in five_best]
     onlyfiles = [onlyfiles[f] for f in five_best]
     for k in range(llambda):
         if k < len(five_best):
             imp = pygame.transform.scale(pygame.image.load(onlyfiles[k]).convert(), (300, 300))
+            shutil.copyfile(onlyfiles[k], to_native("Selected") + onlyfiles[k])
             # Using blit to copy content from one surface to other
             scrn.blit(imp, (300 * (k // 3), 300 * (k % 3)))
             pygame.display.flip()
@@ -145,7 +154,7 @@ for iteration in range(30):
         with autocast("cuda"):
             image = pipe(english_prompt, guidance_scale=gs, num_inference_steps=num_iterations)["sample"][0]
             images += [image]
-        filename = f"SD_{prompt.replace(' ','_')}_image_{sentinel}_{iteration}_{k}.png"  
+        filename = f"SD_{prompt.replace(' ','_')}_image_{sentinel}_{iteration:05d}_{k:05d}.png"  
         image.save(filename)
         onlyfiles += [filename]
         imp = pygame.transform.scale(pygame.image.load(onlyfiles[-1]).convert(), (300, 300))
@@ -171,6 +180,12 @@ for iteration in range(30):
     # create the display surface object
     # of specific dimension..e(X, Y).
 
+    # Add rectangles
+    pygame.draw.rect(scrn, red, pygame.Rect(X*3/4, 0, X*3/4+X/16+X/32, Y/3), 2)
+    pygame.draw.rect(scrn, red, pygame.Rect(X*3/4, Y/3, X*3/4+X/16+X/32, 2*Y/3), 2)
+    pygame.draw.rect(scrn, red, pygame.Rect(X*3/4, 2*Y/3, X*3/4+X/16+X/32, Y), 2)
+    pygame.draw.rect(scrn, red, pygame.Rect(0, Y, X/2, Y+100), 2)
+
     # Button for loading a starting point
     text1 = font.render('Load image    ', True, green, blue)
     text1 = pygame.transform.rotate(text1, 90)
@@ -178,6 +193,7 @@ for iteration in range(30):
     text1 = font.render('& latent    ', True, green, blue)
     text1 = pygame.transform.rotate(text1, 90)
     scrn.blit(text1, (X*3/4+X/16+X/32 - X/32, 0))
+
     # Button for creating a meme
     text2 = font.render(to_native('Create'), True, green, blue)
     text2 = pygame.transform.rotate(text2, 90)
@@ -186,13 +202,13 @@ for iteration in range(30):
     text2 = pygame.transform.rotate(text2, 90)
     scrn.blit(text2, (X*3/4+X/16+X/32 - X/32, Y/3))
     # Button for new generation
-    text3 = font.render(to_native(f"I don't want to"), True, green, blue)
+    text3 = font.render(to_native(f"I don't want to select images"), True, green, blue)
     text3 = pygame.transform.rotate(text3, 90)
     scrn.blit(text3, (X*3/4+X/16 - X/32, Y*2/3))
-    text3 = font.render(to_native(f"select images! Just rerun."), True, green, blue)
+    text3 = font.render(to_native(f"Just rerun."), True, green, blue)
     text3 = pygame.transform.rotate(text3, 90)
     scrn.blit(text3, (X*3/4+X/16+X/32 - X/32, Y*2/3))
-    text4 = font.render(to_native(f"Modify parameters !"), True, green, blue)
+    text4 = font.render(to_native(f"Modify parameters or text!"), True, green, blue)
     scrn.blit(text4, (300, Y + 30))
     pygame.display.flip()
 
@@ -225,6 +241,11 @@ for iteration in range(30):
                     pygame.display.flip()
                     num_iterations = int(input(to_native(f"Number of iterations ? (current = {num_iterations})\n")))
                     gs = float(input(to_native(f"Guidance scale ? (current = {gs})\n")))
+                    new_prompt = str(input(to_native(f"Enter a text if you want to change from ") + prompt))
+                    if len(new_prompt) > 2:
+                        prompt = new_prompt
+                        language = detect(prompt)
+                        english_prompt = GoogleTranslator(source='auto', target='en').translate(prompt)
                     text4 = font.render(to_native(f"Ok! parameters changed!"), True, green, blue)
                     scrn.blit(text4, (300, Y + 30))
                     pygame.display.flip()
@@ -296,7 +317,7 @@ for iteration in range(30):
         os.environ["bad"] = str(bad)
         coefficients = np.zeros(len(indices))
         for i in range(len(indices)):
-            coefficients[i] = np.exp(np.random.randn())
+            coefficients[i] = np.exp(2. * np.random.randn())
         for i in range(64):
             x = i / 63.
             for j in range(64):
