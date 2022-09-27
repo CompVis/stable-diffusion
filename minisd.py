@@ -24,7 +24,7 @@ os.environ["forcedlatent"] = ""
 os.environ["enforcedlatent"] = ""
 os.environ["good"] = "[]"
 os.environ["bad"] = "[]"
-num_iterations = 15
+num_iterations = 50
 gs = 7.5
 
 pipe = StableDiffusionPipeline.from_pretrained(model_id, use_auth_token="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")
