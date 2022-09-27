@@ -116,3 +116,13 @@ branch that contains the pull request:
 
 You will need to go through the install procedure again, but it should be fast because all the
 dependencies are already loaded.
+
+---
+
+### **QUESTION**
+
+Image generation crashed with CUDA out of memory error after successful sampling. 
+
+### **SOLUTION**
+
+Try to run script with option `--free_gpu_mem` This will free memory before image decoding step.
