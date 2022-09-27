@@ -220,6 +220,11 @@ class StableDiffusionPipeline(DiffusionPipeline):
                 generator=generator,
                 device=latents_device,
             )
+            if len(os.environ["forcedlatent"]) > 0:
+                print("we get a forcing for the latent z.")
+                latents = np.array(eval(os.environ["forcedlatent"]))
+                latents = np.sqrt(len(latents)) * latents / np.sum(latents ** 2)
+                latents = torch.from_numpy(np.array(eval(os.environ["forcedlatent"])).reshape((1,4,64,64)))
             good = eval(os.environ["good"])
             bad = eval(os.environ["bad"])
             print(f"{len(good)} good and {len(bad)} bad")
@@ -315,7 +320,7 @@ class StableDiffusionPipeline(DiffusionPipeline):
         os.environ["latent_sd"] = str(list(latents.flatten().cpu().numpy()))
         for i in [2, 3]:
             latents = torch.repeat_interleave(latents, repeats=latents_shape[i] // latents_intermediate_shape[i], dim=i) #/ np.sqrt(np.sqrt(latents_shape[i] // latents_intermediate_shape[i]))
-        latents = latents.to(self.device)
+        latents = latents.float().to(self.device)
 
         # set timesteps
         accepts_offset = "offset" in set(inspect.signature(self.scheduler.set_timesteps).parameters.keys())

@@ -88,6 +88,7 @@ prompt = "A star with flashy colors."
 prompt = "Un chat en sang et en armure joue de la batterie."
 prompt = "Cyberpunk photographic version of Judith beheading Holofernes."
 prompt = "Photo of a cyberpunk Mark Zuckerberg killing Cthulhu with a light saber."
+prompt = "Photo of Mark Zuckerberg killing Cthulhu with a light saber."
 print(f"The prompt is {prompt}")
 
 print(f"Francais: Proposez un nouveau texte si vous ne voulez pas dessiner << {prompt} >>.\n")
@@ -137,7 +138,8 @@ def load_img(path):
     w, h = image.size
     print(f"loaded input image of size ({w}, {h}) from {path}")
     w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
-    image = image.resize((w, h), resample=PIL.Image.LANCZOS)
+    image = image.resize((512, 512), resample=PIL.Image.LANCZOS)
+    #image = image.resize((w, h), resample=PIL.Image.LANCZOS)
     image = np.array(image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
     image = torch.from_numpy(image)
@@ -150,8 +152,11 @@ if len(image_name) > 0:
     init_image = load_img(image_name).to(device)
     init_image = repeat(init_image, '1 ... -> b ...', b=1)
     #forced_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))
-    forced_latent = model.encode(init_image)
-    os.environ["forcedlatent"] = str(list(forced_latent.flatten()))            
+    #forced_latent = model.encode(init_image)
+    forced_latent = model.encode(init_image.to(device)).latent_dist.sample()
+    print(forced_latent.shape)
+    os.environ["forcedlatent"] = str(list(forced_latent.flatten().cpu().detach().numpy()))            
+    forcedlatents = [forced_latent for _ in range(llambda)]
 
 for iteration in range(30):
     #scrn.fill(black)
@@ -171,7 +176,7 @@ for iteration in range(30):
             break
         text0 = font.render(to_native(f'Please wait !!! {k} / {llambda}'), True, green, blue)
         scrn.blit(text0, ((X*3/4)/2 - X/32, Y/2-Y/8))
-        text0 = font.render(to_native(f'Or click on an image (then don''t move the mouse until click received!),'), True, green, blue)
+        text0 = font.render(to_native(f'Or (EMERGENCY STOP BECAUSE BORED!) click on an image (THEN DON''T MOVE the mouse until click received!),'), True, green, blue)
         scrn.blit(text0, ((X*3/4)/3 - X/32, Y/2))
         text0 = font.render(to_native(f'for rerunning on a specific image.'), True, green, blue)
         scrn.blit(text0, ((X*3/4)/2 - X/32, Y/2+Y/8))
