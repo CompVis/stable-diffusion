@@ -88,6 +88,7 @@ import hashlib
 import os
 import copy
 import base64
+import functools
 import ldm.dream.pngwriter
 from ldm.dream.conditioning import split_weighted_subprompts
 
@@ -220,9 +221,15 @@ class Args(object):
         # outpainting parameters
         if a['out_direction']:
             switches.append(f'-D {" ".join([str(u) for u in a["out_direction"]])}')
+        # LS: slight semantic drift which needs addressing in the future:
+        # 1. Variations come out of the stored metadata as a packed string with the keyword "variations"
+        # 2. However, they come out of the CLI (and probably web) with the keyword "with_variations" and
+        #    in broken-out form. Variation (1) should be changed to comply with (2)
         if a['with_variations']:
-            formatted_variations = ','.join(f'{seed}:{weight}' for seed, weight in (a["with_variations"]))
-            switches.append(f'-V {formatted_variations}')
+            formatted_variations = ','.join(f'{seed}:{weight}' for seed, weight in (a["variations"]))
+            switches.append(f'-V {a["formatted_variations"]}')
+        if 'variations' in a:
+            switches.append(f'-V {a["variations"]}')
         return ' '.join(switches)
 
     def __getattribute__(self,name):
@@ -732,6 +739,7 @@ def metadata_dumps(opt,
 
     return metadata
 
+@functools.lru_cache(maxsize=50)
 def metadata_from_png(png_file_path):
     '''
     Given the path to a PNG file created by dream.py, retrieves
@@ -740,6 +748,10 @@ def metadata_from_png(png_file_path):
     meta = ldm.dream.pngwriter.retrieve_metadata(png_file_path)
     opts = metadata_loads(meta)
     return opts[0]
+
+def dream_cmd_from_png(png_file_path):
+    opt = metadata_from_png(png_file_path)
+    return opt.dream_prompt_str()
 
 def metadata_loads(metadata):
     '''
