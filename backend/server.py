@@ -683,7 +683,7 @@ def generate_images(generation_parameters, esrgan_parameters, gfpgan_parameters)
                 {
                     "url": os.path.relpath(path),
                     "mtime": os.path.getmtime(path),
-                    "metadata": generation_parameters,
+                    "metadata": metadata,
                 },
             )
         socketio.emit("progressUpdate", progress)
