@@ -11,10 +11,25 @@ setup(
     author="w4ffl35 (Joe Curlee)",
     packages=find_packages(exclude=["tests*"]),
     install_requires=[
-        str(r)
-        for r in pkg_resources.parse_requirements(
-            open(os.path.join(os.path.dirname(__file__), "requirements.txt"))
-        )
+        "psutil",
+        "opencv-python",
+        "pudb",
+        "invisible-watermark",
+        "imageio",
+        "imageio-ffmpeg",
+        "pytorch-lightning",
+        "omegaconf",
+        "test-tube",
+        "streamlit",
+        "einops",
+        "torch-fidelity",
+        "transformers",
+        "torchmetrics",
+        "kornia",
+        "natsort",
+        "-e git+https://github.com/w4ffl35/taming-transformers.git#egg=taming-transformers",
+        "-e git+https://github.com/w4ffl35/CLIP.git#egg=clip",
+        "-e git+https://github.com/albumentations-team/albumentations#egg=albumentations",
     ],
     include_package_data=True,
     extras_require={'dev': ['pytest']},
