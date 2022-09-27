@@ -304,7 +304,7 @@ for iteration in range(30):
             # if event object type is QUIT
             # then quitting the pygame
             # and program both.
-            if i.type == pygame.QUIT:
+            if len(early_stop) > 0 or i.type == pygame.QUIT:
                 status = False
      
     # Using draw.rect module of
