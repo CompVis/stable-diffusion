@@ -24,7 +24,7 @@ os.environ["forcedlatent"] = ""
 os.environ["enforcedlatent"] = ""
 os.environ["good"] = "[]"
 os.environ["bad"] = "[]"
-num_iterations = 50
+num_iterations = 15
 gs = 7.5
 
 pipe = StableDiffusionPipeline.from_pretrained(model_id, use_auth_token="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")
@@ -76,6 +76,7 @@ prompt = "Bizarre art."
 
 prompt = "Beautiful bizarre woman."
 prompt = "Yann LeCun as the grim reaper: bizarre art."
+prompt = "A star with flashy colors."
 print(f"The prompt is {prompt}")
 user_prompt = input("Enter a new prompt if you prefer\n")
 if len(user_prompt) > 2:
@@ -114,7 +115,7 @@ onlyfiles = []
 pygame.init()
 X = 2000  # > 1500 = buttons
 Y = 900  
-scrn = pygame.display.set_mode((1700, Y))
+scrn = pygame.display.set_mode((1700, Y + 100))
 font = pygame.font.Font('freesansbold.ttf', 22)
 
 
