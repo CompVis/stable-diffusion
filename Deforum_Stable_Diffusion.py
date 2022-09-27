@@ -866,7 +866,7 @@ def DeforumAnimArgs():
     #@markdown ####**Animation:**
     animation_mode = 'None' #@param ['None', '2D', '3D', 'Video Input', 'Interpolation'] {type:'string'}
     max_frames = 1000 #@param {type:"number"}
-    border = 'wrap' #@param ['wrap', 'replicate'] {type:'string'}
+    border = 'replicate' #@param ['wrap', 'replicate'] {type:'string'}
 
     #@markdown ####**Motion Parameters:**
     angle = "0:(0)"#@param {type:"string"}
@@ -877,7 +877,7 @@ def DeforumAnimArgs():
     rotation_3d_x = "0:(0)"#@param {type:"string"}
     rotation_3d_y = "0:(0)"#@param {type:"string"}
     rotation_3d_z = "0:(0)"#@param {type:"string"}
-    flip_2d_perspective = True #@param {type:"boolean"}
+    flip_2d_perspective = False #@param {type:"boolean"}
     perspective_flip_theta = "0:(0)"#@param {type:"string"}
     perspective_flip_phi = "0:(t%15)"#@param {type:"string"}
     perspective_flip_gamma = "0:(0)"#@param {type:"string"}
