@@ -47,16 +47,19 @@ def main():
     # Loading Face Restoration and ESRGAN Modules
     try:
         gfpgan, codeformer, esrgan = None, None, None
-        from ldm.dream.restoration import Restoration
-        restoration = Restoration(opt.gfpgan_dir, opt.gfpgan_model_path, opt.esrgan_bg_tile)
-        if opt.restore:
-            gfpgan, codeformer = restoration.load_face_restore_models()
+        if opt.restore or opt.esrgan:
+            from ldm.dream.restoration import Restoration
+            restoration = Restoration()
+            if opt.restore:
+                gfpgan, codeformer = restoration.load_face_restore_models(opt.gfpgan_dir, opt.gfpgan_model_path)
+            else:
+                print('>> Face restoration disabled')
+            if opt.esrgan:
+                esrgan = restoration.load_esrgan(opt.esrgan_bg_tile)
+            else:
+                print('>> Upscaling disabled')
         else:
-            print('>> Face restoration disabled')
-        if opt.esrgan:
-            esrgan = restoration.load_esrgan()
-        else:
-            print('>> Upscaling disabled')
+            print('>> Face restoration and upscaling disabled')
     except (ModuleNotFoundError, ImportError):
         import traceback
         print(traceback.format_exc(), file=sys.stderr)
@@ -105,6 +108,8 @@ def main():
 
     # preload the model
     gen.load_model()
+    #set additional option
+    gen.free_gpu_mem = opt.free_gpu_mem
 
     if not infile:
         print(
@@ -170,9 +175,10 @@ def main_loop(gen, opt, infile):
 
         if opt.init_img:
             try:
-                oldargs    = metadata_from_png(opt.init_img)
-                opt.prompt = oldargs.prompt
-                print(f'>> Retrieved old prompt "{opt.prompt}" from {opt.init_img}')
+                if not opt.prompt:
+                    oldargs    = metadata_from_png(opt.init_img)
+                    opt.prompt = oldargs.prompt
+                    print(f'>> Retrieved old prompt "{opt.prompt}" from {opt.init_img}')
             except AttributeError:
                 pass
             except KeyError:
@@ -429,7 +435,7 @@ def dream_server_loop(gen, host, port, outdir, gfpgan):
             f"Point your browser at http://localhost:{port} or use the host's DNS name or IP address.")
     else:
         print(">> Default host address now 127.0.0.1 (localhost). Use --host 0.0.0.0 to bind any address.")
-        print(f">> Point your browser at http://{host}:{port}.")
+        print(f">> Point your browser at http://{host}:{port}")
 
     try:
         dream_server.serve_forever()

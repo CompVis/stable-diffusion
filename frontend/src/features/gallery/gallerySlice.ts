@@ -8,11 +8,15 @@ export interface GalleryState {
   currentImageUuid: string;
   images: Array<InvokeAI.Image>;
   intermediateImage?: InvokeAI.Image;
+  nextPage: number;
+  offset: number;
 }
 
 const initialState: GalleryState = {
   currentImageUuid: '',
   images: [],
+  nextPage: 1,
+  offset: 0,
 };
 
 export const gallerySlice = createSlice({
@@ -50,7 +54,7 @@ export const gallerySlice = createSlice({
          * Clamp the new index to ensure it is valid..
          */
         const newCurrentImageIndex = clamp(
-          imageToDeleteIndex - 1,
+          imageToDeleteIndex,
           0,
           newImages.length - 1
         );
@@ -67,10 +71,11 @@ export const gallerySlice = createSlice({
       state.images = newImages;
     },
     addImage: (state, action: PayloadAction<InvokeAI.Image>) => {
-      state.images.push(action.payload);
+      state.images.unshift(action.payload);
       state.currentImageUuid = action.payload.uuid;
       state.intermediateImage = undefined;
       state.currentImage = action.payload;
+      state.offset += 1
     },
     setIntermediateImage: (state, action: PayloadAction<InvokeAI.Image>) => {
       state.intermediateImage = action.payload;
@@ -78,13 +83,24 @@ export const gallerySlice = createSlice({
     clearIntermediateImage: (state) => {
       state.intermediateImage = undefined;
     },
-    setGalleryImages: (state, action: PayloadAction<Array<InvokeAI.Image>>) => {
-      const newImages = action.payload;
-      if (newImages.length) {
-        const newCurrentImage = newImages[newImages.length - 1];
-        state.images = newImages;
+    addGalleryImages: (
+      state,
+      action: PayloadAction<{
+        images: Array<InvokeAI.Image>;
+        nextPage: number;
+        offset: number;
+      }>
+    ) => {
+      const { images, nextPage, offset } = action.payload;
+      if (images.length) {
+        const newCurrentImage = images[0];
+        state.images = state.images
+          .concat(images)
+          .sort((a, b) => b.mtime - a.mtime);
         state.currentImage = newCurrentImage;
         state.currentImageUuid = newCurrentImage.uuid;
+        state.nextPage = nextPage;
+        state.offset = offset;
       }
     },
   },
@@ -95,7 +111,7 @@ export const {
   clearIntermediateImage,
   removeImage,
   setCurrentImage,
-  setGalleryImages,
+  addGalleryImages,
   setIntermediateImage,
 } = gallerySlice.actions;
 

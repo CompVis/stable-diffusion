@@ -57,6 +57,7 @@ We thank them for all of their time and hard work.
 - [Kyle Schouviller](https://github.com/kyle0654)
 - [rabidcopy](https://github.com/rabidcopy)
 - [Dominic Letz](https://github.com/dominicletz)
+- [Dmitry T.](https://github.com/ArDiouscuros)
 
 ## **Original CompVis Authors:**
 

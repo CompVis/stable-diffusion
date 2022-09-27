@@ -14,10 +14,10 @@ import {
 } from '../../features/system/systemSlice';
 
 import {
+  addGalleryImages,
   addImage,
   clearIntermediateImage,
   removeImage,
-  setGalleryImages,
   setIntermediateImage,
 } from '../../features/gallery/gallerySlice';
 
@@ -25,6 +25,7 @@ import {
   setInitialImagePath,
   setMaskPath,
 } from '../../features/options/optionsSlice';
+import { requestNewImages } from './actions';
 
 /**
  * Returns an object containing listener callbacks for socketio events.
@@ -43,6 +44,7 @@ const makeSocketIOListeners = (
       try {
         dispatch(setIsConnected(true));
         dispatch(setCurrentStatus('Connected'));
+        dispatch(requestNewImages());
       } catch (e) {
         console.error(e);
       }
@@ -53,7 +55,6 @@ const makeSocketIOListeners = (
     onDisconnect: () => {
       try {
         dispatch(setIsConnected(false));
-        dispatch(setIsProcessing(false));
         dispatch(setCurrentStatus('Disconnected'));
 
         dispatch(
@@ -72,13 +73,14 @@ const makeSocketIOListeners = (
      */
     onGenerationResult: (data: InvokeAI.ImageResultResponse) => {
       try {
-        const { url, metadata } = data;
+        const { url, mtime, metadata } = data;
         const newUuid = uuidv4();
 
         dispatch(
           addImage({
             uuid: newUuid,
             url,
+            mtime,
             metadata: metadata,
           })
         );
@@ -99,11 +101,12 @@ const makeSocketIOListeners = (
     onIntermediateResult: (data: InvokeAI.ImageResultResponse) => {
       try {
         const uuid = uuidv4();
-        const { url, metadata } = data;
+        const { url, metadata, mtime } = data;
         dispatch(
           setIntermediateImage({
             uuid,
             url,
+            mtime,
             metadata,
           })
         );
@@ -123,12 +126,13 @@ const makeSocketIOListeners = (
      */
     onESRGANResult: (data: InvokeAI.ImageResultResponse) => {
       try {
-        const { url, metadata } = data;
+        const { url, metadata, mtime } = data;
 
         dispatch(
           addImage({
             uuid: uuidv4(),
             url,
+            mtime,
             metadata,
           })
         );
@@ -149,12 +153,13 @@ const makeSocketIOListeners = (
      */
     onGFPGANResult: (data: InvokeAI.ImageResultResponse) => {
       try {
-        const { url, metadata } = data;
+        const { url, metadata, mtime } = data;
 
         dispatch(
           addImage({
             uuid: uuidv4(),
             url,
+            mtime,
             metadata,
           })
         );
@@ -209,16 +214,26 @@ const makeSocketIOListeners = (
      * Callback to run when we receive a 'galleryImages' event.
      */
     onGalleryImages: (data: InvokeAI.GalleryImagesResponse) => {
-      const { images } = data;
+      const { images, nextPage, offset } = data;
+
+      /**
+       * the logic here ideally would be in the reducer but we have a side effect:
+       * generating a uuid. so the logic needs to be here, outside redux.
+       */
+
+      // Generate a UUID for each image
       const preparedImages = images.map((image): InvokeAI.Image => {
-        const { url, metadata } = image;
+        const { url, metadata, mtime } = image;
         return {
           uuid: uuidv4(),
           url,
+          mtime,
           metadata,
         };
       });
-      dispatch(setGalleryImages(preparedImages));
+
+      dispatch(addGalleryImages({ images: preparedImages, nextPage, offset }));
+
       dispatch(
         addLogEntry({
           timestamp: dateFormat(new Date(), 'isoDateTime'),

@@ -31,6 +31,9 @@ import OutputOptions from './OutputOptions';
 import ImageToImageOptions from './ImageToImageOptions';
 import { ChangeEvent } from 'react';
 
+import GuideIcon from '../../common/components/GuideIcon';
+import { Feature } from '../../app/features';
+
 const optionsSelector = createSelector(
   (state: RootState) => state.options,
   (options: OptionsState) => {
@@ -108,6 +111,7 @@ const OptionsAccordion = () => {
             <Box flex="1" textAlign="left">
               Seed & Variation
             </Box>
+            <GuideIcon feature={Feature.SEED_AND_VARIATION} />
             <AccordionIcon />
           </AccordionButton>
         </h2>
@@ -121,6 +125,7 @@ const OptionsAccordion = () => {
             <Box flex="1" textAlign="left">
               Sampler
             </Box>
+            <GuideIcon feature={Feature.SAMPLER} />
             <AccordionIcon />
           </AccordionButton>
         </h2>
@@ -144,6 +149,7 @@ const OptionsAccordion = () => {
                 onChange={handleChangeShouldRunESRGAN}
               />
             </Flex>
+            <GuideIcon feature={Feature.ESRGAN} />
             <AccordionIcon />
           </AccordionButton>
         </h2>
@@ -160,13 +166,14 @@ const OptionsAccordion = () => {
               width={'100%'}
               mr={2}
             >
-              <Text>Fix Faces (GFPGAN)</Text>
+              <Text>Face Correction</Text>
               <Switch
                 isDisabled={!isGFPGANAvailable}
                 isChecked={shouldRunGFPGAN}
                 onChange={handleChangeShouldRunGFPGAN}
               />
             </Flex>
+            <GuideIcon feature={Feature.FACE_CORRECTION} />
             <AccordionIcon />
           </AccordionButton>
         </h2>
@@ -190,6 +197,7 @@ const OptionsAccordion = () => {
                 onChange={handleChangeShouldUseInitImage}
               />
             </Flex>
+            <GuideIcon feature={Feature.IMAGE_TO_IMAGE} />
             <AccordionIcon />
           </AccordionButton>
         </h2>
@@ -203,6 +211,7 @@ const OptionsAccordion = () => {
             <Box flex="1" textAlign="left">
               Output
             </Box>
+            <GuideIcon feature={Feature.OUTPUT} />
             <AccordionIcon />
           </AccordionButton>
         </h2>

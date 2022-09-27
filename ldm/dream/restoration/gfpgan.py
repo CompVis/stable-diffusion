@@ -11,14 +11,14 @@ class GFPGAN():
     def __init__(
             self,
             gfpgan_dir='src/gfpgan',
-            gfpgan_model_path='experiments/pretrained_models/GFPGANv1.3.pth') -> None:
+            gfpgan_model_path='experiments/pretrained_models/GFPGANv1.4.pth') -> None:
 
         self.model_path = os.path.join(gfpgan_dir, gfpgan_model_path)
         self.gfpgan_model_exists = os.path.isfile(self.model_path)
 
         if not self.gfpgan_model_exists:
-            raise Exception(
-                'GFPGAN model not found at path ' + self.model_path)
+            print('## NOT FOUND: GFPGAN model not found at ' + self.model_path)
+            return None
         sys.path.append(os.path.abspath(gfpgan_dir))
 
     def model_exists(self):
@@ -50,7 +50,7 @@ class GFPGAN():
                 f'>> WARNING: GFPGAN not initialized.'
             )
             print(
-                f'>> Download https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth to {self.model_path}, \nor change GFPGAN directory with --gfpgan_dir.'
+                f'>> Download https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.4.pth to {self.model_path}, \nor change GFPGAN directory with --gfpgan_dir.'
             )
 
         image = image.convert('RGB')

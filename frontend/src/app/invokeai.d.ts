@@ -107,6 +107,7 @@ export declare type Metadata = SystemConfig & {
 export declare type Image = {
   uuid: string;
   url: string;
+  mtime: number;
   metadata: Metadata;
 };
 
@@ -148,6 +149,7 @@ export declare type SystemConfigResponse = SystemConfig;
 
 export declare type ImageResultResponse = {
   url: string;
+  mtime: number;
   metadata: Metadata;
 };
 
@@ -157,7 +159,10 @@ export declare type ErrorResponse = {
 };
 
 export declare type GalleryImagesResponse = {
-  images: Array<{ url: string; metadata: Metadata }>;
+  images:  Array<Omit<Image, 'uuid'>>;
+  nextPage: number;
+  offset: number;
+  onlyNewImages: boolean;
 };
 
 export declare type ImageUrlAndUuidResponse = {

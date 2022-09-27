@@ -20,6 +20,7 @@ import { useAppDispatch, useAppSelector } from '../../app/store';
 import {
   setShouldConfirmOnDelete,
   setShouldDisplayInProgress,
+  setShouldDisplayGuides,
   SystemState,
 } from './systemSlice';
 import { RootState } from '../../app/store';
@@ -31,8 +32,16 @@ import { cloneElement, ReactElement } from 'react';
 const systemSelector = createSelector(
   (state: RootState) => state.system,
   (system: SystemState) => {
-    const { shouldDisplayInProgress, shouldConfirmOnDelete } = system;
-    return { shouldDisplayInProgress, shouldConfirmOnDelete };
+    const {
+      shouldDisplayInProgress,
+      shouldConfirmOnDelete,
+      shouldDisplayGuides,
+    } = system;
+    return {
+      shouldDisplayInProgress,
+      shouldConfirmOnDelete,
+      shouldDisplayGuides,
+    };
   },
   {
     memoizeOptions: { resultEqualityCheck: isEqual },
@@ -63,8 +72,11 @@ const SettingsModal = ({ children }: SettingsModalProps) => {
     onClose: onRefreshModalClose,
   } = useDisclosure();
 
-  const { shouldDisplayInProgress, shouldConfirmOnDelete } =
-    useAppSelector(systemSelector);
+  const {
+    shouldDisplayInProgress,
+    shouldConfirmOnDelete,
+    shouldDisplayGuides,
+  } = useAppSelector(systemSelector);
 
   const dispatch = useAppDispatch();
 
@@ -112,6 +124,19 @@ const SettingsModal = ({ children }: SettingsModalProps) => {
                     isChecked={shouldConfirmOnDelete}
                     onChange={(e) =>
                       dispatch(setShouldConfirmOnDelete(e.target.checked))
+                    }
+                  />
+                </HStack>
+              </FormControl>
+              <FormControl>
+                <HStack>
+                  <FormLabel marginBottom={1}>
+                    Display help guides in configuration menus
+                  </FormLabel>
+                  <Switch
+                    isChecked={shouldDisplayGuides}
+                    onChange={(e) =>
+                      dispatch(setShouldDisplayGuides(e.target.checked))
                     }
                   />
                 </HStack>

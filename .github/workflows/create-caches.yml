@@ -13,10 +13,10 @@ jobs:
         id: vars
         run: |
             if [ "$RUNNER_OS" = "macOS" ]; then
-                echo "::set-output name=ENV_FILE::environment-mac.yaml"
+                echo "::set-output name=ENV_FILE::environment-mac.yml"
                 echo "::set-output name=PYTHON_BIN::/usr/local/miniconda/envs/ldm/bin/python"
             elif [ "$RUNNER_OS" = "Linux" ]; then
-                echo "::set-output name=ENV_FILE::environment.yaml"
+                echo "::set-output name=ENV_FILE::environment.yml"
                 echo "::set-output name=PYTHON_BIN::/usr/share/miniconda/envs/ldm/bin/python"
             fi
       - name: Checkout sources

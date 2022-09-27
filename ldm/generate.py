@@ -497,11 +497,8 @@ class Generate:
         prompt = None
         try:
             args = metadata_from_png(image_path)
-            if len(args) > 1:
-                print("* Can't postprocess a grid")
-                return
-            seed   = args[0].seed
-            prompt = args[0].prompt
+            seed   = args.seed
+            prompt = args.prompt
             print(f'>> retrieved seed {seed} and prompt "{prompt}" from {image_path}')
         except:
             m    = re.search('(\d+)\.png$',image_path)
@@ -591,8 +588,8 @@ class Generate:
 
     def _make_images(
             self,
-            img_path,
-            mask_path,
+            img,
+            mask,
             width,
             height,
             fit=False,
@@ -600,11 +597,11 @@ class Generate:
     ):
         init_image      = None
         init_mask       = None
-        if not img_path:
+        if not img:
             return None, None
 
         image = self._load_img(
-            img_path,
+            img,
             width,
             height,
             fit=fit
@@ -614,7 +611,7 @@ class Generate:
         init_image   = self._create_init_image(image)                   # this returns a torch tensor
 
         # if image has a transparent area and no mask was provided, then try to generate mask
-        if self._has_transparency(image) and not mask_path:
+        if self._has_transparency(image) and not mask:
             print(
                 '>> Initial image has transparent areas. Will inpaint in these regions.')
             if self._check_for_erasure(image):
@@ -626,12 +623,18 @@ class Generate:
             # this returns a torch tensor
             init_mask = self._create_init_mask(image)
 
-        if mask_path:
+        if mask:
             mask_image = self._load_img(
-                mask_path, width, height, fit=fit)  # this returns an Image
+                mask, width, height, fit=fit)  # this returns an Image
             init_mask = self._create_init_mask(mask_image)
 
         return init_image, init_mask
+
+    def _make_base(self):
+        if not self.generators.get('base'):
+            from ldm.dream.generator import Generator
+            self.generators['base'] = Generator(self.model, self.precision)
+        return self.generators['base']
 
     def _make_img2img(self):
         if not self.generators.get('img2img'):
@@ -649,6 +652,7 @@ class Generate:
         if not self.generators.get('txt2img'):
             from ldm.dream.generator.txt2img import Txt2Img
             self.generators['txt2img'] = Txt2Img(self.model, self.precision)
+            self.generators['txt2img'].free_gpu_mem = self.free_gpu_mem
         return self.generators['txt2img']
 
     def _make_inpaint(self):
@@ -717,6 +721,21 @@ class Generate:
         for r in image_list:
             image, seed = r
             try:
+                if strength > 0:
+                    if self.gfpgan is not None or self.codeformer is not None:
+                        if facetool == 'gfpgan':
+                            if self.gfpgan is None:
+                                print('>> GFPGAN not found. Face restoration is disabled.')
+                            else:
+                              image = self.gfpgan.process(image, strength, seed)                              
+                        if facetool == 'codeformer':
+                            if self.codeformer is None:
+                                print('>> CodeFormer not found. Face restoration is disabled.')
+                            else:
+                                cf_device = 'cpu' if str(self.device) == 'mps' else self.device
+                                image = self.codeformer.process(image=image, strength=strength, device=cf_device, seed=seed, fidelity=codeformer_fidelity)
+                    else:
+                        print(">> Face Restoration is disabled.")
                 if upscale is not None:
                     if self.esrgan is not None:
                         if len(upscale) < 2:
@@ -725,14 +744,6 @@ class Generate:
                             image, upscale[1], seed, int(upscale[0]))
                     else:
                         print(">> ESRGAN is disabled. Image not upscaled.")
-                if strength > 0:
-                    if self.gfpgan is not None and self.codeformer is not None:
-                        if facetool == 'codeformer':
-                            image = self.codeformer.process(image=image, strength=strength, device=self.device, seed=seed, fidelity=codeformer_fidelity)
-                        else:
-                            image = self.gfpgan.process(image, strength, seed)
-                    else:
-                        print(">> Face Restoration is disabled.")
             except Exception as e:
                 print(
                     f'>> Error running RealESRGAN or GFPGAN. Your image was not upscaled.\n{e}'
@@ -745,13 +756,7 @@ class Generate:
 
     # to help WebGUI - front end to generator util function
     def sample_to_image(self, samples):
-        return self._sample_to_image(samples)
-
-    def _sample_to_image(self, samples):
-        if not self.base_generator:
-            from ldm.dream.generator import Generator
-            self.base_generator = Generator(self.model)
-        return self.base_generator.sample_to_image(samples)
+        return self._make_base().sample_to_image(samples)
 
     def _set_sampler(self):
         msg = f'>> Setting Sampler to {self.sampler_name}'
@@ -828,15 +833,24 @@ class Generate:
 
         return model
 
-    def _load_img(self, path, width, height, fit=False):
-        assert os.path.exists(path), f'>> {path}: File not found'
+    def _load_img(self, img, width, height, fit=False):
+        if isinstance(img, Image.Image):
+            image = img
+            print(
+                f'>> using provided input image of size {image.width}x{image.height}'
+            )
+        elif isinstance(img, str):
+            assert os.path.exists(img), f'>> {img}: File not found'
 
-        #        with Image.open(path) as img:
-        #            image = img.convert('RGBA')
-        image = Image.open(path)
-        print(
-            f'>> loaded input image of size {image.width}x{image.height} from {path}'
-        )
+            image = Image.open(img)
+            print(
+                f'>> loaded input image of size {image.width}x{image.height} from {img}'
+            )
+        else:
+            image = Image.open(img)
+            print(
+                f'>> loaded input image of size {image.width}x{image.height}'
+            )
         if fit:
             image = self._fit_image(image, (width, height))
         else:
@@ -922,7 +936,7 @@ class Generate:
         # BUG: We need to use the model's downsample factor rather than hardcoding "8"
         from ldm.dream.generator.base import downsampling
         image = image.resize((image.width//downsampling, image.height //
-                             downsampling), resample=Image.Resampling.LANCZOS)
+                              downsampling), resample=Image.Resampling.NEAREST)
         # print(
         #     f'>> DEBUG: writing the mask to mask.png'
         #     )
