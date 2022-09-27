@@ -1,4 +1,9 @@
-models/ldm/stable-diffusion-v1/model.ckpt
-ldm/*
-outputs/*
-.vscode/*
+/__pycache__/
+/.vscode/
+/dist/
+/models/
+/outputs/
+/src/
+/wget-log*
+*.ckpt
+*.zip
