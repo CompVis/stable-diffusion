@@ -19,6 +19,7 @@ pip install transformers diffusers invisible-watermark
 pip install pygame
 pip install webbrowser
 pip install nevergrad
+pip install langdetect
 pip install deep-translator
 pip install -e .
 ```

@@ -6,7 +6,7 @@ from torch import autocast
 from diffusers import StableDiffusionPipeline
 import webbrowser
 from deep_translator import GoogleTranslator
-
+from langdetect import detect
 
 model_id = "CompVis/stable-diffusion-v1-4"
 #device = "cuda"
@@ -73,13 +73,21 @@ prompt = "A red-haired woman with red hair. Her head is tilted."
 prompt = "A bloody heavy-metal zombie with a chainsaw."
 prompt = "Tentacles attacking a bloody Meg Myers in Eyptian dress. Meg Myers has a chainsaw."
 prompt = "Bizarre art."
+
+prompt = "Beautiful bizarre woman."
 print(f"The prompt is {prompt}")
 user_prompt = input("Enter a new prompt if you prefer\n")
 if len(user_prompt) > 2:
     prompt = user_prompt
 
 # On the fly translation.
+language = detect(prompt)
 english_prompt = GoogleTranslator(source='auto', target='en').translate(prompt)
+
+define to_native(stri):
+    return GoogleTranslator(source='en', target=language).translate(stri)
+
+print(f"Working on {english_prompt}, a.k.a {prompt}.")
 
 
 import os
@@ -120,7 +128,7 @@ for iteration in range(30):
             scrn.blit(imp, (300 * (k // 3), 300 * (k % 3)))
             pygame.display.flip()
             continue
-        text0 = font.render(f'Please wait !!! {k} / {llambda}', True, green, blue)
+        text0 = font.render(to_native(f'Please wait !!! {k} / {llambda}'), True, green, blue)
         scrn.blit(text0, ((X*3/4)/2 - X/32, Y/2))
         pygame.display.flip()
         os.environ["earlystop"] = "False" if k > len(five_best) else "True"
@@ -169,26 +177,26 @@ for iteration in range(30):
     text1 = pygame.transform.rotate(text1, 90)
     scrn.blit(text1, (X*3/4+X/16+X/32 - X/32, 0))
     # Button for creating a meme
-    text2 = font.render('Create', True, green, blue)
+    text2 = font.render(to_native('Create'), True, green, blue)
     text2 = pygame.transform.rotate(text2, 90)
     scrn.blit(text2, (X*3/4+X/16 - X/32, Y/3))
-    text2 = font.render('a meme', True, green, blue)
+    text2 = font.render(to_native('a meme'), True, green, blue)
     text2 = pygame.transform.rotate(text2, 90)
     scrn.blit(text2, (X*3/4+X/16+X/32 - X/32, Y/3))
     # Button for new generation
-    text3 = font.render(f"I don't want to", True, green, blue)
+    text3 = font.render(to_native(f"I don't want to"), True, green, blue)
     text3 = pygame.transform.rotate(text3, 90)
     scrn.blit(text3, (X*3/4+X/16 - X/32, Y*2/3))
-    text3 = font.render(f"select images! Just rerun.", True, green, blue)
+    text3 = font.render(to_native(f"select images! Just rerun."), True, green, blue)
     text3 = pygame.transform.rotate(text3, 90)
     scrn.blit(text3, (X*3/4+X/16+X/32 - X/32, Y*2/3))
-    text4 = font.render(f"Modify parameters !", True, green, blue)
+    text4 = font.render(to_native(f"Modify parameters !"), True, green, blue)
     scrn.blit(text4, (300, Y + 30))
     pygame.display.flip()
 
     for idx in range(llambda):
         # set the pygame window name
-        pygame.display.set_caption('images')
+        pygame.display.set_caption(prompt)
         imp = pygame.transform.scale(pygame.image.load(onlyfiles[idx]).convert(), (300, 300))
         scrn.blit(imp, (300 * (idx // 3), 300 * (idx % 3)))
      
@@ -200,7 +208,7 @@ for iteration in range(30):
     five_best = []
     for i in pygame.event.get():
         if i.type == pygame.MOUSEBUTTONUP:
-            print("too early for clicking !!!!")
+            print(to_native("too early for clicking !!!!"))
     while (status):
      
       # iterate over the list of Event objects
@@ -210,26 +218,26 @@ for iteration in range(30):
                 pos = pygame.mouse.get_pos() 
                 print(f"Click at {pos}")
                 if pos[1] > Y:
-                    text4 = font.render(f"ok, go to shell !", True, green, blue)
+                    text4 = font.render(to_native(f"ok, go to text window!"), True, green, blue)
                     scrn.blit(text4, (300, Y + 30))
                     pygame.display.flip()
-                    num_iterations = int(input(f"Number of iterations ? (current = {num_iterations})\n"))
-                    gs = float(input(f"Guidance scale ? (current = {gs})\n"))
-                    text4 = font.render(f"Ok! parameters changed!", True, green, blue)
+                    num_iterations = int(input(to_native(f"Number of iterations ? (current = {num_iterations})\n")))
+                    gs = float(input(to_native(f"Guidance scale ? (current = {gs})\n")))
+                    text4 = font.render(to_native(f"Ok! parameters changed!"), True, green, blue)
                     scrn.blit(text4, (300, Y + 30))
                     pygame.display.flip()
                 elif pos[0] > 1500:  # Not in the images.
                     if pos[1] < Y/3:
-                        filename = input("Filename (please provide the latent file, of the format SD*latent*.txt) ?\n")
+                        filename = input(to_native("Filename (please provide the latent file, of the format SD*latent*.txt) ?\n"))
                         status = False
                         with open(filename, 'r') as f:
                              latent = f.read()
                         break
                     if pos[1] < 2*Y/3:
                         url = 'https://imgflip.com/memegenerator'
-                        onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
+                        onlyfiles = [f for f in listdir(".") if isfile(join(mypath, f))]
                         onlyfiles = [str(f) for f in onlyfiles if "SD_" in str(f) and ".png" in str(f) and str(f) not in all_files and sentinel in str(f)]
-                        print("Your generated images:")
+                        print(to_native("Your generated images:"))
                         print(onlyfiles)
                         webbrowser.open(url)
                         exit()
@@ -240,10 +248,10 @@ for iteration in range(30):
                     five_best += [index]
                 indices += [[index, (pos[0] - (pos[0] // 300) * 300) / 300, (pos[1] - (pos[1] // 300) * 300) / 300]]
                 # Update the button for new generation.
-                text3 = font.render(f"  I have chosen {len(indices)} images:", True, green, blue)
+                text3 = font.render(to_native(f"  I have chosen {len(indices)} images:"), True, green, blue)
                 text3 = pygame.transform.rotate(text3, 90)
                 scrn.blit(text3, (X*3/4+X/16 - X/32, Y*2/3))
-                text3 = font.render(f"        New generation!", True, green, blue)
+                text3 = font.render(to_native(f"        New generation!"), True, green, blue)
                 text3 = pygame.transform.rotate(text3, 90)
                 scrn.blit(text3, (X*3/4+X/16+X/32 - X/32, Y*2/3))
                 pygame.display.flip()
