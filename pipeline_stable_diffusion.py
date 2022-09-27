@@ -95,6 +95,9 @@ class StableDiffusionPipeline(DiffusionPipeline):
         # set slice_size = `None` to disable `attention slicing`
         self.enable_attention_slicing(None)
 
+#    def get_latent(self, image):
+#        return self.vae.encode(image)
+
     @torch.no_grad()
     def __call__(
         self,

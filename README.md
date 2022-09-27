@@ -17,6 +17,7 @@ conda activate ldm    # you can change that name in the environment.yaml file...
 conda install pytorch torchvision -c pytorch
 pip install transformers diffusers invisible-watermark
 pip install pygame
+pip install einops
 pip install webbrowser
 pip install nevergrad
 pip install langdetect
