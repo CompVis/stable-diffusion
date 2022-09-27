@@ -11,6 +11,9 @@ setup(
     author="w4ffl35 (Joe Curlee)",
     packages=find_packages(exclude=["tests*"]),
     install_requires=[
+        "torch",
+        "numpy",
+        "tqdm",
         "psutil",
         "opencv-python",
         "pudb",
