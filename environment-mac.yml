@@ -14,7 +14,7 @@ dependencies:
   # To determine what the latest versions should be, run:
   #
   # ```shell
-  # sed -E 's/ldm/ldm-updated/;20,99s/- ([^=]+)==.+/- \1/' environment-mac.yaml > environment-mac-updated.yml
+  # sed -E 's/ldm/ldm-updated/;20,99s/- ([^=]+)==.+/- \1/' environment-mac.yml > environment-mac-updated.yml
   # CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac-updated.yml && conda list -n ldm-updated | awk ' {print "  - " $1 "==" $2;} '
   # ```
   - albumentations==1.2.1
