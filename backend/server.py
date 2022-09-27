@@ -672,9 +672,10 @@ def generate_images(generation_parameters, esrgan_parameters, gfpgan_parameters)
             and step < generation_parameters["steps"] - 1
         ):
             image = generate.sample_to_image(sample)
-            path = save_image(
-                image, generation_parameters, intermediate_path, step_index
-            )
+
+            metadata = parameters_to_generated_image_metadata(generation_parameters)
+            command = parameters_to_command(generation_parameters)
+            path = save_image(image, command, metadata, intermediate_path, step_index=step_index, postprocessing=False)
 
             step_index += 1
             socketio.emit(
