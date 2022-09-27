@@ -1,4 +1,3 @@
--i https://download.pytorch.org/whl/cu113
 psutil
 opencv-python>=4.6.0
 pudb
