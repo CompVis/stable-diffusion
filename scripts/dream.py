@@ -9,8 +9,8 @@ import copy
 import warnings
 import time
 sys.path.append('.')    # corrects a weird problem on Macs
-import ldm.dream.readline
-from ldm.dream.args import Args, metadata_dumps, metadata_from_png
+from ldm.dream.readline import completer
+from ldm.dream.args import Args, metadata_dumps, metadata_from_png, dream_cmd_from_png
 from ldm.dream.pngwriter import PngWriter
 from ldm.dream.image_util import make_grid
 from ldm.dream.log import write_log
@@ -142,7 +142,10 @@ def main_loop(gen, opt, infile):
 
     while not done:
         operation = 'generate'   # default operation, alternative is 'postprocess'
-        
+
+        if completer:
+            completer.set_default_dir(opt.outdir)
+            
         try:
             command = get_next_command(infile)
         except EOFError:
@@ -160,16 +163,28 @@ def main_loop(gen, opt, infile):
             done = True
             break
 
-        if command.startswith(
-            '!dream'
-        ):   # in case a stored prompt still contains the !dream command
+        if command.startswith('!dream'):   # in case a stored prompt still contains the !dream command
             command = command.replace('!dream ','',1)
 
-        if command.startswith(
-                '!fix'
-        ):
+        if command.startswith('!fix'):
             command = command.replace('!fix ','',1)
             operation = 'postprocess'
+
+        if command.startswith('!fetch'):
+            file_path = command.replace('!fetch ','',1)
+            retrieve_dream_command(opt,file_path)
+            continue
+
+        if command == '!history':
+            completer.show_history()
+            continue
+
+        match = re.match('^!(\d+)',command)
+        if match:
+            command_no = match.groups()[0]
+            command    = completer.get_line(int(command_no))
+            completer.set_line(command)
+            continue
             
         if opt.parse_cmd(command) is None:
             continue
@@ -220,37 +235,15 @@ def main_loop(gen, opt, infile):
             opt.strength = 0.75 if opt.out_direction is None else 0.83
 
         if opt.with_variations is not None:
-            # shotgun parsing, woo
-            parts = []
-            broken = False  # python doesn't have labeled loops...
-            for part in opt.with_variations.split(','):
-                seed_and_weight = part.split(':')
-                if len(seed_and_weight) != 2:
-                    print(f'could not parse with_variation part "{part}"')
-                    broken = True
-                    break
-                try:
-                    seed = int(seed_and_weight[0])
-                    weight = float(seed_and_weight[1])
-                except ValueError:
-                    print(f'could not parse with_variation part "{part}"')
-                    broken = True
-                    break
-                parts.append([seed, weight])
-            if broken:
-                continue
-            if len(parts) > 0:
-                opt.with_variations = parts
-            else:
-                opt.with_variations = None
+            opt.with_variations = split_variations(opt.with_variations)
 
         if opt.prompt_as_dir:
             # sanitize the prompt to a valid folder name
             subdir = path_filter.sub('_', opt.prompt)[:name_max].rstrip(' .')
 
             # truncate path to maximum allowed length
-            # 27 is the length of '######.##########.##.png', plus two separators and a NUL
-            subdir = subdir[:(path_max - 27 - len(os.path.abspath(opt.outdir)))]
+            # 39 is the length of '######.##########.##########-##.png', plus two separators and a NUL
+            subdir = subdir[:(path_max - 39 - len(os.path.abspath(opt.outdir)))]
             current_outdir = os.path.join(opt.outdir, subdir)
 
             print('Writing files to directory: "' + current_outdir + '"')
@@ -281,23 +274,17 @@ def main_loop(gen, opt, infile):
                 if opt.grid:
                     grid_images[seed] = image
                 else:
-                    if operation == 'postprocess':
-                        filename = choose_postprocess_name(opt.prompt)
-                    elif upscaled and opt.save_original:
-                        filename = f'{prefix}.{seed}.postprocessed.png'
-                    else:
-                        filename = f'{prefix}.{seed}.png'
-                    if opt.variation_amount > 0:
-                        first_seed             = first_seed or seed
-                        this_variation         = [[seed, opt.variation_amount]]
-                        opt.with_variations    = prior_variations + this_variation
-                        formatted_dream_prompt = opt.dream_prompt_str(seed=first_seed)
-                    elif len(prior_variations) > 0:
-                        formatted_dream_prompt = opt.dream_prompt_str(seed=first_seed)
-                    elif operation == 'postprocess':
-                        formatted_dream_prompt = '!fix '+opt.dream_prompt_str(seed=seed)
-                    else:
-                        formatted_dream_prompt = opt.dream_prompt_str(seed=seed)
+                    postprocessed = upscaled if upscaled else operation=='postprocess'
+                    filename, formatted_dream_prompt = prepare_image_metadata(
+                        opt,
+                        prefix,
+                        seed,
+                        operation,
+                        prior_variations,
+                        postprocessed,
+                        first_seed
+                    )
+
                     path = file_writer.save_image_and_prompt_to_png(
                         image           = image,
                         dream_prompt    = formatted_dream_prompt,
@@ -311,10 +298,15 @@ def main_loop(gen, opt, infile):
                     if (not upscaled) or opt.save_original:
                         # only append to results if we didn't overwrite an earlier output
                         results.append([path, formatted_dream_prompt])
+                # so that the seed autocompletes (on linux|mac when -S or --seed specified
+                if completer:
+                    completer.add_seed(seed)
+                    completer.add_seed(first_seed)
                 last_results.append([path, seed])
 
             if operation == 'generate':
                 catch_ctrl_c = infile is None # if running interactively, we catch keyboard interrupts
+                opt.last_operation='generate'
                 gen.prompt2image(
                     image_callback=image_writer,
                     catch_interrupts=catch_ctrl_c,
@@ -322,7 +314,7 @@ def main_loop(gen, opt, infile):
                 )
             elif operation == 'postprocess':
                 print(f'>> fixing {opt.prompt}')
-                do_postprocess(gen,opt,image_writer)
+                opt.last_operation = do_postprocess(gen,opt,image_writer)
 
             if opt.grid and len(grid_images) > 0:
                 grid_img   = make_grid(list(grid_images.values()))
@@ -357,6 +349,7 @@ def main_loop(gen, opt, infile):
         global output_cntr
         output_cntr = write_log(results, log_path ,('txt', 'md'), output_cntr)
         print()
+        completer.add_to_history(command)
 
     print('goodbye!')
 
@@ -378,7 +371,8 @@ def do_postprocess (gen, opt, callback):
     elif opt.out_direction:
         tool = 'outpaint'
     opt.save_original = True # do not overwrite old image!
-    return gen.apply_postprocessor(
+    opt.last_operation    = f'postprocess:{tool}'
+    gen.apply_postprocessor(
         image_path      = opt.prompt,
         tool            = tool,
         gfpgan_strength = opt.gfpgan_strength,
@@ -389,18 +383,54 @@ def do_postprocess (gen, opt, callback):
         callback            = callback,
         opt                 = opt,
         )
+    return opt.last_operation
     
-def choose_postprocess_name(original_filename):
-    basename,_ = os.path.splitext(os.path.basename(original_filename))
-    if re.search('\d+\.\d+$',basename):
-        return f'{basename}.fixed.png'
-    match = re.search('(\d+\.\d+)\.fixed(-(\d+))?$',basename) 
-    if match:
-        counter  = match.group(3) or 0
-        return '{prefix}-{counter:02d}.png'.format(prefix=match.group(1), counter=int(counter)+1)
+def prepare_image_metadata(
+        opt,
+        prefix,
+        seed,
+        operation='generate',
+        prior_variations=[],
+        postprocessed=False,
+        first_seed=None
+):
+
+    if postprocessed and opt.save_original:
+        filename = choose_postprocess_name(opt,prefix,seed)
     else:
-        return f'{basename}.fixed.png'
+        filename = f'{prefix}.{seed}.png'        
         
+    if opt.variation_amount > 0:
+        first_seed             = first_seed or seed
+        this_variation         = [[seed, opt.variation_amount]]
+        opt.with_variations    = prior_variations + this_variation
+        formatted_dream_prompt = opt.dream_prompt_str(seed=first_seed)
+    elif len(prior_variations) > 0:
+        formatted_dream_prompt = opt.dream_prompt_str(seed=first_seed)
+    elif operation == 'postprocess':
+        formatted_dream_prompt = '!fix '+opt.dream_prompt_str(seed=seed)
+    else:
+        formatted_dream_prompt = opt.dream_prompt_str(seed=seed)
+    return filename,formatted_dream_prompt
+
+def choose_postprocess_name(opt,prefix,seed) -> str:
+    match      = re.search('postprocess:(\w+)',opt.last_operation)
+    if match:
+        modifier = match.group(1)   # will look like "gfpgan", "upscale", "outpaint" or "embiggen"
+    else:
+        modifier = 'postprocessed'
+
+    counter   = 0
+    filename  = None
+    available = False
+    while not available:
+        if counter > 0:
+            filename = f'{prefix}.{seed}.{modifier}.png'
+        else:
+            filename = f'{prefix}.{seed}.{modifier}-{counter:02d}.png'
+        available = not os.path.exists(os.path.join(opt.outdir,filename))
+        counter += 1
+    return filename
 
 def get_next_command(infile=None) -> str:  # command string
     if infile is None:
@@ -429,6 +459,46 @@ def invoke_ai_web_server_loop(gen, gfpgan, codeformer, esrgan):
     except KeyboardInterrupt:
         pass
     
+
+def split_variations(variations_string) -> list:
+    # shotgun parsing, woo
+    parts = []
+    broken = False  # python doesn't have labeled loops...
+    for part in variations_string.split(','):
+        seed_and_weight = part.split(':')
+        if len(seed_and_weight) != 2:
+            print(f'** Could not parse with_variation part "{part}"')
+            broken = True
+            break
+        try:
+            seed   = int(seed_and_weight[0])
+            weight = float(seed_and_weight[1])
+        except ValueError:
+            print(f'** Could not parse with_variation part "{part}"')
+            broken = True
+            break
+        parts.append([seed, weight])
+    if broken:
+        return None
+    elif len(parts) == 0:
+        return None
+    else:
+        return parts
+
+def retrieve_dream_command(opt,file_path):
+    '''
+    Given a full or partial path to a previously-generated image file,
+    will retrieve and format the dream command used to generate the image,
+    and pop it into the readline buffer (linux, Mac), or print out a comment
+    for cut-and-paste (windows)
+    '''
+    dir,basename = os.path.split(file_path)
+    if len(dir) == 0:
+        path = os.path.join(opt.outdir,basename)
+    else:
+        path = file_path
+    cmd = dream_cmd_from_png(path)
+    completer.set_line(cmd)
 
 def write_log_message(results, log_path):
     """logs the name of the output image, prompt, and prompt args to the terminal and log file"""
