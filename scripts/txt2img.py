@@ -1,4 +1,4 @@
-import argparse, os, sys, glob
+import argparse, os, sys
 import cv2
 import torch
 import numpy as np
@@ -12,7 +12,7 @@ from torchvision.utils import make_grid
 import time
 from pytorch_lightning import seed_everything
 from torch import autocast
-from contextlib import contextmanager, nullcontext
+from contextlib import nullcontext
 
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
@@ -21,7 +21,6 @@ from ldm.models.diffusion.plms import PLMSSampler
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
 import uuid
-
 
 # load safety model
 safety_model_id = "CompVis/stable-diffusion-safety-checker"
@@ -250,7 +249,7 @@ def main():
             if opt.prompt in line:
                 outfolder = line[0:36]
     if len(outfolder) == 0:
-        outfolder = str(uuid.uuid4())
+        outfolder = str(opt.fprefix or uuid.uuid4()})
     promt_text = f"{outfolder} {args}"
     with open(prompts_file, "a") as f:
         f.write(promt_text)
@@ -343,12 +342,7 @@ def main():
                                 x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                                 img = Image.fromarray(x_sample.astype(np.uint8))
                                 img = put_watermark(img, wm_encoder)
-
-                                while os.path.exists(os.path.join(sample_path, f"{base_count:05}.png")):
-                                    base_count += 1
-
-                                img.save(os.path.join(sample_path, f"{base_count:05}.png"))
-                                base_count += 1
+                                img.save(os.path.join(sample_path, f"{uuid.uuid4()}.png"))
 
                         if not opt.skip_grid:
                             all_samples.append(x_checked_image_torch)
