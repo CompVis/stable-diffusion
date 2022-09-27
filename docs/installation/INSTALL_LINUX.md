@@ -44,7 +44,7 @@ This will create InvokeAI folder where you will follow the rest of the steps.
 
 
 ```
-(base) ~/InvokeAI$ conda env create -f environment.yaml
+(base) ~/InvokeAI$ conda env create
 (base) ~/InvokeAI$ conda activate ldm
 (ldm) ~/InvokeAI$
 ```

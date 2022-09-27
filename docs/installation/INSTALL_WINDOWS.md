@@ -54,11 +54,10 @@ cd InvokeAI
 
 6. Run the following two commands:
 
-    ```batch
-    conda env create -f environment.yaml
-    conda activate ldm
-    ```
-
+```
+conda env create       (step 6a)
+conda activate ldm     (step 6b)
+```
     This will install all python requirements and activate the "ldm" environment
     which sets PATH and other environment variables properly.
 
@@ -122,7 +121,7 @@ latest and greatest version, launch the Anaconda window, enter
 
 ```bash
 git pull
-conda env update -f environment.yaml
+conda env update
 ```
 
 This will bring your local copy into sync with the remote one.

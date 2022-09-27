@@ -122,6 +122,7 @@ ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" \
           && conda activate ldm
         ```
 
+
     === "Intel x86_64"
 
         ```bash
@@ -147,19 +148,9 @@ python scripts/orig_scripts/txt2img.py \
   --plms
 ```
 
-1. half-precision requires autocast which is unfortunatelly incompatible
-
-!!! note
-
-    `#!bash export PIP_EXISTS_ACTION=w` is a precaution to fix a problem where
-
-    ```bash
-    conda env create \
-      -f environment-mac.yaml
-    ```
-
-    did never finish in some situations. So it isn't required but wont hurt.
-
+Note, `export PIP_EXISTS_ACTION=w` is a precaution to fix `conda env
+create -f environment-mac.yml` never finishing in some situations. So
+it isn't required but wont hurt.
 ---
 
 ## Common problems
@@ -199,14 +190,7 @@ conda install \
   -n ldm
 ```
 
-If it takes forever to run
-
-```bash
-conda env create \
-  -f environment-mac.yaml
-```
-
-you could try to run:
+If it takes forever to run `conda env create -f environment-mac.yml`, try this:
 
 ```bash
 git clean -f
@@ -247,9 +231,7 @@ There are several causes of these errors:
     ```bash
     conda deactivate
     conda env remove -n ldm
-    PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 \
-      conda env create \
-      -f environment-mac.yaml
+    conda env create -f environment-mac.yml
     ```
 
 4. If you have activated the ldm virtual environment and tried rebuilding it,
@@ -396,9 +378,7 @@ python scripts/preload_models.py
     ```
 
 This fork already includes a fix for this in
-[environment-mac.yaml](https://github.com/invoke-ai/InvokeAI/blob/main/environment-mac.yaml).
-
----
+[environment-mac.yml](https://github.com/invoke-ai/InvokeAI/blob/main/environment-mac.yml).
 
 ### "Could not build wheels for tokenizers"
 
