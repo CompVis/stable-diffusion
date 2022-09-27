@@ -223,7 +223,7 @@ class StableDiffusionPipeline(DiffusionPipeline):
             if len(os.environ["forcedlatent"]) > 0:
                 print("we get a forcing for the latent z.")
                 latents = np.array(eval(os.environ["forcedlatent"]))
-                latents = np.sqrt(len(latents)) * latents / np.sum(latents ** 2)
+                latents = np.sqrt(len(latents)) * latents / np.sqrt(np.sum(latents ** 2))
                 latents = torch.from_numpy(np.array(eval(os.environ["forcedlatent"])).reshape((1,4,64,64)))
             good = eval(os.environ["good"])
             bad = eval(os.environ["bad"])
