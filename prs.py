@@ -292,7 +292,7 @@ def do_run(device, model, opt):
                             else: # just behave like usual
                                 c = model.get_learned_conditioning(prompts)
                             
-                            if opt.variance != 0.0 and n != 0:
+                            if opt.variance != 0.0:
                                 # add a little extra random noise to get varying output with same seed
                                 base_x = og_start_code # torch.randn(rand_size, device=device) * sigmas[0]
                                 torch.manual_seed(opt.variance_seed + n)

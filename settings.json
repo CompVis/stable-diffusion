@@ -13,7 +13,7 @@
     "frozen_seed" : false, // When true, the seed will be kept the same for every image (useful when randomizing prompts)
     "n_batches" : 1, // Number of overall batches of images to make in this run (seed changes every batch)
     "n_iter" : 1, // number of images to make within a batch (seed remains the same for each iteration)
-    "variance" : 0.1, // How much to vary each image iteration within a batch (only applies if n_iter is 2 or more)
+    "variance" : 0.0, // Add a slight amount of extra random noise to create subtle variations (useful when combined with n_iter)
     // Init image stuff
     "init_image": null, // the file to use for a starting point (leave as null for no init). will be resized to match width/height above
     "init_strength": 0.62, // how strongly the init should be applied (essentially skip_steps)
