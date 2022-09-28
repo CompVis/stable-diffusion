@@ -363,6 +363,8 @@ class GeneratorService:
           fit              = None if init_img is None else jobRequest.fit,
           iterations       = jobRequest.iterations,
           cfg_scale        = jobRequest.cfg_scale,
+          threshold        = jobRequest.threshold,
+          perlin           = jobRequest.perlin,
           width            = jobRequest.width,
           height           = jobRequest.height,
           seed             = jobRequest.seed,

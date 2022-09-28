@@ -31,6 +31,8 @@ class DreamBase():
   width: int = 512
   height: int = 512
   cfg_scale: float = 7.5
+  threshold: float = 0.0
+  perlin: float = 0.0
   sampler_name: string = 'klms'
   seamless: bool = False
   model: str = None # The model to use (currently unused)
@@ -83,6 +85,8 @@ class DreamBase():
       self.width = int(j.get('width'))
       self.height = int(j.get('height'))
       self.cfg_scale = float(j.get('cfgscale') or j.get('cfg_scale'))
+      self.threshold = float(j.get('threshold'))
+      self.perlin = float(j.get('perlin'))
       self.sampler_name  = j.get('sampler') or j.get('sampler_name')
       # model: str = None # The model to use (currently unused)
       # embeddings = None # The embeddings to use (currently unused)

@@ -530,6 +530,18 @@ class Args(object):
             help='Classifier free guidance (CFG) scale - higher numbers cause generator to "try" harder.',
         )
         render_group.add_argument(
+            '--threshold',
+            default=0.0,
+            type=float,
+            help='Latent threshold for classifier free guidance (CFG) - prevent generator from "trying" too hard. Use positive values, 0 disables.',
+        )
+        render_group.add_argument(
+            '--perlin',
+            default=0.0,
+            type=float,
+            help='Perlin noise scale (0.0 - 1.0) - add perlin noise to the initialization instead of the usual gaussian noise.',
+        )
+        render_group.add_argument(
             '--grid',
             '-g',
             action='store_true',
@@ -725,7 +737,7 @@ def metadata_dumps(opt,
 
     # remove any image keys not mentioned in RFC #266
     rfc266_img_fields = ['type','postprocessing','sampler','prompt','seed','variations','steps',
-                         'cfg_scale','step_number','width','height','extra','strength']
+                         'cfg_scale','threshold','perlin','step_number','width','height','extra','strength']
 
     rfc_dict ={}
 

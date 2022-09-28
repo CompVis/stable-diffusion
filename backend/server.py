@@ -486,6 +486,8 @@ def parameters_to_generated_image_metadata(parameters):
         "variations",
         "steps",
         "cfg_scale",
+        "threshold",
+        "perlin",
         "step_number",
         "width",
         "height",

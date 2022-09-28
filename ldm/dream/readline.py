@@ -32,6 +32,8 @@ COMMANDS = (
     '--iterations','-n',
     '--width','-W','--height','-H',
     '--cfg_scale','-C',
+    '--threshold',
+    '--perlin',
     '--grid','-g',
     '--individual','-i',
     '--init_img','-I',

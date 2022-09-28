@@ -699,6 +699,8 @@ class InvokeAIWebServer:
             'variations',
             'steps',
             'cfg_scale',
+            'threshold',
+            'perlin',
             'step_number',
             'width',
             'height',

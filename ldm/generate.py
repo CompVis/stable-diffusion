@@ -361,7 +361,7 @@ class Generate:
         ), '-v --variation_amount must be in [0.0, 1.0]'
         assert (
                 0.0 <= perlin <= 1.0
-        ), '-v --perlin must be in [0.0, 1.0]'
+        ), '--perlin must be in [0.0, 1.0]'
         assert (
             (embiggen == None and embiggen_tiles == None) or (
                 (embiggen != None or embiggen_tiles != None) and init_img != None)
