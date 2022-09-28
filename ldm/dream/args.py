@@ -81,13 +81,14 @@ with metadata_from_png():
 """
 
 import argparse
-from argparse import Namespace
+from argparse import Namespace, RawTextHelpFormatter
 import shlex
 import json
 import hashlib
 import os
 import copy
 import base64
+import functools
 import ldm.dream.pngwriter
 from ldm.dream.conditioning import split_weighted_subprompts
 
@@ -220,9 +221,15 @@ class Args(object):
         # outpainting parameters
         if a['out_direction']:
             switches.append(f'-D {" ".join([str(u) for u in a["out_direction"]])}')
+        # LS: slight semantic drift which needs addressing in the future:
+        # 1. Variations come out of the stored metadata as a packed string with the keyword "variations"
+        # 2. However, they come out of the CLI (and probably web) with the keyword "with_variations" and
+        #    in broken-out form. Variation (1) should be changed to comply with (2)
         if a['with_variations']:
-            formatted_variations = ','.join(f'{seed}:{weight}' for seed, weight in (a["with_variations"]))
-            switches.append(f'-V {formatted_variations}')
+            formatted_variations = ','.join(f'{seed}:{weight}' for seed, weight in (a["variations"]))
+            switches.append(f'-V {a["formatted_variations"]}')
+        if 'variations' in a:
+            switches.append(f'-V {a["variations"]}')
         return ' '.join(switches)
 
     def __getattribute__(self,name):
@@ -455,9 +462,24 @@ class Args(object):
     # This creates the parser that processes commands on the dream> command line
     def _create_dream_cmd_parser(self):
         parser = argparse.ArgumentParser(
-            description="""
-            Generate example: dream> a fantastic alien landscape -W576 -H512 -s60 -n4
-            Postprocess example: dream> !pp 0000045.4829112.png -G1 -U4 -ft codeformer
+            formatter_class=RawTextHelpFormatter,
+            description=
+            """
+            *Image generation:*
+                 dream> a fantastic alien landscape -W576 -H512 -s60 -n4
+
+            *postprocessing*
+                !fix applies upscaling/facefixing to a previously-generated image.
+                dream> !fix 0000045.4829112.png -G1 -U4 -ft codeformer
+
+            *History manipulation*
+            !fetch retrieves the command used to generate an earlier image.
+                dream> !fetch 0000015.8929913.png
+                dream> a fantastic alien landscape -W 576 -H 512 -s 60 -A plms -C 7.5
+
+            !history lists all the commands issued during the current session.
+
+            !NN retrieves the NNth command from the history
             """
         )
         render_group     = parser.add_argument_group('General rendering')
@@ -625,7 +647,7 @@ class Args(object):
             '-embiggen',
             nargs='+',
             type=float,
-            help='Embiggen tiled img2img for higher resolution and detail without extra VRAM usage. Takes scale factor relative to the size of the --init_img (-I), followed by ESRGAN upscaling strength (0-1.0), followed by minimum amount of overlap between tiles as a decimal ratio (0 - 1.0) or number of pixels. ESRGAN strength defaults to 0.75, and overlap defaults to 0.25 . ESRGAN is used to upscale the init prior to cutting it into tiles/pieces to run through img2img and then stitch back togeather.',
+            help='Arbitrary upscaling using img2img. Provide scale factor (0.75), optionally followed by strength (0.75) and tile overlap proportion (0.25).',
             default=None,
         )
         postprocessing_group.add_argument(
@@ -633,7 +655,7 @@ class Args(object):
             '-embiggen_tiles',
             nargs='+',
             type=int,
-            help='If while doing Embiggen we are altering only parts of the image, takes a list of tiles by number to process and replace onto the image e.g. `1 3 5`, useful for redoing problematic spots from a prior Embiggen run',
+            help='For embiggen, provide list of tiles to process and replace onto the image e.g. `1 3 5`.',
             default=None,
         )
         special_effects_group.add_argument(
@@ -749,6 +771,7 @@ def metadata_dumps(opt,
 
     return metadata
 
+@functools.lru_cache(maxsize=50)
 def metadata_from_png(png_file_path):
     '''
     Given the path to a PNG file created by dream.py, retrieves
@@ -757,6 +780,10 @@ def metadata_from_png(png_file_path):
     meta = ldm.dream.pngwriter.retrieve_metadata(png_file_path)
     opts = metadata_loads(meta)
     return opts[0]
+
+def dream_cmd_from_png(png_file_path):
+    opt = metadata_from_png(png_file_path)
+    return opt.dream_prompt_str()
 
 def metadata_loads(metadata):
     '''
