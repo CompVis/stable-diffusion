@@ -22,6 +22,8 @@ def write_log(results, log_path, file_types, output_cntr):
 
 def write_log_message(results, output_cntr):
     """logs to the terminal"""
+    if len(results) == 0:
+        return output_cntr
     log_lines = [f"{path}: {prompt}\n" for path, prompt in results]
     if len(log_lines)>1:
         subcntr = 1
