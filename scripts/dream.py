@@ -15,6 +15,7 @@ from ldm.dream.pngwriter import PngWriter
 from ldm.dream.image_util import make_grid
 from ldm.dream.log import write_log
 from omegaconf import OmegaConf
+from backend.invoke_ai_web_server import InvokeAIWebServer
 
 # The output counter labels each output and is keyed to the
 # command-line history
