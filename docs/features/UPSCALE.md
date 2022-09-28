@@ -14,9 +14,9 @@ For **GFPGAN** to work, there is one additional step needed. You will need to do
 copy the GFPGAN [models file](https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth) 
 into **src/gfpgan/experiments/pretrained_models**. On Mac and Linux systems, here's how you'd do it using
 **wget**:
-~~~~
-> wget https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth -P src/gfpgan/experiments/pretrained_models/
-~~~~
+```bash
+wget https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth -P src/gfpgan/experiments/pretrained_models/
+```
 
 Make sure that you're in the stable-diffusion directory when you do this.
 
