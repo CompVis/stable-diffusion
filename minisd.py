@@ -86,10 +86,14 @@ prompt = "Beautiful bizarre woman."
 prompt = "Yann LeCun as the grim reaper: bizarre art."
 prompt = "A star with flashy colors."
 prompt = "Un chat en sang et en armure joue de la batterie."
-prompt = "Cyberpunk photographic version of Judith beheading Holofernes."
 prompt = "Photo of a cyberpunk Mark Zuckerberg killing Cthulhu with a light saber."
 prompt = "A ferocious cyborg bear."
 prompt = "Photo of Mark Zuckerberg killing Cthulhu with a light saber."
+prompt = "A bear with horns and blood and big teeth."
+prompt = "A photo of a bear and Yoda, good friends."
+prompt = "A photo of Yoda on the left, a blue octopus on the right, an explosion in the center."
+prompt = "A bird is on a hippo. They fight a black and red octopus. Jungle in the background."
+prompt = "A flying white bird behind 4 colored pots with fire."
 print(f"The prompt is {prompt}")
 
 
@@ -204,10 +208,12 @@ for iteration in range(30):
         if len(early_stop) > 0:
             break
         pygame.draw.rect(scrn, black, pygame.Rect(0, Y, 1700, Y+100))
-        pygame.draw.rect(scrn, black, pygame.Rect(X, 0, 1700, Y+100))
+        pygame.draw.rect(scrn, black, pygame.Rect(1500, 0, 2000, Y+100))
         text0 = font.render(to_native(f'Please wait !!! {k} / {llambda}'), True, green, blue)
-        scrn.blit(text0, ((X*3/4)/2 - X/32, Y/2-Y/8))
-        text0 = font.render(to_native(f'Or (EMERGENCY STOP BECAUSE BORED!) click on an image (THEN DON''T MOVE the mouse until click received!),'), True, green, blue)
+        scrn.blit(text0, ((X*3/4)/2 - X/32, Y/2-Y/4))
+        text0 = font.render(to_native(f'Or, if you find one image very cool and want to focus on it only,'), True, green, blue)
+        scrn.blit(text0, ((X*3/4)/3 - X/32, Y/2-Y/8))
+        text0 = font.render(to_native(f'then click on it AND KEEP THE MOUSE AT THE SAME POINT until I get the click.),'), True, green, blue)
         scrn.blit(text0, ((X*3/4)/3 - X/32, Y/2))
         text0 = font.render(to_native(f'for rerunning on a specific image.'), True, green, blue)
         scrn.blit(text0, ((X*3/4)/2 - X/32, Y/2+Y/8))
@@ -321,6 +327,7 @@ for iteration in range(30):
                     pygame.display.flip()
                     num_iterations = int(input(to_native(f"Number of iterations ? (current = {num_iterations})\n")))
                     gs = float(input(to_native(f"Guidance scale ? (current = {gs})\n")))
+                    print(f"The current text is << {prompt} >>.")
                     new_prompt = str(input(to_native(f"Enter a text if you want to change from ") + prompt))
                     if len(new_prompt) > 2:
                         prompt = new_prompt
@@ -338,6 +345,7 @@ for iteration in range(30):
                              latent = f.read()
                         break
                     if pos[1] < 2*Y/3:
+                        pretty_print("Let us create a meme!")
                         url = 'https://imgflip.com/memegenerator'
                         onlyfiles = [f for f in listdir(".") if isfile(join(mypath, f))]
                         onlyfiles = [str(f) for f in onlyfiles if "SD_" in str(f) and ".png" in str(f) and str(f) not in all_files and sentinel in str(f)]
@@ -352,6 +360,8 @@ for iteration in range(30):
                     five_best += [index]
                 indices += [[index, (pos[0] - (pos[0] // 300) * 300) / 300, (pos[1] - (pos[1] // 300) * 300) / 300]]
                 # Update the button for new generation.
+                pygame.draw.rect(scrn, black, pygame.Rect(X*3/4, 2*Y/3, X*3/4+X/16+X/32, Y))
+                pygame.draw.rect(scrn, red, pygame.Rect(X*3/4, 2*Y/3, X*3/4+X/16+X/32, Y), 2)
                 text3 = font.render(to_native(f"  I have chosen {len(indices)} images:"), True, green, blue)
                 text3 = pygame.transform.rotate(text3, 90)
                 scrn.blit(text3, (X*3/4+X/16 - X/32, Y*2/3))

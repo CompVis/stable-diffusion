@@ -214,6 +214,7 @@ class StableDiffusionPipeline(DiffusionPipeline):
         latents_device = "cpu" if self.device.type == "mps" else self.device
         latents_shape = (batch_size, self.unet.in_channels, height // 8, width // 8)
         latents_intermediate_shape = (batch_size, self.unet.in_channels, height // 8, width // 8)
+        speedup = 1
         if latents is None:
             latents = torch.randn(
                 latents_intermediate_shape,
@@ -222,6 +223,7 @@ class StableDiffusionPipeline(DiffusionPipeline):
             )
             if len(os.environ["forcedlatent"]) > 0:
                 print("we get a forcing for the latent z.")
+                speedup = 1
                 latents = np.array(eval(os.environ["forcedlatent"])).flatten()
                 latents = np.sqrt(len(latents)) * latents / np.sqrt(np.sum(latents ** 2))
                 print(latents[:10])
@@ -232,7 +234,7 @@ class StableDiffusionPipeline(DiffusionPipeline):
             bad = eval(os.environ["bad"])
             print(f"{len(good)} good and {len(bad)} bad")
             i_believe_in_evolution = len(good) > 0 and len(bad) > 0
-            #i_believe_in_evolution = False
+            i_believe_in_evolution = False
             print(f"I believe in evolution = {i_believe_in_evolution}")
             if i_believe_in_evolution: 
                 from sklearn import tree
@@ -331,7 +333,7 @@ class StableDiffusionPipeline(DiffusionPipeline):
         if accepts_offset:
             extra_set_kwargs["offset"] = 1
 
-        self.scheduler.set_timesteps(num_inference_steps, **extra_set_kwargs)
+        self.scheduler.set_timesteps(num_inference_steps // speedup, **extra_set_kwargs)
 
         # if we use LMSDiscreteScheduler, let's make sure latents are mulitplied by sigmas
         if isinstance(self.scheduler, LMSDiscreteScheduler):
@@ -369,6 +371,7 @@ class StableDiffusionPipeline(DiffusionPipeline):
                 latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
 
         # scale and decode the image latents with vae
+        os.environ["latent_sd"] = str(list(latents.flatten().cpu().detach().numpy()))
         latents = 1 / 0.18215 * latents
         image = self.vae.decode(latents).sample
 
