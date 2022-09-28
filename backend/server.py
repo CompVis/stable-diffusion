@@ -50,6 +50,7 @@ host = opt.host  # Web & socket.io host
 port = opt.port  # Web & socket.io port
 verbose = opt.verbose  # enables copious socket.io logging
 precision = opt.precision
+free_gpu_mem = opt.free_gpu_mem
 embedding_path = opt.embedding_path
 additional_allowed_origins = (
     opt.cors if opt.cors else []
@@ -148,6 +149,7 @@ generate = Generate(
     precision=precision,
     embedding_path=embedding_path,
 )
+generate.free_gpu_mem = free_gpu_mem
 generate.load_model()
 
 

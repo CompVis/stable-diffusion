@@ -87,7 +87,6 @@ Usually this will be sufficient, but if you start to see errors about
 missing or incorrect modules, use the command `pip install -e .`
 and/or `conda env update` (These commands won't break anything.)
 
-
 `pip install -e .` and/or
 
 `conda env update -f environment.yaml`

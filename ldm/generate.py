@@ -500,25 +500,26 @@ class Generate:
             opt                 = None,
             ):
         # retrieve the seed from the image;
-        # note that we will try both the new way and the old way, since not all files have the
-        # metadata (yet)
         seed   = None
         image_metadata = None
         prompt = None
-        try:
-            args = metadata_from_png(image_path)
-            seed   = args.seed
-            prompt = args.prompt
-            print(f'>> retrieved seed {seed} and prompt "{prompt}" from {image_path}')
-        except:
-            m    = re.search('(\d+)\.png$',image_path)
-            if m:
-                seed = m.group(1)
+
+        args   = metadata_from_png(image_path)
+        seed   = args.seed
+        prompt = args.prompt
+        print(f'>> retrieved seed {seed} and prompt "{prompt}" from {image_path}')
 
         if not seed:
             print('* Could not recover seed for image. Replacing with 42. This will not affect image quality')
             seed = 42
-        
+
+        # try to reuse the same filename prefix as the original file.
+        # note that this is hacky
+        prefix = None
+        m    = re.search('(\d+)\.',os.path.basename(image_path))
+        if m:
+            prefix = m.groups()[0]
+
         # face fixers and esrgan take an Image, but embiggen takes a path
         image = Image.open(image_path)
 
@@ -540,6 +541,7 @@ class Generate:
                 save_original = save_original,
                 upscale = upscale,
                 image_callback = callback,
+                prefix = prefix,
             )
 
         elif tool == 'embiggen':
@@ -726,7 +728,9 @@ class Generate:
                                 strength      =  0.0,
                                 codeformer_fidelity = 0.75,
                                 save_original = False,
-                                image_callback = None):
+                                image_callback = None,
+                                prefix = None,
+    ):
             
         for r in image_list:
             image, seed = r
@@ -760,7 +764,7 @@ class Generate:
                 )
 
             if image_callback is not None:
-                image_callback(image, seed, upscaled=True)
+                image_callback(image, seed, upscaled=True, use_prefix=prefix)
             else:
                 r[0] = image
 
@@ -869,10 +873,6 @@ class Generate:
 
     def _create_init_image(self, image):
         image = image.convert('RGB')
-        # print(
-        #     f'>> DEBUG: writing the image to img.png'
-        # )
-        # image.save('img.png')
         image = np.array(image).astype(np.float32) / 255.0
         image = image[None].transpose(0, 3, 1, 2)
         image = torch.from_numpy(image)

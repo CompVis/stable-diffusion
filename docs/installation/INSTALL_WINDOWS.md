@@ -39,7 +39,7 @@ in the wiki
 
 4. Run the command:
 
-    ```batch
+    ```bash
     git clone https://github.com/invoke-ai/InvokeAI.git
     ```
 
@@ -48,17 +48,16 @@ in the wiki
 
 5. Enter the newly-created InvokeAI folder. From this step forward make sure that you are working in the InvokeAI directory!
 
-    ```batch
-    cd InvokeAI
-    ```
+```
+cd InvokeAI
+```
 
 6. Run the following two commands:
 
-    ```batch
-    conda env create       (step 6a)
-    conda activate ldm     (step 6b)
-    ```
-
+```
+conda env create       (step 6a)
+conda activate ldm     (step 6b)
+```
     This will install all python requirements and activate the "ldm" environment
     which sets PATH and other environment variables properly.
 
@@ -68,7 +67,7 @@ in the wiki
 
 7. Run the command:
 
-    ```batch
+    ```bash
     python scripts\preload_models.py
     ```
 
@@ -90,17 +89,17 @@ in the wiki
 
 Now run the following commands from **within the InvokeAI directory** to copy the weights file to the right place:
 
-    ```batch
-    mkdir -p models\ldm\stable-diffusion-v1
-    copy C:\path\to\sd-v1-4.ckpt models\ldm\stable-diffusion-v1\model.ckpt
-    ```
+```
+mkdir -p models\ldm\stable-diffusion-v1
+copy C:\path\to\sd-v1-4.ckpt models\ldm\stable-diffusion-v1\model.ckpt
+```
 
 Please replace `C:\path\to\sd-v1.4.ckpt` with the correct path to wherever you stashed this file. If you prefer not to copy or move the .ckpt file,
 you may instead create a shortcut to it from within `models\ldm\stable-diffusion-v1\`.
 
 9. Start generating images!
 
-    ```batch
+    ```bash
     # for the pre-release weights
     python scripts\dream.py -l
 
@@ -117,16 +116,16 @@ you may instead create a shortcut to it from within `models\ldm\stable-diffusion
 
 ---
 
-## Updating to newer versions of the script
+This distribution is changing rapidly. If you used the `git clone` method (step 5) to download the InvokeAI directory, then to update to the latest and greatest version, launch the Anaconda window, enter `InvokeAI`, and type:
 
 This distribution is changing rapidly. If you used the `git clone` method
 (step 5) to download the stable-diffusion directory, then to update to the
 latest and greatest version, launch the Anaconda window, enter
 `stable-diffusion`, and type:
 
-   ```batch
-   git pull
-   conda env update
-   ```
+```bash
+git pull
+conda env update
+```
 
 This will bring your local copy into sync with the remote one.
