@@ -81,7 +81,7 @@ with metadata_from_png():
 """
 
 import argparse
-from argparse import Namespace
+from argparse import Namespace, RawTextHelpFormatter
 import shlex
 import json
 import hashlib
@@ -445,7 +445,9 @@ class Args(object):
     # This creates the parser that processes commands on the dream> command line
     def _create_dream_cmd_parser(self):
         parser = argparse.ArgumentParser(
-            description="""
+            formatter_class=RawTextHelpFormatter,
+            description=
+            """
             *Image generation:*
             To generate images, type a text prompt with optional switches. Example:
                  a fantastic alien landscape -W576 -H512 -s60 -n4
