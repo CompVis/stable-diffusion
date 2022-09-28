@@ -52,15 +52,15 @@ COMMANDS = (
     '!fix','!fetch',
     )
 IMG_PATH_COMMANDS = (
-    '--init_img[=\s]','-I',
-    '--init_mask[=\s]','-M',
-    '--init_color[=\s]',
-    '--embedding_path[=\s]',
-    '--outdir[=\s]'
+    '--outdir[=\s]',
     )
 IMG_FILE_COMMANDS=(
     '!fix',
     '!fetch',
+    '--init_img[=\s]','-I',
+    '--init_mask[=\s]','-M',
+    '--init_color[=\s]',
+    '--embedding_path[=\s]',
     )
 path_regexp = '('+'|'.join(IMG_PATH_COMMANDS+IMG_FILE_COMMANDS) + ')\s*\S*$'
 
@@ -178,7 +178,7 @@ class Completer:
             readline.redisplay()
             self.linebuffer = None
 
-    def _path_completions(self, text, state, extensions, shortcut_ok=False):
+    def _path_completions(self, text, state, extensions, shortcut_ok=True):
         # separate the switch from the partial path
         match = re.search('^(-\w|--\w+=?)(.*)',text)
         if match is None:
