@@ -94,12 +94,10 @@ def get_resampling_mode():
 def load_img(w, h, path):
     image = Image.open(path).convert("RGB")
     xw, xh = image.size
-    #print(f"loaded input image of size ({w}, {h}) from {path}")
-    #w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
     if xw != w or xh != h:
         image = image.resize((w, h), get_resampling_mode())
         print(f'Warning: Init image size ({xw}x{xh}) differs from target size ({w}x{h}).')
-        print(f'         It will be resized, but you may want to check your settings ArtDiffuser.')
+        print(f'         It will be resized (if using improved composition mode, this is expected)')
     image = np.array(image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
     image = torch.from_numpy(image)
@@ -267,12 +265,14 @@ def do_run(device, model, opt):
                                 uc = model.get_learned_conditioning(batch_size * [""])
 
                             # process the prompt for randomizers and dynamic values
-                            newprompts = []
-                            for prompt in prompts:
-                                prompt = randomize_prompt(prompt)
-                                prompt = dynamic_value(prompt)
-                                newprompts.append(prompt)
-                            prompts = newprompts
+                            # (don't do this after creating a compositional init, so we can keep the same prompt)
+                            if compositional_init == None:
+                                newprompts = []
+                                for prompt in prompts:
+                                    prompt = randomize_prompt(prompt)
+                                    prompt = dynamic_value(prompt)
+                                    newprompts.append(prompt)
+                                prompts = newprompts
 
                             print(f'\nPrompt for this image:\n   {prompts}\n')
                             # split the prompt if it has : for weighting
@@ -418,6 +418,8 @@ def do_run(device, model, opt):
                                 else: #otherwise, we use this output as an init for another run
                                     compositional_init = progress_image
                                     opt.improve_composition = False
+                                    opt.prompt = prompts[0]
+                                    data = [batch_size * [opt.prompt]] # make sure we use the enhanced prompt instead of the original
                                     print('\nImprove Composition enabled! Re-rendering at the desired size.')
                                 output_image.close()
                                 grid_count += 1
@@ -681,6 +683,8 @@ def randomize_prompt(prompt):
         swap = prompt[(start + 1):end]
         swapped = randomizer(swap)
         prompt = prompt.replace(f'_{swap}_', swapped, 1)
+    # so we can still have underscores in prompts, replace any .. with _
+    prompt = prompt.replace('..', '_')
     return prompt
 
 # Dynamic value - takes ready-made possible options within a string and returns the string with an option randomly selected
@@ -743,6 +747,7 @@ class Settings:
     gobig_overlap = 64
     gobig_realesrgan = False
     gobig_keep_slices = False
+    augment_prompt = None
     esrgan_model = "realesrgan-x4plus"
     cool_down = 0.0
     checkpoint = "./models/sd-v1-4.ckpt"
@@ -806,6 +811,8 @@ class Settings:
             self.gobig_realesrgan = (settings_file["gobig_realesrgan"])
         if is_json_key_present(settings_file, 'esrgan_model'):
             self.esrgan_model = (settings_file["esrgan_model"])
+        if is_json_key_present(settings_file, 'augment_prompt'):
+            self.augment_prompt = (settings_file["augment_prompt"])
         if is_json_key_present(settings_file, 'gobig_keep_slices'):
             self.gobig_keep_slices = (settings_file["gobig_keep_slices"])
         if is_json_key_present(settings_file, 'cool_down'):
@@ -847,6 +854,7 @@ def save_settings(options, prompt, filenum):
         'gobig_realesrgan' : options.gobig_realesrgan,
         'gobig_keep_slices' : options.gobig_keep_slices,
         'esrgan_model': options.esrgan_model,
+        'augment_prompt': options.augment_prompt,
         'use_jpg' : "true" if options.filetype == ".jpg" else "false",
         'hide_metadata' : options.hide_metadata,
         'method' : options.method,
@@ -872,6 +880,7 @@ def esrgan_resize(input, id, esrgan_model='realesrgan-x4plus'):
 
 def do_gobig(gobig_init, device, model, opt):
     overlap = opt.gobig_overlap
+    original_prompt = opt.prompt
     outpath = opt.outdir
     # get our render size for each slice, and our target size
     input_image = Image.open(gobig_init).convert('RGBA')
@@ -885,6 +894,7 @@ def do_gobig(gobig_init, device, model, opt):
     else:
         #target_W, target_H = input_image.size
         target_image = input_image
+    # slice up the image into a grid
     slices, target_image = grid_slice(target_image, overlap, (opt.W, opt.H), opt.gobig_maximize)
     # now we trigger a do_run for each slice
     betterslices = []
@@ -896,7 +906,11 @@ def do_gobig(gobig_init, device, model, opt):
         opt.init_image = slice_image
         opt.save_settings = False # we don't need to keep settings for each slice, just the main image.
         opt.n_iter = 1 # no point doing multiple iterations since only one will be used
+        opt.improve_composition = False # don't want to do stretching and yet another init image during gobig
         opt.seed = opt.seed + 1
+        if opt.augment_prompt != None:
+            # now augment the prompt
+            opt.prompt = opt.augment_prompt + " " + original_prompt
         result = do_run(device, model, opt)
         resultslice = Image.open(result).convert('RGBA')
         betterslices.append((resultslice.copy(), coord_x, coord_y))
@@ -916,6 +930,7 @@ def do_gobig(gobig_init, device, model, opt):
         a = 255 if a > 255 else a
         i += 1
         shape = ((opt.W - i, opt.H - i), (i,i))
+    alpha_gradient.rectangle(shape, fill = 255) # one last one to make sure the non-overlap section is fully used.
     mask = Image.new('RGBA', (opt.W, opt.H), color=0)
     mask.putalpha(alpha)
     # now composite the slices together
@@ -1106,6 +1121,7 @@ def main():
                     "gobig_realesrgan": settings.gobig_realesrgan,
                     "gobig_keep_slices": settings.gobig_keep_slices,
                     "esrgan_model": settings.esrgan_model,
+                    "augment_prompt": settings.augment_prompt,
                     "config": config,
                     "filetype": filetype,
                     "hide_metadata": settings.hide_metadata,
