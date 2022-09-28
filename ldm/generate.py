@@ -855,7 +855,6 @@ class Generate:
             print(
                 f'>> loaded input image of size {image.width}x{image.height}'
             )
-
         if fit:
             image = self._fit_image(image, (width, height))
         else:

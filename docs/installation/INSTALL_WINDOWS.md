@@ -61,6 +61,10 @@ conda activate ldm     (step 6b)
     This will install all python requirements and activate the "ldm" environment
     which sets PATH and other environment variables properly.
 
+    Note that the long form of the first command is `conda env create -f environment.yml`. If the
+    environment file isn't specified, conda will default to `environment.yml`. You will need
+    to provide the `-f` option if you wish to load a different environment file at any point.
+
 7. Run the command:
 
     ```bash

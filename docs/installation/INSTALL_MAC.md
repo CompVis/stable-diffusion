@@ -190,6 +190,7 @@ conda install \
   -n ldm
 ```
 
+
 If it takes forever to run `conda env create -f environment-mac.yml`, try this:
 
 ```bash
@@ -201,12 +202,12 @@ conda clean \
 
 Or you could try to completley reset Anaconda:
 
-```bash
-conda update \
-  --force-reinstall \
-  -y \
-  -n base \
-  -c defaults conda
+    ```bash
+    conda update \
+      --force-reinstall \
+      -y \
+      -n base \
+     -c defaults conda
 ```
 
 ---
@@ -233,7 +234,7 @@ There are several causes of these errors:
     conda env remove -n ldm
     conda env create -f environment-mac.yml
     ```
-
+    
 4. If you have activated the ldm virtual environment and tried rebuilding it,
    maybe the problem could be that I have something installed that you don't and
    you'll just need to manually install it. Make sure you activate the virtual

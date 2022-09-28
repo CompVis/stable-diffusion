@@ -44,6 +44,9 @@ conda env create
 conda activate ldm
 ```
 
+Note that the first line may be abbreviated `conda env create`, since conda will
+look for `environment.yml` by default.
+
 You can also update an existing
 [latent diffusion](https://github.com/CompVis/latent-diffusion) environment by
 running
