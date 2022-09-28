@@ -1,6 +1,7 @@
 import os
 import sys
 import queue
+from connect import StableDiffusionConnectionManager
 
 
 if __name__ == "__main__":

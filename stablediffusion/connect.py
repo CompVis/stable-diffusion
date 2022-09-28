@@ -17,6 +17,23 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 HOME = os.path.expanduser("~")
 SDPATH = os.path.join(HOME, "stablediffusion")
 
+
+class StableDiffusionConnectionManager:
+    def __init__(self, *args, **kwargs):
+        """
+        Initialize all connections and workers
+        """
+        # create queues
+        self.request_queue = kwargs.get("request_queue", queue.SimpleQueue())
+        self.response_queue = kwargs.get("response_queue", queue.SimpleQueue())
+
+        # create request client
+        print("creating request worker...")
+        self.request_worker = StableDiffusionRequestQueueWorker(
+            port=50006,
+            pid=kwargs.get("pid"),
+        )
+
 SCRIPTS = {
     'txt2img': [
         ('prompt', ''),

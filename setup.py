@@ -30,7 +30,7 @@ setup(
         "torchmetrics",
         "kornia",
         "natsort",
-        "taming-transformers @ git+https://github.com/w4ffl35/taming-transformers.git#egg=taming-transformers",
+        "taming-transformers @ git+https://github.com/w4ffl35/taming-transformers.git#egg=taming",
         "clip @ git+https://github.com/w4ffl35/CLIP.git#egg=clip",
         "albumentations @ git+https://github.com/albumentations-team/albumentations#egg=albumentations",
     ],

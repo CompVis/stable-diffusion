@@ -79,12 +79,12 @@ def instantiate_from_config(config):
 
 
 def get_obj_from_str(string, reload=False):
-    from stablediffusion.ldm.models.diffusion.ddpm import LatentDiffusion
-    from stablediffusion.ldm.lr_scheduler import LambdaLinearScheduler
-    from stablediffusion.ldm.modules.diffusionmodules.openaimodel import UNetModel
-    from stablediffusion.ldm.models.autoencoder import AutoencoderKL
+    from ldm.models.diffusion.ddpm import LatentDiffusion
+    from ldm.lr_scheduler import LambdaLinearScheduler
+    from ldm.modules.diffusionmodules.openaimodel import UNetModel
+    from ldm.models.autoencoder import AutoencoderKL
     from torch.nn import Identity
-    from stablediffusion.ldm.modules.encoders.modules import FrozenCLIPEmbedder
+    from ldm.modules.encoders.modules import FrozenCLIPEmbedder
     ldm_diffusion_models = {
         "ddpm": {
             "LatentDiffusion": LatentDiffusion,
