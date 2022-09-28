@@ -19,25 +19,28 @@ from itertools import islice
 # load safety model
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
-safety_model_id = "CompVis/stable-diffusion-safety-checker"
-safety_feature_extractor = AutoFeatureExtractor.from_pretrained(safety_model_id)
+import logger as log
+HOME = os.path.expanduser("~")
+safety_model_id = f"{HOME}/stablediffusion/models/CompVis/stable-diffusion-safety-checker"
+#safety_feature_extractor = AutoFeatureExtractor.from_pretrained(safety_model_id)
+log.info("SETTING UP StableDiffusionSafetyChecker FROM PRETRAINED")
 safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
 
 # import txt2img functions from stable diffusion
 def load_model_from_config(config, ckpt, verbose=False):
-    print(f"Loading model from {ckpt}")
+    log.info(f"Loading model from {ckpt}")
     pl_sd = torch.load(ckpt, map_location="cpu")
     if "global_step" in pl_sd:
-        print(f"Global Step: {pl_sd['global_step']}")
+        log.info(f"Global Step: {pl_sd['global_step']}")
     sd = pl_sd["state_dict"]
     model = instantiate_from_config(config.model)
     m, u = model.load_state_dict(sd, strict=False)
     if len(m) > 0 and verbose:
-        print("missing keys:")
-        print(m)
+        log.error("missing keys:")
+        log.error(m)
     if len(u) > 0 and verbose:
-        print("unexpected keys:")
-        print(u)
+        log.error("unexpected keys:")
+        log.error(u)
 
     model.cuda().half()
     model.eval()
@@ -239,7 +242,7 @@ class BaseModel:
         return pil_images
 
     def check_safety(self, x_image):
-        safety_checker_input = safety_feature_extractor(self.numpy_to_pil(x_image), return_tensors="pt")
+        # safety_checker_input = safety_feature_extractor(self.numpy_to_pil(x_image), return_tensors="pt")
         x_checked_image, has_nsfw_concept = safety_checker(images=x_image, clip_input=safety_checker_input.pixel_values)
         assert x_checked_image.shape[0] == len(has_nsfw_concept)
         for i in range(len(has_nsfw_concept)):

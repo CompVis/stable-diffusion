@@ -1,11 +1,10 @@
+import os
 import torch
 import torch.nn as nn
 from functools import partial
 import clip
-from einops import rearrange, repeat
+from einops import repeat
 from transformers import CLIPTokenizer, CLIPTextModel
-import kornia
-
 from ldm.modules.x_transformer import Encoder, TransformerWrapper  # TODO: can we directly rely on lucidrains code and simply add this as a reuirement? --> test
 
 
@@ -54,8 +53,10 @@ class BERTTokenizer(AbstractEncoder):
     """ Uses a pretrained BERT tokenizer by huggingface. Vocab size: 30522 (?)"""
     def __init__(self, device="cuda", vq_interface=True, max_length=77):
         super().__init__()
+        HOME = os.path.expanduser("~")
         from transformers import BertTokenizerFast  # TODO: add to reuquirements
-        self.tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
+        print("SETTING UP bert-base-uncased FROM PRETRAINED")
+        self.tokenizer = BertTokenizerFast.from_pretrained(os.path.join(HOME, "stablediffusion/models/bert-base-uncased"))
         self.device = device
         self.vq_interface = vq_interface
         self.max_length = max_length
@@ -138,8 +139,15 @@ class FrozenCLIPEmbedder(AbstractEncoder):
     """Uses the CLIP transformer encoder for text (from Hugging Face)"""
     def __init__(self, version="openai/clip-vit-large-patch14", device="cuda", max_length=77):
         super().__init__()
-        self.tokenizer = CLIPTokenizer.from_pretrained(version)
-        self.transformer = CLIPTextModel.from_pretrained(version)
+        HOME = os.path.expanduser("~")
+        print("SETTING UP TOKENIZER FROM PRETRAINED")
+        self.tokenizer = CLIPTokenizer.from_pretrained(
+            os.path.join(HOME, 'stablediffusion/models', version),
+        )
+        print("SETTING UP TRANSFORMER FROM PRETRAINED")
+        self.transformer = CLIPTextModel.from_pretrained(
+            os.path.join(HOME, 'stablediffusion/models', version)
+        )
         self.device = device
         self.max_length = max_length
         self.freeze()
@@ -214,6 +222,8 @@ class FrozenClipImageEmbedder(nn.Module):
         self.register_buffer('std', torch.Tensor([0.26862954, 0.26130258, 0.27577711]), persistent=False)
 
     def preprocess(self, x):
+        import kornia
+
         # normalize to [0,1]
         x = kornia.geometry.resize(x, (224, 224),
                                    interpolation='bicubic',align_corners=True,

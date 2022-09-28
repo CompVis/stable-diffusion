@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from functools import partial
 from inspect import isfunction
 from collections import namedtuple
-from einops import rearrange, repeat, reduce
+from einops import rearrange, repeat
 
 # constants
 

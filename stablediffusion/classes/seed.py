@@ -21,9 +21,6 @@ from functools import wraps
 import numpy as np
 import torch
 
-# from pytorch_lightning.utilities import _TORCH_GREATER_EQUAL_1_7, rank_zero_warn
-# from pytorch_lightning.utilities.distributed import rank_zero_only
-
 def rank_zero_only(fn):
     @wraps(fn)
     def wrapped_fn(*args, **kwargs):
@@ -43,11 +40,9 @@ def _get_rank() -> int:
 rank_zero_only.rank = getattr(rank_zero_only, "rank", _get_rank())
 @rank_zero_only
 def rank_zero_debug(*args, stacklevel: int = 4, **kwargs):
-    #_debug(*args, stacklevel=stacklevel, **kwargs)
     pass
 @rank_zero_only
 def rank_zero_info(*args, stacklevel: int = 4, **kwargs):
-    #_info(*args, stacklevel=stacklevel, **kwargs)
     pass
 
 log = logging.getLogger(__name__)
