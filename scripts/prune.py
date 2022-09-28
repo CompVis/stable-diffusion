@@ -1,8 +1,14 @@
 import os
+from pathlib import Path
 import torch
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--input', '-I', type=str, help='Input file to prune', required = True)
+args = parser.parse_args()
+file = args.input
 
 
-def prune_it(p, keep_only_ema=False):
+def prune_it(p, keep_only_ema=True):
     print(f"prunin' in path: {p}")
     size_initial = os.path.getsize(p)
     nsd = dict()
@@ -18,14 +24,15 @@ def prune_it(p, keep_only_ema=False):
     if keep_only_ema:
         sd = nsd["state_dict"].copy()
         # infer ema keys
-        ema_keys = {k: "model_ema." + k[6:].replace(".", ".") for k in sd.keys() if k.startswith("model.")}
+        ema_keys = {k: "model_ema." + k[6:].replace(".", "") for k in sd.keys() if k.startswith('model.')}
         new_sd = dict()
 
         for k in sd:
             if k in ema_keys:
-                new_sd[k] = sd[ema_keys[k]].half()
+                print(k, ema_keys[k])
+                new_sd[k] = sd[ema_keys[k]]
             elif not k.startswith("model_ema.") or k in ["model_ema.num_updates", "model_ema.decay"]:
-                new_sd[k] = sd[k].half()
+                new_sd[k] = sd[k]
 
         assert len(new_sd) == len(sd) - len(ema_keys)
         nsd["state_dict"] = new_sd
@@ -33,7 +40,7 @@ def prune_it(p, keep_only_ema=False):
         sd = nsd['state_dict'].copy()
         new_sd = dict()
         for k in sd:
-            new_sd[k] = sd[k].half()
+            new_sd[k] = sd[k]
         nsd['state_dict'] = new_sd
 
     fn = f"{os.path.splitext(p)[0]}-pruned.ckpt" if not keep_only_ema else f"{os.path.splitext(p)[0]}-ema-pruned.ckpt"
@@ -48,4 +55,4 @@ def prune_it(p, keep_only_ema=False):
 
 
 if __name__ == "__main__":
-    prune_it('models/ldm/stable-diffusion-v1/model.ckpt')
+    prune_it(file)
