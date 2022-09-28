@@ -72,14 +72,16 @@ class InvokeAIWebServer:
             ping_timeout=60,
         )
 
-        # Outputs Route
-        self.app.config['OUTPUTS_FOLDER'] = f'../{args.outdir}'
 
-        @self.app.route('/outputs/<path:filename>')
-        def outputs(filename):
+        # Outputs Route
+        self.app.config['OUTPUTS_FOLDER'] = os.path.abspath(args.outdir)
+
+        @self.app.route('/outputs/<path:file_path>')
+        def outputs(file_path):
             return send_from_directory(
-                self.app.config['OUTPUTS_FOLDER'], filename
+                self.app.config['OUTPUTS_FOLDER'], file_path
             )
+
 
         # Base Route
         @self.app.route('/')
@@ -107,6 +109,10 @@ class InvokeAIWebServer:
         self.socketio.run(app=self.app, host=self.host, port=self.port)
 
     def setup_app(self):
+        self.result_url = 'outputs/'
+        self.init_image_url = 'outputs/init-images/'
+        self.mask_image_url = 'outputs/mask-images/'
+        self.intermediate_url = 'outputs/intermediates/'
         # location for "finished" images
         self.result_path = args.outdir
         # temporary path for intermediates
@@ -172,7 +178,7 @@ class InvokeAIWebServer:
                 metadata = retrieve_metadata(path)
                 image_array.append(
                     {
-                        'url': path,
+                        'url': self.get_url_from_image_path(path),
                         'mtime': os.path.getmtime(path),
                         'metadata': metadata['sd-metadata'],
                     }
@@ -217,7 +223,10 @@ class InvokeAIWebServer:
             socketio.emit('progressUpdate', progress)
             eventlet.sleep(0)
 
-            image = Image.open(original_image['url'])
+            original_image_path = self.get_image_path_from_url(original_image['url'])
+            # os.path.join(self.result_path, os.path.basename(original_image['url']))
+
+            image = Image.open(original_image_path)
 
             seed = (
                 original_image['metadata']['seed']
@@ -243,7 +252,7 @@ class InvokeAIWebServer:
             esrgan_parameters['seed'] = seed
             metadata = self.parameters_to_post_processed_image_metadata(
                 parameters=esrgan_parameters,
-                original_image_path=original_image['url'],
+                original_image_path=original_image_path,
                 type='esrgan',
             )
             command = parameters_to_command(esrgan_parameters)
@@ -257,7 +266,7 @@ class InvokeAIWebServer:
             )
 
             self.write_log_message(
-                f'[Upscaled] "{original_image["url"]}" > "{path}": {command}'
+                f'[Upscaled] "{original_image_path}" > "{path}": {command}'
             )
 
             progress['currentStatus'] = 'Finished'
@@ -272,7 +281,7 @@ class InvokeAIWebServer:
             socketio.emit(
                 'esrganResult',
                 {
-                    'url': os.path.relpath(path),
+                    'url': self.get_url_from_image_path(path),
                     'mtime': os.path.getmtime(path),
                     'metadata': metadata,
                 },
@@ -296,7 +305,9 @@ class InvokeAIWebServer:
             socketio.emit('progressUpdate', progress)
             eventlet.sleep(0)
 
-            image = Image.open(original_image['url'])
+            original_image_path = self.get_image_path_from_url(original_image['url'])
+
+            image = Image.open(original_image_path)
 
             seed = (
                 original_image['metadata']['seed']
@@ -321,7 +332,7 @@ class InvokeAIWebServer:
             gfpgan_parameters['seed'] = seed
             metadata = self.parameters_to_post_processed_image_metadata(
                 parameters=gfpgan_parameters,
-                original_image_path=original_image['url'],
+                original_image_path=original_image_path,
                 type='gfpgan',
             )
             command = parameters_to_command(gfpgan_parameters)
@@ -335,7 +346,7 @@ class InvokeAIWebServer:
             )
 
             self.write_log_message(
-                f'[Fixed faces] "{original_image["url"]}" > "{path}": {command}'
+                f'[Fixed faces] "{original_image_path}" > "{path}": {command}'
             )
 
             progress['currentStatus'] = 'Finished'
@@ -350,7 +361,7 @@ class InvokeAIWebServer:
             socketio.emit(
                 'gfpganResult',
                 {
-                    'url': os.path.relpath(path),
+                    'url': self.get_url_from_image_path(path),
                     'mtime': os.path.getmtime(path),
                     'metadata': metadata,
                 },
@@ -368,6 +379,7 @@ class InvokeAIWebServer:
             print(f'>> Delete requested "{path}"')
             from send2trash import send2trash
 
+            path = self.get_image_path_from_url(path)
             send2trash(path)
             socketio.emit('imageDeleted', {'url': path, 'uuid': uuid})
 
@@ -382,8 +394,9 @@ class InvokeAIWebServer:
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             newFile = open(file_path, 'wb')
             newFile.write(bytes)
+
             socketio.emit(
-                'initialImageUploaded', {'url': file_path, 'uuid': ''}
+                'initialImageUploaded', {'url': self.get_url_from_image_path(file_path), 'uuid': ''}
             )
 
         # TODO: I think this needs a safety mechanism.
@@ -397,7 +410,8 @@ class InvokeAIWebServer:
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             newFile = open(file_path, 'wb')
             newFile.write(bytes)
-            socketio.emit('maskImageUploaded', {'url': file_path, 'uuid': ''})
+
+            socketio.emit('maskImageUploaded', {'url': self.get_url_from_image_path(file_path), 'uuid': ''})
 
     # App Functions
     def get_system_config(self):
@@ -420,37 +434,58 @@ class InvokeAIWebServer:
             if 'with_variations' in generation_parameters
             else []
         )
+
         """
+        TODO: RE-IMPLEMENT THE COMMENTED-OUT CODE
         If a result image is used as an init image, and then deleted, we will want to be
         able to use it as an init image in the future. Need to copy it.
 
         If the init/mask image doesn't exist in the init_image_path/mask_image_path,
         make a unique filename for it and copy it there.
         """
+        # if 'init_img' in generation_parameters:
+        #     filename = os.path.basename(generation_parameters['init_img'])
+        #     abs_init_image_path = os.path.join(self.init_image_path, filename)
+        #     if not os.path.exists(
+        #         abs_init_image_path
+        #     ):
+        #         unique_filename = self.make_unique_init_image_filename(
+        #             filename
+        #         )
+        #         new_path = os.path.join(self.init_image_path, unique_filename)
+        #         shutil.copy(abs_init_image_path, new_path)
+        #         generation_parameters['init_img'] = os.path.abspath(new_path)
+        #     else:
+        #         generation_parameters['init_img'] = os.path.abspath(os.path.join(self.init_image_path, filename))
+
+        #     if 'init_mask' in generation_parameters:
+        #         filename = os.path.basename(generation_parameters['init_mask'])
+        #         if not os.path.exists(
+        #             os.path.join(self.mask_image_path, filename)
+        #         ):
+        #             unique_filename = self.make_unique_init_image_filename(
+        #                 filename
+        #             )
+        #             new_path = os.path.join(
+        #                 self.init_image_path, unique_filename
+        #             )
+        #             shutil.copy(generation_parameters['init_img'], new_path)
+        #             generation_parameters['init_mask'] = os.path.abspath(new_path)
+        #         else:
+        #             generation_parameters['init_mas'] = os.path.abspath(os.path.join(self.mask_image_path, filename))
+
+
+        # We need to give absolute paths to the generator, stash the URLs for later
+        init_img_url =  None;
+        mask_img_url =  None;
+
         if 'init_img' in generation_parameters:
-            filename = os.path.basename(generation_parameters['init_img'])
-            if not os.path.exists(
-                os.path.join(self.init_image_path, filename)
-            ):
-                unique_filename = self.make_unique_init_image_filename(
-                    filename
-                )
-                new_path = os.path.join(self.init_image_path, unique_filename)
-                shutil.copy(generation_parameters['init_img'], new_path)
-                generation_parameters['init_img'] = new_path
-            if 'init_mask' in generation_parameters:
-                filename = os.path.basename(generation_parameters['init_mask'])
-                if not os.path.exists(
-                    os.path.join(self.mask_image_path, filename)
-                ):
-                    unique_filename = self.make_unique_init_image_filename(
-                        filename
-                    )
-                    new_path = os.path.join(
-                        self.init_image_path, unique_filename
-                    )
-                    shutil.copy(generation_parameters['init_img'], new_path)
-                    generation_parameters['init_mask'] = new_path
+            init_img_url = generation_parameters['init_img']
+            generation_parameters['init_img'] = self.get_image_path_from_url(generation_parameters['init_img'])
+
+        if 'init_mask' in generation_parameters:
+            mask_img_url = generation_parameters['init_mask']
+            generation_parameters['init_mask'] = self.get_image_path_from_url(generation_parameters['init_mask'])
 
         totalSteps = self.calculate_real_steps(
             steps=generation_parameters['steps'],
@@ -493,13 +528,14 @@ class InvokeAIWebServer:
                 image = self.generate.sample_to_image(sample)
                 metadata = self.parameters_to_generated_image_metadata(generation_parameters)
                 command = parameters_to_command(generation_parameters)
+
                 path = self.save_image(image, command, metadata, self.intermediate_path, step_index=step_index, postprocessing=False)
 
                 step_index += 1
                 self.socketio.emit(
                     'intermediateResult',
                     {
-                        'url': os.path.relpath(path),
+                        'url': self.get_url_from_image_path(path),
                         'mtime': os.path.getmtime(path),
                         'metadata': metadata,
                     },
@@ -577,9 +613,17 @@ class InvokeAIWebServer:
             self.socketio.emit('progressUpdate', progress)
             eventlet.sleep(0)
 
+            # restore the stashed URLS and discard the paths, we are about to send the result to client
+            if 'init_img' in all_parameters:
+                all_parameters['init_img'] = init_img_url
+
+            if 'init_mask' in all_parameters:
+                all_parameters['init_mask'] = mask_img_url
+
             metadata = self.parameters_to_generated_image_metadata(
                 all_parameters
             )
+
             command = parameters_to_command(all_parameters)
 
             path = self.save_image(
@@ -612,7 +656,7 @@ class InvokeAIWebServer:
             self.socketio.emit(
                 'generationResult',
                 {
-                    'url': os.path.relpath(path),
+                    'url': self.get_url_from_image_path(path),
                     'mtime': os.path.getmtime(path),
                     'metadata': metadata,
                 },
@@ -713,9 +757,7 @@ class InvokeAIWebServer:
             rfc_dict['type'] = 'img2img'
             rfc_dict['strength'] = parameters['strength']
             rfc_dict['fit'] = parameters['fit']  # TODO: Noncompliant
-            rfc_dict['orig_hash'] = calculate_init_img_hash(
-                parameters['init_img']
-            )
+            rfc_dict['orig_hash'] = calculate_init_img_hash(self.get_image_path_from_url(parameters['init_img']))
             rfc_dict['init_image_path'] = parameters[
                 'init_img'
             ]  # TODO: Noncompliant
@@ -723,9 +765,7 @@ class InvokeAIWebServer:
                 'sampler'
             ] = 'ddim'  # TODO: FIX ME WHEN IMG2IMG SUPPORTS ALL SAMPLERS
             if 'init_mask' in parameters:
-                rfc_dict['mask_hash'] = calculate_init_img_hash(
-                    parameters['init_mask']
-                )  # TODO: Noncompliant
+                rfc_dict['mask_hash'] = calculate_init_img_hash(self.get_image_path_from_url(parameters['init_mask'])) # TODO: Noncompliant
                 rfc_dict['mask_image_path'] = parameters[
                     'init_mask'
                 ]  # TODO: Noncompliant
@@ -742,7 +782,7 @@ class InvokeAIWebServer:
         # top-level metadata minus `image` or `images`
         metadata = self.get_system_config()
 
-        orig_hash = calculate_init_img_hash(original_image_path)
+        orig_hash = calculate_init_img_hash(self.get_image_path_from_url(original_image_path))
 
         image = {'orig_path': original_image_path, 'orig_hash': orig_hash}
 
@@ -790,7 +830,7 @@ class InvokeAIWebServer:
             image=image, dream_prompt=command, metadata=metadata, name=filename
         )
 
-        return path
+        return os.path.abspath(path)
 
     def make_unique_init_image_filename(self, name):
         uuid = uuid4().hex
@@ -807,6 +847,29 @@ class InvokeAIWebServer:
         message = f'{message}\n'
         with open(self.log_path, 'a', encoding='utf-8') as file:
             file.writelines(message)
+
+    def get_image_path_from_url(self, url):
+        """Given a url to an image used by the client, returns the absolute file path to that image"""
+        if 'init-images' in url:
+            return os.path.abspath(os.path.join(self.init_image_path, os.path.basename(url)))
+        elif 'mask-images' in url:
+            return os.path.abspath(os.path.join(self.mask_image_path, os.path.basename(url)))
+        elif 'intermediates' in url:
+            return os.path.abspath(os.path.join(self.intermediate_path, os.path.basename(url)))
+        else:
+            return os.path.abspath(os.path.join(self.result_path, os.path.basename(url)))
+
+    def get_url_from_image_path(self, path):
+        """Given an absolute file path to an image, returns the URL that the client can use to load the image"""
+        if 'init-images' in path:
+            return os.path.join(self.init_image_url, os.path.basename(path))
+        elif 'mask-images' in path:
+            return os.path.join(self.mask_image_url, os.path.basename(path))
+        elif 'intermediates' in path:
+            return os.path.join(self.intermediate_url, os.path.basename(path))
+        else:
+            return os.path.join(self.result_url, os.path.basename(path))
+
 
 
 class CanceledException(Exception):
