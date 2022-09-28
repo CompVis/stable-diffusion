@@ -405,6 +405,7 @@ def do_run(device, model, opt):
                                 metadata.add_text("ETA", str(opt.ddim_eta))
                                 metadata.add_text("method", str(opt.method))
                                 metadata.add_text("init_image", str(opt.init_image))
+                                metadata.add_text("variance", str(opt.variance))
 
                             for x_sample in x_samples_ddim:
                                 x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
