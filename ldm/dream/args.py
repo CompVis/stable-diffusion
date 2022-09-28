@@ -467,35 +467,20 @@ class Args(object):
             description=
             """
             *Image generation:*
-            To generate images, type a text prompt with optional switches. Example:
-                 a fantastic alien landscape -W576 -H512 -s60 -n4
+                 dream> a fantastic alien landscape -W576 -H512 -s60 -n4
 
             *postprocessing*
-            To post-process a previously-generated image, use the "!fix" command, and
-            provide the image filename and postprocessing options. You may provide either the filename,
-            in which case the script will look in the current output directory, or an arbitrary absolute or
-            relative path to the desired PNG file.
-                   -G (strength)        - apply face-fixing, e.g. -G0.8
-                   -U (scaleg)          - upscale to the desired dimensions with ersgan, e.g. -U2
-                   --embiggen (scale)   - upscale using the embiggen algorithm
-                   -ft (algorithm)      - select which face-fixing algorithm to use (gfpgan|codeformer)
-
-            Example: !fix 0000045.4829112.png -G1 -U4 -ft codeformer
+                !fix applies upscaling/facefixing to a previously-generated image.
+                dream> !fix 0000045.4829112.png -G1 -U4 -ft codeformer
 
             *History manipulation*
-            Use !fetch to retrieve the image generation parameters used to generate a previously-generated
-            image. The original command will be inserted onto the command line for editing (Linux, Mac), or
-            printed as a comment above the dream> prompt (Windows). If a bare filename is provided, the script
-            will look in the current output directory
+            !fetch retrieves the command used to generate an earlier image.
+                dream> !fetch 0000015.8929913.png
+                dream> a fantastic alien landscape -W 576 -H 512 -s 60 -A plms -C 7.5
 
-            Example: dream> !fetch 0000015.8929913.png
-                     dream> a fantastic alien landscape -W 576 -H 512 -s 60 -A plms -C 7.5
+            !history lists all the commands issued during the current session.
 
-            Use !history to get a numbered list of the past 1000 commands (Linux, Mac) or the commands issued
-            during the current session (Windows).
-
-            Use !NN to retrieve the NNth command from the history list and load it into the command line
-            for editing and re-issuing.
+            !NN retrieves the NNth command from the history
             """
         )
         render_group     = parser.add_argument_group('General rendering')
@@ -663,7 +648,7 @@ class Args(object):
             '-embiggen',
             nargs='+',
             type=float,
-            help='Embiggen tiled img2img for higher resolution and detail without extra VRAM usage. Takes scale factor relative to the size of the --init_img (-I), followed by ESRGAN upscaling strength (0-1.0), followed by minimum amount of overlap between tiles as a decimal ratio (0 - 1.0) or number of pixels. ESRGAN strength defaults to 0.75, and overlap defaults to 0.25 . ESRGAN is used to upscale the init prior to cutting it into tiles/pieces to run through img2img and then stitch back togeather.',
+            help='Arbitrary upscaling using img2img. Provide scale factor (0.75), optionally followed by strength (0.75) and tile overlap proportion (0.25).',
             default=None,
         )
         postprocessing_group.add_argument(
@@ -671,7 +656,7 @@ class Args(object):
             '-embiggen_tiles',
             nargs='+',
             type=int,
-            help='If while doing Embiggen we are altering only parts of the image, takes a list of tiles by number to process and replace onto the image e.g. `1 3 5`, useful for redoing problematic spots from a prior Embiggen run',
+            help='For embiggen, provide list of tiles to process and replace onto the image e.g. `1 3 5`.',
             default=None,
         )
         special_effects_group.add_argument(
