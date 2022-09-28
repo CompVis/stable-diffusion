@@ -1,5 +1,4 @@
-CLIP/
-taming-transformers/
+src/
 init_images/
 _esrgan_/
 *.png
