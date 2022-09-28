@@ -4,21 +4,19 @@ import time
 import torch
 import torchvision
 import pytorch_lightning as pl
-
 from packaging import version
 from omegaconf import OmegaConf
 from torch.utils.data import random_split, DataLoader, Dataset, Subset
 from functools import partial
 from PIL import Image
-
 from pytorch_lightning import seed_everything
 from pytorch_lightning.trainer import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, Callback, LearningRateMonitor
 from pytorch_lightning.utilities.distributed import rank_zero_only
 from pytorch_lightning.utilities import rank_zero_info
 
-from ldm.data.base import Txt2ImgIterableBaseDataset
-from ldm.util import instantiate_from_config
+from stablediffusion.ldm.data.base import Txt2ImgIterableBaseDataset
+from stablediffusion.ldm.util import instantiate_from_config
 
 
 def get_parser(**parser_kwargs):

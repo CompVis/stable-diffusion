@@ -5,8 +5,7 @@ from functools import partial
 import clip
 from einops import repeat
 from transformers import CLIPTokenizer, CLIPTextModel
-import kornia
-from ldm.modules.x_transformer import Encoder, TransformerWrapper  # TODO: can we directly rely on lucidrains code and simply add this as a reuirement? --> test
+from stablediffusion.ldm.modules.x_transformer import Encoder, TransformerWrapper  # TODO: can we directly rely on lucidrains code and simply add this as a reuirement? --> test
 
 
 class AbstractEncoder(nn.Module):
@@ -223,6 +222,8 @@ class FrozenClipImageEmbedder(nn.Module):
         self.register_buffer('std', torch.Tensor([0.26862954, 0.26130258, 0.27577711]), persistent=False)
 
     def preprocess(self, x):
+        import kornia
+
         # normalize to [0,1]
         x = kornia.geometry.resize(x, (224, 224),
                                    interpolation='bicubic',align_corners=True,
@@ -238,6 +239,6 @@ class FrozenClipImageEmbedder(nn.Module):
 
 
 if __name__ == "__main__":
-    from ldm.util import count_params
+    from stablediffusion.ldm.util import count_params
     model = FrozenCLIPEmbedder()
     count_params(model, verbose=True)

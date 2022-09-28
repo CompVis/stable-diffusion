@@ -1,6 +1,6 @@
 model:
   base_learning_rate: 5.0e-05
-  target: ldm.models.diffusion.ddpm.LatentDiffusion
+  target: stablediffusion.ldmmodels.diffusion.ddpm.LatentDiffusion
   params:
     linear_start: 0.00085
     linear_end: 0.012
@@ -18,7 +18,7 @@ model:
     use_ema: False
 
     unet_config:
-      target: ldm.modules.diffusionmodules.openaimodel.UNetModel
+      target: stablediffusion.ldmmodules.diffusionmodules.openaimodel.UNetModel
       params:
         image_size: 32
         in_channels: 4
@@ -42,7 +42,7 @@ model:
         legacy: False
 
     first_stage_config:
-      target: ldm.models.autoencoder.AutoencoderKL
+      target: stablediffusion.ldmmodels.autoencoder.AutoencoderKL
       params:
         embed_dim: 4
         monitor: val/rec_loss
@@ -65,7 +65,7 @@ model:
           target: torch.nn.Identity
 
     cond_stage_config:
-      target: ldm.modules.encoders.modules.BERTEmbedder
+      target: stablediffusion.ldmmodules.encoders.modules.BERTEmbedder
       params:
         n_embed: 1280
         n_layer: 32

@@ -1,6 +1,6 @@
 model:
   base_learning_rate: 1.0e-06
-  target: ldm.models.diffusion.ddpm.LatentDiffusion
+  target: stablediffusion.ldmmodels.diffusion.ddpm.LatentDiffusion
   params:
     linear_start: 0.0015
     linear_end: 0.0195
@@ -15,7 +15,7 @@ model:
     conditioning_key: crossattn
     monitor: val/loss_simple_ema
     unet_config:
-      target: ldm.modules.diffusionmodules.openaimodel.UNetModel
+      target: stablediffusion.ldmmodules.diffusionmodules.openaimodel.UNetModel
       params:
         image_size: 32
         in_channels: 4
@@ -39,7 +39,7 @@ model:
         transformer_depth: 1
         context_dim: 512
     first_stage_config:
-      target: ldm.models.autoencoder.VQModelInterface
+      target: stablediffusion.ldmmodels.autoencoder.VQModelInterface
       params:
         embed_dim: 4
         n_embed: 16384
@@ -63,7 +63,7 @@ model:
         lossconfig:
           target: torch.nn.Identity
     cond_stage_config:
-      target: ldm.modules.encoders.modules.ClassEmbedder
+      target: stablediffusion.ldmmodules.encoders.modules.ClassEmbedder
       params:
         embed_dim: 512
         key: class_label
@@ -74,12 +74,12 @@ data:
     num_workers: 12
     wrap: false
     train:
-      target: ldm.data.imagenet.ImageNetTrain
+      target: stablediffusion.ldmdata.imagenet.ImageNetTrain
       params:
         config:
           size: 256
     validation:
-      target: ldm.data.imagenet.ImageNetValidation
+      target: stablediffusion.ldmdata.imagenet.ImageNetValidation
       params:
         config:
           size: 256

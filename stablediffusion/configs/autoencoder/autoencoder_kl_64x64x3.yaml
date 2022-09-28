@@ -1,11 +1,11 @@
 model:
   base_learning_rate: 4.5e-6
-  target: ldm.models.autoencoder.AutoencoderKL
+  target: stablediffusion.ldmmodels.autoencoder.AutoencoderKL
   params:
     monitor: "val/rec_loss"
     embed_dim: 3
     lossconfig:
-      target: ldm.modules.losses.LPIPSWithDiscriminator
+      target: stablediffusion.ldmmodules.losses.LPIPSWithDiscriminator
       params:
         disc_start: 50001
         kl_weight: 0.000001
@@ -30,12 +30,12 @@ data:
     batch_size: 12
     wrap: True
     train:
-      target: ldm.data.imagenet.ImageNetSRTrain
+      target: stablediffusion.ldmdata.imagenet.ImageNetSRTrain
       params:
         size: 256
         degradation: pil_nearest
     validation:
-      target: ldm.data.imagenet.ImageNetSRValidation
+      target: stablediffusion.ldmdata.imagenet.ImageNetSRValidation
       params:
         size: 256
         degradation: pil_nearest

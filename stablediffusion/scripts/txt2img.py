@@ -17,9 +17,9 @@ from pytorch_lightning import seed_everything
 from torch import autocast
 from contextlib import  nullcontext
 
-from ldm.util import instantiate_from_config
-from ldm.models.diffusion.ddim import DDIMSampler
-from ldm.models.diffusion.plms import PLMSSampler
+from stablediffusion.ldmutil import instantiate_from_config
+from stablediffusion.ldmmodels.diffusion.ddim import DDIMSampler
+from stablediffusion.ldmmodels.diffusion.plms import PLMSSampler
 
 # load safety model
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
