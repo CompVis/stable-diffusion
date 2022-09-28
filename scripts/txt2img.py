@@ -249,7 +249,7 @@ def main():
             if opt.prompt in line:
                 outfolder = line[0:36]
     if len(outfolder) == 0:
-        outfolder = str(opt.fprefix or uuid.uuid4()})
+        outfolder = str(opt.fprefix or uuid.uuid4())
     promt_text = f"{outfolder} {args}"
     with open(prompts_file, "a") as f:
         f.write(promt_text)
