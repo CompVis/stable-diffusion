@@ -15,13 +15,11 @@ from ldm.dream.pngwriter import PngWriter
 from ldm.dream.image_util import make_grid
 from ldm.dream.log import write_log
 from omegaconf import OmegaConf
-
 from backend.invoke_ai_web_server import InvokeAIWebServer
 
-# Placeholder to be replaced with proper class that tracks the
-# outputs and associates with the prompt that generated them.
-# Just want to get the formatting look right for now.
-output_cntr = 0
+# The output counter labels each output and is keyed to the
+# command-line history
+output_cntr = completer.get_current_history_length()+1
 
 def main():
     """Initialize command-line parsers and the diffusion model"""
@@ -260,17 +258,21 @@ def main_loop(gen, opt, infile):
         last_results = []
         try:
             file_writer      = PngWriter(current_outdir)
-            prefix           = file_writer.unique_prefix()
             results          = []  # list of filename, prompt pairs
             grid_images      = dict()  # seed -> Image, only used if `opt.grid`
             prior_variations = opt.with_variations or []
 
-            def image_writer(image, seed, upscaled=False, first_seed=None):
+            def image_writer(image, seed, upscaled=False, first_seed=None, use_prefix=None):
                 # note the seed is the seed of the current image
                 # the first_seed is the original seed that noise is added to
                 # when the -v switch is used to generate variations
-                path = None
                 nonlocal prior_variations
+                if use_prefix is not None:
+                    prefix = use_prefix
+                else:
+                    prefix           = file_writer.unique_prefix()
+
+                path = None
                 if opt.grid:
                     grid_images[seed] = image
                 else:
@@ -349,7 +351,10 @@ def main_loop(gen, opt, infile):
         global output_cntr
         output_cntr = write_log(results, log_path ,('txt', 'md'), output_cntr)
         print()
-        completer.add_to_history(command)
+        if operation == 'postprocess':
+            completer.add_history(f'!fix {command}')
+        else:
+            completer.add_history(command)
 
     print('goodbye!')
 
@@ -373,7 +378,7 @@ def do_postprocess (gen, opt, callback):
     opt.save_original = True # do not overwrite old image!
     opt.last_operation    = f'postprocess:{tool}'
     gen.apply_postprocessor(
-        image_path      = opt.prompt,
+        image_path      = file_path,
         tool            = tool,
         gfpgan_strength = opt.gfpgan_strength,
         codeformer_fidelity = opt.codeformer_fidelity,
@@ -424,7 +429,7 @@ def choose_postprocess_name(opt,prefix,seed) -> str:
     filename  = None
     available = False
     while not available:
-        if counter > 0:
+        if counter == 0:
             filename = f'{prefix}.{seed}.{modifier}.png'
         else:
             filename = f'{prefix}.{seed}.{modifier}-{counter:02d}.png'
@@ -499,17 +504,6 @@ def retrieve_dream_command(opt,file_path):
         path = file_path
     cmd = dream_cmd_from_png(path)
     completer.set_line(cmd)
-
-def write_log_message(results, log_path):
-    """logs the name of the output image, prompt, and prompt args to the terminal and log file"""
-    global output_cntr
-    log_lines = [f'{path}: {prompt}\n' for path, prompt in results]
-    for l in log_lines:
-        output_cntr += 1
-        print(f'[{output_cntr}] {l}',end='')
-
-    with open(log_path, 'a', encoding='utf-8') as file:
-        file.writelines(log_lines)
 
 if __name__ == '__main__':
     main()
