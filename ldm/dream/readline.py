@@ -21,6 +21,10 @@ try:
 except:
     readline_available = False
 
+#to simulate what happens on windows systems, uncomment
+# this line
+#readline_available = False
+
 IMG_EXTENSIONS     = ('.png','.jpg','.jpeg')
 COMMANDS = (
     '--steps','-s',
@@ -101,12 +105,14 @@ class Completer:
             response = None
         return response
 
-    def add_to_history(self,line):
+    def add_history(self,line):
         '''
-        This is a no-op; readline handles this automatically. But we provide it
-        for DummyReadline compatibility.
+        Pass thru to readline
         '''
-        pass
+        readline.add_history(line)
+
+    def remove_history_item(self,pos):
+        readline.remove_history_item(pos)
 
     def add_seed(self, seed):
         '''
@@ -226,7 +232,7 @@ class DummyCompleter(Completer):
         super().__init__(options)
         self.history = list()
         
-    def add_to_history(self,line):
+    def add_history(self,line):
         self.history.append(line)
 
     def get_current_history_length(self):
@@ -234,6 +240,9 @@ class DummyCompleter(Completer):
 
     def get_history_item(self,index):
         return self.history[index-1]
+
+    def remove_history_item(self,index):
+        return self.history.pop(index-1)
 
     def set_line(self,line):
         print(f'# {line}')
@@ -244,6 +253,7 @@ if readline_available:
     readline.set_completer(
         completer.complete
     )
+    readline.set_auto_history(False)
     readline.set_pre_input_hook(completer._pre_input_hook)
     readline.set_completer_delims(' ')
     readline.parse_and_bind('tab: complete')

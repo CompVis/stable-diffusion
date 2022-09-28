@@ -446,8 +446,36 @@ class Args(object):
     def _create_dream_cmd_parser(self):
         parser = argparse.ArgumentParser(
             description="""
-            Generate example: dream> a fantastic alien landscape -W576 -H512 -s60 -n4
-            Postprocess example: dream> !pp 0000045.4829112.png -G1 -U4 -ft codeformer
+            *Image generation:*
+            To generate images, type a text prompt with optional switches. Example:
+                 a fantastic alien landscape -W576 -H512 -s60 -n4
+
+            *postprocessing*
+            To post-process a previously-generated image, use the "!fix" command, and
+            provide the image filename and postprocessing options. You may provide either the filename,
+            in which case the script will look in the current output directory, or an arbitrary absolute or
+            relative path to the desired PNG file.
+                   -G (strength)        - apply face-fixing, e.g. -G0.8
+                   -U (scaleg)          - upscale to the desired dimensions with ersgan, e.g. -U2
+                   --embiggen (scale)   - upscale using the embiggen algorithm
+                   -ft (algorithm)      - select which face-fixing algorithm to use (gfpgan|codeformer)
+
+            Example: !fix 0000045.4829112.png -G1 -U4 -ft codeformer
+
+            *History manipulation*
+            Use !fetch to retrieve the image generation parameters used to generate a previously-generated
+            image. The original command will be inserted onto the command line for editing (Linux, Mac), or
+            printed as a comment above the dream> prompt (Windows). If a bare filename is provided, the script
+            will look in the current output directory
+
+            Example: dream> !fetch 0000015.8929913.png
+                     dream> a fantastic alien landscape -W 576 -H 512 -s 60 -A plms -C 7.5
+
+            Use !history to get a numbered list of the past 1000 commands (Linux, Mac) or the commands issued
+            during the current session (Windows).
+
+            Use !NN to retrieve the NNth command from the history list and load it into the command line
+            for editing and re-issuing.
             """
         )
         render_group     = parser.add_argument_group('General rendering')
