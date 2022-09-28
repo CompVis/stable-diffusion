@@ -1,19 +1,39 @@
-# **Interactive Command-Line Interface**
+---
+title: CLI
+hide:
+  - toc
+---
 
-The `dream.py` script, located in `scripts/dream.py`, provides an interactive interface to image generation similar to the "dream mothership" bot that Stable AI provided on its Discord server.
+# :material-bash: CLI
 
-Unlike the txt2img.py and img2img.py scripts provided in the original CompViz/stable-diffusion source code repository, the time-consuming initialization of the AI model initialization only happens once. After that image generation
-from the command-line interface is very fast.
+## **Interactive Command Line Interface**
 
-The script uses the readline library to allow for in-line editing, command history (up and down arrows), autocompletion, and more. To help keep track of which prompts generated which images, the script writes a log file of image names and prompts to the selected output directory.
+The `dream.py` script, located in `scripts/dream.py`, provides an interactive
+interface to image generation similar to the "dream mothership" bot that Stable
+AI provided on its Discord server.
 
-In addition, as of version 1.02, it also writes the prompt into the PNG file's metadata where it can be retrieved using scripts/images2prompt.py
+Unlike the `txt2img.py` and `img2img.py` scripts provided in the original
+[CompVis/stable-diffusion](https://github.com/CompVis/stable-diffusion) source
+code repository, the time-consuming initialization of the AI model
+initialization only happens once. After that image generation from the
+command-line interface is very fast.
+
+The script uses the readline library to allow for in-line editing, command
+history (++up++ and ++down++), autocompletion, and more. To help keep track of
+which prompts generated which images, the script writes a log file of image
+names and prompts to the selected output directory.
+
+In addition, as of version 1.02, it also writes the prompt into the PNG file's
+metadata where it can be retrieved using `scripts/images2prompt.py`
 
 The script is confirmed to work on Linux, Windows and Mac systems.
 
-_Note:_ This script runs from the command-line or can be used as a Web application. The Web GUI is currently rudimentary, but a much better replacement is on its way.
+!!! note
 
-```
+    This script runs from the command-line or can be used as a Web application. The Web GUI is
+    currently rudimentary, but a much better replacement is on its way.
+
+```bash
 (ldm) ~/stable-diffusion$ python3 ./scripts/dream.py
 * Initializing, be patient...
 Loading model from models/ldm/text2img-large/model.ckpt
@@ -37,52 +57,54 @@ dream> q
 00011.png: "there's a fly in my soup" -n6 -g -S 2685670268
 ```
 
-<p align='center'>
-<img src="../assets/dream-py-demo.png"/>
-</p>
+![dream-py-demo](../assets/dream-py-demo.png)
 
-The `dream>` prompt's arguments are pretty much identical to those
-used in the Discord bot, except you don't need to type "!dream" (it
-doesn't hurt if you do). A significant change is that creation of
-individual images is now the default unless --grid (-g) is given. A
-full list is given in [List of prompt arguments]
-(#list-of-prompt-arguments).
+The `dream>` prompt's arguments are pretty much identical to those used in the
+Discord bot, except you don't need to type "!dream" (it doesn't hurt if you do).
+A significant change is that creation of individual images is now the default
+unless `--grid` (`-g`) is given. A full list is given in
+[List of prompt arguments](#list-of-prompt-arguments).
 
-# Arguments
+## Arguments
 
-The script itself also recognizes a series of command-line switches
-that will change important global defaults, such as the directory for
-image outputs and the location of the model weight files.
+The script itself also recognizes a series of command-line switches that will
+change important global defaults, such as the directory for image outputs and
+the location of the model weight files.
 
-## List of arguments recognized at the command line:
+### List of arguments recognized at the command line
 
-These command-line arguments can be passed to dream.py when you first
-run it from the Windows, Mac or Linux command line. Some set defaults
-that can be overridden on a per-prompt basis (see [List of prompt
-arguments] (#list-of-prompt-arguments). Others
+These command-line arguments can be passed to `dream.py` when you first run it
+from the Windows, Mac or Linux command line. Some set defaults that can be
+overridden on a per-prompt basis (see [List of prompt arguments]
+(#list-of-prompt-arguments). Others
 
-| Argument           |  Shortcut  |  Default            |  Description |
-|--------------------|------------|---------------------|--------------|
-| --help             | -h         |                     | Print a concise help message.  |
-| --outdir <path>    |  -o<path> | outputs/img_samples | Location for generated images. |
-| --prompt_as_dir    |  -p        | False               | Name output directories using the prompt text. |
-| --from_file <path> |            | None                | Read list of prompts from a file. Use "-" to read from standard input |
-| --model <modelname>|            | stable-diffusion-1.4| Loads model specified in configs/models.yaml. Currently one of "stable-diffusion-1.4" or "laion400m"|
-| --full_precision   |  -F        | False               | Run in slower full-precision mode. Needed for Macintosh M1/M2 hardware and some older video cards. |
-| --web              |            | False               | Start in web server mode |
-| --host <ip addr>   |            | localhost           | Which network interface web server should listen on. Set to 0.0.0.0 to listen on any. |
-| --port <port>      |            | 9090                | Which port web server should listen for requests on. |
-| --config <path>    |            | configs/models.yaml | Configuration file for models and their weights.     |
-| --iterations <int> |   -n<int> | 1                   | How many images to generate per prompt. |
-| --grid             |   -g       | False               | Save all image series as a grid rather than individually. |
-| --sampler <sampler>| -A<sampler>| k_lms              | Sampler to use. Use -h to get list of available samplers. |
-| --seamless         |            | False               | Create interesting effects by tiling elements of the image. |
-| --embedding_path <path>|        | None                | Path to pre-trained embedding manager checkpoints, for custom models |
-| --gfpgan_dir       |            | src/gfpgan        | Path to where GFPGAN is installed. |
-| --gfpgan_model_path|            | experiments/pretrained_models/GFPGANv1.3.pth| Path to GFPGAN model file, relative to --gfpgan_dir. |
-| --device <device>  | -d<device>| torch.cuda.current_device() | Device to run SD on, e.g. "cuda:0" |
+| Argument <img width="240" align="right"/> | Shortcut <img width="100" align="right"/> | Default <img width="320" align="right"/>       | Description                                                                                          |
+| ----------------------------------------- | ----------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `--help`                                  | `-h`                                      |                                                | Print a concise help message.                                                                        |
+| `--outdir <path>`                         | `-o<path>`                                | `outputs/img_samples`                          | Location for generated images.                                                                       |
+| `--prompt_as_dir`                         | `-p`                                      | `False`                                        | Name output directories using the prompt text.                                                       |
+| `--from_file <path>`                      |                                           | `None`                                         | Read list of prompts from a file. Use `-` to read from standard input                                |
+| `--model <modelname>`                     |                                           | `stable-diffusion-1.4`                         | Loads model specified in configs/models.yaml. Currently one of "stable-diffusion-1.4" or "laion400m" |
+| `--full_precision`                        | `-F`                                      | `False`                                        | Run in slower full-precision mode. Needed for Macintosh M1/M2 hardware and some older video cards.   |
+| `--web`                                   |                                           | `False`                                        | Start in web server mode                                                                             |
+| `--host <ip addr>`                        |                                           | `localhost`                                    | Which network interface web server should listen on. Set to 0.0.0.0 to listen on any.                |
+| `--port <port>`                           |                                           | `9090`                                         | Which port web server should listen for requests on.                                                 |
+| `--config <path>`                         |                                           | `configs/models.yaml`                          | Configuration file for models and their weights.                                                     |
+| `--iterations <int>`                      | `-n<int>`                                 | `1`                                            | How many images to generate per prompt.                                                              |
+| `--grid`                                  | `-g`                                      | `False`                                        | Save all image series as a grid rather than individually.                                            |
+| `--sampler <sampler>`                     | `-A<sampler>`                             | `k_lms`                                        | Sampler to use. Use `-h` to get list of available samplers.                                          |
+| `--seamless`                              |                                           | `False`                                        | Create interesting effects by tiling elements of the image.                                          |
+| `--embedding_path <path>`                 |                                           | `None`                                         | Path to pre-trained embedding manager checkpoints, for custom models                                 |
+| `--gfpgan_dir`                            |                                           | `src/gfpgan`                                   | Path to where GFPGAN is installed.                                                                   |
+| `--gfpgan_model_path`                     |                                           | `experiments/pretrained_models/GFPGANv1.4.pth` | Path to GFPGAN model file, relative to `--gfpgan_dir`.                                               |
+| `--device <device>`                       | `-d<device>`                              | `torch.cuda.current_device()`                  | Device to run SD on, e.g. "cuda:0"                                                                   |
+| `--free_gpu_mem`                          |                                           | `False`                                        | Free GPU memory after sampling, to allow image decoding and saving in low VRAM conditions            |
+| `--precision`                             |                                           | `auto`                                         | Set model precision, default is selected by device. Options: auto, float32, float16, autocast        |
+
+#### deprecated
 
 These arguments are deprecated but still work:
+
 
 | Argument           |  Shortcut  |  Default            |  Description |
 |--------------------|------------|---------------------|--------------|
@@ -121,7 +143,7 @@ Here are the dream> command that apply to txt2img:
 | --height <int>     | -H<int>   | 512                 | Height of generated image |
 | --iterations <int> | -n<int>   | 1                   | How many images to generate from this prompt |
 | --steps <int>      | -s<int>   | 50                  | How many steps of refinement to apply |
-| --cfg_scale <float>| -C<float> | 7.5                 | How hard to try to match the prompt to the generated image; any number greater than 0.0 works, but the useful range is roughly 5.0 to 20.0 |
+| --cfg_scale <float>| -C<float> | 7.5                 | How hard to try to match the prompt to the generated image; any number greater than 1.0 works, but the useful range is roughly 5.0 to 20.0 |
 | --seed <int>       | -S<int>   | None                | Set the random seed for the next series of images. This can be used to recreate an image generated previously.|
 | --sampler <sampler>| -A<sampler>| k_lms              | Sampler to use. Use -h to get list of available samplers. |
 | --grid             | -g        | False               | Turn on grid mode to return a single image combining all the images generated by this prompt |
@@ -183,6 +205,85 @@ well as the --mask (-M) argument:
 | --init_mask <path> | -M<path>   | None                |Path to an image the same size as the initial_image, with areas for inpainting made transparent.|
 
 
+# Convenience commands
+
+In addition to the standard image generation arguments, there are a
+series of convenience commands that begin with !:
+
+## !fix
+
+This command runs a post-processor on a previously-generated image. It
+takes a PNG filename or path and applies your choice of the -U, -G, or
+--embiggen switches in order to fix faces or upscale. If you provide a
+filename, the script will look for it in the current output
+directory. Otherwise you can provide a full or partial path to the
+desired file.
+
+Some examples:
+
+Upscale to 4X its original size and fix faces using codeformer:
+~~~
+dream> !fix 0000045.4829112.png -G1 -U4 -ft codeformer
+~~~
+
+Use the GFPGAN algorithm to fix faces, then upscale to 3X using --embiggen:
+
+~~~
+dream> !fix 0000045.4829112.png -G0.8 -ft gfpgan
+>> fixing outputs/img-samples/0000045.4829112.png
+>> retrieved seed 4829112 and prompt "boy enjoying a banana split"
+>> GFPGAN - Restoring Faces for image seed:4829112
+Outputs:
+[1] outputs/img-samples/000017.4829112.gfpgan-00.png: !fix "outputs/img-samples/0000045.4829112.png" -s 50 -S  -W 512 -H 512 -C 7.5 -A k_lms -G 0.8
+
+dream> !fix 000017.4829112.gfpgan-00.png --embiggen 3
+...lots of text...
+Outputs:
+[2] outputs/img-samples/000018.2273800735.embiggen-00.png: !fix "outputs/img-samples/000017.243781548.gfpgan-00.png" -s 50 -S 2273800735 -W 512 -H 512 -C 7.5 -A k_lms --embiggen 3.0 0.75 0.25
+~~~
+
+## !fetch
+
+This command retrieves the generation parameters from a previously
+generated image and either loads them into the command line
+(Linux|Mac), or prints them out in a comment for copy-and-paste
+(Windows). You may provide either the name of a file in the current
+output directory, or a full file path.
+
+~~~
+dream> !fetch 0000015.8929913.png
+# the script returns the next line, ready for editing and running:
+dream> a fantastic alien landscape -W 576 -H 512 -s 60 -A plms -C 7.5
+~~~
+
+Note that this command may behave unexpectedly if given a PNG file that
+was not generated by InvokeAI.
+
+## !history
+
+The dream script keeps track of all the commands you issue during a
+session, allowing you to re-run them. On Mac and Linux systems, it
+also writes the command-line history out to disk, giving you access to
+the most recent 1000 commands issued.
+
+The `!history` command will return a numbered list of all the commands
+issued during the session (Windows), or the most recent 1000 commands
+(Mac|Linux). You can then repeat a command by using the command !NNN,
+where "NNN" is the history line number. For example:
+
+~~~
+dream> !history
+...
+[14] happy woman sitting under tree wearing broad hat and flowing garment
+[15] beautiful woman sitting under tree wearing broad hat and flowing garment
+[18] beautiful woman sitting under tree wearing broad hat and flowing garment -v0.2 -n6
+[20] watercolor of beautiful woman sitting under tree wearing broad hat and flowing garment -v0.2 -n6 -S2878767194
+[21] surrealist painting of beautiful woman sitting under tree wearing broad hat and flowing garment -v0.2 -n6 -S2878767194
+...
+dream> !20
+dream> watercolor of beautiful woman sitting under tree wearing broad hat and flowing garment -v0.2 -n6 -S2878767194
+~~~
+
 # Command-line editing and completion
 
 If you are on a Macintosh or Linux machine, the command-line offers
@@ -220,9 +321,8 @@ the path with a slash ("/") or "./". For example:
 dream> zebra with a mustache -I./test-pictures<TAB>
 -I./test-pictures/Lincoln-and-Parrot.png  -I./test-pictures/zebra.jpg        -I./test-pictures/madonna.png
 -I./test-pictures/bad-sketch.png          -I./test-pictures/man_with_eagle/
-~~~
+```
 
-You can then type "z", hit tab again, and it will autofill to "zebra.jpg".
+You can then type ++z++, hit ++tab++ again, and it will autofill to `zebra.jpg`.
 
 More text completion features (such as autocompleting seeds) are on their way.
-

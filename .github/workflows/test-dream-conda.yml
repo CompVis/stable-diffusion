@@ -19,10 +19,10 @@ jobs:
         run: |
           # Note, can't "activate" via github action; specifying the env's python has the same effect
           if [ "$RUNNER_OS" = "macOS" ]; then
-              echo "::set-output name=ENV_FILE::environment-mac.yaml"
+              echo "::set-output name=ENV_FILE::environment-mac.yml"
               echo "::set-output name=PYTHON_BIN::/usr/local/miniconda/envs/ldm/bin/python"
           elif [ "$RUNNER_OS" = "Linux" ]; then
-              echo "::set-output name=ENV_FILE::environment.yaml"
+              echo "::set-output name=ENV_FILE::environment.yml"
               echo "::set-output name=PYTHON_BIN::/usr/share/miniconda/envs/ldm/bin/python"
           fi
       - name: Checkout sources
@@ -85,9 +85,9 @@ jobs:
           fi
           # Utterly hacky, but I don't know how else to do this
           if [[ ${{ github.ref }} == 'refs/heads/master' ]]; then
-            time ${{ steps.vars.outputs.PYTHON_BIN }} scripts/dream.py --from_file tests/preflight_prompts.txt --full_precision
+            time ${{ steps.vars.outputs.PYTHON_BIN }} scripts/dream.py --from_file tests/preflight_prompts.txt
           elif [[ ${{ github.ref }} == 'refs/heads/development' ]]; then
-            time ${{ steps.vars.outputs.PYTHON_BIN }} scripts/dream.py --from_file tests/dev_prompts.txt --full_precision
+            time ${{ steps.vars.outputs.PYTHON_BIN }} scripts/dream.py --from_file tests/dev_prompts.txt
           fi
           mkdir -p outputs/img-samples
       - name: Archive results
