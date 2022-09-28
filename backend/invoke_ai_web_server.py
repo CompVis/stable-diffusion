@@ -2,6 +2,7 @@ import eventlet
 import glob
 import os
 import shutil
+import mimetypes
 
 from flask import Flask, redirect, send_from_directory
 from flask_socketio import SocketIO
@@ -37,6 +38,9 @@ class InvokeAIWebServer:
         self.setup_flask()
 
     def setup_flask(self):
+        # Fix missing mimetypes on Windows
+        mimetypes.add_type("application/javascript", ".js")
+        mimetypes.add_type("text/css", ".css")
         # Socket IO
         logger = True if args.web_verbose else False
         engineio_logger = True if args.web_verbose else False
