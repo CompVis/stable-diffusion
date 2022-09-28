@@ -7,7 +7,13 @@ It should work directly on Mac M1.
 It should be easy to adap to a machine with GPU.
 Without GPU it will be more complicated.
 Ping us at the Nevergrad user group if you need help, I'll do my best.
+
 [**Nevergrad Users**](https://www.facebook.com/groups/nevergradusers/)<br/>
+[**Doc**](https://docs.google.com/document/d/12Bz095QNuo_ojxSlGENXKL5Law75IUx5_Nm5L5guKgo/edit?usp=sharing)<br/>
+
+
+
+
 
 ## Install StableDiffusion as usual, plus a few more stuff.  Basically:
 
@@ -34,8 +40,9 @@ How to do this ?
 ```
  python -c "import diffusers ; print(diffusers.__file__)"
 ```
-and pipeline_stable_diffusion should at this location + "/pipelines/stable_diffusion/pipeline_stable_diffusion.py"
-or inside python
+and pipeline_stable_diffusion should be copied at this location  + "/pipelines/stable_diffusion/pipeline_stable_diffusion.py" (overwrite that file).
+
+Or inside python
 ```
 import diffusers
 print(diffusers.__file__)
