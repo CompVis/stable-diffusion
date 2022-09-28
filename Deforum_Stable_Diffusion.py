@@ -590,12 +590,12 @@ def check_is_number(value):
 # prompt weighting with colons and number coefficients (like 'bacon:0.75 eggs:0.25')
 # borrowed from https://github.com/kylewlacy/stable-diffusion/blob/0a4397094eb6e875f98f9d71193e350d859c4220/ldm/dream/conditioning.py
 # and https://github.com/raefu/stable-diffusion-automatic/blob/unstablediffusion/modules/processing.py
-def get_uc_and_c(prompts, model, args, frame = 0, skip_normalize=False):
+def get_uc_and_c(prompts, model, args, frame = 0):
     prompt = prompts[0] # they are the same in a batch anyway
 
     # get weighted sub-prompts
     negative_subprompts, positive_subprompts = split_weighted_subprompts(
-        prompt, frame, skip_normalize
+        prompt, frame, not args.normalize_prompt_weights
     )
 
     uc = get_learned_conditioning(model, negative_subprompts, "", args, -1)
@@ -619,7 +619,7 @@ def get_learned_conditioning(model, weighted_subprompts, text, args, sign = 1):
         
     return c
 
-def parse_weight(match, frame = 0):
+def parse_weight(match, frame = 0)->float:
     import numexpr
     w_raw = match.group("weight")
     if w_raw == None:
@@ -1128,8 +1128,8 @@ def parse_key_frames(string, prompt_parser=None):
 # !! }}
 
 prompts = [
-    "a beautiful portrait of a woman:0.75 in forest:0.25, hair:-1, green dress, by Artgerm, Asher Brown Durand, trending on Artstation", #the first prompt I want
-    "a beautiful portrait of a woman:0.25 in forest:0.75, hair:2, green dress, by Artgerm, Asher Brown Durand, trending on Artstation", #the second prompt I want
+    "a beautiful forest by Asher Brown Durand, trending on Artstation", #the first prompt I want
+    "a beautiful portrait of a woman by Artgerm, trending on Artstation", #the second prompt I want
     #"the third prompt I don't want it I commented it with an",
 ]
 
@@ -1191,8 +1191,9 @@ def DeforumArgs():
     #@markdown math expressions framed with \`-characters are also supported
     #@markdown
     #@markdown example forest:\`sin(2\*3.14\*t/10)\` where t is the frame number
-    prompt_weighting = True #@param {type:"boolean"}
-    log_weighted_subprompts = True #@param {type:"boolean"}
+    prompt_weighting = False #@param {type:"boolean"}
+    normalize_prompt_weights = True #@param {type:"boolean"}
+    log_weighted_subprompts = False #@param {type:"boolean"}
 
     #@markdown **Batch Settings**
     n_batch = 1 #@param
