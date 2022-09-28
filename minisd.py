@@ -27,7 +27,7 @@ os.environ["epsilon"] = "0.005"
 os.environ["decay"] = "0."
 os.environ["ngoptim"] = "DiscreteLenglerOnePlusOne"
 os.environ["forcedlatent"] = ""
-os.environ["enforcedlatent"] = ""
+#os.environ["enforcedlatent"] = ""
 os.environ["good"] = "[]"
 os.environ["bad"] = "[]"
 num_iterations = 50
@@ -88,8 +88,16 @@ prompt = "A star with flashy colors."
 prompt = "Un chat en sang et en armure joue de la batterie."
 prompt = "Cyberpunk photographic version of Judith beheading Holofernes."
 prompt = "Photo of a cyberpunk Mark Zuckerberg killing Cthulhu with a light saber."
+prompt = "A ferocious cyborg bear."
 prompt = "Photo of Mark Zuckerberg killing Cthulhu with a light saber."
 print(f"The prompt is {prompt}")
+
+
+import pyfiglet
+print(pyfiglet.figlet_format("Welcome in Genetic Stable Diffusion !"))
+print(pyfiglet.figlet_format("First, let us choose the text :-)!"))
+
+
 
 print(f"Francais: Proposez un nouveau texte si vous ne voulez pas dessiner << {prompt} >>.\n")
 user_prompt = input(f"English: Enter a new prompt if you prefer something else than << {prompt} >>.\n")
@@ -103,7 +111,10 @@ english_prompt = GoogleTranslator(source='auto', target='en').translate(prompt)
 def to_native(stri):
     return GoogleTranslator(source='en', target=language).translate(stri)
 
-print(f"Working on {english_prompt}, a.k.a {prompt}.")
+def pretty_print(stri):
+    print(pyfiglet.figlet_format(to_native(stri)))
+
+print(f"{to_native('Working on')} {english_prompt}, a.k.a {prompt}.")
 
 
 import os
@@ -125,6 +136,9 @@ latent = []
 images = []
 onlyfiles = []
 
+pretty_print("Now let us choose (if you want) an image as a start.")
+image_name = input(to_native("Name of image for starting ? (enter if no start image)"))
+
 # activate the pygame library .
 pygame.init()
 X = 2000  # > 1500 = buttons
@@ -132,11 +146,10 @@ Y = 900
 scrn = pygame.display.set_mode((1700, Y + 100))
 font = pygame.font.Font('freesansbold.ttf', 22)
 
-image_name = input(to_native("Name of image for starting ? (enter if no start image)"))
 def load_img(path):
     image = Image.open(path).convert("RGB")
     w, h = image.size
-    print(f"loaded input image of size ({w}, {h}) from {path}")
+    print(to_native(f"loaded input image of size ({w}, {h}) from {path}"))
     w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
     image = image.resize((512, 512), resample=PIL.Image.LANCZOS)
     #image = image.resize((w, h), resample=PIL.Image.LANCZOS)
@@ -155,8 +168,22 @@ if len(image_name) > 0:
     #forced_latent = model.encode(init_image)
     forced_latent = model.encode(init_image.to(device)).latent_dist.sample()
     print(forced_latent.shape)
-    os.environ["forcedlatent"] = str(list(forced_latent.flatten().cpu().detach().numpy()))            
-    forcedlatents = [forced_latent for _ in range(llambda)]
+    #os.environ["forcedlatent"] = str(list(forced_latent.flatten().cpu().detach().numpy()))            
+    # Forced latent is for after os.environ["forcedlatent"]...
+    forcedlatents = []
+    new_fl = forced_latent.cpu().detach().numpy().flatten()
+    basic_new_fl = np.sqrt(len(new_fl)) * new_fl / np.sqrt(np.sum(new_fl ** 2))
+    for i in range(llambda):
+        #new_fl = forced_latent + (1. / 1.1**(llambda-i)) * torch.from_numpy(np.random.randn(1*4*64*64).reshape(1,4,64,64)).float().to(device)
+        #forcedlatents += [new_fl.cpu().detach().numpy()]
+        if i > 0:
+            epsilon = 0.3 / 1.1**i
+            new_fl = epsilon * basic_new_fl + (1 - epsilon) * np.random.randn(1*4*64*64)
+        else:
+            new_fl = basic_new_fl
+        new_fl = np.sqrt(len(new_fl)) * new_fl / np.sqrt(np.sum(new_fl ** 2))
+        forcedlatents += [new_fl]
+        #print(f"{i} --> {forcedlatents[i][:10]}")
 
 for iteration in range(30):
     #scrn.fill(black)
@@ -165,6 +192,8 @@ for iteration in range(30):
     onlyfiles = [onlyfiles[f] for f in five_best]
     early_stop = []
     for k in range(llambda):
+        if len(forcedlatents) > 0 and k < len(forcedlatents):
+            os.environ["forcedlatent"] = str(list(forcedlatents[k].flatten()))            
         if k < len(five_best):
             imp = pygame.transform.scale(pygame.image.load(onlyfiles[k]).convert(), (300, 300))
             shutil.copyfile(onlyfiles[k], to_native("Selected") + onlyfiles[k])
@@ -174,6 +203,8 @@ for iteration in range(30):
             continue
         if len(early_stop) > 0:
             break
+        pygame.draw.rect(scrn, black, pygame.Rect(0, Y, 1700, Y+100))
+        pygame.draw.rect(scrn, black, pygame.Rect(X, 0, 1700, Y+100))
         text0 = font.render(to_native(f'Please wait !!! {k} / {llambda}'), True, green, blue)
         scrn.blit(text0, ((X*3/4)/2 - X/32, Y/2-Y/8))
         text0 = font.render(to_native(f'Or (EMERGENCY STOP BECAUSE BORED!) click on an image (THEN DON''T MOVE the mouse until click received!),'), True, green, blue)
@@ -185,11 +216,10 @@ for iteration in range(30):
         os.environ["epsilon"] = str(0. if k == len(five_best) else (k - len(five_best)) / llambda)
         os.environ["budget"] = str(300 if k > len(five_best) else 2)
         os.environ["skl"] = {0: "nn", 1: "tree", 2: "logit"}[k % 3]
-        if iteration > 0 and len(forcedlatents) > 0:
-            os.environ["forcedlatent"] = str(list(forcedlatents[k].flatten()))            
-        enforcedlatent = os.environ.get("enforcedlatent", "")
-        if len(enforcedlatent) > 2:
-            os.environ["forcedlatent"] = enforcedlatent
+        #enforcedlatent = os.environ.get("enforcedlatent", "")
+        #if len(enforcedlatent) > 2:
+        #    os.environ["forcedlatent"] = enforcedlatent
+        #    os.environ["enforcedlatent"] = ""
         with autocast("cuda"):
             image = pipe(english_prompt, guidance_scale=gs, num_inference_steps=num_iterations)["sample"][0]
             images += [image]
@@ -212,12 +242,12 @@ for iteration in range(30):
                 pos = pygame.mouse.get_pos() 
                 index = 3 * (pos[0] // 300) + (pos[1] // 300)
                 if index <= k:
-                    print(to_native("You clicked for requesting an early stopping."))
+                    pretty_print(("You clicked for requesting an early stopping."))
                     early_stop = [pos]
                     break
     
     # Stop the forcing from disk!
-    os.environ["enforcedlatent"] = ""
+    #os.environ["enforcedlatent"] = ""
     # importing required library
     
     #mypath = "./"
@@ -283,8 +313,9 @@ for iteration in range(30):
         for i in early_stop + pygame.event.get():
             if hasattr(i, "type") and i.type == pygame.MOUSEBUTTONUP or len(early_stop) > 0:
                 pos = early_stop[0] if len(early_stop) > 0 else pygame.mouse.get_pos() 
-                print(f"Click at {pos}")
+                pretty_print(f"Detected! Click at {pos}")
                 if pos[1] > Y:
+                    pretty_print("Let us update parameters!")
                     text4 = font.render(to_native(f"ok, go to text window!"), True, green, blue)
                     scrn.blit(text4, (300, Y + 30))
                     pygame.display.flip()
@@ -295,6 +326,7 @@ for iteration in range(30):
                         prompt = new_prompt
                         language = detect(prompt)
                         english_prompt = GoogleTranslator(source='auto', target='en').translate(prompt)
+                    pretty_print("Ok! Parameters updated.")
                     text4 = font.render(to_native(f"Ok! parameters changed!"), True, green, blue)
                     scrn.blit(text4, (300, Y + 30))
                     pygame.display.flip()
@@ -337,15 +369,12 @@ for iteration in range(30):
             if len(early_stop) > 0 or i.type == pygame.QUIT:
                 status = False
      
-    # Using draw.rect module of
-    # pygame to draw the solid circle
+    # Covering old images with full circles.
     for _ in range(123):
         x = np.random.randint(1500)
         y = np.random.randint(900)
         pygame.draw.circle(scrn, (0, 255, 0),
                            [x, y], 17, 0)
-     
-    # Draws the surface object to the screen.
     pygame.display.update()
     if len(indices) == 0:
         print("The user did not like anything! Rerun :-(")
