@@ -584,8 +584,8 @@ def transform_image_3d(prev_img_cv2, depth_tensor, rot_mat, translate, anim_args
 
 # prompt weighting with colons and number coefficients (like 'bacon:0.75 eggs:0.25')
 # borrowed from https://github.com/kylewlacy/stable-diffusion/blob/0a4397094eb6e875f98f9d71193e350d859c4220/ldm/dream/conditioning.py
-# and altered to enable negative weights
-def get_uc_and_c(prompts, model, args, log_tokens=True, skip_normalize=False):
+# and https://github.com/raefu/stable-diffusion-automatic/blob/unstablediffusion/modules/processing.py
+def get_uc_and_c(prompts, model, args, skip_normalize=False):
     prompt = prompts[0] # they are the same in a batch anyway
 
     # get weighted sub-prompts
@@ -593,31 +593,26 @@ def get_uc_and_c(prompts, model, args, log_tokens=True, skip_normalize=False):
         prompt, skip_normalize
     )
 
-    uc = model.get_learned_conditioning(args.n_samples * [""])
-    uc = weighted_prompts_cs(negative_subprompts, model, args, uc, True, log_tokens)
-    
-    if len(positive_subprompts) > 0:
-        c = weighted_prompts_cs(positive_subprompts, model, args, uc, False, log_tokens)
-    else:
-        log_tokenization(prompt, model, log_tokens, 1)
-        c = model.get_learned_conditioning(args.n_samples * [prompt])
+    uc = get_learned_conditioning(model, negative_subprompts, "", args, -1)
+    c = get_learned_conditioning(model, positive_subprompts, prompt, args, 1)
 
     return (uc, c)
 
-def weighted_prompts_cs(weighted_subprompts, model, args, base, is_negative, log_tokens=True):
-    if base != None:
-        # (webui author) dont know if this is correct.. but it works
-        cs = torch.zeros_like(base)
-    # normalize each "sub prompt" and add it
-    for subprompt, weight in weighted_subprompts:
-        log_tokenization(subprompt, model, log_tokens, -weight if is_negative else weight)
-        cs = torch.add(
-            cs,
-            model.get_learned_conditioning(args.n_samples * [subprompt]),
-            alpha=weight,
-        )
+def get_learned_conditioning(model, weighted_subprompts, text, args, sign = 1):
+    if len(weighted_subprompts) < 1:
+        log_tokenization(text, model, args.log_weighted_subprompts, sign)
+        c = model.get_learned_conditioning(args.n_samples * [text])
+    else:
+        c = None
+        for subtext, subweight in weighted_subprompts:
+            log_tokenization(subtext, model, args.log_weighted_subprompts, sign * subweight)
+            if c is None:
+                c = model.get_learned_conditioning(args.n_samples * [subtext])
+                c *= subweight
+            else:
+                c.add_(model.get_learned_conditioning(args.n_samples * [subtext]), alpha=subweight)
         
-    return cs
+    return c
 
 def parse_weight(match):
     w_raw = match.group("weight")
@@ -627,6 +622,8 @@ def parse_weight(match):
     return float(w_raw)
 
 def normalize_prompt_weights(parsed_prompts):
+    if len(parsed_prompts) == 0:
+        return parsed_prompts
     weight_sum = sum(map(lambda x: x[1], parsed_prompts))
     if weight_sum == 0:
         print(
@@ -777,7 +774,12 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
                 for prompts in data:
                     if isinstance(prompts, tuple):
                         prompts = list(prompts)
-                    uc, c = get_uc_and_c(prompts, model, args)
+                    if args.prompt_weighting:
+                        uc, c = get_uc_and_c(prompts, model, args)
+                    else:
+                        uc = model.get_learned_conditioning(batch_size * [""])
+                        c = model.get_learned_conditioning(prompts)
+
 
                     if args.scale == 1.0:
                         uc = None
@@ -1166,6 +1168,18 @@ def DeforumArgs():
     display_samples = True #@param {type:"boolean"}
     save_sample_per_step = False #@param {type:"boolean"}
     show_sample_per_step = False #@param {type:"boolean"}
+
+    #@markdown **Prompt Settings**
+    #@markdown
+    #@markdown weighting is experimental, use at your own risk!
+    #@markdown
+    #@markdown add weight numbers with colons `thing:0.25`
+    #@markdown
+    #@markdown the larger the number, the greater the emphasis
+    #@markdown
+    #@markdown negative values reduce the presence 
+    prompt_weighting = False #@param {type:"boolean"}
+    log_weighted_subprompts = False #@param {type:"boolean"}
 
     #@markdown **Batch Settings**
     n_batch = 1 #@param
