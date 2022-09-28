@@ -226,6 +226,11 @@ def main():
         choices=["full", "autocast"],
         default="autocast"
     )
+    parser.add_argument(
+        "--fprefix",
+        type=str,
+        help="filename prefix for sample outputs"
+    )
     opt = parser.parse_args()
 
     if opt.laion400m:
