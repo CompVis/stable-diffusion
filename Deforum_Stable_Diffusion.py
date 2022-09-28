@@ -129,6 +129,7 @@ from torchvision.utils import make_grid
 from tqdm import tqdm, trange
 from types import SimpleNamespace
 from torch import autocast
+import re
 from scipy.ndimage import gaussian_filter
 
 sys.path.extend([
@@ -582,15 +583,19 @@ def transform_image_3d(prev_img_cv2, depth_tensor, rot_mat, translate, anim_args
     ).cpu().numpy().astype(prev_img_cv2.dtype)
     return result
 
+def check_is_number(value):
+    float_pattern = r'^(?=.)([+-]?([0-9]*)(\.([0-9]+))?)$'
+    return re.match(float_pattern, value)
+
 # prompt weighting with colons and number coefficients (like 'bacon:0.75 eggs:0.25')
 # borrowed from https://github.com/kylewlacy/stable-diffusion/blob/0a4397094eb6e875f98f9d71193e350d859c4220/ldm/dream/conditioning.py
 # and https://github.com/raefu/stable-diffusion-automatic/blob/unstablediffusion/modules/processing.py
-def get_uc_and_c(prompts, model, args, skip_normalize=False):
+def get_uc_and_c(prompts, model, args, frame = 0, skip_normalize=False):
     prompt = prompts[0] # they are the same in a batch anyway
 
     # get weighted sub-prompts
     negative_subprompts, positive_subprompts = split_weighted_subprompts(
-        prompt, skip_normalize
+        prompt, frame, skip_normalize
     )
 
     uc = get_learned_conditioning(model, negative_subprompts, "", args, -1)
@@ -614,12 +619,19 @@ def get_learned_conditioning(model, weighted_subprompts, text, args, sign = 1):
         
     return c
 
-def parse_weight(match):
+def parse_weight(match, frame = 0):
+    import numexpr
     w_raw = match.group("weight")
     if w_raw == None:
         return 1
-    # TODO numexpr support
-    return float(w_raw)
+    if check_is_number(w_raw):
+        return float(w_raw)
+    else:
+        t = frame
+        if len(w_raw) < 3:
+            print('the value inside `-characters cannot represent a math function')
+            return 1
+        return float(numexpr.evaluate(w_raw[1:-1]))
 
 def normalize_prompt_weights(parsed_prompts):
     if len(parsed_prompts) == 0:
@@ -632,33 +644,33 @@ def normalize_prompt_weights(parsed_prompts):
         return [(x[0], equal_weight) for x in parsed_prompts]
     return [(x[0], x[1] / weight_sum) for x in parsed_prompts]
 
-def split_weighted_subprompts(text, skip_normalize=False):
-    import re
+def split_weighted_subprompts(text, frame = 0, skip_normalize=False):
     """
     grabs all text up to the first occurrence of ':'
     uses the grabbed text as a sub-prompt, and takes the value following ':' as weight
     if ':' has no value defined, defaults to 1.0
     repeats until no text remaining
-    #TODO: add functions parsing
     """
     prompt_parser = re.compile("""
-            (?P<prompt>     # capture group for 'prompt'
-            (?:\\\:|[^:])+  # match one or more non ':' characters or escaped colons '\:'
-            )               # end 'prompt'
-            (?:             # non-capture group
-            :+              # match one or more ':' characters
-            (?P<weight>     # capture group for 'weight'
-            -?\d+(?:\.\d+)? # match positive or negative integer or decimal number
-            )?              # end weight capture group, make optional
-            \s*             # strip spaces after weight
-            |               # OR
-            $               # else, if no ':' then match end of line
-            )               # end non-capture group
+            (?P<prompt>         # capture group for 'prompt'
+            (?:\\\:|[^:])+      # match one or more non ':' characters or escaped colons '\:'
+            )                   # end 'prompt'
+            (?:                 # non-capture group
+            :+                  # match one or more ':' characters
+            (?P<weight>((        # capture group for 'weight'
+            -?\d+(?:\.\d+)?     # match positive or negative integer or decimal number
+            )|(                 # or
+            `[\S\s]*?`# a math function
+            )))?                 # end weight capture group, make optional
+            \s*                 # strip spaces after weight
+            |                   # OR
+            $                   # else, if no ':' then match end of line
+            )                   # end non-capture group
             """, re.VERBOSE)
     negative_prompts = []
     positive_prompts = []
     for match in re.finditer(prompt_parser, text):
-        w = parse_weight(match)
+        w = parse_weight(match, frame)
         if w < 0:
             # negating the sign as we'll feed this to uc
             negative_prompts.append((match.group("prompt").replace("\\:", ":"), -w))
@@ -695,7 +707,7 @@ def log_tokenization(text, model, log=False, weight=1):
             f">> Tokens Discarded ({totalTokens-usedTokens}):\n{discarded}\x1b[0m"
         )
 
-def generate(args, return_latent=False, return_sample=False, return_c=False):
+def generate(args, frame = 0, return_latent=False, return_sample=False, return_c=False):
     seed_everything(args.seed)
     os.makedirs(args.outdir, exist_ok=True)
 
@@ -775,7 +787,7 @@ def generate(args, return_latent=False, return_sample=False, return_c=False):
                     if isinstance(prompts, tuple):
                         prompts = list(prompts)
                     if args.prompt_weighting:
-                        uc, c = get_uc_and_c(prompts, model, args)
+                        uc, c = get_uc_and_c(prompts, model, args, frame)
                     else:
                         uc = model.get_learned_conditioning(batch_size * [""])
                         c = model.get_learned_conditioning(prompts)
@@ -1055,14 +1067,12 @@ class DeformAnimKeys():
 
 def get_inbetweens(key_frames, max_frames, integer=False, interp_method='Linear'):
     import numexpr
-    import re
-    float_pattern = r'^(?=.)([+-]?([0-9]*)(\.([0-9]+))?)$'
     key_frame_series = pd.Series([np.nan for a in range(max_frames)])
     
     for i in range(0, max_frames):
         if i in key_frames:
             value = key_frames[i]
-            value_is_number = re.match(float_pattern, value)
+            value_is_number = check_is_number(value)
             # if it's only a number, leave the rest for the default interpolation
             if value_is_number:
                 t = i
@@ -1085,7 +1095,6 @@ def get_inbetweens(key_frames, max_frames, integer=False, interp_method='Linear'
     return key_frame_series
 
 def parse_key_frames(string, prompt_parser=None):
-    import re
     # because math functions (i.e. sin(t)) can utilize brackets 
     # it extracts the value in form of some stuff
     # which has previously been enclosed with brackets and
@@ -1178,8 +1187,12 @@ def DeforumArgs():
     #@markdown the larger the number, the greater the emphasis
     #@markdown
     #@markdown negative values reduce the presence 
-    prompt_weighting = False #@param {type:"boolean"}
-    log_weighted_subprompts = False #@param {type:"boolean"}
+    #@markdown
+    #@markdown math expressions framed with \`-characters are also supported
+    #@markdown
+    #@markdown example forest:\`sin(2\*3.14\*t/10)\` where t is the frame number
+    prompt_weighting = True #@param {type:"boolean"}
+    log_weighted_subprompts = True #@param {type:"boolean"}
 
     #@markdown **Batch Settings**
     n_batch = 1 #@param
@@ -1475,7 +1488,7 @@ def render_animation(args, anim_args):
                 args.mask_file = mask_frame
 
         # sample the diffusion model
-        sample, image = generate(args, return_latent=False, return_sample=True)
+        sample, image = generate(args, frame_idx, return_latent=False, return_sample=True)
         if not using_vid_init:
             prev_sample = sample
 
