@@ -93,7 +93,7 @@ prompt = "A bear with horns and blood and big teeth."
 prompt = "A photo of a bear and Yoda, good friends."
 prompt = "A photo of Yoda on the left, a blue octopus on the right, an explosion in the center."
 prompt = "A bird is on a hippo. They fight a black and red octopus. Jungle in the background."
-prompt = "A flying white bird behind 4 colored pots with fire."
+prompt = "A flying white owl above 4 colored pots with fire. The owl has a hat."
 print(f"The prompt is {prompt}")
 
 
@@ -271,12 +271,12 @@ for iteration in range(30):
     pygame.draw.rect(scrn, red, pygame.Rect(0, Y, X/2, Y+100), 2)
 
     # Button for loading a starting point
-    text1 = font.render('Load image    ', True, green, blue)
+    text1 = font.render('Manually edit an image.', True, green, blue)
     text1 = pygame.transform.rotate(text1, 90)
-    scrn.blit(text1, (X*3/4+X/16 - X/32, 0))
-    text1 = font.render('& latent    ', True, green, blue)
-    text1 = pygame.transform.rotate(text1, 90)
-    scrn.blit(text1, (X*3/4+X/16+X/32 - X/32, 0))
+    #scrn.blit(text1, (X*3/4+X/16 - X/32, 0))
+    #text1 = font.render('& latent    ', True, green, blue)
+    #text1 = pygame.transform.rotate(text1, 90)
+    #scrn.blit(text1, (X*3/4+X/16+X/32 - X/32, 0))
 
     # Button for creating a meme
     text2 = font.render(to_native('Create'), True, green, blue)
@@ -325,12 +325,19 @@ for iteration in range(30):
                     text4 = font.render(to_native(f"ok, go to text window!"), True, green, blue)
                     scrn.blit(text4, (300, Y + 30))
                     pygame.display.flip()
-                    num_iterations = int(input(to_native(f"Number of iterations ? (current = {num_iterations})\n")))
+                    try:
+                        num_iterations = int(input(to_native(f"Number of iterations ? (current = {num_iterations})\n")))
+                    except:
+                        num_iterations = int(input(to_native(f"Number of iterations ? (current = {num_iterations})\n")))
                     gs = float(input(to_native(f"Guidance scale ? (current = {gs})\n")))
-                    print(f"The current text is << {prompt} >>.")
+                    print(to_native(f"The current text is << {prompt} >>."))
+                    print(to_native("Start your answer with a symbol << + >> if this is an edit and not a new text.")) 
                     new_prompt = str(input(to_native(f"Enter a text if you want to change from ") + prompt))
                     if len(new_prompt) > 2:
-                        prompt = new_prompt
+                        if new_prompt[0] == "+":
+                            prompt += new_prompt[1:]
+                        else:
+                            prompt = new_prompt
                         language = detect(prompt)
                         english_prompt = GoogleTranslator(source='auto', target='en').translate(prompt)
                     pretty_print("Ok! Parameters updated.")
@@ -339,11 +346,14 @@ for iteration in range(30):
                     pygame.display.flip()
                 elif pos[0] > 1500:  # Not in the images.
                     if pos[1] < Y/3:
-                        filename = input(to_native("Filename (please provide the latent file, of the format SD*latent*.txt) ?\n"))
-                        status = False
-                        with open(filename, 'r') as f:
-                             latent = f.read()
-                        break
+                        #filename = input(to_native("Filename (please provide the latent file, of the format SD*latent*.txt) ?\n"))
+                        #status = False
+                        #with open(filename, 'r') as f:
+                        #     latent = f.read()
+                        #break
+                        pretty_print("Easy! I exit now, you edit the file and you save it.")
+                        pretty_print("Then just relaunch me and provide the text and the image.")
+                        exit()
                     if pos[1] < 2*Y/3:
                         pretty_print("Let us create a meme!")
                         url = 'https://imgflip.com/memegenerator'

@@ -233,8 +233,7 @@ class StableDiffusionPipeline(DiffusionPipeline):
             good = eval(os.environ["good"])
             bad = eval(os.environ["bad"])
             print(f"{len(good)} good and {len(bad)} bad")
-            i_believe_in_evolution = len(good) > 0 and len(bad) > 0
-            i_believe_in_evolution = False
+            i_believe_in_evolution = len(good) > 0 and len(bad) > 200
             print(f"I believe in evolution = {i_believe_in_evolution}")
             if i_believe_in_evolution: 
                 from sklearn import tree
@@ -371,7 +370,7 @@ class StableDiffusionPipeline(DiffusionPipeline):
                 latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
 
         # scale and decode the image latents with vae
-        os.environ["latent_sd"] = str(list(latents.flatten().cpu().detach().numpy()))
+        #os.environ["latent_sd"] = str(list(latents.flatten().cpu().detach().numpy()))
         latents = 1 / 0.18215 * latents
         image = self.vae.decode(latents).sample
 
