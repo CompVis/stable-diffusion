@@ -287,6 +287,7 @@ class Generate:
             upscale          = None,
             # Set this True to handle KeyboardInterrupt internally
             catch_interrupts = False,
+            hires_fix        = False,
             **args,
     ):   # eat up additional cruft
         """
@@ -403,6 +404,8 @@ class Generate:
                 generator = self._make_embiggen()
             elif init_image is not None:
                 generator = self._make_img2img()
+            elif hires_fix:
+                generator = self._make_txt2img2img()
             else:
                 generator = self._make_txt2img()
 
@@ -659,6 +662,13 @@ class Generate:
             self.generators['txt2img'] = Txt2Img(self.model, self.precision)
             self.generators['txt2img'].free_gpu_mem = self.free_gpu_mem
         return self.generators['txt2img']
+
+    def _make_txt2img2img(self):
+        if not self.generators.get('txt2img2'):
+            from ldm.dream.generator.txt2img2img import Txt2Img2Img
+            self.generators['txt2img2'] = Txt2Img2Img(self.model, self.precision)
+            self.generators['txt2img2'].free_gpu_mem = self.free_gpu_mem
+        return self.generators['txt2img2']
 
     def _make_inpaint(self):
         if not self.generators.get('inpaint'):
