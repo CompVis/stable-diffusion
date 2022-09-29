@@ -24,20 +24,9 @@ import * as InvokeAI from '../invokeai';
 export const socketioMiddleware = () => {
   const { hostname, port } = new URL(window.location.href);
 
-  if (import.meta.env.VITE_SOCKETIO_PORT !== undefined) {
-    console.log(
-      `Running in Vite dev mode, using socketio port ${
-        import.meta.env.VITE_SOCKETIO_PORT
-      }`
-    );
-  }
-
-  const socketio = io(
-    `http://${hostname}:${import.meta.env.VITE_SOCKETIO_PORT || port}`,
-    {
-      timeout: 60000,
-    }
-  );
+  const socketio = io(`http://${hostname}:9090`, {
+    timeout: 60000,
+  });
 
   let areListenersSet = false;
 
@@ -163,6 +152,7 @@ export const socketioMiddleware = () => {
         emitRequestNewImages();
         break;
       }
+
 
       case 'socketio/cancelProcessing': {
         emitCancelProcessing();
