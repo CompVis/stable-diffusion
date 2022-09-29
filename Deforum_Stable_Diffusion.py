@@ -775,7 +775,7 @@ model_map = {
     "sd-v1-2.ckpt": {'sha256': '3b87d30facd5bafca1cbed71cfb86648aad75d1c264663c0cc78c7aea8daec0d'},
     "sd-v1-1-full-ema.ckpt": {'sha256': 'efdeb5dc418a025d9a8cc0a8617e106c69044bc2925abecc8a254b2910d69829'},
     "sd-v1-1.ckpt": {'sha256': '86cd1d3ccb044d7ba8db743d717c9bac603c4043508ad2571383f954390f3cea'},
-    "robo-diffusion-v1.ckpt": {'sha256': '244dbe0dcb55c761bde9c2ac0e9b46cc9705ebfe5f1f3a7cc46251573ea14e16'},
+    "robo-diffusion-v1.ckpt": {'sha256': '244dbe0dcb55c761bde9c2ac0e9b46cc9705ebfe5f1f3a7cc46251573ea14e16', 'url': 'https://huggingface.co/nousr/robo-diffusion/resolve/main/models/robo-diffusion-v1.ckpt'},
 }
 
 # config path
@@ -791,6 +791,13 @@ ckpt_path = custom_checkpoint_path if model_checkpoint == "custom" else os.path.
 ckpt_valid = True
 if os.path.exists(ckpt_path):
     print(f"{ckpt_path} exists")
+elif 'url' in model_map[model_checkpoint]:
+    print(f"Attempting to download {model_checkpoint}")
+
+    ckpt_request = requests.get(model_map[model_checkpoint]['url'])
+
+    with open(os.path.join(models_path, model_checkpoint), 'wb') as model_file:
+        model_file.write(ckpt_request.content)
 else:
     print(f"Please download model checkpoint and place in {os.path.join(models_path, model_checkpoint)}")
     ckpt_valid = False
