@@ -207,7 +207,7 @@ def main_loop(gen, opt, infile):
             opt.width = model_config.width
         if not opt.height:
             opt.height = model_config.height
-        
+
         # retrieve previous value of init image if requested
         if opt.init_img is not None and re.match('^-\\d+$', opt.init_img):
             try:
@@ -218,6 +218,13 @@ def main_loop(gen, opt, infile):
                     f'>> No previous initial image at position {opt.init_img} found')
                 opt.init_img = None
                 continue
+
+        # try to relativize pathnames
+        for attr in ('init_img','init_mask','init_color','embedding_path'):
+            if getattr(opt,attr) and not os.path.exists(getattr(opt,attr)):
+                basename = getattr(opt,attr)
+                path     = os.path.join(opt.outdir,basename)
+                setattr(opt,attr,path)
 
         # retrieve previous valueof seed if requested
         if opt.seed is not None and opt.seed < 0:   
@@ -261,16 +268,19 @@ def main_loop(gen, opt, infile):
             results          = []  # list of filename, prompt pairs
             grid_images      = dict()  # seed -> Image, only used if `opt.grid`
             prior_variations = opt.with_variations or []
+            prefix = file_writer.unique_prefix()
 
             def image_writer(image, seed, upscaled=False, first_seed=None, use_prefix=None):
+                print(f'DEBUG:upscaled={upscaled}, first_seed={first_seed}, use_prefix={use_prefix}')
+
+                
                 # note the seed is the seed of the current image
                 # the first_seed is the original seed that noise is added to
                 # when the -v switch is used to generate variations
                 nonlocal prior_variations
+                nonlocal prefix
                 if use_prefix is not None:
                     prefix = use_prefix
-                else:
-                    prefix           = file_writer.unique_prefix()
 
                 path = None
                 if opt.grid:
