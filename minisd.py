@@ -229,8 +229,8 @@ if len(image_name) > 0:
         init_image = load_img(image_name).to(device)
     except:
         pretty_print("Try again!")
-        image_name = input(to_native("Name of image for starting ? (enter if no start image)"))
         pretty_print("Loading failed!!")
+        image_name = input(to_native("Name of image for starting ? (enter if no start image)"))
         
     base_init_image = load_img(image_name).to(device)
     noise.say("Image loaded")
@@ -238,8 +238,20 @@ if len(image_name) > 0:
     print(base_init_image.shape)
     print(np.max(base_init_image.cpu().detach().numpy().flatten()))
     print(np.min(base_init_image.cpu().detach().numpy().flatten()))
+    
     forcedlatents = []
     divider = 1.5
+    latent_found = False
+    try:
+        latent_file = image_name + ".latent.txt"
+        print(to_native(f"Trying to load latent variables in {latent_file}."))
+        f = open(latent_file, "r")
+        print(to_native("File opened."))
+        latent_str = f.read()
+        print("Latent string read.")
+        latent_found = True
+    except:
+        print(to_native("No latent file: guessing."))
     for i in range(llambda):
         new_base_init_image = base_init_image
         if (i % 7)  == 1:
@@ -265,8 +277,11 @@ if len(image_name) > 0:
         else:
             init_image = new_base_init_image
         init_image = repeat(init_image, '1 ... -> b ...', b=1)
-        forced_latent = 6. * model.encode(init_image.to(device)).latent_dist.sample()
-        new_fl = forced_latent.cpu().detach().numpy().flatten()
+        if latent_found:
+            new_fl = np.asarray(eval(latent_str))
+        else:
+            forced_latent = 6. * model.encode(init_image.to(device)).latent_dist.sample()
+            new_fl = forced_latent.cpu().detach().numpy().flatten()
         basic_new_fl = new_fl  #np.sqrt(len(new_fl) / sum(new_fl ** 2)) * new_fl
         #new_fl = forced_latent + (1. / 1.1**(llambda-i)) * torch.from_numpy(np.random.randn(1*4*64*64).reshape(1,4,64,64)).float().to(device)
         #forcedlatents += [new_fl.cpu().detach().numpy()]
@@ -349,8 +364,8 @@ for iteration in range(30):
         array_latent = eval(f"np.array(str_latent).reshape(4, 64, 64)")
         print(f"Debug info: array_latent sumsq/var {sum(array_latent.flatten() ** 2) / len(array_latent.flatten())}")
         latent += [array_latent]
-        with open(f"SD_{prompt.replace(' ','_')}_latent_{sentinel}_{k}.txt", 'w') as f:
-            f.write(f"{latent}")
+        with open(filename + ".latent.txt", 'w') as f:
+            f.write(f"{str_latent}")
         # In case of early stopping.
         for i in pygame.event.get():
             if i.type == pygame.MOUSEBUTTONUP:
@@ -570,7 +585,7 @@ for iteration in range(30):
         #if a % 2 == 0:
         #    forcedlatent -= np.random.rand() * sauron
         basic_new_fl = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
-        epsilon = (a / (llambda - 1)) ** 3
+        epsilon = (a / (llambda - 1)) ** 6
         forcedlatent = (1. - epsilon) * basic_new_fl.flatten() + epsilon * np.random.randn(4*64*64)
         forcedlatent = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
         forcedlatents += [forcedlatent]
