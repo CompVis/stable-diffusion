@@ -197,7 +197,7 @@ def main():
         help="unconditional guidance scale: eps = eps(x, empty) + scale * (eps(x, cond) - eps(x, empty))",
     )
     parser.add_argument(
-        "--from-file",
+        "--from_file",
         type=str,
         help="if specified, load prompts from this file",
     )
