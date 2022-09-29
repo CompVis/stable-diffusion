@@ -323,6 +323,8 @@ class StableDiffusionPipeline(DiffusionPipeline):
             if latents.shape != latents_intermediate_shape:
                 raise ValueError(f"Unexpected latents shape, got {latents.shape}, expected {latents_intermediate_shape}")
         print(f"latent ==> {sum(latents.flatten()**2) / len(latents.flatten())}")
+        print(f"latent ==> {torch.max(latents)}")
+        print(f"latent ==> {torch.min(latents)}")
         os.environ["latent_sd"] = str(list(latents.flatten().cpu().numpy()))
         for i in [2, 3]:
             latents = torch.repeat_interleave(latents, repeats=latents_shape[i] // latents_intermediate_shape[i], dim=i) #/ np.sqrt(np.sqrt(latents_shape[i] // latents_intermediate_shape[i]))

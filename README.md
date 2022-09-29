@@ -25,6 +25,7 @@ conda install pytorch torchvision -c pytorch
 pip install transformers diffusers invisible-watermark
 pip install -e .
 pip install pygame
+pip install pyttsx3
 pip install einops
 pip install webbrowser
 pip install pyfiglet

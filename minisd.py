@@ -36,8 +36,16 @@ gs = 7.5
 
 
 
+import pyttsx3
 
+noise = pyttsx3.init()
+noise.setProperty("rate", 178)
+noise.setProperty('voice', 'mb-us1')                                            
 
+#voice = noise.getProperty('voices')
+#for v in voice:
+#    if v.name == "Kyoko":
+#        noise.setProperty('voice', v.id)
 
 
 all_selected = []
@@ -116,6 +124,8 @@ print(pyfiglet.figlet_format("First, let us choose the text :-)!"))
 
 
 print(f"Francais: Proposez un nouveau texte si vous ne voulez pas dessiner << {prompt} >>.\n")
+noise.say("Hey!")
+noise.runAndWait()
 user_prompt = input(f"English: Enter a new prompt if you prefer something else than << {prompt} >>.\n")
 if len(user_prompt) > 2:
     prompt = user_prompt
@@ -135,6 +145,8 @@ print(f"{to_native('Working on')} {english_prompt}, a.k.a {prompt}.")
 def eg(list_of_files):
     pretty_print("Should I convert images below to high resolution ?")
     print(list_of_files)
+    noise.say("Hey!")
+    noise.runAndWait()
     answer = input(" [y]es / [n]o ?")
     if "y" in answer or "Y" in answer:
         model = RealESRGAN(device, scale=4)
@@ -152,6 +164,19 @@ def eg(list_of_files):
             output_filename = "SR" + f
             sr_image.save(output_filename)
             print(to_native(f"Created the super-resolution file {output_filename}")) 
+
+def stop_all(list_of_files):
+    print(to_native("Your selected images and the last generation:"))
+    print(list_of_files)
+    eg(all_selected + onlyfiles)
+    pretty_print("Should we create a meme ?")
+    answer = input(" [y]es or [n]o ?")
+    if "y" in answer or "Y" in answer:
+        url = 'https://imgflip.com/memegenerator'
+        webbrowser.open(url)
+    pretty_print("Good bye!")
+    exit()
+
 
 import os
 import pygame
@@ -208,14 +233,37 @@ if len(image_name) > 0:
         pretty_print("Loading failed!!")
         
     base_init_image = load_img(image_name).to(device)
+    noise.say("Image loaded")
+    noise.runAndWait()
+    print(base_init_image.shape)
+    print(np.max(base_init_image.cpu().detach().numpy().flatten()))
+    print(np.min(base_init_image.cpu().detach().numpy().flatten()))
     forcedlatents = []
+    divider = 1.5
     for i in range(llambda):
+        new_base_init_image = base_init_image
+        if (i % 7)  == 1:
+            new_base_init_image[0,0,:,:] /= divider
+        if (i % 7) == 2:
+            new_base_init_image[0,1,:,:] /= divider
+        if (i % 7) == 3:
+            new_base_init_image[0,2,:,:] /= divider
+        if (i % 7) == 4:
+            new_base_init_image[0,0,:,:] /= divider
+            new_base_init_image[0,1,:,:] /= divider
+        if (i % 7) == 5:
+            new_base_init_image[0,1,:,:] /= divider
+            new_base_init_image[0,2,:,:] /= divider
+        if (i % 7) == 6:
+            new_base_init_image[0,0,:,:] /= divider
+            new_base_init_image[0,2,:,:] /= divider
+           
         c = np.exp(np.random.randn() - 2)
         init_image_shape = base_init_image.cpu().numpy().shape
         if i > 0:
-            init_image = base_init_image + torch.from_numpy(c * np.random.randn(np.prod(init_image_shape))).reshape(init_image_shape).float().to(device)
+            init_image = new_base_init_image + torch.from_numpy(c * np.random.randn(np.prod(init_image_shape))).reshape(init_image_shape).float().to(device)
         else:
-            init_image = base_init_image
+            init_image = new_base_init_image
         init_image = repeat(init_image, '1 ... -> b ...', b=1)
         forced_latent = 6. * model.encode(init_image.to(device)).latent_dist.sample()
         new_fl = forced_latent.cpu().detach().numpy().flatten()
@@ -224,30 +272,29 @@ if len(image_name) > 0:
         #forcedlatents += [new_fl.cpu().detach().numpy()]
         if i > 0:
             #epsilon = 0.3 / 1.1**i
-            basic_new_fl = np.sqrt(len(new_fl) / np.sum(new_fl**2)) * basic_new_fl
+            #basic_new_fl = np.sqrt(len(new_fl) / np.sum(new_fl**2)) * basic_new_fl
             epsilon = 1.0 / 2**(2 + i / 6)
             new_fl = epsilon * basic_new_fl + (1 - epsilon) * np.random.randn(1*4*64*64)
         else:
             new_fl = basic_new_fl
         #new_fl = np.sqrt(len(new_fl)) * new_fl / np.sqrt(np.sum(new_fl ** 2))
-        #forcedlatents += [new_fl] #np.sqrt(len(new_fl) / sum(new_fl ** 2)) * new_fl]
-        forcedlatents += [np.sqrt(len(new_fl) / sum(new_fl ** 2)) * new_fl]
+        forcedlatents += [new_fl] #np.clip(new_fl, -3., 3.)] #np.sqrt(len(new_fl) / sum(new_fl ** 2)) * new_fl]
+        #forcedlatents += [np.sqrt(len(new_fl) / sum(new_fl ** 2)) * new_fl]
         #print(f"{i} --> {forcedlatents[i][:10]}")
 
+# We start the big loop!
 for iteration in range(30):
-    #scrn.fill(black)
     latent = [latent[f] for f in five_best]
     images = [images[f] for f in five_best]
     onlyfiles = [onlyfiles[f] for f in five_best]
     early_stop = []
+    noise.say("WAIT!")
+    noise.runAndWait()
     for k in range(llambda):
         if len(forcedlatents) > 0 and k < len(forcedlatents):
             os.environ["forcedlatent"] = str(list(forcedlatents[k].flatten()))            
         if k < len(five_best):
             imp = pygame.transform.scale(pygame.image.load(onlyfiles[k]).convert(), (300, 300))
-            selected_filename = to_native("Selected") + onlyfiles[k]
-            shutil.copyfile(onlyfiles[k], selected_filename)
-            all_selected += [selected_filename]
             # Using blit to copy content from one surface to other
             scrn.blit(imp, (300 * (k // 3), 300 * (k % 3)))
             pygame.display.flip()
@@ -264,6 +311,18 @@ for iteration in range(30):
         scrn.blit(text0, ((X*3/4)/3 - X/32, Y/2))
         text0 = font.render(to_native(f'Then I''ll work on variants of that specific image.'), True, green, blue)
         scrn.blit(text0, ((X*3/4)/2 - X/32, Y/2+Y/8))
+
+        # Button for early stopping
+        text2 = font.render(to_native('Click here for stopping, '), True, green, blue)
+        text2 = pygame.transform.rotate(text2, 90)
+        scrn.blit(text2, (X*3/4+X/16      - X/32, Y/3))
+        text2 = font.render(to_native('and get the effects,'), True, green, blue)
+        text2 = pygame.transform.rotate(text2, 90)
+        scrn.blit(text2, (X*3/4+X/16+X/64 - X/32, Y/3))
+        text2 = font.render(to_native('or for creating a meme.'), True, green, blue)
+        text2 = pygame.transform.rotate(text2, 90)
+        scrn.blit(text2, (X*3/4+X/16+X/32 - X/32, Y/3))
+
         pygame.display.flip()
         os.environ["earlystop"] = "False" if k > len(five_best) else "True"
         os.environ["epsilon"] = str(0. if k == len(five_best) else (k - len(five_best)) / llambda)
@@ -283,6 +342,9 @@ for iteration in range(30):
         # Using blit to copy content from one surface to other
         scrn.blit(imp, (300 * (k // 3), 300 * (k % 3)))
         pygame.display.flip()
+        #noise.say("Dong")
+        #noise.runAndWait()
+        print('\a')
         str_latent = eval((os.environ["latent_sd"]))
         array_latent = eval(f"np.array(str_latent).reshape(4, 64, 64)")
         print(f"Debug info: array_latent sumsq/var {sum(array_latent.flatten() ** 2) / len(array_latent.flatten())}")
@@ -292,12 +354,20 @@ for iteration in range(30):
         # In case of early stopping.
         for i in pygame.event.get():
             if i.type == pygame.MOUSEBUTTONUP:
-                pos = pygame.mouse.get_pos() 
+                noise.say("Ok I stop")
+                noise.runAndWait()
+                pos = pygame.mouse.get_pos()
                 index = 3 * (pos[0] // 300) + (pos[1] // 300)
+                if pos[0] > X and pos[1] > Y /3 and pos[1] < 2*Y/3:
+                    stop_all(all_selected)
+                    exit()
                 if index <= k:
                     pretty_print(("You clicked for requesting an early stopping."))
                     early_stop = [pos]
                     break
+                #early_stop = [(k - 1, .5,.5)]
+                pretty_print("I do not understand your click.")
+                pretty_print("So I assume you want the last image...")
     
     # Stop the forcing from disk!
     #os.environ["enforcedlatent"] = ""
@@ -310,7 +380,9 @@ for iteration in range(30):
      
     # create the display surface object
     # of specific dimension..e(X, Y).
-
+    if len(early_stop) == 0:
+        noise.say("Ok I'm ready!")
+        noise.runAndWait()
     # Add rectangles
     pygame.draw.rect(scrn, red, pygame.Rect(X*3/4, 0, X*3/4+X/16+X/32, Y/3), 2)
     pygame.draw.rect(scrn, red, pygame.Rect(X*3/4, Y/3, X*3/4+X/16+X/32, 2*Y/3), 2)
@@ -326,19 +398,19 @@ for iteration in range(30):
     #scrn.blit(text1, (X*3/4+X/16+X/32 - X/32, 0))
 
     # Button for creating a meme
-    text2 = font.render(to_native('Stop / High-Resolution / Create '), True, green, blue)
+    text2 = font.render(to_native('Click <here>,'), True, green, blue)
     text2 = pygame.transform.rotate(text2, 90)
-    scrn.blit(text2, (X*3/4+X/16 - X/32, Y/3))
-    text2 = font.render(to_native('a meme'), True, green, blue)
+    scrn.blit(text2, (X*3/4+X/16 - X/32, Y/3+10))
+    text2 = font.render(to_native('for finishing with effects.'), True, green, blue)
     text2 = pygame.transform.rotate(text2, 90)
-    scrn.blit(text2, (X*3/4+X/16+X/32 - X/32, Y/3))
+    scrn.blit(text2, (X*3/4+X/16+X/32 - X/32, Y/3+10))
     # Button for new generation
     text3 = font.render(to_native(f"I don't want to select images"), True, green, blue)
     text3 = pygame.transform.rotate(text3, 90)
-    scrn.blit(text3, (X*3/4+X/16 - X/32, Y*2/3))
+    scrn.blit(text3, (X*3/4+X/16 - X/32, Y*2/3+10))
     text3 = font.render(to_native(f"Just rerun."), True, green, blue)
     text3 = pygame.transform.rotate(text3, 90)
-    scrn.blit(text3, (X*3/4+X/16+X/32 - X/32, Y*2/3))
+    scrn.blit(text3, (X*3/4+X/16+X/32 - X/32, Y*2/3+10))
     text4 = font.render(to_native(f"Modify parameters or text!"), True, green, blue)
     scrn.blit(text4, (300, Y + 30))
     pygame.display.flip()
@@ -394,6 +466,7 @@ for iteration in range(30):
                         language = detect(prompt)
                         english_prompt = GoogleTranslator(source='auto', target='en').translate(prompt)
                     pretty_print("Ok! Parameters updated.")
+                    pretty_print("==> go back to the window!")
                     text4 = font.render(to_native(f"Ok! parameters changed!"), True, green, blue)
                     scrn.blit(text4, (300, Y + 30))
                     pygame.display.flip()
@@ -408,31 +481,27 @@ for iteration in range(30):
                         pretty_print("Then just relaunch me and provide the text and the image.")
                         exit()
                     if pos[1] < 2*Y/3:
-                        onlyfiles = [f for f in listdir(".") if isfile(join(mypath, f))]
-                        onlyfiles = [str(f) for f in onlyfiles if "SD_" in str(f) and ".png" in str(f) and str(f) not in all_files and sentinel in str(f)]
-                        print(to_native("Your generated images:"))
-                        print(onlyfiles)
-                        eg(all_selected + onlyfiles)
-                        pretty_print("Should we create a meme ?")
-                        answer = input(" [y]es or [n]o ?")
-                        if "y" in answer or "Y" in answer:
-                            url = 'https://imgflip.com/memegenerator'
-                            webbrowser.open(url)
-                        pretty_print("Good bye!")
+                        #onlyfiles = [f for f in listdir(".") if isfile(join(mypath, f))]
+                        #onlyfiles = [str(f) for f in onlyfiles if "SD_" in str(f) and ".png" in str(f) and str(f) not in all_files and sentinel in str(f)]
+                        stop_all(all_selected + onlyfiles)
                         exit()
                     status = False
                     break
                 index = 3 * (pos[0] // 300) + (pos[1] // 300)
+                pygame.draw.circle(scrn, red, [pos[0], pos[1]], 3, 0)
+                selected_filename = to_native("Selected") + onlyfiles[index]
+                shutil.copyfile(onlyfiles[index], selected_filename)
+                all_selected += [selected_filename]
                 if index not in five_best and len(five_best) < 5:
                     five_best += [index]
                 indices += [[index, (pos[0] - (pos[0] // 300) * 300) / 300, (pos[1] - (pos[1] // 300) * 300) / 300]]
                 # Update the button for new generation.
                 pygame.draw.rect(scrn, black, pygame.Rect(X*3/4, 2*Y/3, X*3/4+X/16+X/32, Y))
                 pygame.draw.rect(scrn, red, pygame.Rect(X*3/4, 2*Y/3, X*3/4+X/16+X/32, Y), 2)
-                text3 = font.render(to_native(f"  I have chosen {len(indices)} images:"), True, green, blue)
+                text3 = font.render(to_native(f"  You have chosen {len(indices)} images:"), True, green, blue)
                 text3 = pygame.transform.rotate(text3, 90)
                 scrn.blit(text3, (X*3/4+X/16 - X/32, Y*2/3))
-                text3 = font.render(to_native(f"        New generation!"), True, green, blue)
+                text3 = font.render(to_native(f"  Click <here> for new generation!"), True, green, blue)
                 text3 = pygame.transform.rotate(text3, 90)
                 scrn.blit(text3, (X*3/4+X/16+X/32 - X/32, Y*2/3))
                 pygame.display.flip()
@@ -466,6 +535,8 @@ for iteration in range(30):
     sauron = (1 / len([u for u in range(len(onlyfiles)) if u not in [i[0] for i in indices]])) * sauron
     if len(bad) > 300:
         bad = bad[(len(bad) - 300):]
+    print(to_native(f"{len(indices)} indices are selected."))
+    #print(f"indices = {indices}")
     for a in range(llambda):
         forcedlatent = np.zeros((4, 64, 64))
         os.environ["good"] = str(good)
@@ -479,6 +550,10 @@ for iteration in range(30):
                 y = j / 63
                 mindistances = 10000000000.
                 for u in range(len(indices)):
+                    #print(a, i, x, j, y, u)
+                    #print(indices[u][1])
+                    #print(indices[u][2])
+                    #print(f"  {coefficients[u]}* np.linalg.norm({np.array((x, y))}-{np.array((indices[u][1], indices[u][2]))}")
                     distance = coefficients[u] * np.linalg.norm( np.array((x, y)) - np.array((indices[u][1], indices[u][2])) )
                     if distance < mindistances:
                         mindistances = distance
@@ -491,12 +566,13 @@ for iteration in range(30):
                     assert k < len(latent[uu]), k
                     assert i < len(latent[uu][k]), i
                     assert j < len(latent[uu][k][i]), j
-                    forcedlatent[k][i][j] = latent[uu][k][i][j]
-        if a % 2 == 0:
-            forcedlatent -= np.random.rand() * sauron
+                    forcedlatent[k][i][j] = float(latent[uu][k][i][j])
+        #if a % 2 == 0:
+        #    forcedlatent -= np.random.rand() * sauron
         basic_new_fl = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
-        epsilon = 1.0 / 2**(2 + a / 6)
-        forcedlatent = epsilon * basic_new_fl + (1 - epsilon) * np.random.randn(1*4*64*64)
+        epsilon = (a / (llambda - 1)) ** 3
+        forcedlatent = (1. - epsilon) * basic_new_fl.flatten() + epsilon * np.random.randn(4*64*64)
+        forcedlatent = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
         forcedlatents += [forcedlatent]
     #for uu in range(len(latent)):
     #    print(f"--> latent[{uu}] sum of sq / variable = {np.sum(latent[uu].flatten()**2) / len(latent[uu].flatten())}")
