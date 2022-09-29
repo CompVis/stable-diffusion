@@ -18,10 +18,12 @@ Ping us at the Nevergrad user group if you need help, I'll do my best.
 ## Install StableDiffusion as usual, plus a few more stuff.  Basically:
 
 ```
+brew install wget
 conda env create -f environment.yaml
 conda activate ldm    # you can change that name in the environment.yaml file...
 conda install pytorch torchvision -c pytorch
 pip install transformers diffusers invisible-watermark
+pip install -e .
 pip install pygame
 pip install einops
 pip install webbrowser
@@ -29,7 +31,8 @@ pip install pyfiglet
 pip install nevergrad
 pip install langdetect
 pip install deep-translator
-pip install -e .
+pip install git+https://github.com/sberbank-ai/Real-ESRGAN.git
+wget https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth -P weights
 ```
 
 ## Hack diffusers (yes I should do that differently... only solution for now).
