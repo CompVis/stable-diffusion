@@ -887,7 +887,7 @@ def generate(args, frame = 0, return_latent=False, return_sample=False, return_c
 #@markdown **Select and Load Model**
 
 model_config = "v1-inference.yaml" #@param ["custom","v1-inference.yaml"]
-model_checkpoint =  "sd-v1-4.ckpt" #@param ["custom","sd-v1-4-full-ema.ckpt","sd-v1-4.ckpt","sd-v1-3-full-ema.ckpt","sd-v1-3.ckpt","sd-v1-2-full-ema.ckpt","sd-v1-2.ckpt","sd-v1-1-full-ema.ckpt","sd-v1-1.ckpt"]
+model_checkpoint =  "sd-v1-4.ckpt" #@param ["custom","sd-v1-4-full-ema.ckpt","sd-v1-4.ckpt","sd-v1-3-full-ema.ckpt","sd-v1-3.ckpt","sd-v1-2-full-ema.ckpt","sd-v1-2.ckpt","sd-v1-1-full-ema.ckpt","sd-v1-1.ckpt", "robo-diffusion-v1.ckpt"]
 custom_config_path = "" #@param {type:"string"}
 custom_checkpoint_path = "" #@param {type:"string"}
 
@@ -896,14 +896,51 @@ half_precision = True # check
 check_sha256 = True #@param {type:"boolean"}
 
 model_map = {
-    "sd-v1-4-full-ema.ckpt": {'sha256': '14749efc0ae8ef0329391ad4436feb781b402f4fece4883c7ad8d10556d8a36a'},
-    "sd-v1-4.ckpt": {'sha256': 'fe4efff1e174c627256e44ec2991ba279b3816e364b49f9be2abc0b3ff3f8556'},
-    "sd-v1-3-full-ema.ckpt": {'sha256': '54632c6e8a36eecae65e36cb0595fab314e1a1545a65209f24fde221a8d4b2ca'},
-    "sd-v1-3.ckpt": {'sha256': '2cff93af4dcc07c3e03110205988ff98481e86539c51a8098d4f2236e41f7f2f'},
-    "sd-v1-2-full-ema.ckpt": {'sha256': 'bc5086a904d7b9d13d2a7bccf38f089824755be7261c7399d92e555e1e9ac69a'},
-    "sd-v1-2.ckpt": {'sha256': '3b87d30facd5bafca1cbed71cfb86648aad75d1c264663c0cc78c7aea8daec0d'},
-    "sd-v1-1-full-ema.ckpt": {'sha256': 'efdeb5dc418a025d9a8cc0a8617e106c69044bc2925abecc8a254b2910d69829'},
-    "sd-v1-1.ckpt": {'sha256': '86cd1d3ccb044d7ba8db743d717c9bac603c4043508ad2571383f954390f3cea'}
+    "sd-v1-4-full-ema.ckpt": {
+        'sha256': '14749efc0ae8ef0329391ad4436feb781b402f4fece4883c7ad8d10556d8a36a',
+        'url': 'https://huggingface.co/CompVis/stable-diffusion-v-1-2-original/blob/main/sd-v1-4-full-ema.ckpt',
+        'requires_login': True,
+        },
+    "sd-v1-4.ckpt": {
+        'sha256': 'fe4efff1e174c627256e44ec2991ba279b3816e364b49f9be2abc0b3ff3f8556',
+        'url': 'https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/blob/main/sd-v1-4.ckpt',
+        'requires_login': True,
+        },
+    "sd-v1-3-full-ema.ckpt": {
+        'sha256': '54632c6e8a36eecae65e36cb0595fab314e1a1545a65209f24fde221a8d4b2ca',
+        'url': 'https://huggingface.co/CompVis/stable-diffusion-v-1-3-original/blob/main/sd-v1-3-full-ema.ckpt',
+        'requires_login': True,
+        },
+    "sd-v1-3.ckpt": {
+        'sha256': '2cff93af4dcc07c3e03110205988ff98481e86539c51a8098d4f2236e41f7f2f',
+        'url': 'https://huggingface.co/CompVis/stable-diffusion-v-1-3-original/resolve/main/sd-v1-3.ckpt',
+        'requires_login': True,
+        },
+    "sd-v1-2-full-ema.ckpt": {
+        'sha256': 'bc5086a904d7b9d13d2a7bccf38f089824755be7261c7399d92e555e1e9ac69a',
+        'url': 'https://huggingface.co/CompVis/stable-diffusion-v-1-2-original/blob/main/sd-v1-2-full-ema.ckpt',
+        'requires_login': True,
+        },
+    "sd-v1-2.ckpt": {
+        'sha256': '3b87d30facd5bafca1cbed71cfb86648aad75d1c264663c0cc78c7aea8daec0d',
+        'url': 'https://huggingface.co/CompVis/stable-diffusion-v-1-2-original/resolve/main/sd-v1-2.ckpt',
+        'requires_login': True,
+        },
+    "sd-v1-1-full-ema.ckpt": {
+        'sha256': 'efdeb5dc418a025d9a8cc0a8617e106c69044bc2925abecc8a254b2910d69829',
+        'url':'https://huggingface.co/CompVis/stable-diffusion-v-1-1-original/resolve/main/sd-v1-1-full-ema.ckpt',
+        'requires_login': True,
+        },
+    "sd-v1-1.ckpt": {
+        'sha256': '86cd1d3ccb044d7ba8db743d717c9bac603c4043508ad2571383f954390f3cea',
+        'url': 'https://huggingface.co/CompVis/stable-diffusion-v-1-1-original/resolve/main/sd-v1-1.ckpt',
+        'requires_login': True,
+        },
+    "robo-diffusion-v1.ckpt": {
+        'sha256': '244dbe0dcb55c761bde9c2ac0e9b46cc9705ebfe5f1f3a7cc46251573ea14e16',
+        'url': 'https://huggingface.co/nousr/robo-diffusion/resolve/main/models/robo-diffusion-v1.ckpt',
+        'requires_login': False,
+        },
 }
 
 # config path
@@ -919,6 +956,37 @@ ckpt_path = custom_checkpoint_path if model_checkpoint == "custom" else os.path.
 ckpt_valid = True
 if os.path.exists(ckpt_path):
     print(f"{ckpt_path} exists")
+elif 'url' in model_map[model_checkpoint]:
+    url = model_map[model_checkpoint]['url']
+
+    # CLI dialogue to authenticate download
+    if model_map[model_checkpoint]['requires_login']:
+        print("This model requires an authentication token")
+        print("Please ensure you have accepted its terms of service before continuing.")
+
+        username = input("What is your huggingface username?:")
+        token = input("What is your huggingface token?:")
+
+        _, path = url.split("https://")
+
+        url = f"https://{username}:{token}@{path}"
+
+    # contact server for model
+    print(f"Attempting to download {model_checkpoint}...this may take a while")
+    ckpt_request = requests.get(url)
+    request_status = ckpt_request.status_code
+
+    # inform user of errors
+    if request_status == 403:
+      raise ConnectionRefusedError("You have not accepted the license for this model.")
+    elif request_status == 404:
+      raise ConnectionError("Could not make contact with server")
+    elif request_status != 200:
+      raise ConnectionError(f"Some other error has ocurred - response code: {request_status}")
+
+    # write to model path
+    with open(os.path.join(models_path, model_checkpoint), 'wb') as model_file:
+        model_file.write(ckpt_request.content)
 else:
     print(f"Please download model checkpoint and place in {os.path.join(models_path, model_checkpoint)}")
     ckpt_valid = False
