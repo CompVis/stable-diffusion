@@ -1187,7 +1187,6 @@ def parse_key_frames(string, prompt_parser=None):
         raise RuntimeError('Key Frame string not correctly formatted')
     return frames
 
-
 # %%
 # !! {"metadata":{
 # !!   "id": "63UOJvU3xdPS"
@@ -1205,8 +1204,9 @@ def parse_key_frames(string, prompt_parser=None):
 prompts = [
     "a beautiful forest by Asher Brown Durand, trending on Artstation", #the first prompt I want
     "a beautiful portrait of a woman by Artgerm, trending on Artstation", #the second prompt I want
-    "a nousr robot, trending on Artstation", #"nousr robot" for robot diffusion
-    "touhou 1girl komeiji_koishi portrait, green hair", #waifu diffusion prompt
+    #"a nousr robot, trending on Artstation", #"nousr robot" for robot diffusion
+    #"touhou 1girl komeiji_koishi portrait, green hair", #waifu diffusion prompt
+    #"this prompt has weights if prompt weighting enabled:2 can also do negative:-2", #prompt weights
     #"the third prompt I don't want it I commented it with an",
 ]
 
@@ -1257,18 +1257,6 @@ def DeforumArgs():
     show_sample_per_step = False #@param {type:"boolean"}
 
     #@markdown **Prompt Settings**
-    #@markdown
-    #@markdown weighting is experimental, use at your own risk!
-    #@markdown
-    #@markdown add weight numbers with colons `thing:0.25`
-    #@markdown
-    #@markdown the larger the number, the greater the emphasis
-    #@markdown
-    #@markdown negative values reduce the presence 
-    #@markdown
-    #@markdown math expressions framed with \`-characters are also supported
-    #@markdown
-    #@markdown example forest:\`sin(2\*3.14\*t/10)\` where t is the frame number
     prompt_weighting = False #@param {type:"boolean"}
     normalize_prompt_weights = True #@param {type:"boolean"}
     log_weighted_subprompts = False #@param {type:"boolean"}
