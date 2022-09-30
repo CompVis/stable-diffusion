@@ -583,6 +583,9 @@ class Generate:
                 strength    = opt.strength,
                 image_callback = callback,
                 )
+        elif tool is None:
+            print(f'* please provide at least one postprocessing option, such as -G or -U')
+            return None
         else:
             print(f'* postprocessing tool {tool} is not yet supported')
             return None
