@@ -3,7 +3,7 @@
 # !!   "id": "c442uQJ_gUgy"
 # !! }}
 """
-# **Deforum Stable Diffusion v0.4**
+# **Deforum Stable Diffusion v0.5**
 [Stable Diffusion](https://github.com/CompVis/stable-diffusion) by Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer and the [Stability.ai](https://stability.ai/) Team. [K Diffusion](https://github.com/crowsonkb/k-diffusion) by [Katherine Crowson](https://twitter.com/RiversHaveWings). You need to get the ckpt file and put it on your Google Drive first to use this. It can be downloaded from [HuggingFace](https://huggingface.co/CompVis/stable-diffusion).
 
 Notebook by [deforum](https://discord.gg/upmXXsrwZc)
@@ -1075,9 +1075,9 @@ def DeforumArgs():
     mask_brightness_adjust = 1.0  #@param {type:"number"}
     mask_contrast_adjust = 1.0  #@param {type:"number"}
     # Overlay the masked image at the end of the generation so it does not get degraded by encoding and decoding
-    overlay_mask = True  #@param {type:"boolean"}
+    overlay_mask = True  # {type:"boolean"}
     # Blur edges of final overlay mask, if used. Minimum = 0 (no blur)
-    mask_overlay_blur = 5 #@param {type:"number"}
+    mask_overlay_blur = 5 # {type:"number"}
 
     n_samples = 1 # doesnt do anything
     precision = 'autocast' 
