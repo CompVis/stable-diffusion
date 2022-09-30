@@ -7,11 +7,17 @@ export default defineConfig(({ mode }) => {
   const common = {
     plugins: [react(), eslint()],
     server: {
+      // Proxy HTTP requests to the flask server
       proxy: {
         '/outputs': {
-          target: 'http://localhost:9090/outputs',
+          target: 'http://127.0.0.1:9090/outputs',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/outputs/, ''),
+        },
+        // Proxy socket.io to the flask-socketio server
+        '/socket.io': {
+          target: 'ws://127.0.0.1:9090',
+          ws: true,
         },
       },
     },
