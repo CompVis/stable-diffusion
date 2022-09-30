@@ -7,6 +7,8 @@ export const SAMPLERS: Array<string> = [
   'k_lms',
   'k_dpm_2',
   'k_dpm_2_a',
+  'k_dpm_fast',
+  'k_dpm_adaptive',
   'k_euler',
   'k_euler_a',
   'k_heun',
