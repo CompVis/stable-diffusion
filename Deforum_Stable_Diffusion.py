@@ -888,7 +888,7 @@ def generate(args, frame = 0, return_latent=False, return_sample=False, return_c
 
 model_config = "v1-inference.yaml" #@param ["custom","v1-inference.yaml"]
 model_checkpoint =  "sd-v1-4.ckpt" #@param ["custom","sd-v1-4-full-ema.ckpt","sd-v1-4.ckpt","sd-v1-3-full-ema.ckpt","sd-v1-3.ckpt","sd-v1-2-full-ema.ckpt","sd-v1-2.ckpt","sd-v1-1-full-ema.ckpt","sd-v1-1.ckpt", "robo-diffusion-v1.ckpt","waifu-diffusion-v1-3.ckpt"]
-if model_checkpoint = "waifu-diffusion-v1-3.ckpt":
+if model_checkpoint == "waifu-diffusion-v1-3.ckpt":
     model_checkpoint = "model-epoch05-float16.ckpt"
 custom_config_path = "" #@param {type:"string"}
 custom_checkpoint_path = "" #@param {type:"string"}
