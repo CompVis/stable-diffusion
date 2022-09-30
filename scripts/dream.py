@@ -201,9 +201,7 @@ def main_loop(gen, opt, infile):
                     oldargs    = metadata_from_png(opt.init_img)
                     opt.prompt = oldargs.prompt
                     print(f'>> Retrieved old prompt "{opt.prompt}" from {opt.init_img}')
-            except AttributeError:
-                pass
-            except KeyError:
+            except (OSError, AttributeError, KeyError):
                 pass
 
         if len(opt.prompt) == 0:
@@ -376,9 +374,6 @@ def do_postprocess (gen, opt, callback):
     file_path = opt.prompt     # treat the prompt as the file pathname
     if os.path.dirname(file_path) == '': #basename given
         file_path = os.path.join(opt.outdir,file_path)
-    if not os.path.exists(file_path):
-        print(f'* file {file_path} does not exist')
-        return
 
     tool=None
     if opt.gfpgan_strength > 0:
@@ -391,17 +386,24 @@ def do_postprocess (gen, opt, callback):
         tool = 'outpaint'
     opt.save_original = True # do not overwrite old image!
     opt.last_operation    = f'postprocess:{tool}'
-    gen.apply_postprocessor(
-        image_path      = file_path,
-        tool            = tool,
-        gfpgan_strength = opt.gfpgan_strength,
-        codeformer_fidelity = opt.codeformer_fidelity,
-        save_original       = opt.save_original,
-        upscale             = opt.upscale,
-        out_direction       = opt.out_direction,
-        callback            = callback,
-        opt                 = opt,
+    try:
+        gen.apply_postprocessor(
+            image_path      = file_path,
+            tool            = tool,
+            gfpgan_strength = opt.gfpgan_strength,
+            codeformer_fidelity = opt.codeformer_fidelity,
+            save_original       = opt.save_original,
+            upscale             = opt.upscale,
+            out_direction       = opt.out_direction,
+            callback            = callback,
+            opt                 = opt,
         )
+    except OSError:
+        print(f'** {file_path}: file could not be read')
+        return
+    except (KeyError, AttributeError):
+        print(f'** {file_path}: file has no metadata')
+        return
     return opt.last_operation
     
 def prepare_image_metadata(
@@ -518,8 +520,11 @@ def retrieve_dream_command(opt,file_path,completer):
         path = file_path
     try:
         cmd = dream_cmd_from_png(path)
-    except FileNotFoundError:
-        print(f'** {path}: file not found')
+    except OSError:
+        print(f'** {path}: file could not be read')
+        return
+    except (KeyError, AttributeError):
+        print(f'** {path}: file has no metadata')
         return
     completer.set_line(cmd)
 
