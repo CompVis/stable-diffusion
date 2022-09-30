@@ -9,7 +9,7 @@ import copy
 import warnings
 import time
 sys.path.append('.')    # corrects a weird problem on Macs
-from ldm.dream.readline import completer
+from ldm.dream.readline import get_completer
 from ldm.dream.args import Args, metadata_dumps, metadata_from_png, dream_cmd_from_png
 from ldm.dream.pngwriter import PngWriter
 from ldm.dream.image_util import make_grid
@@ -17,9 +17,6 @@ from ldm.dream.log import write_log
 from omegaconf import OmegaConf
 from backend.invoke_ai_web_server import InvokeAIWebServer
 
-# The output counter labels each output and is keyed to the
-# command-line history
-output_cntr = completer.get_current_history_length()+1
 
 def main():
     """Initialize command-line parsers and the diffusion model"""
@@ -130,6 +127,12 @@ def main_loop(gen, opt, infile):
     last_results = list()
     model_config = OmegaConf.load(opt.conf)[opt.model]
 
+    # The readline completer reads history from the .dream_history file located in the
+    # output directory specified at the time of script launch. We do not currently support
+    # changing the history file midstream when the output directory is changed.
+    completer   = get_completer(opt)
+    output_cntr = completer.get_current_history_length()+1
+
     # os.pathconf is not available on Windows
     if hasattr(os, 'pathconf'):
         path_max = os.pathconf(opt.outdir, 'PC_PATH_MAX')
@@ -161,29 +164,34 @@ def main_loop(gen, opt, infile):
             done = True
             break
 
-        if command.startswith('!dream'):   # in case a stored prompt still contains the !dream command
-            command = command.replace('!dream ','',1)
+        if command.startswith('!'):
+            subcommand = command[1:]
 
-        if command.startswith('!fix'):
-            command = command.replace('!fix ','',1)
-            operation = 'postprocess'
+            if subcommand.startswith('dream'):   # in case a stored prompt still contains the !dream command
+                command = command.replace('!dream ','',1)
 
-        if command.startswith('!fetch'):
-            file_path = command.replace('!fetch ','',1)
-            retrieve_dream_command(opt,file_path)
-            continue
+            elif subcommand.startswith('fix'):
+                command = command.replace('!fix ','',1)
+                operation = 'postprocess'
 
-        if command == '!history':
-            completer.show_history()
-            continue
+            elif subcommand.startswith('fetch'):
+                file_path = command.replace('!fetch ','',1)
+                retrieve_dream_command(opt,file_path,completer)
+                continue
 
-        match = re.match('^!(\d+)',command)
-        if match:
-            command_no = match.groups()[0]
-            command    = completer.get_line(int(command_no))
-            completer.set_line(command)
-            continue
-            
+            elif subcommand.startswith('history'):
+                completer.show_history()
+                continue
+
+            elif re.match('^(\d+)',subcommand):
+                command_no = re.match('^(\d+)',subcommand).groups()[0]
+                command    = completer.get_line(int(command_no))
+                completer.set_line(command)
+                continue
+                
+            else:  # not a recognized subcommand, so give the --help text
+                command = '-h'
+
         if opt.parse_cmd(command) is None:
             continue
 
@@ -358,7 +366,6 @@ def main_loop(gen, opt, infile):
 
         print('Outputs:')
         log_path = os.path.join(current_outdir, 'dream_log')
-        global output_cntr
         output_cntr = write_log(results, log_path ,('txt', 'md'), output_cntr)
         print()
         if operation == 'postprocess':
@@ -500,7 +507,7 @@ def split_variations(variations_string) -> list:
     else:
         return parts
 
-def retrieve_dream_command(opt,file_path):
+def retrieve_dream_command(opt,file_path,completer):
     '''
     Given a full or partial path to a previously-generated image file,
     will retrieve and format the dream command used to generate the image,
@@ -512,7 +519,11 @@ def retrieve_dream_command(opt,file_path):
         path = os.path.join(opt.outdir,basename)
     else:
         path = file_path
-    cmd = dream_cmd_from_png(path)
+    try:
+        cmd = dream_cmd_from_png(path)
+    except FileNotFoundError:
+        print(f'** {path}: file not found')
+        return
     completer.set_line(cmd)
 
 if __name__ == '__main__':
