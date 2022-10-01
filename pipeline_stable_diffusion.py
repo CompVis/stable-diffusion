@@ -221,17 +221,20 @@ class StableDiffusionPipeline(DiffusionPipeline):
                 generator=generator,
                 device=latents_device,
             )
-            if len(os.environ["forcedlatent"]) > 0:
-                print("we get a forcing for the latent z.")
+            if len(os.environ["forcedlatent"]) > 10:
+                stri = os.environ["forcedlatent"]
+                print(f"we get a forcing for the latent z: {stri[:20]}.")
+                if len(eval(stri)) == 1:
+                    stri = str(eval(stri)[0])
                 speedup = 1
-                latents = np.array(eval(os.environ["forcedlatent"])).flatten()
+                latents = np.array(list(eval(stri))).flatten()
                 #latents = latents + np.exp(0.1 * np.random.randn()) * np.random.rand(len(latents))
                 #latents = np.sqrt(len(latents) / np.sum(latents ** 2)) * latents
                 #latents = np.sqrt(len(latents)) * latents / np.sqrt(np.sum(latents ** 2))
-                print(latents[:10])
+                print(f"As an array, this is {latents[:10]}")
                 print(f"immediately after loading latent ==> {sum(latents.flatten()**2) / len(latents.flatten())}")
                 latents = torch.from_numpy(latents.reshape((1,4,64,64))).float().to(latents_device)
-                os.environ["forcedlatent"] = ""
+            os.environ["forcedlatent"] = ""
             good = eval(os.environ["good"])
             bad = eval(os.environ["bad"])
             print(f"{len(good)} good and {len(bad)} bad")
