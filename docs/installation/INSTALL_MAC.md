@@ -95,10 +95,9 @@ While that is downloading, open a Terminal and run the following commands:
 ```{.bash .annotate title="local repo setup"}
 # clone the repo
 git clone https://github.com/invoke-ai/InvokeAI.git
-
 cd InvokeAI
 
-# wait until the checkpoint file has downloaded, then proceed
+# Download the checkpoint file, and then proceed
 
 # create symlink to checkpoint
 mkdir -p models/ldm/stable-diffusion-v1/
@@ -172,13 +171,13 @@ python ./scripts/orig_scripts/txt2img.py \
 
 ### Doesn't work anymore?
 
-PyTorch nightly includes support for MPS. Because of this, this setup is
-inherently unstable. One morning I woke up and it no longer worked no matter
-what I did until I switched to miniforge. However, I have another Mac that works
-just fine with Anaconda. If you can't get it to work, please search a little
-first because many of the errors will get posted and solved. If you can't find a
-solution please
-[create an issue](https://github.com/invoke-ai/InvokeAI/issues).
+PyTorch nightly includes support for MPS. Because of this, this setup
+is inherently unstable. One morning I woke up and it no longer worked
+no matter what I did until I switched to miniforge. However, I have
+another Mac that works just fine with Anaconda. If you can't get it to
+work, please search a little first because many of the errors will get
+posted and solved. If you can't find a solution please [create an
+issue](https://github.com/invoke-ai/InvokeAI/issues).
 
 One debugging step is to update to the latest version of PyTorch nightly.
 
@@ -378,8 +377,8 @@ python scripts/preload_models.py
     WARNING: this will be slower than running natively on MPS.
     ```
 
-This fork already includes a fix for this in
-[environment-mac.yml](https://github.com/invoke-ai/InvokeAI/blob/main/environment-mac.yml).
+The InvokeAI version includes this fix in
+[environment-mac.yaml](https://github.com/invoke-ai/InvokeAI/blob/main/environment-mac.yaml).
 
 ### "Could not build wheels for tokenizers"
 
@@ -463,13 +462,10 @@ C.
 
 You don't have a virus. It's part of the project. Here's
 [Rick](https://github.com/invoke-ai/InvokeAI/blob/main/assets/rick.jpeg)
-and here's
-[the code](https://github.com/invoke-ai/InvokeAI/blob/69ae4b35e0a0f6ee1af8bb9a5d0016ccb27e36dc/scripts/txt2img.py#L79)
-that swaps him in. It's a NSFW filter, which IMO, doesn't work very good (and we
-call this "computer vision", sheesh).
-
-Actually, this could be happening because there's not enough RAM. You could try
-the `model.half()` suggestion or specify smaller output images.
+and here's [the
+code](https://github.com/invoke-ai/InvokeAI/blob/69ae4b35e0a0f6ee1af8bb9a5d0016ccb27e36dc/scripts/txt2img.py#L79)
+that swaps him in. It's a NSFW filter, which IMO, doesn't work very
+good (and we call this "computer vision", sheesh).
 
 ---
 
@@ -492,11 +488,9 @@ return torch.layer_norm(input, normalized_shape, weight, bias, eps, torch.backen
 RuntimeError: view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead.
 ```
 
-Update to the latest version of invoke-ai/InvokeAI. We were patching
-pytorch but we found a file in stable-diffusion that we could change instead.
-This is a 32-bit vs 16-bit problem.
-
----
+Update to the latest version of invoke-ai/InvokeAI. We were
+patching pytorch but we found a file in stable-diffusion that we could
+change instead. This is a 32-bit vs 16-bit problem.
 
 ### The processor must support the Intel bla bla bla
 
