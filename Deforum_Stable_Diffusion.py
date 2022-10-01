@@ -7,10 +7,11 @@
 [Stable Diffusion](https://github.com/CompVis/stable-diffusion) by Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer and the [Stability.ai](https://stability.ai/) Team. [K Diffusion](https://github.com/crowsonkb/k-diffusion) by [Katherine Crowson](https://twitter.com/RiversHaveWings). You need to get the ckpt file and put it on your Google Drive first to use this. It can be downloaded from [HuggingFace](https://huggingface.co/CompVis/stable-diffusion).
 
 Notebook by [deforum](https://discord.gg/upmXXsrwZc)
+"""
 
 # %%
 # !! {"metadata":{
-# !!   "id": "T4knibRpAQ06"
+# !!   "id": "LBamKxcmNI7-"
 # !! }}
 """
 By using this Notebook, you agree to the following Terms of Use, and license:
@@ -24,8 +25,16 @@ The CreativeML OpenRAIL License specifies:
 You can't use the model to deliberately produce nor share illegal or harmful outputs or content
 CompVis claims no rights on the outputs you generate, you are free to use them and are accountable for their use which must not go against the provisions set in the license
 You may re-distribute the weights and use the model commercially and/or as a service. If you do, please be aware you have to include the same use restrictions as the ones in the license and share a copy of the CreativeML OpenRAIL-M to all your users (please read the license entirely and carefully)
-Please read the full license here: https://huggingface.co/spaces/CompVis/stable-diffusion-license
 
+
+Please read the full license here: https://huggingface.co/spaces/CompVis/stable-diffusion-license
+"""
+
+# %%
+# !! {"metadata":{
+# !!   "id": "T4knibRpAQ06"
+# !! }}
+"""
 # Setup
 """
 
@@ -1219,7 +1228,7 @@ prompts = [
     #"this prompt I don't want it I commented it out",
     #"a nousr robot, trending on Artstation", # use "nousr robot" with the robot diffusion model (see model_checkpoint setting)
     #"touhou 1girl komeiji_koishi portrait, green hair", # waifu diffusion prompts can use danbooru tag groups (see model_checkpoint)
-    #"this prompt has weights if prompt weighting enabled:2 can also do negative:-2", # prompt weights
+    #"this prompt has weights if prompt weighting enabled:2 can also do negative:-2", # (see prompt_weighting)
 ]
 
 animation_prompts = {
