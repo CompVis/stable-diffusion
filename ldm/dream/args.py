@@ -573,7 +573,7 @@ class Args(object):
             '--hires_fix',
             action='store_true',
             dest='hires_fix',
-            help='Create hires image using img2img to prevent dupes'
+            help='Create hires image using img2img to prevent duplicated objects'
         )
         img2img_group.add_argument(
             '-I',
