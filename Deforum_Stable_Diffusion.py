@@ -926,7 +926,7 @@ model_map = {
         },
     "sd-v1-4.ckpt": {
         'sha256': 'fe4efff1e174c627256e44ec2991ba279b3816e364b49f9be2abc0b3ff3f8556',
-        'url': 'https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/blob/main/sd-v1-4.ckpt',
+        'url': 'https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/resolve/main/sd-v1-4.ckpt',
         'requires_login': True,
         },
     "sd-v1-3-full-ema.ckpt": {
