@@ -62,7 +62,7 @@ You wil need one of the following:
 
 **Note**
 
-If you are have a Nvidia 10xx series card (e.g. the 1080ti), please
+If you have a Nvidia 10xx series card (e.g. the 1080ti), please
 run the dream script in full-precision mode as shown below.
 
 Similarly, specify full-precision mode on Apple M1 hardware.
