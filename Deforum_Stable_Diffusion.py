@@ -1214,12 +1214,12 @@ def parse_key_frames(string, prompt_parser=None):
 # !! }}
 
 prompts = [
-    "a beautiful forest by Asher Brown Durand, trending on Artstation", #the first prompt I want
-    "a beautiful portrait of a woman by Artgerm, trending on Artstation", #the second prompt I want
-    #"a nousr robot, trending on Artstation", #"nousr robot" for robot diffusion
-    #"touhou 1girl komeiji_koishi portrait, green hair", #waifu diffusion prompt
-    #"this prompt has weights if prompt weighting enabled:2 can also do negative:-2", #prompt weights
-    #"the third prompt I don't want it I commented it with an",
+    "a beautiful forest by Asher Brown Durand, trending on Artstation", # the first prompt I want
+    "a beautiful portrait of a woman by Artgerm, trending on Artstation", # the second prompt I want
+    #"this prompt I don't want it I commented it out",
+    #"a nousr robot, trending on Artstation", # use "nousr robot" with the robot diffusion model (see model_checkpoint setting)
+    #"touhou 1girl komeiji_koishi portrait, green hair", # waifu diffusion prompts can use danbooru tag groups (see model_checkpoint)
+    #"this prompt has weights if prompt weighting enabled:2 can also do negative:-2", # prompt weights
 ]
 
 animation_prompts = {
