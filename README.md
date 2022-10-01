@@ -90,7 +90,12 @@ You wil need one of the following:
 
 - At least 6 GB of free disk space for the machine learning model, Python, and all its dependencies.
 
-#### Note
+**Note**
+
+If you have a Nvidia 10xx series card (e.g. the 1080ti), please
+run the dream script in full-precision mode as shown below.
+
+Similarly, specify full-precision mode on Apple M1 hardware.
 
 Precision is auto configured based on the device. If however you encounter
 errors like 'expected type Float but found Half' or 'not implemented for Half'
