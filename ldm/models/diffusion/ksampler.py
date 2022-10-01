@@ -119,6 +119,7 @@ class KSampler(Sampler):
             'uncond': unconditional_conditioning,
             'cond_scale': unconditional_guidance_scale,
         }
+        print(f'>> Sampling with k__{self.schedule}')
         return (
             K.sampling.__dict__[f'sample_{self.schedule}'](
                 model_wrap_cfg, x, sigmas, extra_args=extra_args,
@@ -190,3 +191,30 @@ class KSampler(Sampler):
         Overrides parent method to return the q_sample of the inner model.
         '''
         return self.model.inner_model.q_sample(x0,ts)
+
+    @torch.no_grad()
+    def decode(
+            self,
+            z_enc,
+            cond,
+            t_enc,
+            img_callback=None,
+            unconditional_guidance_scale=1.0,
+            unconditional_conditioning=None,
+            use_original_steps=False,
+            init_latent       = None,
+            mask              = None,
+    ):
+        samples,_ = self.sample(
+            batch_size = 1,
+            S          = t_enc,
+            x_T        = z_enc,
+            shape      = z_enc.shape[1:],
+            conditioning = cond,
+            unconditional_guidance_scale=unconditional_guidance_scale,
+            unconditional_conditioning = unconditional_conditioning,
+            img_callback = img_callback,
+            x0           = init_latent,
+            mask         = mask
+            )
+        return samples

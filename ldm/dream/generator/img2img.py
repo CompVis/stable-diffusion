@@ -40,18 +40,16 @@ class Img2Img(Generator):
                 torch.tensor([t_enc]).to(self.model.device),
                 noise=x_T
             )
-            samples,_ = sampler.sample(
-                batch_size   = 1,
-                S            = t_enc,
-                shape        = z_enc.shape[1:],
-                x_T          = z_enc,
-                conditioning = c,
-                unconditional_guidance_scale = cfg_scale,
-                unconditional_conditioning   = uc,
-                eta                          = ddim_eta,
-                img_callback                 = step_callback,
-                verbose                      = False,
+            # decode it
+            samples = sampler.decode(
+                z_enc,
+                c,
+                t_enc,
+                img_callback = step_callback,
+                unconditional_guidance_scale=cfg_scale,
+                unconditional_conditioning=uc,
             )
+
             return self.sample_to_image(samples)
 
         return make_image
