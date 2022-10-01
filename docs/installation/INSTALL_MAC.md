@@ -61,8 +61,8 @@ curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o Mi
 # continue from here
 
 # clone the repo
-git clone https://github.com/lstein/stable-diffusion.git
-cd stable-diffusion
+git clone https://github.com/invoke-ai/InvokeAI.git
+cd InvokeAI
 
 #
 # wait until the checkpoint file has downloaded, then proceed
@@ -106,7 +106,7 @@ Be sure to specify 1 sample and 1 iteration.
 
 ### Doesn't work anymore?
 
-PyTorch nightly includes support for MPS. Because of this, this setup is inherently unstable. One morning I woke up and it no longer worked no matter what I did until I switched to miniforge. However, I have another Mac that works just fine with Anaconda. If you can't get it to work, please search a little first because many of the errors will get posted and solved. If you can't find a solution please [create an issue](https://github.com/lstein/stable-diffusion/issues).
+PyTorch nightly includes support for MPS. Because of this, this setup is inherently unstable. One morning I woke up and it no longer worked no matter what I did until I switched to miniforge. However, I have another Mac that works just fine with Anaconda. If you can't get it to work, please search a little first because many of the errors will get posted and solved. If you can't find a solution please [create an issue](https://github.com/invoke-ai/InvokeAI/issues).
 
 One debugging step is to update to the latest version of PyTorch nightly.
 
@@ -239,7 +239,7 @@ Example error.
 NotImplementedError: The operator 'aten::_index_put_impl_' is not current implemented for the MPS device. If you want this op to be added in priority during the prototype phase of this feature, please comment on [https://github.com/pytorch/pytorch/issues/77764](https://github.com/pytorch/pytorch/issues/77764). As a temporary fix, you can set the environment variable `PYTORCH_ENABLE_MPS_FALLBACK=1` to use the CPU as a fallback for this op. WARNING: this will be slower than running natively on MPS.
 ```
 
-The lstein branch includes this fix in [environment-mac.yaml](https://github.com/lstein/stable-diffusion/blob/main/environment-mac.yaml).
+The InvokeAI version includes this fix in [environment-mac.yaml](https://github.com/invoke-ai/InvokeAI/blob/main/environment-mac.yaml).
 
 ### "Could not build wheels for tokenizers"
 
@@ -305,9 +305,9 @@ BTW, 2\*\*31-1 = [2,147,483,647](https://en.wikipedia.org/wiki/2,147,483,647#In_
 ### I just got Rickrolled! Do I have a virus?
 
 You don't have a virus. It's part of the project. Here's
-[Rick](https://github.com/lstein/stable-diffusion/blob/main/assets/rick.jpeg)
+[Rick](https://github.com/invoke-ai/InvokeAI/blob/main/assets/rick.jpeg)
 and here's [the
-code](https://github.com/lstein/stable-diffusion/blob/69ae4b35e0a0f6ee1af8bb9a5d0016ccb27e36dc/scripts/txt2img.py#L79)
+code](https://github.com/invoke-ai/InvokeAI/blob/69ae4b35e0a0f6ee1af8bb9a5d0016ccb27e36dc/scripts/txt2img.py#L79)
 that swaps him in. It's a NSFW filter, which IMO, doesn't work very
 good (and we call this "computer vision", sheesh).
 
@@ -332,7 +332,7 @@ suggestion above would fix this issue too. I should probably test it.
 RuntimeError: view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead.
 ```
 
-Update to the latest version of lstein/stable-diffusion. We were
+Update to the latest version of invoke-ai/InvokeAI. We were
 patching pytorch but we found a file in stable-diffusion that we could
 change instead. This is a 32-bit vs 16-bit problem.
 
