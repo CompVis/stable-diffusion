@@ -581,6 +581,12 @@ class Args(object):
             type=str,
             help='Directory to save generated images and a log of prompts and seeds',
         )
+        render_group.add_argument(
+            '--hires_fix',
+            action='store_true',
+            dest='hires_fix',
+            help='Create hires image using img2img to prevent duplicated objects'
+        )
         img2img_group.add_argument(
             '-I',
             '--init_img',
