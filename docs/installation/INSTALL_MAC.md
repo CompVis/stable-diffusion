@@ -74,12 +74,8 @@ curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o M
 # Clone the Invoke AI repo
 git clone https://github.com/invoke-ai/InvokeAI.git
 cd InvokeAI
-<<<<<<< HEAD
 
-### WAIT FOR THE CHECKPOINT FILE TO DOWNLOAD, THEN PROCEED ###
-# We will leave the big checkpoint wherever you stashed it for long-term storage,
-# and make a link to it from the repo's folder. This allows you to use it for
-# other repos, and if you need to delete Invoke AI, you won't have to download it again.
+# Download the checkpoint file, and then proceed
 
 # Make the directory in the repo for the symlink
 mkdir -p models/ldm/stable-diffusion-v1/
@@ -347,6 +343,7 @@ python scripts/preload_models.py
     ```
 
 The InvokeAI version includes this fix in
+
 [environment-mac.yml](https://github.com/invoke-ai/InvokeAI/blob/main/environment-mac.yml).
 
 ### "Could not build wheels for tokenizers"
