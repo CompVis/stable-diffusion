@@ -279,9 +279,6 @@ def main_loop(gen, opt, infile):
             prefix = file_writer.unique_prefix()
 
             def image_writer(image, seed, upscaled=False, first_seed=None, use_prefix=None):
-                print(f'DEBUG:upscaled={upscaled}, first_seed={first_seed}, use_prefix={use_prefix}')
-
-                
                 # note the seed is the seed of the current image
                 # the first_seed is the original seed that noise is added to
                 # when the -v switch is used to generate variations
