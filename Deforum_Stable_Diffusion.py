@@ -887,7 +887,9 @@ def generate(args, frame = 0, return_latent=False, return_sample=False, return_c
 #@markdown **Select and Load Model**
 
 model_config = "v1-inference.yaml" #@param ["custom","v1-inference.yaml"]
-model_checkpoint =  "sd-v1-4.ckpt" #@param ["custom","sd-v1-4-full-ema.ckpt","sd-v1-4.ckpt","sd-v1-3-full-ema.ckpt","sd-v1-3.ckpt","sd-v1-2-full-ema.ckpt","sd-v1-2.ckpt","sd-v1-1-full-ema.ckpt","sd-v1-1.ckpt", "robo-diffusion-v1.ckpt"]
+model_checkpoint =  "sd-v1-4.ckpt" #@param ["custom","sd-v1-4-full-ema.ckpt","sd-v1-4.ckpt","sd-v1-3-full-ema.ckpt","sd-v1-3.ckpt","sd-v1-2-full-ema.ckpt","sd-v1-2.ckpt","sd-v1-1-full-ema.ckpt","sd-v1-1.ckpt", "robo-diffusion-v1.ckpt","waifu-diffusion-v1-3.ckpt"]
+if model_checkpoint == "waifu-diffusion-v1-3.ckpt":
+    model_checkpoint = "model-epoch05-float16.ckpt"
 custom_config_path = "" #@param {type:"string"}
 custom_checkpoint_path = "" #@param {type:"string"}
 
@@ -939,6 +941,11 @@ model_map = {
     "robo-diffusion-v1.ckpt": {
         'sha256': '244dbe0dcb55c761bde9c2ac0e9b46cc9705ebfe5f1f3a7cc46251573ea14e16',
         'url': 'https://huggingface.co/nousr/robo-diffusion/resolve/main/models/robo-diffusion-v1.ckpt',
+        'requires_login': False,
+        },
+    "model-epoch05-float16.ckpt": {
+        'sha256': '26cf2a2e30095926bb9fd9de0c83f47adc0b442dbfdc3d667d43778e8b70bece',
+        'url': 'https://huggingface.co/hakurei/waifu-diffusion-v1-3/resolve/main/model-epoch05-float16.ckpt',
         'requires_login': False,
         },
 }
@@ -1180,7 +1187,6 @@ def parse_key_frames(string, prompt_parser=None):
         raise RuntimeError('Key Frame string not correctly formatted')
     return frames
 
-
 # %%
 # !! {"metadata":{
 # !!   "id": "63UOJvU3xdPS"
@@ -1198,6 +1204,9 @@ def parse_key_frames(string, prompt_parser=None):
 prompts = [
     "a beautiful forest by Asher Brown Durand, trending on Artstation", #the first prompt I want
     "a beautiful portrait of a woman by Artgerm, trending on Artstation", #the second prompt I want
+    #"a nousr robot, trending on Artstation", #"nousr robot" for robot diffusion
+    #"touhou 1girl komeiji_koishi portrait, green hair", #waifu diffusion prompt
+    #"this prompt has weights if prompt weighting enabled:2 can also do negative:-2", #prompt weights
     #"the third prompt I don't want it I commented it with an",
 ]
 
@@ -1221,6 +1230,7 @@ animation_prompts = {
 # !!   "id": "qH74gBWDd2oq",
 # !!   "cellView": "form"
 # !! }}
+#@markdown **Load Settings**
 override_settings_with_file = False #@param {type:"boolean"}
 custom_settings_file = "/content/drive/MyDrive/Settings.txt"#@param {type:"string"}
 
@@ -1247,18 +1257,6 @@ def DeforumArgs():
     show_sample_per_step = False #@param {type:"boolean"}
 
     #@markdown **Prompt Settings**
-    #@markdown
-    #@markdown weighting is experimental, use at your own risk!
-    #@markdown
-    #@markdown add weight numbers with colons `thing:0.25`
-    #@markdown
-    #@markdown the larger the number, the greater the emphasis
-    #@markdown
-    #@markdown negative values reduce the presence 
-    #@markdown
-    #@markdown math expressions framed with \`-characters are also supported
-    #@markdown
-    #@markdown example forest:\`sin(2\*3.14\*t/10)\` where t is the frame number
     prompt_weighting = False #@param {type:"boolean"}
     normalize_prompt_weights = True #@param {type:"boolean"}
     log_weighted_subprompts = False #@param {type:"boolean"}
