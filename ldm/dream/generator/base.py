@@ -50,7 +50,7 @@ class Generator():
         )
 
         results             = []
-        seed                = seed if seed else self.new_seed()
+        seed                = seed if seed is not None else self.new_seed()
         first_seed          = seed
         seed, initial_noise = self.generate_initial_noise(seed, width, height)
         with scope(self.model.device.type), self.model.ema_scope():
