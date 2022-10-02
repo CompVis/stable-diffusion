@@ -5,6 +5,7 @@ including img2img, txt2img, and inpaint
 import torch
 import numpy as  np
 import random
+import os
 from tqdm import tqdm, trange
 from PIL               import Image
 from einops import rearrange, repeat
@@ -168,3 +169,14 @@ class Generator():
 
         return v2
 
+    # this is a handy routine for debugging use. Given a generated sample,
+    # convert it into a PNG image and store it at the indicated path
+    def save_sample(self, sample, filepath):
+        image = self.sample_to_image(sample)
+        dirname = os.path.dirname(filepath) or '.'
+        if not os.path.exists(dirname):
+            print(f'** creating directory {dirname}')
+            os.makedirs(dirname, exist_ok=True)
+        image.save(filepath,'PNG')
+
+        

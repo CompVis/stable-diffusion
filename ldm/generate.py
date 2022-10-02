@@ -260,6 +260,8 @@ class Generate:
             codeformer_fidelity = None,
             save_original    = False,
             upscale          = None,
+            # this is specific to inpainting and causes more extreme inpainting
+            inpaint_replace  = 0.0,
             # Set this True to handle KeyboardInterrupt internally
             catch_interrupts = False,
             hires_fix        = False,
@@ -358,6 +360,7 @@ class Generate:
                 f'variation weights must be in [0.0, 1.0]: got {[weight for _, weight in with_variations]}'
 
         width, height, _ = self._resolution_check(width, height, log=True)
+        assert inpaint_replace >=0.0 and inpaint_replace <= 1.0,'inpaint_replace must be between 0.0 and 1.0'
 
         if sampler_name and (sampler_name != self.sampler_name):
             self.sampler_name = sampler_name
@@ -385,6 +388,8 @@ class Generate:
                 height,
                 fit=fit,
             )
+
+            # TODO: Hacky selection of operation to perform. Needs to be refactored.
             if (init_image is not None) and (mask_image is not None):
                 generator = self._make_inpaint()
             elif (embiggen != None or embiggen_tiles != None):
@@ -399,6 +404,7 @@ class Generate:
             generator.set_variation(
                 self.seed, variation_amount, with_variations
             )
+
             results = generator.generate(
                 prompt,
                 iterations=iterations,
@@ -420,6 +426,7 @@ class Generate:
                 perlin=perlin,
                 embiggen=embiggen,
                 embiggen_tiles=embiggen_tiles,
+                inpaint_replace=inpaint_replace,
             )
 
             if init_color:
