@@ -1,4 +1,6 @@
+import io
 import argparse
+import base64
 import os
 import torch
 import numpy as np
@@ -11,36 +13,34 @@ from torch import autocast
 from pytorch_lightning import seed_everything  # FAILS
 from omegaconf import OmegaConf
 from contextlib import  nullcontext
-# import common classes from stable diffusion
-from ldm.models.diffusion.ddim import DDIMSampler
-from ldm.models.diffusion.plms import PLMSSampler
-from ldm.util import instantiate_from_config
+from stablediffusion.ldm.models.diffusion.ddim import DDIMSampler
+from stablediffusion.ldm.models.diffusion.plms import PLMSSampler
+from stablediffusion.ldm.util import instantiate_from_config
 from itertools import islice
+
 # load safety model
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
-import logger as log
 HOME = os.path.expanduser("~")
 safety_model_id = f"{HOME}/stablediffusion/models/CompVis/stable-diffusion-safety-checker"
-#safety_feature_extractor = AutoFeatureExtractor.from_pretrained(safety_model_id)
-log.info("SETTING UP StableDiffusionSafetyChecker FROM PRETRAINED")
+safety_feature_extractor = AutoFeatureExtractor.from_pretrained(safety_model_id)
+logging.info("SETTING UP StableDiffusionSafetyChecker FROM PRETRAINED")
 safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
 
-# import txt2img functions from stable diffusion
 def load_model_from_config(config, ckpt, verbose=False):
-    log.info(f"Loading model from {ckpt}")
+    logging.info(f"Loading model from {ckpt}")
     pl_sd = torch.load(ckpt, map_location="cpu")
     if "global_step" in pl_sd:
-        log.info(f"Global Step: {pl_sd['global_step']}")
+        logging.info(f"Global Step: {pl_sd['global_step']}")
     sd = pl_sd["state_dict"]
     model = instantiate_from_config(config.model)
     m, u = model.load_state_dict(sd, strict=False)
     if len(m) > 0 and verbose:
-        log.error("missing keys:")
-        log.error(m)
+        logging.error("missing keys:")
+        logging.error(m)
     if len(u) > 0 and verbose:
-        log.error("unexpected keys:")
-        log.error(u)
+        logging.error("unexpected keys:")
+        logging.error(u)
 
     model.cuda().half()
     model.eval()
@@ -242,7 +242,7 @@ class BaseModel:
         return pil_images
 
     def check_safety(self, x_image):
-        # safety_checker_input = safety_feature_extractor(self.numpy_to_pil(x_image), return_tensors="pt")
+        safety_checker_input = safety_feature_extractor(self.numpy_to_pil(x_image), return_tensors="pt")
         x_checked_image, has_nsfw_concept = safety_checker(images=x_image, clip_input=safety_checker_input.pixel_values)
         assert x_checked_image.shape[0] == len(has_nsfw_concept)
         for i in range(len(has_nsfw_concept)):
@@ -258,7 +258,6 @@ class BaseModel:
         """
         if self.opt.do_nsfw_filter:
             x_samples_ddim, has_nsfw = self.check_safety(x_samples_ddim)
-            return x_samples_ddim
         return x_samples_ddim
 
     def add_watermark(self, img):
@@ -345,19 +344,3 @@ class BaseModel:
         self.set_precision_scope()
         self.base_count = len(os.listdir(self.sample_path))
         self.grid_count = len(os.listdir(self.outpath)) - 1
-
-    def save_image(self, samples, sample_path, base_count, watermark=True):
-        """
-        Save the image
-        :param x_checked_image_torch:
-        :param sample_path:
-        :param base_count:
-        :return:
-        """
-        for x_sample in samples:
-            x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-            img = Image.fromarray(x_sample.astype(np.uint8))
-            img = self.add_watermark(img)
-            file_name = os.path.join(sample_path, f"{base_count:05}.png")
-            img.save(file_name)
-            return file_name

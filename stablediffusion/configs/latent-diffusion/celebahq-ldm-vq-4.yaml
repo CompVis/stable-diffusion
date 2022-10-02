@@ -1,6 +1,6 @@
 model:
   base_learning_rate: 2.0e-06
-  target: ldm.models.diffusion.ddpm.LatentDiffusion
+  target: stablediffusion.ldmmodels.diffusion.ddpm.LatentDiffusion
   params:
     linear_start: 0.0015
     linear_end: 0.0195
@@ -13,7 +13,7 @@ model:
     monitor: val/loss_simple_ema
 
     unet_config:
-      target: ldm.modules.diffusionmodules.openaimodel.UNetModel
+      target: stablediffusion.ldmmodules.diffusionmodules.openaimodel.UNetModel
       params:
         image_size: 64
         in_channels: 3
@@ -35,7 +35,7 @@ model:
         - 4
         num_head_channels: 32
     first_stage_config:
-      target: ldm.models.autoencoder.VQModelInterface
+      target: stablediffusion.ldmmodels.autoencoder.VQModelInterface
       params:
         embed_dim: 3
         n_embed: 8192

@@ -1,6 +1,6 @@
 model:
   base_learning_rate: 5.0e-5   # set to target_lr by starting main.py with '--scale_lr False'
-  target: ldm.models.diffusion.ddpm.LatentDiffusion
+  target: stablediffusion.ldmmodels.diffusion.ddpm.LatentDiffusion
   params:
     linear_start: 0.0015
     linear_end: 0.0155
@@ -18,7 +18,7 @@ model:
     monitor: 'val/loss_simple_ema'
 
     scheduler_config: # 10000 warmup steps
-      target: ldm.lr_scheduler.LambdaLinearScheduler
+      target: stablediffusion.ldmlr_scheduler.LambdaLinearScheduler
       params:
         warm_up_steps: [10000]
         cycle_lengths: [10000000000000]
@@ -27,7 +27,7 @@ model:
         f_min: [ 1.]
 
     unet_config:
-      target: ldm.modules.diffusionmodules.openaimodel.UNetModel
+      target: stablediffusion.ldmmodules.diffusionmodules.openaimodel.UNetModel
       params:
         image_size: 32
         in_channels: 4
@@ -41,7 +41,7 @@ model:
         resblock_updown: True
 
     first_stage_config:
-      target: ldm.models.autoencoder.AutoencoderKL
+      target: stablediffusion.ldmmodels.autoencoder.AutoencoderKL
       params:
         embed_dim: 4
         monitor: "val/rec_loss"
@@ -69,11 +69,11 @@ data:
     num_workers: 5
     wrap: False
     train:
-      target: ldm.data.lsun.LSUNChurchesTrain
+      target: stablediffusion.ldmdata.lsun.LSUNChurchesTrain
       params:
         size: 256
     validation:
-      target: ldm.data.lsun.LSUNChurchesValidation
+      target: stablediffusion.ldmdata.lsun.LSUNChurchesValidation
       params:
         size: 256
 

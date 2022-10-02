@@ -1,6 +1,6 @@
 model:
   base_learning_rate: 2.0e-06
-  target: ldm.models.diffusion.ddpm.LatentDiffusion
+  target: stablediffusion.ldmmodels.diffusion.ddpm.LatentDiffusion
   params:
     linear_start: 0.0015
     linear_end: 0.0195
@@ -12,7 +12,7 @@ model:
     channels: 3
     monitor: val/loss_simple_ema
     unet_config:
-      target: ldm.modules.diffusionmodules.openaimodel.UNetModel
+      target: stablediffusion.ldmmodules.diffusionmodules.openaimodel.UNetModel
       params:
         image_size: 64
         in_channels: 3
@@ -34,7 +34,7 @@ model:
         - 4
         num_head_channels: 32
     first_stage_config:
-      target: ldm.models.autoencoder.VQModelInterface
+      target: stablediffusion.ldmmodels.autoencoder.VQModelInterface
       params:
         ckpt_path: configs/first_stage_models/vq-f4/model.yaml
         embed_dim: 3
@@ -63,11 +63,11 @@ data:
     num_workers: 5
     wrap: false
     train:
-      target: ldm.data.lsun.LSUNBedroomsTrain
+      target: stablediffusion.ldmdata.lsun.LSUNBedroomsTrain
       params:
         size: 256
     validation:
-      target: ldm.data.lsun.LSUNBedroomsValidation
+      target: stablediffusion.ldmdata.lsun.LSUNBedroomsValidation
       params:
         size: 256
 

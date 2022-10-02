@@ -1,10 +1,14 @@
 import time
 import torch
-from classes.base import BaseModel
+from stablediffusion.classes.base import BaseModel
 from torch import autocast
 from tqdm import tqdm, trange
 from contextlib import nullcontext
-
+from einops import rearrange
+import json
+from PIL import Image
+import numpy as np
+import io
 
 class Txt2Img(BaseModel):
     args = [
@@ -158,58 +162,34 @@ class Txt2Img(BaseModel):
         with torch.no_grad():
             with precision_scope("cuda"):
                 with model.ema_scope():
-                    tic = time.time()
-                    uc = None
+                    prompts = "a cat"
+                    unconditional_conditioning = None
                     if opt.scale != 1.0:
-                        uc = model.get_learned_conditioning(
+                        unconditional_conditioning = model.get_learned_conditioning(
                             batch_size * [""]
                         )
-                        self.log.info("sample")
-                    for _n in trange(opt.n_iter, desc="Sampling"):
-                        for prompts in tqdm(data, desc="data"):
-                            if isinstance(prompts, tuple):
-                                prompts = list(prompts)
-                            c = model.get_learned_conditioning(prompts)
-                            shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
-                            samples_ddim, _ = sampler.sample(
-                                S=opt.ddim_steps,
-                                conditioning=c,
-                                batch_size=1,
-                                shape=shape,
-                                verbose=False,
-                                unconditional_guidance_scale=opt.scale,
-                                unconditional_conditioning=uc,
-                                eta=opt.ddim_eta,
-                                x_T=start_code
-                            )
-                            image = self.prepare_image(model, samples_ddim)
-                            saved_files, base_count = self.handle_save_image(
-                                image,
-                                saved_files,
-                                base_count,
-                                sample_path,
-                                opt)
-                    toc = time.time()
-
-        return saved_files
-
-    def handle_save_image(self, image, saved_files, base_count, sample_path, opt):
-        if not opt.skip_save:
-            file_name = self.save_image(
-                image,
-                sample_path,
-                base_count
-            )
-            saved_files.append({
-                "file_name": file_name,
-                "seed": opt.seed,
-            })
-            base_count += 1
-        return saved_files, base_count
+                    if isinstance(prompts, tuple):
+                        prompts = list(prompts)
+                    c = model.get_learned_conditioning(prompts)
+                    shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
+                    samples_ddim, _ = sampler.sample(
+                        S=opt.ddim_steps,
+                        conditioning=c,
+                        batch_size=1,
+                        shape=shape,
+                        verbose=False,
+                        unconditional_guidance_scale=opt.scale,
+                        unconditional_conditioning=unconditional_conditioning,
+                        eta=opt.ddim_eta,
+                        x_T=start_code
+                    )
+                    imgdata = self.prepare_image(model, samples_ddim)
+                    print("IMAGE DATA PREPARED, RETURNING")
+                    return imgdata
 
     def prepare_image(self, model, samples_ddim):
-        x_samples_ddim = self.get_first_stage_sample(model, samples_ddim)
-        x_samples_ddim = x_samples_ddim.cpu().permute(0, 2, 3, 1).numpy()
-        x_checked_image = self.filter_nsfw_content(x_samples_ddim)
-        x_checked_image_torch = torch.from_numpy(x_checked_image).permute(0, 3, 1, 2)
-        return x_checked_image_torch
+        x_samples_ddim = model.decode_first_stage(samples_ddim)
+        x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
+        for x_sample in x_samples_ddim:
+            x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
+            return x_sample

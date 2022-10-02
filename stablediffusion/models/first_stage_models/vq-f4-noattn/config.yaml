@@ -1,6 +1,6 @@
 model:
   base_learning_rate: 4.5e-06
-  target: ldm.models.autoencoder.VQModel
+  target: stablediffusion.ldmmodels.autoencoder.VQModel
   params:
     embed_dim: 3
     n_embed: 8192
@@ -37,10 +37,10 @@ data:
     num_workers: 12
     wrap: true
     train:
-      target: ldm.data.openimages.FullOpenImagesTrain
+      target: stablediffusion.ldmdata.openimages.FullOpenImagesTrain
       params:
         crop_size: 256
     validation:
-      target: ldm.data.openimages.FullOpenImagesValidation
+      target: stablediffusion.ldmdata.openimages.FullOpenImagesValidation
       params:
         crop_size: 256

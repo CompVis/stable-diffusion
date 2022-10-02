@@ -1,12 +1,11 @@
 import os
-
 import pkg_resources
 from setuptools import setup, find_packages
 
 setup(
     name="stablediffusion",
     py_modules=["stablediffusion"],
-    version="0.3.0",
+    version="0.3.1",
     description="",
     author="w4ffl35 (Joe Curlee)",
     packages=find_packages(exclude=["tests*"]),

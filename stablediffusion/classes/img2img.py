@@ -7,7 +7,7 @@ from torch import autocast
 from PIL import Image
 from contextlib import nullcontext
 from tqdm import tqdm, trange
-from classes.base import BaseModel
+from stablediffusion.classes.base import BaseModel
 from einops import rearrange, repeat
 
 def load_img(path):
@@ -218,15 +218,7 @@ class Img2Img(BaseModel):
                             x_samples = self.get_first_stage_sample(model, samples)
 
                             if not opt.skip_save:
-                                file_name = self.save_image(
-                                    x_samples,
-                                    sample_path,
-                                    base_count
-                                )
-                                saved_files.append({
-                                    "file_name": file_name,
-                                    "seed": opt.seed,
-                                })
+                                saved_files.append(x_samples)
                                 base_count += 1
 
                             all_samples.append(x_samples)

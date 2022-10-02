@@ -1,6 +1,6 @@
 model:
   base_learning_rate: 0.0001
-  target: ldm.models.diffusion.ddpm.LatentDiffusion
+  target: stablediffusion.ldmmodels.diffusion.ddpm.LatentDiffusion
   params:
     linear_start: 0.0015
     linear_end: 0.015
@@ -17,7 +17,7 @@ model:
     scale_by_std: false
     scale_factor: 0.22765929
     unet_config:
-      target: ldm.modules.diffusionmodules.openaimodel.UNetModel
+      target: stablediffusion.ldmmodules.diffusionmodules.openaimodel.UNetModel
       params:
         image_size: 48
         in_channels: 16
@@ -41,7 +41,7 @@ model:
         context_dim: 768
         use_checkpoint: true
     first_stage_config:
-      target: ldm.models.autoencoder.AutoencoderKL
+      target: stablediffusion.ldmmodels.autoencoder.AutoencoderKL
       params:
         monitor: val/rec_loss
         embed_dim: 16

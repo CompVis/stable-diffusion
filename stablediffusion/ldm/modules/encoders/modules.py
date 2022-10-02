@@ -239,6 +239,6 @@ class FrozenClipImageEmbedder(nn.Module):
 
 
 if __name__ == "__main__":
-    from ldm.util import count_params
+    from stablediffusion.ldm.util import count_params
     model = FrozenCLIPEmbedder()
     count_params(model, verbose=True)
