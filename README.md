@@ -37,33 +37,6 @@ pip install git+https://github.com/sberbank-ai/Real-ESRGAN.git
 wget https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth -P weights
 ```
 
-## Hack diffusers (yes I should do that differently... only solution for now).
-Copy the file "pipeline_stable_diffusion.py" in lieu of the original pipeline_stable_diffusion.py.
-
-How to do this ?
- First, find where ``diffusers'' is:
-```
- python -c "import diffusers ; print(diffusers.__file__)"
-```
-and pipeline_stable_diffusion should be copied at this location  + "/pipelines/stable_diffusion/pipeline_stable_diffusion.py" (overwrite that file).
-
-Or inside python
-```
-import diffusers
-print(diffusers.__file__)
-```
-
- Then copy the local file there as follows:
-```
-cp pipeline_stable_diffusion.py <<that_directory/pipelines/stable_diffusion/>>/pipeline_stable_diffusion.py
-```
-You can also do a symbolic link:
-```
-pushd <<the_directory_of_diffusers_which_contains_pipeline_stable_diffusion.py>>
-mv pipeline_stable_diffusion.py backup_pipeline_stable_diffusion.py
-ln -s <<the_installation_directory>>/pipeline_stable_diffusion.py .
-```
-
 ## Then run << python minisd.py >>.
 You should be asked for a prompt (just <<enter>> if you like the proposed hardcoded prompt), and then a window should be opened.
 
