@@ -13,7 +13,10 @@ Ping us at the Nevergrad user group if you need help, I'll do my best.
 
 
 
+## Get a HuggingFace token! This is a fork of HuggingFace's stablediffusion.
 
+Just click here and copy-paste your token:
+[**Hugging face tokens**](https://huggingface.co/login?next=%2Fsettings%2Ftokens)<br/>
 
 ## Install StableDiffusion as usual, plus a few more stuff.  Basically:
 
