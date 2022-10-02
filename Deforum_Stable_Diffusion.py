@@ -1827,7 +1827,7 @@ fps = 12 #@param {type:"number"}
 use_manual_settings = False #@param {type:"boolean"}
 image_path = "/content/drive/MyDrive/AI/StableDiffusion/2022-09/20220903000939_%05d.png" #@param {type:"string"}
 mp4_path = "/content/drive/MyDrive/AI/StableDiffu'/content/drive/MyDrive/AI/StableDiffusion/2022-09/sion/2022-09/20220903000939.mp4" #@param {type:"string"}
-render_steps = True  #@param {type: 'boolean'}
+render_steps = False  #@param {type: 'boolean'}
 path_name_modifier = "x0_pred" #@param ["x0_pred","x"]
 
 
