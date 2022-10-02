@@ -7,7 +7,7 @@ import PIL
 from PIL import Image
 from einops import rearrange, repeat
 from torch import autocast
-from local_diffusers import StableDiffusionPipeline
+from diffusers import StableDiffusionPipeline
 import webbrowser
 from deep_translator import GoogleTranslator
 from langdetect import detect
@@ -34,7 +34,7 @@ latent_forcing = ""
 #os.environ["enforcedlatent"] = ""
 os.environ["good"] = "[]"
 os.environ["bad"] = "[]"
-num_iterations = 50
+num_iterations = 200
 gs = 7.5
 
 
@@ -121,6 +121,8 @@ prompt = "A flying white owl above 4 colored pots with fire."
 prompt = "Yann LeCun rides a dragon which spits fire on a cherry on a cake."
 prompt = "An armored Mark Zuckerberg fighting off a monster with bloody tentacles in the jungle with a light saber."
 prompt = "Cute woman, portrait, photo, red hair, green eyes, smiling."
+prompt = "Photo of Tarzan as a lawyer with a tie and an octopus on his head."
+prompt = "An armored bloody Yann Lecun has a lightsabar and fights a red tentacular monster."
 print(f"The prompt is {prompt}")
 
 
@@ -205,11 +207,11 @@ def stop_all(list_of_files, list_of_latent, last_list_of_latent):
     pretty_print("Should we create animations ?")
     answer = input(" [y]es or [n]o or [j]ust the selection on the last panel ?")
     if "y" in answer or "Y" in answer or "j" in answer or "J" in answer:
+        assert len(list_of_files) == len(list_of_latent)
         if "j" in answer or "J" in answer:
             list_of_latent = last_list_of_latent
         pretty_print("Let us create animations!")
-        assert len(list_of_files) == len(list_of_latent)
-        for c in [0.5, 0.25, 0.125, 0.0625, 0.05, 0.04,0.03125]:
+        for c in sorted([0.5, 0.25, 0.125, 0.0625, 0.05, 0.04,0.03125]):
             for idx in range(len(list_of_files)):
                 images = []
                 l = list_of_latent[idx].reshape(1,4,64,64)
@@ -379,7 +381,7 @@ if len(image_name) > 0:
         if i > 0:
             #epsilon = 0.3 / 1.1**i
             #basic_new_fl = np.sqrt(len(new_fl) / np.sum(basic_new_fl**2)) * basic_new_fl
-            epsilon = (i-1)/(llambda-1) #1.0 / 2**(2 + (llambda - i) / 6)
+            epsilon = (0.5 * (i-1)/(llambda-1))**3 #1.0 / 2**(2 + (llambda - i) / 6)
             new_fl = (1. - epsilon) * basic_new_fl + epsilon * np.random.randn(1*4*64*64)
         else:
             new_fl = basic_new_fl
@@ -423,7 +425,7 @@ for iteration in range(30):
         scrn.blit(text0, ((X*3/4)/2 - X/32, Y/2+Y/8))
 
         # Button for early stopping
-        text2 = font.render(to_native(f'{len(all_selected)} chosen images! '), True, green, blue)
+        text2 = font.render(to_native(f'Total: {len(all_selected)} chosen images! '), True, green, blue)
         text2 = pygame.transform.rotate(text2, 90)
         scrn.blit(text2, (X*3/4+X/16      - X/32, Y/3))
         text2 = font.render(to_native('Click <here> for stopping,'), True, green, blue)
@@ -614,7 +616,7 @@ for iteration in range(30):
                     all_selected += [selected_filename]
                     all_selected_latent += [latent[index]]
                     final_selection += [latent[index]]
-                    text2 = font.render(to_native(f'{len(all_selected)} chosen images! '), True, green, blue)
+                    text2 = font.render(to_native(f'==> {len(all_selected)} chosen images! '), True, green, blue)
                     text2 = pygame.transform.rotate(text2, 90)
                     scrn.blit(text2, (X*3/4+X/16      - X/32, Y/3))
                     if index not in five_best and len(five_best) < 5:
@@ -696,7 +698,7 @@ for iteration in range(30):
         #if a % 2 == 0:
         #    forcedlatent -= np.random.rand() * sauron
         basic_new_fl = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
-        epsilon = 0.3 * (((a - len(good)) / (llambda - len(good) - 1)) ** 6)
+        epsilon = 0.1 * (((a + .5 - len(good)) / (llambda - len(good) - 1)) ** 6)
         forcedlatent = (1. - epsilon) * basic_new_fl.flatten() + epsilon * np.random.randn(4*64*64)
         forcedlatent = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
         forcedlatents += [forcedlatent]
