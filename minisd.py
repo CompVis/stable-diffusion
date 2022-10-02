@@ -7,7 +7,7 @@ import PIL
 from PIL import Image
 from einops import rearrange, repeat
 from torch import autocast
-from diffusers import StableDiffusionPipeline
+from local_diffusers import StableDiffusionPipeline
 import webbrowser
 from deep_translator import GoogleTranslator
 from langdetect import detect
