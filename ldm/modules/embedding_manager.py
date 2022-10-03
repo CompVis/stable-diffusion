@@ -169,9 +169,14 @@ class EmbeddingManager(nn.Module):
                     placeholder_embedding.shape[0], max_step_tokens
                 )
 
-                placeholder_rows, placeholder_cols = torch.where(
-                    tokenized_text == placeholder_token.to(device)
-                )
+                if torch.cuda.is_available():
+                    placeholder_rows, placeholder_cols = torch.where(
+                        tokenized_text == placeholder_token.to(device)
+                    )
+                else:
+                    placeholder_rows, placeholder_cols = torch.where(
+                        tokenized_text == placeholder_token
+                    )
 
                 if placeholder_rows.nelement() == 0:
                     continue

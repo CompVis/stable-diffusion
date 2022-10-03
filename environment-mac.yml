@@ -33,13 +33,13 @@ dependencies:
   - openh264==2.3.0
   - onnx==1.12.0
   - onnxruntime==1.12.1
-  - protobuf==3.20.1
+  - protobuf==3.19.4
   - pudb==2022.1
-  - pytorch-lightning==1.6.5
+  - pytorch-lightning==1.7.5
   - scipy==1.9.1
   - streamlit==1.12.2
   - sympy==1.10.1
-  - tensorboard==2.9.0
+  - tensorboard==2.10.0
   - torchmetrics==0.9.3
   - pip:
     - flask==2.1.3

@@ -93,7 +93,7 @@ class PersonalizedBase(Dataset):
 
         self.image_paths = [
             os.path.join(self.data_root, file_path)
-            for file_path in os.listdir(self.data_root)
+            for file_path in os.listdir(self.data_root) if file_path != ".DS_Store"
         ]
 
         # self._length = len(self.image_paths)
