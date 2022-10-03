@@ -101,7 +101,7 @@ class KSampler(Sampler):
     ):
         def route_callback(k_callback_values):
             if img_callback is not None:
-                img_callback(k_callback_values['x'])
+                img_callback(k_callback_values['x'],k_callback_values['i'])
 
         # sigmas = self.model.get_sigmas(S)
         # sigmas are now set up in make_schedule - we take the last steps items
