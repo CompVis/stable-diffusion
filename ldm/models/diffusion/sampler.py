@@ -346,7 +346,7 @@ class Sampler(object):
             
             x_dec, pred_x0, e_t = outs
             if img_callback:
-                img_callback(img)
+                img_callback(x_dec)
 
         return x_dec
 
