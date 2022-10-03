@@ -193,7 +193,7 @@ class Args(object):
         # img2img generations have parameters relevant only to them and have special handling
         if a['init_img'] and len(a['init_img'])>0:
             switches.append(f'-I {a["init_img"]}')
-            switches.append(f'-A ddim') # TODO: FIX ME WHEN IMG2IMG SUPPORTS ALL SAMPLERS
+            switches.append(f'-A {a["sampler_name"]}')
             if a['fit']:
                 switches.append(f'--fit')
             if a['init_mask'] and len(a['init_mask'])>0:
@@ -227,8 +227,8 @@ class Args(object):
         # 2. However, they come out of the CLI (and probably web) with the keyword "with_variations" and
         #    in broken-out form. Variation (1) should be changed to comply with (2)
         if a['with_variations']:
-            formatted_variations = ','.join(f'{seed}:{weight}' for seed, weight in (a["variations"]))
-            switches.append(f'-V {a["formatted_variations"]}')
+            formatted_variations = ','.join(f'{seed}:{weight}' for seed, weight in (a["with_variations"]))
+            switches.append(f'-V {formatted_variations}')
         if 'variations' in a:
             switches.append(f'-V {a["variations"]}')
         return ' '.join(switches)

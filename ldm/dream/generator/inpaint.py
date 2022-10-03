@@ -8,6 +8,7 @@ from einops import rearrange, repeat
 from ldm.dream.devices             import choose_autocast
 from ldm.dream.generator.img2img   import Img2Img
 from ldm.models.diffusion.ddim     import DDIMSampler
+from ldm.models.diffusion.ksampler import KSampler
 
 class Inpaint(Img2Img):
     def __init__(self, model, precision):
@@ -23,20 +24,19 @@ class Inpaint(Img2Img):
         the initial image + mask.  Return value depends on the seed at
         the time you call it.  kwargs are 'init_latent' and 'strength'
         """
-
-        mask_image = mask_image[0][0].unsqueeze(0).repeat(4,1,1).unsqueeze(0)
-        mask_image = repeat(mask_image, '1 ... -> b ...', b=1)
-
-        # PLMS sampler not supported yet, so ignore previous sampler
-        if not isinstance(sampler,DDIMSampler):
+        # klms samplers not supported yet, so ignore previous sampler
+        if isinstance(sampler,KSampler):
             print(
-                f">> sampler '{sampler.__class__.__name__}' is not yet supported. Using DDIM sampler"
+                f">> sampler '{sampler.__class__.__name__}' is not yet supported for inpainting, using DDIMSampler instead."
             )
             sampler = DDIMSampler(self.model, device=self.model.device)
-
+        
         sampler.make_schedule(
             ddim_num_steps=steps, ddim_eta=ddim_eta, verbose=False
         )
+
+        mask_image = mask_image[0][0].unsqueeze(0).repeat(4,1,1).unsqueeze(0)
+        mask_image = repeat(mask_image, '1 ... -> b ...', b=1)
 
         scope = choose_autocast(self.precision)
         with scope(self.model.device.type):
@@ -57,7 +57,7 @@ class Inpaint(Img2Img):
                 torch.tensor([t_enc]).to(self.model.device),
                 noise=x_T
             )
-                                       
+
             # decode it
             samples = sampler.decode(
                 z_enc,
@@ -69,6 +69,7 @@ class Inpaint(Img2Img):
                 mask                       = mask_image,
                 init_latent                = self.init_latent
             )
+
             return self.sample_to_image(samples)
 
         return make_image
