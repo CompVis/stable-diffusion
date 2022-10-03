@@ -8,10 +8,11 @@ import shlex
 import copy
 import warnings
 import time
+import traceback
 sys.path.append('.')    # corrects a weird problem on Macs
 from ldm.dream.readline import get_completer
 from ldm.dream.args import Args, metadata_dumps, metadata_from_png, dream_cmd_from_png
-from ldm.dream.pngwriter import PngWriter
+from ldm.dream.pngwriter import PngWriter, retrieve_metadata, write_metadata
 from ldm.dream.image_util import make_grid
 from ldm.dream.log import write_log
 from omegaconf import OmegaConf
@@ -57,7 +58,6 @@ def main():
         else:
             print('>> Face restoration and upscaling disabled')
     except (ModuleNotFoundError, ImportError):
-        import traceback
         print(traceback.format_exc(), file=sys.stderr)
         print('>> You may need to install the ESRGAN and/or GFPGAN modules')
 
@@ -309,9 +309,22 @@ def main_loop(gen, opt, infile):
                         ),
                         name      = filename,
                     )
-                    if (not upscaled) or opt.save_original:
+
+                    # update rfc metadata
+                    if operation == 'postprocess':
+                        tool = re.match('postprocess:(\w+)',opt.last_operation).groups()[0]
+                        add_postprocessing_to_metadata(
+                            opt,
+                            opt.prompt,
+                            filename,
+                            tool,
+                            formatted_dream_prompt,
+                        )                           
+                        
+                    if (not postprocessed) or opt.save_original:
                         # only append to results if we didn't overwrite an earlier output
                         results.append([path, formatted_dream_prompt])
+
                 # so that the seed autocompletes (on linux|mac when -S or --seed specified
                 if completer:
                     completer.add_seed(seed)
@@ -383,8 +396,10 @@ def do_postprocess (gen, opt, callback):
         tool = 'upscale'
     elif opt.out_direction:
         tool = 'outpaint'
-    opt.save_original = True # do not overwrite old image!
-    opt.last_operation    = f'postprocess:{tool}'
+    elif opt.outcrop:
+        tool = 'outcrop'
+    opt.save_original  = True # do not overwrite old image!
+    opt.last_operation = f'postprocess:{tool}'
     try:
         gen.apply_postprocessor(
             image_path      = file_path,
@@ -394,6 +409,7 @@ def do_postprocess (gen, opt, callback):
             save_original       = opt.save_original,
             upscale             = opt.upscale,
             out_direction       = opt.out_direction,
+            outcrop             = opt.outcrop,
             callback            = callback,
             opt                 = opt,
         )
@@ -401,9 +417,24 @@ def do_postprocess (gen, opt, callback):
         print(f'** {file_path}: file could not be read')
         return
     except (KeyError, AttributeError):
-        print(f'** {file_path}: file has no metadata')
+        print(traceback.format_exc(), file=sys.stderr)
         return
     return opt.last_operation
+
+def add_postprocessing_to_metadata(opt,original_file,new_file,tool,command):
+    original_file = original_file if os.path.exists(original_file) else os.path.join(opt.outdir,original_file)
+    new_file       = new_file     if os.path.exists(new_file)      else os.path.join(opt.outdir,new_file)
+    meta = retrieve_metadata(original_file)['sd-metadata']
+    img_data = meta['image']
+    pp = img_data.get('postprocessing',[]) or []
+    pp.append(
+        {
+            'tool':tool,
+            'dream_command':command,
+        }
+    )
+    meta['image']['postprocessing'] = pp
+    write_metadata(new_file,meta)
     
 def prepare_image_metadata(
         opt,

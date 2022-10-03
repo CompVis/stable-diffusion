@@ -37,7 +37,7 @@ class PngWriter:
         path = os.path.join(self.outdir, name)
         info = PngImagePlugin.PngInfo()
         info.add_text('Dream', dream_prompt)
-        if metadata: # TODO: merge command line app's method of writing metadata and always just write metadata
+        if metadata:
           info.add_text('sd-metadata', json.dumps(metadata))
         image.save(path, 'PNG', pnginfo=info)
         return path
@@ -61,3 +61,8 @@ def retrieve_metadata(img_path):
     dream_prompt = im.text.get('Dream', '')
     return {'sd-metadata': json.loads(md), 'Dream': dream_prompt}
 
+def write_metadata(img_path:str, meta:dict):
+    im = Image.open(img_path)
+    info = PngImagePlugin.PngInfo()
+    info.add_text('sd-metadata', json.dumps(meta))
+    im.save(img_path,'PNG',pnginfo=info)

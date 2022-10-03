@@ -499,6 +499,7 @@ class Generate:
             codeformer_fidelity = 0.75,
             upscale             = None,
             out_direction       = None,
+            outcrop             = [],
             save_original       = True, # to get new name
             callback            = None,
             opt                 = None,
@@ -527,8 +528,13 @@ class Generate:
         # face fixers and esrgan take an Image, but embiggen takes a path
         image = Image.open(image_path)
 
-        # Note that we need to adopt a uniform API for the postprocessors.
-        # This is completely ad hoc ATCM
+        # used by multiple postfixers
+        uc, c = get_uc_and_c(
+            prompt, model =self.model,
+            skip_normalize=opt.skip_normalize,
+            log_tokens    =opt.log_tokenization
+        )
+
         if tool in ('gfpgan','codeformer','upscale'):
             if tool == 'gfpgan':
                 facetool = 'gfpgan'
@@ -548,14 +554,25 @@ class Generate:
                 prefix = prefix,
             )
 
+        elif tool == 'outcrop':
+            from ldm.dream.restoration.outcrop import Outcrop
+            extend_instructions = {}
+            for direction,pixels in _pairwise(opt.outcrop):
+                extend_instructions[direction]=int(pixels)
+            generator = Outcrop(
+                image,
+                self,
+            )
+            return generator.extend(
+                extend_instructions,
+                args,
+                image_callback = callback,
+                prefix = prefix,
+            )
+
         elif tool == 'embiggen':
             # fetch the metadata from the image
             generator = self._make_embiggen()
-            uc, c = get_uc_and_c(
-                prompt, model =self.model,
-                skip_normalize=opt.skip_normalize,
-                log_tokens    =opt.log_tokenization
-            )
             opt.strength  = 0.40
             print(f'>> Setting img2img strength to {opt.strength} for happy embiggening')
             # embiggen takes a image path (sigh)
@@ -586,16 +603,13 @@ class Generate:
                 steps       = opt.steps,
                 cfg_scale   = opt.cfg_scale,
                 ddim_eta    = self.ddim_eta,
-                conditioning= get_uc_and_c(
-                    oldargs.prompt, model =self.model,
-                    skip_normalize=opt.skip_normalize,
-                    log_tokens    =opt.log_tokenization
-                ),
+                conditioning= (uc,c),
                 width       = opt.width,
                 height      = opt.height,
                 init_img    = image_path,  # not the Image! (sigh)
                 strength    = opt.strength,
                 image_callback = callback,
+                prefix      = prefix,
                 )
         elif tool is None:
             print(f'* please provide at least one postprocessing option, such as -G or -U')
@@ -968,7 +982,6 @@ class Generate:
 
         image = image.resize((image.width//downsampling, image.height //
                               downsampling), resample=Image.Resampling.NEAREST)
-
         image = np.array(image)
         image = image.astype(np.float32) / 255.0
         image = image[None].transpose(0, 3, 1, 2)
@@ -1088,3 +1101,8 @@ class Generate:
             image = self.sample_to_image(img)
             image.save(os.path.join(path,f'{counter:03}.png'),'PNG')
         return callback
+
+def _pairwise(iterable):
+    "s -> (s0, s1), (s2, s3), (s4, s5), ..."
+    a = iter(iterable)
+    return zip(a, a)

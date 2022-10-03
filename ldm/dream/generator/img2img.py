@@ -21,6 +21,7 @@ class Img2Img(Generator):
         """
         self.perlin = perlin
 
+        print(f'DEBUG: init_image = {init_image}')
         sampler.make_schedule(
             ddim_num_steps=steps, ddim_eta=ddim_eta, verbose=False
         )
