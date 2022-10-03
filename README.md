@@ -108,7 +108,7 @@ you can try starting `dream.py` with the `--precision=float32` flag:
 - [Image To Image](docs/features/IMG2IMG.md)
 - [Inpainting Support](docs/features/INPAINTING.md)
 - [Outpainting Support](docs/features/OUTPAINTING.md)
-- [GFPGAN and Real-ESRGAN Support](docs/features/UPSCALE.md)
+- [Upscaling, face-restoration and outpainting](docs/features/POSTPROCESS.md)
 - [Seamless Tiling](docs/features/OTHER.md#seamless-tiling)
 - [Google Colab](docs/features/OTHER.md#google-colab)
 - [Web Server](docs/features/WEB.md)

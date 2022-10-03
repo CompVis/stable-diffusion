@@ -281,7 +281,6 @@ class Generate:
             # these are specific to embiggen (which also relies on img2img args)
             embiggen       =    None,
             embiggen_tiles =    None,
-            out_direction  =    None,
             # these are specific to GFPGAN/ESRGAN
             facetool         = None,
             gfpgan_strength  = 0,
@@ -405,7 +404,6 @@ class Generate:
                 width,
                 height,
                 fit=fit,
-                out_direction=out_direction,
             )
             if (init_image is not None) and (mask_image is not None):
                 generator = self._make_inpaint()
@@ -519,9 +517,9 @@ class Generate:
             seed = 42
 
         # try to reuse the same filename prefix as the original file.
-        # note that this is hacky
+        # we take everything up to the first period
         prefix = None
-        m    = re.search('(\d+)\.',os.path.basename(image_path))
+        m    = re.match('^([^.]+)\.',os.path.basename(image_path))
         if m:
             prefix = m.groups()[0]
 
@@ -559,13 +557,12 @@ class Generate:
             extend_instructions = {}
             for direction,pixels in _pairwise(opt.outcrop):
                 extend_instructions[direction]=int(pixels)
-            generator = Outcrop(
-                image,
-                self,
-            )
-            return generator.extend(
+
+            restorer = Outcrop(image,self,)
+            return restorer.process (
                 extend_instructions,
-                args,
+                opt            = opt,
+                orig_opt       = args,
                 image_callback = callback,
                 prefix = prefix,
             )
@@ -593,24 +590,15 @@ class Generate:
                 image_callback = callback,
             )
         elif tool == 'outpaint':
-            oldargs      = metadata_from_png(image_path)
-            opt.strength = 0.83
-            opt.init_img = image_path
-            return self.prompt2image(
-                oldargs.prompt,
-                out_direction  = opt.out_direction,
-                sampler     = self.sampler,
-                steps       = opt.steps,
-                cfg_scale   = opt.cfg_scale,
-                ddim_eta    = self.ddim_eta,
-                conditioning= (uc,c),
-                width       = opt.width,
-                height      = opt.height,
-                init_img    = image_path,  # not the Image! (sigh)
-                strength    = opt.strength,
+            from ldm.dream.restoration.outpaint import Outpaint
+            restorer = Outpaint(image,self)
+            return restorer.process(
+                opt,
+                args,
                 image_callback = callback,
-                prefix      = prefix,
-                )
+                prefix         = prefix
+            )
+                
         elif tool is None:
             print(f'* please provide at least one postprocessing option, such as -G or -U')
             return None
@@ -626,7 +614,6 @@ class Generate:
             width,
             height,
             fit=False,
-            out_direction=None,
     ):
         init_image      = None
         init_mask       = None
@@ -637,7 +624,9 @@ class Generate:
             img,
             width,
             height,
-            ) # this returns an Image
+        ) # this returns an Image
+
+        init_image   = self._create_init_image(image)                   # this returns a torch tensor
 
         # if image has a transparent area and no mask was provided, then try to generate mask
         if self._has_transparency(image) and not mask:
@@ -909,67 +898,7 @@ class Generate:
         image = 2.0 * image - 1.0
         return image.to(self.device)
 
-    #  TODO: outpainting is a post-processing application and should be made to behave
-    # like the other ones.
-    def _create_outpaint_image(self, image, direction_args):
-        assert len(direction_args) in [1, 2], 'Direction (-D) must have exactly one or two arguments.'
-
-        if len(direction_args) == 1:
-            direction = direction_args[0]
-            pixels = None
-        elif len(direction_args) == 2:
-            direction = direction_args[0]
-            pixels = int(direction_args[1])
-
-        assert direction in ['top', 'left', 'bottom', 'right'], 'Direction (-D) must be one of "top", "left", "bottom", "right"'
-
-        image = image.convert("RGBA")
-        # we always extend top, but rotate to extend along the requested side
-        if direction == 'left':
-            image = image.transpose(Image.Transpose.ROTATE_270)
-        elif direction == 'bottom':
-            image = image.transpose(Image.Transpose.ROTATE_180)
-        elif direction == 'right':
-            image = image.transpose(Image.Transpose.ROTATE_90)
-
-        pixels = image.height//2 if pixels is None else int(pixels)
-        assert 0 < pixels < image.height, 'Direction (-D) pixels length must be in the range 0 - image.size'
-
-        # the top part of the image is taken from the source image mirrored
-        # coordinates (0,0) are the upper left corner of an image
-        top = image.transpose(Image.Transpose.FLIP_TOP_BOTTOM).convert("RGBA")
-        top = top.crop((0, top.height - pixels, top.width, top.height))
-
-        # setting all alpha of the top part to 0
-        alpha = top.getchannel("A")
-        alpha.paste(0, (0, 0, top.width, top.height))
-        top.putalpha(alpha)
-
-        # taking the bottom from the original image
-        bottom = image.crop((0, 0, image.width, image.height - pixels))
-
-        new_img = image.copy()
-        new_img.paste(top, (0, 0))
-        new_img.paste(bottom, (0, pixels))
-
-        # create a 10% dither in the middle
-        dither = min(image.height//10, pixels)
-        for x in range(0, image.width, 2):
-            for y in range(pixels - dither, pixels + dither):
-                (r, g, b, a) = new_img.getpixel((x, y))
-                new_img.putpixel((x, y), (r, g, b, 0))
-
-        # let's rotate back again
-        if direction == 'left':
-            new_img = new_img.transpose(Image.Transpose.ROTATE_90)
-        elif direction == 'bottom':
-            new_img = new_img.transpose(Image.Transpose.ROTATE_180)
-        elif direction == 'right':
-            new_img = new_img.transpose(Image.Transpose.ROTATE_270)
-
-        return new_img
-
-    def _create_init_mask(self, image, width, height, fit=True):
+    def _create_init_mask(self, image):
         # convert into a black/white mask
         image = self._image_to_mask(image)
         image = image.convert('RGB')

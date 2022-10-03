@@ -647,8 +647,8 @@ class Args(object):
             '--outcrop',
             nargs='+',
             type=str,
-            metavar=('direction:pixels'),
-            help='Outcrop the image "direction:pixels direction:pixels..." where direction is (top|left|bottom|right)'
+            metavar=('direction','pixels'),
+            help='Outcrop the image with one or more direction/pixel pairs: -c top 64 bottom 128 left 64 right 64',
         )
         postprocessing_group.add_argument(
             '-ft',

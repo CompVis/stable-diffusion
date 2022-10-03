@@ -1,40 +1,42 @@
 import warnings
 import math
-from ldm.dream.conditioning import get_uc_and_c
 from PIL import Image, ImageFilter
 
-class Outcrop():
+class Outcrop(object):
     def __init__(
             self,
             image,
-            generator,  # current generator object
+            generate,  # current generate object
     ):
         self.image     = image
-        self.generator = generator
+        self.generate  = generate
 
-    def extend(
+    def process (
             self,
             extents:dict,
-            opt,
+            opt,                   # current options
+            orig_opt,              # ones originally used to generate the image
             image_callback = None,
             prefix = None
     ):
+        # grow and mask the image
         extended_image = self._extend_all(extents)
 
         # switch samplers temporarily
-        curr_sampler = self.generator.sampler
-        self.generator.sampler_name = opt.sampler_name
-        self.generator._set_sampler()
+        curr_sampler = self.generate.sampler
+        self.generate.sampler_name = opt.sampler_name
+        self.generate._set_sampler()
 
         def wrapped_callback(img,seed,**kwargs):
-            image_callback(img,opt.seed,use_prefix=prefix,**kwargs)
+            image_callback(img,orig_opt.seed,use_prefix=prefix,**kwargs)
 
-        result= self.generator.prompt2image(
-            opt.prompt,
-            sampler = self.generator.sampler,
+        result= self.generate.prompt2image(
+            orig_opt.prompt,
+#            seed        = orig_opt.seed,    # uncomment to make it deterministic
+            sampler     = self.generate.sampler,
             steps       = opt.steps,
             cfg_scale   = opt.cfg_scale,
-            ddim_eta    = self.generator.ddim_eta,
+            ddim_eta    = self.generate.ddim_eta,
             width       = extended_image.width,
             height      = extended_image.height,
             init_img    = extended_image,
@@ -43,7 +45,7 @@ class Outcrop():
         )
         
         # swap sampler back
-        self.generator.sampler = curr_sampler
+        self.generate.sampler = curr_sampler
         return result
 
     def _extend_all(

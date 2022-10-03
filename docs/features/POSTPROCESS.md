@@ -1,14 +1,18 @@
 
 ---
-title: Upscale
+title: Postprocessing
 ---
 
 ## Intro
 
-The script provides the ability to restore faces and upscale. You can apply
-these operations at the time you generate the images, or at any time to a
-previously-generated PNG file, using the
-[!fix](#fixing-previously-generated-images) command.
+This extension provides the ability to restore faces and upscale
+images.
+
+Face restoration and upscaling can be applied at the time you generate
+the images, or at any later time against a previously-generated PNG
+file, using the [!fix](#fixing-previously-generated-images)
+command. [Outpainting and outcropping](OUTPAINTING.md) can only be
+applied after the fact.
 
 ## Face Fixing
 
@@ -158,9 +162,9 @@ situations when there is very little facial data to work with.
 ## Fixing Previously-Generated Images
 
 It is easy to apply face restoration and/or upscaling to any
-previously-generated file. Just use the syntax
-`!fix path/to/file.png <options>`. For example, to apply GFPGAN at strength 0.8
-and upscale 2X for a file named `./outputs/img-samples/000044.2945021133.png`,
+previously-generated file. Just use the syntax `!fix path/to/file.png
+<options>`. For example, to apply GFPGAN at strength 0.8 and upscale
+2X for a file named `./outputs/img-samples/000044.2945021133.png`,
 just run:
 
 ```
