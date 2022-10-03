@@ -274,7 +274,10 @@ class Args(object):
         # the arg value. For example, the --grid and --individual options are a little
         # funny because of their push/pull relationship. This is how to handle it.
         if name=='grid':
-            return not cmd_switches.individual and value_arg  # arg supersedes cmd
+            if cmd_switches.individual:
+                return False
+            else:
+                return value_cmd or value_arg
         return value_cmd if value_cmd is not None else value_arg
 
     def __setattr__(self,name,value):
