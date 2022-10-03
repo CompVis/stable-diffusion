@@ -1,0 +1,82 @@
+@use '../../../styles/Mixins/' as *;
+
+.main-options {
+  display: grid;
+  row-gap: 1rem;
+}
+
+.main-options-list {
+  display: grid;
+  row-gap: 1rem;
+}
+
+.main-options-row {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  column-gap: 1rem;
+  max-width: $options-bar-max-width;
+}
+
+.main-option-block {
+  border-radius: 0.5rem;
+  grid-template-columns: auto !important;
+  row-gap: 0.4rem;
+
+  .number-input-label,
+  .iai-select-label {
+    width: 100%;
+    font-size: 0.9rem;
+    font-weight: bold;
+  }
+
+  .number-input-entry {
+    padding: 0;
+    height: 2.4rem;
+  }
+
+  .iai-select-picker {
+    height: 2.4rem;
+    border-radius: 0.3rem;
+  }
+}
+
+.advanced_options_checker {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  column-gap: 0.5rem;
+  align-items: center;
+  background-color: var(--background-color-secondary);
+  padding: 1rem;
+  font-weight: bold;
+  border-radius: 0.5rem;
+
+  input[type='checkbox'] {
+    -webkit-appearance: none;
+    appearance: none;
+    background-color: var(--input-checkbox-bg);
+    width: 1rem;
+    height: 1rem;
+    border-radius: 0.2rem;
+
+    display: grid;
+    place-content: center;
+
+    &::before {
+      content: '';
+      width: 1rem;
+      height: 1rem;
+      transform: scale(0);
+      transition: 120ms transform ease-in-out;
+      border-radius: 0.2rem;
+      box-shadow: inset 1rem 1rem var(--input-checkbox-checked-tick);
+      clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    }
+
+    &:checked {
+      background-color: var(--input-checkbox-checked-bg);
+      &::before {
+        transform: scale(0.7);
+      }
+    }
+  }
+}

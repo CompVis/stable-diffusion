@@ -108,7 +108,7 @@ def main():
     gen.free_gpu_mem = opt.free_gpu_mem
 
     # web server loops forever
-    if opt.web:
+    if opt.web or opt.gui:
         invoke_ai_web_server_loop(gen, gfpgan, codeformer, esrgan)
         sys.exit(0)
 

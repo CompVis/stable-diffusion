@@ -1,0 +1,18 @@
+.chakra-switch,
+.switch-button {
+  span {
+    background-color: var(--switch-bg-color);
+
+    span {
+      background-color: var(--white);
+    }
+  }
+
+  span[data-checked] {
+    background: var(--switch-bg-active-color);
+
+    span {
+      background-color: var(--white);
+    }
+  }
+}

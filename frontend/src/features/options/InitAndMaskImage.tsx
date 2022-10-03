@@ -2,7 +2,7 @@ import { Flex, Image } from '@chakra-ui/react';
 import { useState } from 'react';
 import { useAppSelector } from '../../app/store';
 import { RootState } from '../../app/store';
-import { OptionsState } from '../../features/options/optionsSlice';
+import { OptionsState } from './optionsSlice';
 import './InitAndMaskImage.css';
 import { createSelector } from '@reduxjs/toolkit';
 import { isEqual } from 'lodash';
@@ -36,12 +36,14 @@ const InitAndMaskImage = () => {
             src={initialImagePath}
             rounded={'md'}
             className={'checkerboard'}
+            maxWidth={320}
           />
           {shouldShowMask && maskPath && (
             <Image
               position={'absolute'}
               top={0}
               left={0}
+              maxWidth={320}
               fit={'contain'}
               src={maskPath}
               rounded={'md'}

@@ -6,7 +6,7 @@ export const stringToSeedWeights = (
   const stringPairs = string.split(',');
   const arrPairs = stringPairs.map((p) => p.split(':'));
   const pairs = arrPairs.map((p: Array<string>): InvokeAI.SeedWeightPair => {
-    return { seed: parseInt(p[0]), weight: parseFloat(p[1]) };
+    return { seed: Number(p[0]), weight: Number(p[1]) };
   });
 
   if (!validateSeedWeights(pairs)) {

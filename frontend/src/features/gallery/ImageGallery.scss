@@ -1,0 +1,51 @@
+@use '../../styles/Mixins/' as *;
+
+.image-gallery-container {
+  display: grid;
+  row-gap: 1rem;
+  grid-auto-rows: max-content;
+  min-width: 16rem;
+}
+
+.image-gallery-container-placeholder {
+  display: grid;
+  background-color: var(--background-color-secondary);
+  border-radius: 0.5rem;
+  place-items: center;
+  padding: 2rem 0;
+
+  p {
+    color: var(--subtext-color-bright);
+  }
+
+  svg {
+    width: 5rem;
+    height: 5rem;
+    color: var(--svg-color);
+  }
+}
+
+.image-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  gap: 0.6rem;
+  justify-items: center;
+  max-height: $app-gallery-height;
+  overflow-y: scroll;
+  @include HideScrollbar;
+}
+
+.image-gallery-load-more-btn {
+  background-color: var(--btn-load-more) !important;
+  font-size: 0.85rem !important;
+
+  &:disabled {
+    &:hover {
+      background-color: var(--btn-load-more) !important;
+    }
+  }
+
+  &:hover {
+    background-color: var(--btn-load-more-hover) !important;
+  }
+}

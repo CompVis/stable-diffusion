@@ -3,11 +3,7 @@ import { SyntheticEvent, useCallback } from 'react';
 import { FaTrash, FaUpload } from 'react-icons/fa';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { RootState } from '../../app/store';
-import {
-  OptionsState,
-  setInitialImagePath,
-  setMaskPath,
-} from '../../features/options/optionsSlice';
+import { OptionsState, setInitialImagePath, setMaskPath } from './optionsSlice';
 import {
   uploadInitialImage,
   uploadMaskImage,

@@ -1,0 +1,92 @@
+[data-theme='dark'] {
+  // General Colors
+  --white: rgb(255, 255, 255);
+
+  // App Colors
+  --root-bg-color: rgb(10, 10, 10);
+  --background-color: rgb(20, 20, 26);
+  --background-color-secondary: rgb(16, 16, 22);
+
+  --text-color: rgb(255, 255, 255);
+  --text-color-secondary: rgb(160, 162, 188);
+
+  --subtext-color: rgb(24, 24, 34);
+  --subtext-color-bright: rgb(48, 48, 64);
+
+  --border-color: rgb(30, 30, 46);
+  --border-color-light: rgb(60, 60, 76);
+
+  --invalid: rgb(255, 75, 75);
+  --invalid-secondary: rgb(120, 5, 5);
+
+  // Error status colors
+  --border-color-invalid: rgb(255, 80, 50);
+  --box-shadow-color-invalid: rgb(210, 30, 10);
+
+  --svg-color: rgb(24, 24, 34);
+
+  // Progress Bar Color
+  --progress-bar-color: rgb(100, 50, 245);
+
+  // Prompt Box Colors
+  --prompt-bg-color: rgb(10, 10, 10);
+  --prompt-border-color: rgb(140, 110, 255);
+  --prompt-box-shadow-color: rgb(80, 30, 210);
+
+  // Button Colors
+  --btn-svg-color: rgb(255, 255, 255);
+
+  --btn-grey: rgb(30, 32, 42);
+  --btn-grey-hover: rgb(46, 48, 68);
+
+  --btn-purple: rgb(80, 40, 200);
+  --btn-purple-hover: rgb(104, 60, 230);
+
+  --btn-red: rgb(185, 55, 55);
+  --btn-red-hover: rgb(255, 75, 75);
+
+  --btn-load-more: rgb(30, 32, 42);
+  --btn-load-more-hover: rgb(36, 38, 48);
+
+  // Switch
+  --switch-bg-color: rgb(100, 102, 110);
+  --switch-bg-active-color: rgb(80, 40, 200);
+
+  // Tabs
+  --tab-color: rgb(30, 32, 42);
+  --tab-hover-color: rgb(36, 38, 48);
+  --tab-list-bg: rgb(100, 50, 255);
+  --tab-list-text: rgb(20, 20, 20);
+  --tab-list-text-inactive: rgb(92, 94, 114);
+  --tab-panel-bg: rgb(20, 22, 28);
+
+  // Metadata Viewer
+  --metadata-bg-color: rgba(0, 0, 0, 0.7);
+  --metadata-json-bg-color: rgba(255, 255, 255, 0.1);
+
+  // Status Message
+  --status-good-color: rgb(125, 255, 100);
+  --status-good-glow: rgb(40, 215, 40);
+  --status-working-color: rgb(255, 175, 55);
+  --status-working-glow: rgb(255, 160, 55);
+  --status-bad-color: rgb(255, 90, 90);
+  --status-bad-glow: rgb(255, 40, 40);
+
+  // Settings Modal
+  --settings-modal-bg: rgb(30, 32, 42);
+
+  // Input
+  --input-checkbox-bg: rgb(90, 90, 120);
+  --input-checkbox-checked-bg: rgb(80, 40, 200);
+  --input-checkbox-checked-tick: rgb(0, 0, 0);
+
+  // Console
+  --error-level-info: rgb(200, 202, 224);
+  --error-level-warning: rgb(255, 225, 105);
+  --error-level-error: rgb(255, 81, 46);
+  --console-bg-color: rgb(30, 30, 36);
+  --console-border-color: rgb(80, 82, 112);
+
+  --console-icon-button-bg-color: rgb(50, 53, 64);
+  --console-icon-button-bg-color-hover: rgb(70, 73, 84);
+}

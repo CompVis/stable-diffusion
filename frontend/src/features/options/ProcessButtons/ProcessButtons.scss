@@ -1,0 +1,23 @@
+@use '../../../styles/Mixins/' as *;
+
+.process-buttons {
+  display: grid;
+  grid-template-columns: auto max-content;
+  column-gap: 0.5rem;
+
+  .invoke-btn {
+    @include Button(
+      $btn-color: var(--btn-purple),
+      $btn-color-hover: var(--btn-purple-hover),
+      $btn-width: 5rem
+    );
+  }
+
+  .cancel-btn {
+    @include Button(
+      $btn-color: var(--btn-red),
+      $btn-color-hover: var(--btn-red-hover),
+      $btn-width: 3rem
+    );
+  }
+}

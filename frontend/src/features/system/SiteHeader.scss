@@ -1,0 +1,27 @@
+.site-header {
+  display: grid;
+  grid-template-columns: auto max-content;
+}
+
+.site-header-left-side {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  column-gap: 0.6rem;
+  align-items: center;
+
+  img {
+    width: 32px;
+    height: 32px;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+  }
+}
+
+.site-header-right-side {
+  display: grid;
+  grid-template-columns: repeat(5, max-content);
+  align-items: center;
+  column-gap: 0.5rem;
+}

@@ -1,0 +1,28 @@
+.iai-select {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  column-gap: 1rem;
+  align-items: center;
+  width: max-content;
+
+  .iai-select-label {
+    color: var(--text-color-secondary);
+    margin-right: 0;
+  }
+
+  .iai-select-picker {
+    border: 2px solid var(--border-color);
+    background-color: var(--background-color-secondary);
+    font-weight: bold;
+
+    &:focus {
+      outline: none;
+      border: 2px solid var(--prompt-border-color);
+      box-shadow: 0 0 10px 0 var(--prompt-box-shadow-color);
+    }
+  }
+
+  .iai-select-option {
+    background-color: var(--background-color-secondary);
+  }
+}

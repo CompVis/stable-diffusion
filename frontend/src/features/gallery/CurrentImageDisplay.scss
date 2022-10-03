@@ -1,0 +1,91 @@
+@use '../../styles/Mixins/' as *;
+
+.current-image-display {
+  display: grid;
+  grid-template-areas:
+    'current-image-tools'
+    'current-image-preview';
+  grid-template-rows: auto 1fr;
+  justify-items: center;
+  background-color: var(--background-color-secondary);
+  border-radius: 0.5rem;
+}
+
+.current-image-display-placeholder {
+  background-color: var(--background-color-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+
+  svg {
+    width: 10rem;
+    height: 10rem;
+    color: var(--svg-color);
+  }
+}
+
+.current-image-tools {
+  grid-area: current-image-tools;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  justify-content: center;
+}
+
+.current-image-options {
+  display: grid;
+  grid-auto-flow: column;
+  padding: 1rem;
+  height: fit-content;
+  gap: 0.5rem;
+
+  button {
+    @include Button(
+      $btn-width: 3rem,
+      $icon-size: 22px,
+      $btn-color: var(--btn-grey),
+      $btn-color-hover: var(--btn-grey-hover)
+    );
+  }
+}
+
+.current-image-preview {
+  grid-area: current-image-preview;
+  position: relative;
+  justify-content: center;
+  align-items: center;
+  display: grid;
+  width: 100%;
+
+  img {
+    border-radius: 0.5rem;
+    object-fit: contain;
+    width: auto;
+    max-height: $app-gallery-height;
+  }
+}
+
+.current-image-metadata-viewer {
+  border-radius: 0.5rem;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(100% - 2rem);
+  padding: 0.5rem;
+  margin-left: 1rem;
+  background-color: var(--metadata-bg-color);
+  z-index: 1;
+  overflow: scroll;
+  height: calc($app-metadata-height - 1rem);
+}
+
+.current-image-json-viewer {
+  border-radius: 0.5rem;
+  margin: 0 0.5rem 1rem 0.5rem;
+  padding: 1rem;
+  overflow-x: scroll;
+  word-break: break-all;
+  background-color: var(--metadata-json-bg-color);
+}

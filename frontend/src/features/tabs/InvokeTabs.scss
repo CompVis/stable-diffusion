@@ -1,0 +1,43 @@
+@use '../../styles/Mixins/' as *;
+
+.app-tabs {
+  display: grid !important;
+  grid-template-columns: min-content auto;
+  column-gap: 1rem;
+}
+
+.app-tabs-list {
+  display: grid;
+  row-gap: 0.3rem;
+  grid-auto-rows: max-content;
+  color: var(--tab-list-text-inactive);
+
+  button {
+    font-size: 0.85rem;
+    padding: 0.5rem;
+
+    &:hover {
+      background-color: var(--tab-hover-color);
+      border-radius: 0.3rem;
+    }
+
+    svg {
+      width: 26px;
+      height: 26px;
+    }
+
+    &[aria-selected='true'] {
+      background-color: var(--tab-list-bg);
+      color: var(--tab-list-text);
+      font-weight: bold;
+      border-radius: 0.3rem;
+      border: none;
+    }
+  }
+}
+
+.app-tabs-panels {
+  .app-tabs-panel {
+    padding: 0;
+  }
+}

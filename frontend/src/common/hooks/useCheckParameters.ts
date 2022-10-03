@@ -4,10 +4,11 @@ import { useMemo } from 'react';
 import { useAppSelector } from '../../app/store';
 import { RootState } from '../../app/store';
 import { OptionsState } from '../../features/options/optionsSlice';
+
 import { SystemState } from '../../features/system/systemSlice';
 import { validateSeedWeights } from '../util/seedWeightPairs';
 
-const optionsSelector = createSelector(
+export const optionsSelector = createSelector(
   (state: RootState) => state.options,
   (options: OptionsState) => {
     return {
@@ -26,7 +27,7 @@ const optionsSelector = createSelector(
   }
 );
 
-const systemSelector = createSelector(
+export const systemSelector = createSelector(
   (state: RootState) => state.system,
   (system: SystemState) => {
     return {
@@ -46,8 +47,9 @@ const systemSelector = createSelector(
  * This is used to prevent the 'Generate' button from being clicked.
  */
 const useCheckParameters = (): boolean => {
+  const { prompt } = useAppSelector(optionsSelector);
+
   const {
-    prompt,
     shouldGenerateVariations,
     seedWeights,
     maskPath,
@@ -59,7 +61,7 @@ const useCheckParameters = (): boolean => {
 
   return useMemo(() => {
     // Cannot generate without a prompt
-    if (!prompt) {
+    if (!prompt || Boolean(prompt.match(/^[\s\r\n]+$/))) {
       return false;
     }
 

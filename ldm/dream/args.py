@@ -461,6 +461,12 @@ class Args(object):
             default='9090',
             help='Web server: Port to listen on'
         )
+        web_server_group.add_argument(
+            '--gui',
+            dest='gui',
+            action='store_true',
+            help='Start InvokeAI GUI',
+        )
         return parser
 
     # This creates the parser that processes commands on the dream> command line

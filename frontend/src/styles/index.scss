@@ -1,0 +1,62 @@
+// General Imports
+@use 'Colors_Dark';
+@use 'Colors_Light';
+@use 'Fonts';
+
+// Component Styles
+//app
+@use '../app/App.scss';
+
+//systen
+@use '../features/system/SiteHeader.scss';
+@use '../features/system/StatusIndicator.scss';
+@use '../features/system/SettingsModal/SettingsModal.scss';
+@use '../features/system/Console.scss';
+
+// options
+@use '../features/options/PromptInput/PromptInput.scss';
+@use '../features/options/ProcessButtons/ProcessButtons.scss';
+@use '../features/options/MainOptions/MainOptions.scss';
+@use '../features/options/AccordionItems/AdvancedSettings.scss';
+@use '../features/options/AdvancedOptions/Upscale/UpscaleOptions.scss';
+@use '../features/system/ProgressBar.scss';
+
+// gallery
+@use '../features/gallery/CurrentImageDisplay.scss';
+@use '../features/gallery/ImageGallery.scss';
+@use '../features/gallery/InvokePopover.scss';
+
+// Tabs
+@use '../features/tabs/InvokeTabs.scss';
+@use '../features/tabs/TextToImage/TextToImage.scss';
+
+// Component Shared
+@use '../common/components/IAINumberInput.scss';
+@use '../common/components/IAIInput.scss';
+@use '../common/components/IAISelect.scss';
+@use '../common/components/IAISwitch.scss';
+@use '../common/components/WorkInProgress/WorkInProgress.scss';
+@use '../common/components/GuidePopover.scss';
+
+// Shared Styles
+@use './Mixins/' as *;
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  @include HideScrollbar;
+  background-color: var(--root-bg-color);
+}
+
+#root {
+  background-color: var(--root-bg-color);
+  color: var(--text-color);
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+}

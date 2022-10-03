@@ -35,8 +35,7 @@ export const socketioMiddleware = () => {
       onConnect,
       onDisconnect,
       onError,
-      onESRGANResult,
-      onGFPGANResult,
+      onPostprocessingResult,
       onGenerationResult,
       onIntermediateResult,
       onProgressUpdate,
@@ -76,12 +75,9 @@ export const socketioMiddleware = () => {
         onGenerationResult(data)
       );
 
-      socketio.on('esrganResult', (data: InvokeAI.ImageResultResponse) =>
-        onESRGANResult(data)
-      );
-
-      socketio.on('gfpganResult', (data: InvokeAI.ImageResultResponse) =>
-        onGFPGANResult(data)
+      socketio.on(
+        'postprocessingResult',
+        (data: InvokeAI.ImageResultResponse) => onPostprocessingResult(data)
       );
 
       socketio.on('intermediateResult', (data: InvokeAI.ImageResultResponse) =>
@@ -152,7 +148,6 @@ export const socketioMiddleware = () => {
         emitRequestNewImages();
         break;
       }
-
 
       case 'socketio/cancelProcessing': {
         emitCancelProcessing();
