@@ -1,8 +1,8 @@
 import { Flex, Image } from '@chakra-ui/react';
 import { useState } from 'react';
-import { useAppSelector } from '../../app/store';
+import { useAppDispatch, useAppSelector } from '../../app/store';
 import { RootState } from '../../app/store';
-import { OptionsState } from './optionsSlice';
+import { OptionsState, setInitialImagePath, setMaskPath } from './optionsSlice';
 import './InitAndMaskImage.css';
 import { createSelector } from '@reduxjs/toolkit';
 import { isEqual } from 'lodash';
@@ -23,8 +23,17 @@ const optionsSelector = createSelector(
  * Displays init and mask images and buttons to upload/delete them.
  */
 const InitAndMaskImage = () => {
+  const dispatch = useAppDispatch();
   const { initialImagePath, maskPath } = useAppSelector(optionsSelector);
   const [shouldShowMask, setShouldShowMask] = useState<boolean>(false);
+
+  const handleInitImageOnError = () => {
+    dispatch(setInitialImagePath(''));
+  };
+
+  const handleMaskImageOnError = () => {
+    dispatch(setMaskPath(''));
+  };
 
   return (
     <Flex direction={'column'} alignItems={'center'} gap={2}>
@@ -37,6 +46,7 @@ const InitAndMaskImage = () => {
             rounded={'md'}
             className={'checkerboard'}
             maxWidth={320}
+            onError={handleInitImageOnError}
           />
           {shouldShowMask && maskPath && (
             <Image
@@ -48,6 +58,7 @@ const InitAndMaskImage = () => {
               src={maskPath}
               rounded={'md'}
               zIndex={1}
+              onError={handleMaskImageOnError}
             />
           )}
         </Flex>

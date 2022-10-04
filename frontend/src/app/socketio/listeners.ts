@@ -279,6 +279,17 @@ const makeSocketIOListeners = (
     onImageDeleted: (data: InvokeAI.ImageUrlAndUuidResponse) => {
       const { url, uuid } = data;
       dispatch(removeImage(uuid));
+
+      const { initialImagePath, maskPath } = getState().options;
+
+      if (initialImagePath === url) {
+        dispatch(setInitialImagePath(''));
+      }
+
+      if (maskPath === url) {
+        dispatch(setMaskPath(''));
+      }
+
       dispatch(
         addLogEntry({
           timestamp: dateFormat(new Date(), 'isoDateTime'),

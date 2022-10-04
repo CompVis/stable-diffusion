@@ -390,14 +390,14 @@ class InvokeAIWebServer:
 
         # TODO: I think this needs a safety mechanism.
         @socketio.on('deleteImage')
-        def handle_delete_image(path, uuid):
+        def handle_delete_image(url, uuid):
             try:
-                print(f'>> Delete requested "{path}"')
+                print(f'>> Delete requested "{url}"')
                 from send2trash import send2trash
 
-                path = self.get_image_path_from_url(path)
+                path = self.get_image_path_from_url(url)
                 send2trash(path)
-                socketio.emit('imageDeleted', {'url': path, 'uuid': uuid})
+                socketio.emit('imageDeleted', {'url': url, 'uuid': uuid})
             except Exception as e:
                 self.socketio.emit('error', {'message': (str(e))})
                 print('\n')
