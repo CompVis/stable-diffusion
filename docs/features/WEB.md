@@ -337,4 +337,9 @@ When an image from the Invocation Gallery is selected, or is generated, the imag
 
 ## Acknowledgements
 
-A huge shout-out to the core team working to make this vision a reality, including [psychedelicious](https://github.com/psychedelicious), [Kyle0654](https://github.com/Kyle0654) and [blessedcoolant](https://github.com/blessedcoolant). [hipsterusername](https://github.com/hipsterusername) was the team's unofficial cheerleader and added tooltips/docs.
+A huge shout-out to the core team working to make this vision a
+reality, including
+[psychedelicious](https://github.com/psychedelicious),
+[Kyle0654](https://github.com/Kyle0654) and
+[blessedcoolant](https://github.com/blessedcoolant). [hipsterusername](https://github.com/hipsterusername)
+was the team's unofficial cheerleader and added tooltips/docs.
