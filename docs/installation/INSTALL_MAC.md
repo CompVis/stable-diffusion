@@ -2,142 +2,111 @@
 title: macOS
 ---
 
-# :fontawesome-brands-apple: macOS
+Invoke AI runs quite well on M1 Macs and we have a number of M1 users
+in the community.
+
+While the repo does run on Intel Macs, we only have a couple
+reports. If you have an Intel Mac and run into issues, please create
+an issue on Github and we will do our best to help.
 
 ## Requirements
 
 - macOS 12.3 Monterey or later
-- Python
-- Patience
-- Apple Silicon or Intel Mac
+- About 10GB of storage (and 10GB of data if your internet connection has data caps)
+- Any M1 Macs or an Intel Macs with 4GB+ of VRAM (ideally more)
 
-Things have moved really fast and so these instructions change often which makes
-them outdated pretty fast. One of the problems is that there are so many
-different ways to run this.
+## Installation
 
-We are trying to build a testing setup so that when we make changes it doesn't
-always break.
+First you need to download a large checkpoint file.
 
-## How to
+1. Sign up at https://huggingface.co
+2. Go to the [Stable diffusion diffusion model page](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original)
+3. Accept the terms and click Access Repository
+4. Download [sd-v1-4.ckpt (4.27 GB)](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/blob/main/sd-v1-4.ckpt) and note where you have saved it (probably the Downloads folder). You may want to move it somewhere else for longer term storage - SD needs this file to run.
 
-(this hasn't been 100% tested yet)
+While that is downloading, open Terminal and run the following commands one at a time, reading the comments and taking care to run the appropriate command for your Mac's architecture (Intel or M1).
 
-First get the weights checkpoint download started since it's big and will take
-some time:
+Do not just copy and paste the whole thing into your terminal!
 
-1. Sign up at [huggingface.co](https://huggingface.co)
-2. Go to the
-   [Stable diffusion diffusion model page](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original)
-3. Accept the terms and click Access Repository:
-4. Download
-   [sd-v1-4.ckpt (4.27 GB)](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/blob/main/sd-v1-4.ckpt)
-   and note where you have saved it (probably the Downloads folder)
+```bash
+# Install brew (and Xcode command line tools):
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-While that is downloading, open a Terminal and run the following commands:
+# Now there are two options to get the Python (miniconda) environment up and running:
+# 1. Alongside pyenv
+# 2. Standalone
+#
+# If you don't know what we are talking about, choose 2.
+#
+# If you are familiar with python environments, you'll know there are other options
+# for setting up the environment - you are on your own if you go one of those routes.
 
-!!! todo "Homebrew"
+##### BEGIN TWO DIFFERENT OPTIONS #####
 
-    === "no brew installation yet"
+### BEGIN OPTION 1: Installing alongside pyenv ###
+brew install pyenv-virtualenv # you might have this from before, no problem
+pyenv install anaconda3-2022.05
+pyenv virtualenv anaconda3-2022.05
+eval "$(pyenv init -)"
+pyenv activate anaconda3-2022.05
+### END OPTION 1 ###
 
-        ```bash title="install brew (and Xcode command line tools)"
-        /bin/bash -c \
-          "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-        ```
 
-    === "brew is already installed"
-    
-        Only if you installed protobuf in a previous version of this tutorial, otherwise skip
+### BEGIN OPTION 2: Installing standalone ###
+# Install cmake, protobuf, and rust:
+brew install cmake protobuf rust
 
-        `#!bash brew uninstall protobuf`
+# BEGIN ARCHITECTURE-DEPENDENT STEP #
+# For M1: install miniconda (M1 arm64 version):
+curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o Miniconda3-latest-MacOSX-arm64.sh
+/bin/bash Miniconda3-latest-MacOSX-arm64.sh
 
-!!! todo "Conda Installation"
+# For Intel: install miniconda (Intel x86-64 version):
+curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o Miniconda3-latest-MacOSX-x86_64.sh
+/bin/bash Miniconda3-latest-MacOSX-x86_64.sh
+# END ARCHITECTURE-DEPENDENT STEP #
 
-    Now there are two different ways to set up the Python (miniconda) environment:
-    1. Standalone
-    2. with pyenv
-    If you don't know what we are talking about, choose Standalone
+### END OPTION 2 ###
 
-    === "Standalone"
+##### END TWO DIFFERENT OPTIONS #####
 
-        ```bash
-        # install cmake and rust:
-        brew install cmake rust
-        ```
-
-        === "M1 arm64"
-
-            ```bash title="Install miniconda for M1 arm64"
-            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh \
-              -o Miniconda3-latest-MacOSX-arm64.sh
-            /bin/bash Miniconda3-latest-MacOSX-arm64.sh
-            ```
-
-        === "Intel x86_64"
-
-            ```bash title="Install miniconda for Intel"
-            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh \
-              -o Miniconda3-latest-MacOSX-x86_64.sh
-            /bin/bash Miniconda3-latest-MacOSX-x86_64.sh
-            ```
-
-    === "with pyenv"
-
-        ```{.bash .annotate}
-        brew install rust pyenv-virtualenv # (1)!
-        pyenv install anaconda3-2022.05
-        pyenv virtualenv anaconda3-2022.05
-        eval "$(pyenv init -)"
-        pyenv activate anaconda3-2022.05
-        ```
-        
-        1. You might already have this installed, if that is the case just continue.
-
-```{.bash .annotate title="local repo setup"}
-# clone the repo
+# Clone the Invoke AI repo
 git clone https://github.com/invoke-ai/InvokeAI.git
 cd InvokeAI
 
-# Download the checkpoint file, and then proceed
+### WAIT FOR THE CHECKPOINT FILE TO DOWNLOAD, THEN PROCEED ###
+>>>>>>> Updates INSTALL_MAC.md
 
-# create symlink to checkpoint
+# We will leave the big checkpoint wherever you stashed it for long-term storage,
+# and make a link to it from the repo's folder. This allows you to use it for
+# other repos, and if you need to delete Invoke AI, you won't have to download it again.
+
+# Make the directory in the repo for the symlink
 mkdir -p models/ldm/stable-diffusion-v1/
 
-PATH_TO_CKPT="$HOME/Downloads" # (1)!
+# This is the folder where you put the checkpoint file `sd-v1-4.ckpt`
+PATH_TO_CKPT="$HOME/Downloads"
 
-ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" \
-  models/ldm/stable-diffusion-v1/model.ckpt
-```
+# Create a link to the checkpoint
+ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
 
-1. or wherever you saved sd-v1-4.ckpt
+# BEGIN ARCHITECTURE-DEPENDENT STEP #
+# For M1: Create the environment & install packages
+PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
 
-!!! todo "create Conda Environment"
+# For Intel: Create the environment & install packages
+PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-64 conda env create -f environment-mac.yaml
+# END ARCHITECTURE-DEPENDENT STEP #
 
-    === "M1 arm64"
+# Activate the environment (you need to do this every time you want to run SD)
+conda activate ldm
 
-        ```bash
-        PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 \
-          conda env create \
-          -f environment-mac.yml \
-          && conda activate ldm
-        ```
-
-
-    === "Intel x86_64"
-
-        ```bash
-        PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-64 \
-          conda env create \
-          -f environment-mac.yml \
-          && conda activate ldm
-        ```
-
-```{.bash .annotate title="preload models and run script"}
-# only need to do this once
+# This will download some bits and pieces and make take a while
 python scripts/preload_models.py
 
-# now you can run SD in CLI mode
-python scripts/invoke.py --full_precision  # (1)!
-
+# Run SD!
+python scripts/dream.py
+```
 # or run the web interface!
 python scripts/invoke.py --web
 
