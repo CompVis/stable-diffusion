@@ -16,6 +16,7 @@ pudb
 pytorch-lightning
 scikit-image>=0.19
 streamlit
+pyreadline3
 # "CompVis/taming-transformers" IS NOT INSTALLABLE
 # This is a drop-in replacement
 taming-transformers-rom1504

@@ -246,10 +246,9 @@ Outputs:
 ## !fetch
 
 This command retrieves the generation parameters from a previously
-generated image and either loads them into the command line
-(Linux|Mac), or prints them out in a comment for copy-and-paste
-(Windows). You may provide either the name of a file in the current
-output directory, or a full file path.
+generated image and either loads them into the command line.  You may
+provide either the name of a file in the current output directory, or
+a full file path.
 
 ~~~
 dream> !fetch 0000015.8929913.png
@@ -285,10 +284,25 @@ dream> !20
 dream> watercolor of beautiful woman sitting under tree wearing broad hat and flowing garment -v0.2 -n6 -S2878767194
 ~~~
 
+## !search <search string>
+
+This is similar to !history but it only returns lines that contain
+`search string`. For example:
+
+~~~
+dream> !search surreal
+[21] surrealist painting of beautiful woman sitting under tree wearing broad hat and flowing garment -v0.2 -n6 -S2878767194
+~~~
+
+## !clear
+
+This clears the search history from memory and disk. Be advised that
+this operation is irreversible and does not issue any warnings!
+
 # Command-line editing and completion
 
-If you are on a Macintosh or Linux machine, the command-line offers
-convenient history tracking, editing, and command completion.
+The command-line offers convenient history tracking, editing, and
+command completion.
 
 - To scroll through previous commands and potentially edit/reuse them, use the up and down cursor keys.
 - To edit the current command, use the left and right cursor keys to position the cursor, and then backspace, delete or insert characters.
@@ -298,7 +312,8 @@ convenient history tracking, editing, and command completion.
 - To paste a cut section back in, position the cursor where you want to paste, and type CTRL-Y
 
 Windows users can get similar, but more limited, functionality if they
-launch dream.py with the "winpty" program:
+launch dream.py with the "winpty" program and have the `pyreadline3`
+library installed:
 
 ~~~
 > winpty python scripts\dream.py
