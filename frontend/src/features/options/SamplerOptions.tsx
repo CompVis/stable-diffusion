@@ -82,21 +82,21 @@ const SamplerOptions = () => {
         onChange={handleChangeSampler}
         validValues={SAMPLERS}
       />
-      <SDNumberInput
+      {/* <IAINumberInput
           label='Threshold'
           min={0}
           step={0.1}
           onChange={handleChangeThreshold}
           value={threshold}
-      />
-      <SDNumberInput
+      /> */}
+      {/* <IAINumberInput
           label='Perlin'
           min={0}
           max={1}
           step={0.05}
           onChange={handleChangePerlin}
           value={perlin}
-      />
+      /> */}
     </Flex>
   );
 };
