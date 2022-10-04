@@ -185,6 +185,11 @@ class Args(object):
         switches.append(f'-W {a["width"]}')
         switches.append(f'-H {a["height"]}')
         switches.append(f'-C {a["cfg_scale"]}')
+        if a['perlin'] > 0:
+            switches.append(f'--perlin {a["perlin"]}')
+        if a['threshold'] > 0:
+            switches.append(f'--threshold {a["threshold"]}')
+
         if a['grid']:
             switches.append('--grid')
         if a['seamless']:
