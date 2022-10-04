@@ -1,5 +1,6 @@
 import random
 import os
+import time
 import torch
 import numpy as np
 import shutil
@@ -34,8 +35,9 @@ latent_forcing = ""
 #os.environ["enforcedlatent"] = ""
 os.environ["good"] = "[]"
 os.environ["bad"] = "[]"
-num_iterations = 200
+num_iterations = 50
 gs = 7.5
+voronoi_in_images = True
 
 
 
@@ -55,6 +57,7 @@ all_selected = []
 all_selected_latent = []
 final_selection = []
 forcedlatents = []
+forcedgs = []
 
 
 
@@ -123,6 +126,14 @@ prompt = "An armored Mark Zuckerberg fighting off a monster with bloody tentacle
 prompt = "Cute woman, portrait, photo, red hair, green eyes, smiling."
 prompt = "Photo of Tarzan as a lawyer with a tie and an octopus on his head."
 prompt = "An armored bloody Yann Lecun has a lightsabar and fights a red tentacular monster."
+prompt = "Photo of a giant armored insect attacking a building. The building is broken. There are flames."
+prompt = "Photo of Meg Myers, on the left, in Egyptian dress, fights Cthulhu (on the right) with a light saber. They stare at each other."
+prompt = "Photo of a cute red panda."
+prompt = "Photo of a cute smiling white-haired woman with pink eyes."
+prompt = "A muscular Jesus with and assault rifle, a cap and and a light saber."
+prompt = "A portrait of a cute smiling woman."
+prompt = "A woman with black skin, red hair, egyptian dress, yellow eyes."
+prompt = "Photo of a young cute black woman."
 print(f"The prompt is {prompt}")
 
 
@@ -176,7 +187,9 @@ def singleeg(path_to_image):
     output_filename = path_to_image + ".SR.png"
     sr_image.save(output_filename)
     return output_filename
+
 def singleeg2(path_to_image):
+    time.sleep(0.5*np.random.rand())
     image = Image.open(path_to_image).convert('RGB')
     sr_device = device #('mps')   #torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Type before SR = {type(image)}")
@@ -251,7 +264,7 @@ def stop_all(list_of_files, list_of_latent, last_list_of_latent):
 #                    images += [image_name]
                 print(to_native(f"Base images created for perturbation={c} and file {list_of_files[idx]}"))
                 #images = Parallel(n_jobs=8)(delayed(process)(i) for i in range(10))
-                images = Parallel(n_jobs=16)(delayed(singleeg2)(image) for image in images)
+                images = Parallel(n_jobs=10)(delayed(singleeg2)(image) for image in images)
 
                 frames = [Image.open(image) for image in images]
                 frame_one = frames[0]
@@ -311,11 +324,18 @@ def load_img(path):
     image = torch.from_numpy(image)
     return 2.*image - 1.
 
+model = pipe.vae
+
+def img_to_latent(path):
+    init_image = 1.8 * load_img(path).to(device)
+    init_image = repeat(init_image, '1 ... -> b ...', b=1)
+    forced_latent = model.encode(init_image.to(device)).latent_dist.sample()
+    new_fl = forced_latent.cpu().detach().numpy().flatten()
+    new_fl = np.sqrt(len(new_fl)) * new_fl / np.sqrt(np.sum(new_fl ** 2))
+    return new_fl
+
 if len(image_name) > 0:
     pretty_print("Importing an image !")
-    import torchvision
-    #forced_latent = pipe.get_latent(torchvision.io.read_image(image_name).float())
-    model = pipe.vae
     try:
         init_image = load_img(image_name).to(device)
     except:
@@ -362,7 +382,8 @@ if len(image_name) > 0:
                 new_base_init_image[0,0,:,:] /= divider
                 new_base_init_image[0,2,:,:] /= divider
            
-        c = np.exp(np.random.randn() - 2)
+        c = np.exp(np.random.randn() - 5)
+        f = np.exp(-3. * np.random.rand())
         init_image_shape = base_init_image.cpu().numpy().shape
         if i > 0 and not latent_found:
             init_image = new_base_init_image + torch.from_numpy(c * np.random.randn(np.prod(init_image_shape))).reshape(init_image_shape).float().to(device)
@@ -373,20 +394,23 @@ if len(image_name) > 0:
             new_fl = np.asarray(eval(latent_str))
             assert len(new_fl) > 1
         else:
-            forced_latent = 6. * model.encode(init_image.to(device)).latent_dist.sample()
+            forced_latent = 1. * model.encode(init_image.to(device)).latent_dist.sample()
             new_fl = forced_latent.cpu().detach().numpy().flatten()
         basic_new_fl = new_fl  #np.sqrt(len(new_fl) / sum(new_fl ** 2)) * new_fl
         #new_fl = forced_latent + (1. / 1.1**(llambda-i)) * torch.from_numpy(np.random.randn(1*4*64*64).reshape(1,4,64,64)).float().to(device)
         #forcedlatents += [new_fl.cpu().detach().numpy()]
         if i > 0:
             #epsilon = 0.3 / 1.1**i
-            #basic_new_fl = np.sqrt(len(new_fl) / np.sum(basic_new_fl**2)) * basic_new_fl
-            epsilon = (0.5 * (i-1)/(llambda-1))**3 #1.0 / 2**(2 + (llambda - i) / 6)
+            basic_new_fl = f * np.sqrt(len(new_fl) / np.sum(basic_new_fl**2)) * basic_new_fl
+            epsilon = .7 * ((i-1)/(llambda-1)) #1.0 / 2**(2 + (llambda - i) / 6)
+            print(f"{i} -- {i % 7} {c} {f} {epsilon}")
+            # 1 -- 1 0.050020045300292804 0.0790648688521246 0.0
             new_fl = (1. - epsilon) * basic_new_fl + epsilon * np.random.randn(1*4*64*64)
         else:
             new_fl = basic_new_fl
-        #new_fl = np.sqrt(len(new_fl)) * new_fl / np.sqrt(np.sum(new_fl ** 2))
+        new_fl = 6. * np.sqrt(len(new_fl)) * new_fl / np.sqrt(np.sum(new_fl ** 2))
         forcedlatents += [new_fl] #np.clip(new_fl, -3., 3.)] #np.sqrt(len(new_fl) / sum(new_fl ** 2)) * new_fl]
+        forcedgs += [7.5]  #np.random.choice([7.5, 15.0, 30.0, 60.0])] TODO
         #forcedlatents += [np.sqrt(len(new_fl) / sum(new_fl ** 2)) * new_fl]
         #print(f"{i} --> {forcedlatents[i][:10]}")
 
@@ -446,7 +470,12 @@ for iteration in range(30):
         #    os.environ["enforcedlatent"] = ""
         #with autocast("cuda"):
         #    image = pipe(english_prompt, guidance_scale=gs, num_inference_steps=num_iterations)["sample"][0]
+        previous_gs = gs
+        if k < len(forcedgs):
+            gs = forcedgs[k]
         image = latent_to_image(np.asarray(latent_forcing)) #eval(os.environ["forcedlatent"])))
+        gs = previous_gs
+
         images += [image]
         filename = f"SD_{prompt.replace(' ','_')}_image_{sentinel}_{iteration:05d}_{k:05d}.png"  
         image.save(filename)
@@ -465,10 +494,13 @@ for iteration in range(30):
         with open(filename + ".latent.txt", 'w') as f:
             f.write(f"{str_latent}")
         # In case of early stopping.
+        first_event = True
         for i in pygame.event.get():
             if i.type == pygame.MOUSEBUTTONUP:
-                noise.say("Ok I stop")
-                noise.runAndWait()
+                if first_event:
+                    noise.say("Ok I stop")
+                    noise.runAndWait()
+                    first_event = False
                 pos = pygame.mouse.get_pos()
                 index = 3 * (pos[0] // 300) + (pos[1] // 300)
                 if pos[0] > X and pos[1] > Y /3 and pos[1] < 2*Y/3:
@@ -480,7 +512,7 @@ for iteration in range(30):
                     break
                 early_stop = [(1,1)]
                 satus = False
-    
+    forcedgs = []
     # Stop the forcing from disk!
     #os.environ["enforcedlatent"] = ""
     # importing required library
@@ -657,51 +689,101 @@ for iteration in range(30):
     os.environ["mu"] = str(len(indices))
     forcedlatents = []
     bad += [list(latent[u].flatten()) for u in range(len(onlyfiles)) if u not in [i[0] for i in indices]]
-    sauron = 0 * latent[0]
-    for u in [u for u in range(len(onlyfiles)) if u not in [i[0] for i in indices]]:
-        sauron += latent[u]
-    sauron = (1 / len([u for u in range(len(onlyfiles)) if u not in [i[0] for i in indices]])) * sauron
+    #sauron = 0 * latent[0]
+    #for u in [u for u in range(len(onlyfiles)) if u not in [i[0] for i in indices]]:
+    #    sauron += latent[u]
+    #sauron = (1 / len([u for u in range(len(onlyfiles)) if u not in [i[0] for i in indices]])) * sauron
     if len(bad) > 300:
         bad = bad[(len(bad) - 300):]
     print(to_native(f"{len(indices)} indices are selected."))
     #print(f"indices = {indices}")
-    for a in range(llambda):
-        forcedlatent = np.zeros((4, 64, 64))
-        os.environ["good"] = str(good)
-        os.environ["bad"] = str(bad)
-        coefficients = np.zeros(len(indices))
-        for i in range(len(indices)):
-            coefficients[i] = np.exp(2. * np.random.randn())
-        for i in range(64):
-            x = i / 63.
-            for j in range(64):
-                y = j / 63
-                mindistances = 10000000000.
-                for u in range(len(indices)):
-                    #print(a, i, x, j, y, u)
-                    #print(indices[u][1])
-                    #print(indices[u][2])
-                    #print(f"  {coefficients[u]}* np.linalg.norm({np.array((x, y))}-{np.array((indices[u][1], indices[u][2]))}")
-                    distance = coefficients[u] * np.linalg.norm( np.array((x, y)) - np.array((indices[u][1], indices[u][2])) )
-                    if distance < mindistances:
-                        mindistances = distance
-                        uu = indices[u][0]
-                for k in range(4):
-                    assert k < len(forcedlatent), k
-                    assert i < len(forcedlatent[k]), i
-                    assert j < len(forcedlatent[k][i]), j
-                    assert uu < len(latent)
-                    assert k < len(latent[uu]), k
-                    assert i < len(latent[uu][k]), i
-                    assert j < len(latent[uu][k][i]), j
-                    forcedlatent[k][i][j] = float(latent[uu][k][i][j])
-        #if a % 2 == 0:
-        #    forcedlatent -= np.random.rand() * sauron
-        basic_new_fl = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
-        epsilon = 0.1 * (((a + .5 - len(good)) / (llambda - len(good) - 1)) ** 6)
-        forcedlatent = (1. - epsilon) * basic_new_fl.flatten() + epsilon * np.random.randn(4*64*64)
-        forcedlatent = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
-        forcedlatents += [forcedlatent]
+    os.environ["good"] = str(good)
+    os.environ["bad"] = str(bad)
+    coefficients = np.zeros(len(indices))
+    if voronoi_in_images:
+        numpy_images = [np.array(image) for image in images]
+        image = np.array(numpy_images[0])
+        for a in range(llambda):
+            print(f"Voronoi in the image space! {a} / {llambda}")
+            for i in range(len(indices)):
+                coefficients[i] = np.exp(2. * np.random.randn())
+            # Creating a forcedlatent.
+            for i in range(512):
+                x = i / 511.
+                for j in range(512):
+                    y = j / 511 
+                    mindistances = 10000000000.
+                    for u in range(len(indices)):
+                        distance = coefficients[u] * np.linalg.norm( np.array((x, y)) - np.array((indices[u][2], indices[u][1])) )
+                        if distance < mindistances:
+                            mindistances = distance
+                            uu = indices[u][0]
+                    image[i][j][:] = numpy_images[uu][i][j][:]
+            # Conversion before using img2latent
+            pil_image = Image.fromarray(image)
+            voronoi_name = f"voronoi{a}_iteration{iteration}.png"
+            pil_image.save(voronoi_name)
+            #timage = np.array([image]).astype(np.float32) / 255.0
+            #timage = timage.transpose(0, 3, 1, 2)
+            #timage = torch.from_numpy(timage).to(device)
+            #timage = repeat(timage, '1 ... -> b ...', b=1)
+            #timage = 2.*timage - 1.
+            #forcedlatent = model.encode(timage).latent_dist.sample().cpu().detach().numpy().flatten()
+            #basic_new_fl = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
+            basic_new_fl = img_to_latent(voronoi_name)
+            basic_new_fl = 0.8 * np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
+            if len(good) > 1:
+                print("Directly copying latent vars !!!")
+                forcedlatents += [4.6 * basic_new_fl]
+            else:
+                epsilon = 1.0 * (((a + .5 - len(good)) / (llambda - len(good) - 1)) ** 2)
+                forcedlatent = (1. - epsilon) * basic_new_fl.flatten() + epsilon * np.random.randn(4*64*64)
+                forcedlatent = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
+                forcedlatents += [4.6 * forcedlatent]
+    else:
+        for a in range(llambda):
+            print(f"Voronoi in the latent space! {a} / {llambda}")
+            forcedlatent = np.zeros((4, 64, 64))
+                #print(type(numpy_image))
+                #print(numpy_image.shape)
+                #print(np.max(numpy_image))
+                #print(np.min(numpy_image))
+                #assert False
+            for i in range(len(indices)):
+                coefficients[i] = np.exp(2. * np.random.randn())
+            for i in range(64):
+                x = i / 63.
+                for j in range(64):
+                    y = j / 63
+                    mindistances = 10000000000.
+                    for u in range(len(indices)):
+                        #print(a, i, x, j, y, u)
+                        #print(indices[u][1])
+                        #print(indices[u][2])
+                        #print(f"  {coefficients[u]}* np.linalg.norm({np.array((x, y))}-{np.array((indices[u][1], indices[u][2]))}")
+                        distance = coefficients[u] * np.linalg.norm( np.array((x, y)) - np.array((indices[u][2], indices[u][1])) )
+                        if distance < mindistances:
+                            mindistances = distance
+                            uu = indices[u][0]
+                    for k in range(4):
+                        assert k < len(forcedlatent), k
+                        assert i < len(forcedlatent[k]), i
+                        assert j < len(forcedlatent[k][i]), j
+                        assert uu < len(latent)
+                        assert k < len(latent[uu]), k
+                        assert i < len(latent[uu][k]), i
+                        assert j < len(latent[uu][k][i]), j
+                        forcedlatent[k][i][j] = float(latent[uu][k][i][j])
+            #if a % 2 == 0:
+            #    forcedlatent -= np.random.rand() * sauron
+            basic_new_fl = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
+            if len(good) > 1:
+                forcedlatents += [basic_new_fl]
+            else:
+                epsilon = 0.1 * (((a + .5 - len(good)) / (llambda - len(good) - 1)) ** 2)
+                forcedlatent = (1. - epsilon) * basic_new_fl.flatten() + epsilon * np.random.randn(4*64*64)
+                forcedlatent = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
+                forcedlatents += [forcedlatent]
     #for uu in range(len(latent)):
     #    print(f"--> latent[{uu}] sum of sq / variable = {np.sum(latent[uu].flatten()**2) / len(latent[uu].flatten())}")
             
