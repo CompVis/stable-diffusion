@@ -797,9 +797,6 @@ class InvokeAIWebServer:
                 rfc_dict['init_image_path'] = parameters[
                     'init_img'
                 ]  # TODO: Noncompliant
-                rfc_dict[
-                    'sampler'
-                ] = 'ddim'  # TODO: FIX ME WHEN IMG2IMG SUPPORTS ALL SAMPLERS
                 if 'init_mask' in parameters:
                     rfc_dict['mask_hash'] = calculate_init_img_hash(
                         self.get_image_path_from_url(parameters['init_mask'])
