@@ -716,27 +716,27 @@ class InvokeAIWebServer:
             print('\n')
 
     def parameters_to_generated_image_metadata(self, parameters):
-    try:
-        # top-level metadata minus `image` or `images`
-        metadata = self.get_system_config()
-        # remove any image keys not mentioned in RFC #266
-        rfc266_img_fields = [
-            'type',
-            'postprocessing',
-            'sampler',
-            'prompt',
-            'seed',
-            'variations',
-            'steps',
-            'cfg_scale',
-            'threshold',
-            'perlin',
-            'step_number',
-            'width',
-            'height',
-            'extra',
-            'seamless',
-        ]
+        try:
+            # top-level metadata minus `image` or `images`
+            metadata = self.get_system_config()
+            # remove any image keys not mentioned in RFC #266
+            rfc266_img_fields = [
+                'type',
+                'postprocessing',
+                'sampler',
+                'prompt',
+                'seed',
+                'variations',
+                'steps',
+                'cfg_scale',
+                'threshold',
+                'perlin',
+                'step_number',
+                'width',
+                'height',
+                'extra',
+                'seamless',
+            ]
 
             rfc_dict = {}
 
