@@ -45,7 +45,6 @@ class KSampler(Sampler):
             ddim_eta=0.0,
             verbose=False,
     ):
-        ddim_num_steps += 1
         outer_model = self.model
         self.model  = outer_model.inner_model
         super().make_schedule(
@@ -56,16 +55,6 @@ class KSampler(Sampler):
         )
         self.model          = outer_model
         self.ddim_num_steps = ddim_num_steps
-        # not working quite right
-        # sigmas = K.sampling.get_sigmas_karras(
-        #     n=ddim_num_steps,
-        #     sigma_min=self.model.sigmas[0].item(),
-        #     sigma_max=self.model.sigmas[-1].item(),
-        #     rho=7.,
-        #     device=self.device,
-        #     # Birch-san recommends this, but it doesn't match the call signature in his branch of k-diffusion
-        #     # concat_zero=False
-        # )
         sigmas = self.model.get_sigmas(ddim_num_steps)
         self.sigmas = sigmas
         
@@ -102,14 +91,14 @@ class KSampler(Sampler):
         # this has to come in the same format as the conditioning, # e.g. as encoded tokens, ...
         **kwargs,
     ):
-        S += 1
         def route_callback(k_callback_values):
             if img_callback is not None:
                 img_callback(k_callback_values['x'],k_callback_values['i'])
 
         # sigmas = self.model.get_sigmas(S)
         # sigmas are now set up in make_schedule - we take the last steps items
-        sigmas = self.sigmas[-S:]
+        sigmas = self.sigmas[-S-1:]
+
         if x_T is not None:
             x = x_T * sigmas[0]
         else:
