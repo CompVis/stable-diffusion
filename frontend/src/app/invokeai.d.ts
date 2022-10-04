@@ -129,6 +129,7 @@ export declare type SystemStatus = {
   totalIterations: number;
   currentStatus: string;
   currentStatusHasSteps: boolean;
+  hasError: boolean;
 };
 
 export declare type SystemConfig = {
@@ -159,10 +160,8 @@ export declare type ErrorResponse = {
 };
 
 export declare type GalleryImagesResponse = {
-  images:  Array<Omit<Image, 'uuid'>>;
-  nextPage: number;
-  offset: number;
-  onlyNewImages: boolean;
+  images: Array<Omit<Image, 'uuid'>>;
+  areMoreImagesAvailable: boolean;
 };
 
 export declare type ImageUrlAndUuidResponse = {

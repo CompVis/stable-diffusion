@@ -3,15 +3,21 @@ import { Flex } from '@chakra-ui/react';
 import { RootState } from '../../app/store';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 
-import { setCfgScale, setSampler, setThreshold, setPerlin, setSteps, OptionsState } from '../options/optionsSlice';
-
+import {
+  setCfgScale,
+  setSampler,
+  setThreshold,
+  setPerlin,
+  setSteps,
+  OptionsState,
+} from './optionsSlice';
 
 import { SAMPLERS } from '../../app/constants';
 import { createSelector } from '@reduxjs/toolkit';
 import { isEqual } from 'lodash';
 import { ChangeEvent } from 'react';
-import SDNumberInput from '../../common/components/SDNumberInput';
-import SDSelect from '../../common/components/SDSelect';
+import IAINumberInput from '../../common/components/IAINumberInput';
+import IAISelect from '../../common/components/IAISelect';
 
 const optionsSelector = createSelector(
   (state: RootState) => state.options,
@@ -56,21 +62,21 @@ const SamplerOptions = () => {
 
   return (
     <Flex gap={2} direction={'column'}>
-      <SDNumberInput
+      {/* <IAINumberInput
         label="Steps"
         min={1}
         step={1}
         precision={0}
         onChange={handleChangeSteps}
         value={steps}
-      />
-      <SDNumberInput
+      /> */}
+      {/* <IAINumberInput
         label="CFG scale"
         step={0.5}
         onChange={handleChangeCfgScale}
         value={cfgScale}
-      />
-      <SDSelect
+      /> */}
+      <IAISelect
         label="Sampler"
         value={sampler}
         onChange={handleChangeSampler}

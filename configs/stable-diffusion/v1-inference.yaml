@@ -30,9 +30,9 @@ model:
       target: ldm.modules.embedding_manager.EmbeddingManager
       params:
         placeholder_strings: ["*"]
-        initializer_words: ["sculpture"]
+        initializer_words: ['face', 'man', 'photo', 'africanmale']
         per_image_tokens: false
-        num_vectors_per_token: 1
+        num_vectors_per_token: 6
         progressive_words: False
 
     unet_config:

@@ -32,6 +32,7 @@ export interface OptionsState {
   shouldRunESRGAN: boolean;
   shouldRunGFPGAN: boolean;
   shouldRandomizeSeed: boolean;
+  showAdvancedOptions: boolean;
 }
 
 const initialOptionsState: OptionsState = {
@@ -60,6 +61,7 @@ const initialOptionsState: OptionsState = {
   shouldRunGFPGAN: false,
   gfpganStrength: 0.8,
   shouldRandomizeSeed: true,
+  showAdvancedOptions: true,
 };
 
 const initialState: OptionsState = initialOptionsState;
@@ -163,7 +165,6 @@ export const optionsSlice = createSlice({
     setAllParameters: (state, action: PayloadAction<InvokeAI.Metadata>) => {
       const {
         type,
-        postprocessing,
         sampler,
         prompt,
         seed,
@@ -203,35 +204,42 @@ export const optionsSlice = createSlice({
         state.shouldRandomizeSeed = false;
       }
 
-      let postprocessingNotDone = ['gfpgan', 'esrgan'];
-      if (postprocessing && postprocessing.length > 0) {
-        postprocessing.forEach(
-          (postprocess: InvokeAI.PostProcessedImageMetadata) => {
-            if (postprocess.type === 'gfpgan') {
-              const { strength } = postprocess;
-              if (strength) state.gfpganStrength = strength;
-              state.shouldRunGFPGAN = true;
-              postprocessingNotDone = postprocessingNotDone.filter(
-                (p) => p !== 'gfpgan'
-              );
-            }
-            if (postprocess.type === 'esrgan') {
-              const { scale, strength } = postprocess;
-              if (scale) state.upscalingLevel = scale;
-              if (strength) state.upscalingStrength = strength;
-              state.shouldRunESRGAN = true;
-              postprocessingNotDone = postprocessingNotDone.filter(
-                (p) => p !== 'esrgan'
-              );
-            }
-          }
-        );
-      }
+      /**
+       * We support arbitrary numbers of postprocessing steps, so it
+       * doesnt make sense to be include postprocessing metadata when
+       * we use all parameters. Because this code needed a bit of braining
+       * to figure out, I am leaving it, in case it is needed again.
+       */
 
-      postprocessingNotDone.forEach((p) => {
-        if (p === 'esrgan') state.shouldRunESRGAN = false;
-        if (p === 'gfpgan') state.shouldRunGFPGAN = false;
-      });
+      // let postprocessingNotDone = ['gfpgan', 'esrgan'];
+      // if (postprocessing && postprocessing.length > 0) {
+      //   postprocessing.forEach(
+      //     (postprocess: InvokeAI.PostProcessedImageMetadata) => {
+      //       if (postprocess.type === 'gfpgan') {
+      //         const { strength } = postprocess;
+      //         if (strength) state.gfpganStrength = strength;
+      //         state.shouldRunGFPGAN = true;
+      //         postprocessingNotDone = postprocessingNotDone.filter(
+      //           (p) => p !== 'gfpgan'
+      //         );
+      //       }
+      //       if (postprocess.type === 'esrgan') {
+      //         const { scale, strength } = postprocess;
+      //         if (scale) state.upscalingLevel = scale;
+      //         if (strength) state.upscalingStrength = strength;
+      //         state.shouldRunESRGAN = true;
+      //         postprocessingNotDone = postprocessingNotDone.filter(
+      //           (p) => p !== 'esrgan'
+      //         );
+      //       }
+      //     }
+      //   );
+      // }
+
+      // postprocessingNotDone.forEach((p) => {
+      //   if (p === 'esrgan') state.shouldRunESRGAN = false;
+      //   if (p === 'gfpgan') state.shouldRunGFPGAN = false;
+      // });
 
       if (prompt) state.prompt = promptToString(prompt);
       if (sampler) state.sampler = sampler;
@@ -257,6 +265,9 @@ export const optionsSlice = createSlice({
     },
     setShouldRandomizeSeed: (state, action: PayloadAction<boolean>) => {
       state.shouldRandomizeSeed = action.payload;
+    },
+    setShowAdvancedOptions: (state, action: PayloadAction<boolean>) => {
+      state.showAdvancedOptions = action.payload;
     },
   },
 });
@@ -291,6 +302,7 @@ export const {
   setShouldRunGFPGAN,
   setShouldRunESRGAN,
   setShouldRandomizeSeed,
+  setShowAdvancedOptions,
 } = optionsSlice.actions;
 
 export default optionsSlice.reducer;

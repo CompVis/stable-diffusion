@@ -1,0 +1,14 @@
+// Calc Values
+$app-cutoff: 1.6rem;
+$app-content-height-cutoff: 7rem; // default: 7rem
+
+// Usage Variables
+// app
+$app-width: calc(100vw - $app-cutoff);
+$app-height: calc(100vh - $app-cutoff);
+$app-content-height: calc(100vh - $app-content-height-cutoff);
+$app-gallery-height: calc(100vh - ($app-content-height-cutoff + 6rem));
+$app-metadata-height: calc(100vh - ($app-content-height-cutoff + 4.4rem));
+
+// option bar
+$options-bar-max-width: 22.5rem;

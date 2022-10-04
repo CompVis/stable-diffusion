@@ -1,0 +1,34 @@
+.input {
+  display: grid;
+  grid-template-columns: max-content auto;
+  column-gap: 1rem;
+  align-items: center;
+
+  .input-label {
+    color: var(--text-color-secondary);
+    margin-right: 0;
+  }
+
+  .input-entry {
+    background-color: var(--background-color-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 0.2rem;
+    font-weight: bold;
+
+    &:focus {
+      outline: none;
+      border: 2px solid var(--prompt-border-color);
+      box-shadow: 0 0 10px 0 var(--prompt-box-shadow-color);
+    }
+
+    &:disabled {
+      opacity: 0.2;
+    }
+
+    &[aria-invalid='true'] {
+      outline: none;
+      border: 2px solid var(--border-color-invalid);
+      box-shadow: 0 0 10px 0 var(--box-shadow-color-invalid);
+    }
+  }
+}

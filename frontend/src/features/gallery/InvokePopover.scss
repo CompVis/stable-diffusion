@@ -1,0 +1,35 @@
+.popover-content {
+  background-color: var(--background-color-secondary) !important;
+  border: none !important;
+  border-top: 0px;
+  background-color: var(--tab-hover-color);
+  border-radius: 0 0 0.4rem 0.4rem;
+}
+
+.popover-arrow {
+  background: var(--tab-hover-color) !important;
+  box-shadow: none;
+}
+
+.popover-options {
+  background: var(--tab-panel-bg);
+  border-radius: 0 0 0.4rem 0.4rem;
+  border: 2px solid var(--tab-hover-color);
+  padding: .75rem 1rem .75rem 1rem;
+  display: grid;
+  grid-template-rows: repeat(auto-fill, 1fr);
+  grid-row-gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.popover-header {
+  background: var(--tab-hover-color);
+  border-radius: 0.4rem 0.4rem 0 0;
+  font-weight: bold;
+  border: none;
+  padding-left: 1rem !important;
+}
+
+.upscale-popover {
+  width: 23rem !important;
+}

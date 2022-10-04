@@ -1,0 +1,28 @@
+@mixin Button(
+  $btn-color: rgb(45, 45, 55),
+  $btn-color-hover: rgb(65, 65, 75),
+  $btn-width: 100%,
+  $btn-height: 100%,
+  $icon-size: 20px
+) {
+  min-width: $btn-width;
+  min-height: $btn-height;
+  background-color: $btn-color;
+
+  &:hover {
+    background-color: $btn-color-hover;
+  }
+
+  &:disabled {
+    background-color: rgb(45, 45, 55);
+    &:hover {
+      background-color: rgb(45, 45, 55);
+    }
+  }
+
+  svg {
+    width: $icon-size;
+    height: $icon-size;
+    color: var(--btn-svg-color);
+  }
+}

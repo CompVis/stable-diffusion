@@ -11,6 +11,8 @@ import {
   setSystemStatus,
   setCurrentStatus,
   setSystemConfig,
+  processingCanceled,
+  errorOccurred,
 } from '../../features/system/systemSlice';
 
 import {
@@ -25,7 +27,7 @@ import {
   setInitialImagePath,
   setMaskPath,
 } from '../../features/options/optionsSlice';
-import { requestNewImages } from './actions';
+import { requestImages, requestNewImages } from './actions';
 
 /**
  * Returns an object containing listener callbacks for socketio events.
@@ -44,7 +46,11 @@ const makeSocketIOListeners = (
       try {
         dispatch(setIsConnected(true));
         dispatch(setCurrentStatus('Connected'));
-        dispatch(requestNewImages());
+        if (getState().gallery.latest_mtime) {
+          dispatch(requestNewImages());
+        } else {
+          dispatch(requestImages());
+        }
       } catch (e) {
         console.error(e);
       }
@@ -90,7 +96,6 @@ const makeSocketIOListeners = (
             message: `Image generated: ${url}`,
           })
         );
-        dispatch(setIsProcessing(false));
       } catch (e) {
         console.error(e);
       }
@@ -116,7 +121,6 @@ const makeSocketIOListeners = (
             message: `Intermediate image generated: ${url}`,
           })
         );
-        dispatch(setIsProcessing(false));
       } catch (e) {
         console.error(e);
       }
@@ -124,7 +128,7 @@ const makeSocketIOListeners = (
     /**
      * Callback to run when we receive an 'esrganResult' event.
      */
-    onESRGANResult: (data: InvokeAI.ImageResultResponse) => {
+    onPostprocessingResult: (data: InvokeAI.ImageResultResponse) => {
       try {
         const { url, metadata, mtime } = data;
 
@@ -140,10 +144,9 @@ const makeSocketIOListeners = (
         dispatch(
           addLogEntry({
             timestamp: dateFormat(new Date(), 'isoDateTime'),
-            message: `Upscaled: ${url}`,
+            message: `Postprocessed: ${url}`,
           })
         );
-        dispatch(setIsProcessing(false));
       } catch (e) {
         console.error(e);
       }
@@ -204,7 +207,7 @@ const makeSocketIOListeners = (
             level: 'error',
           })
         );
-        dispatch(setIsProcessing(false));
+        dispatch(errorOccurred());
         dispatch(clearIntermediateImage());
       } catch (e) {
         console.error(e);
@@ -214,7 +217,7 @@ const makeSocketIOListeners = (
      * Callback to run when we receive a 'galleryImages' event.
      */
     onGalleryImages: (data: InvokeAI.GalleryImagesResponse) => {
-      const { images, nextPage, offset } = data;
+      const { images, areMoreImagesAvailable } = data;
 
       /**
        * the logic here ideally would be in the reducer but we have a side effect:
@@ -232,7 +235,9 @@ const makeSocketIOListeners = (
         };
       });
 
-      dispatch(addGalleryImages({ images: preparedImages, nextPage, offset }));
+      dispatch(
+        addGalleryImages({ images: preparedImages, areMoreImagesAvailable })
+      );
 
       dispatch(
         addLogEntry({
@@ -245,7 +250,7 @@ const makeSocketIOListeners = (
      * Callback to run when we receive a 'processingCanceled' event.
      */
     onProcessingCanceled: () => {
-      dispatch(setIsProcessing(false));
+      dispatch(processingCanceled());
 
       const { intermediateImage } = getState().gallery;
 
@@ -259,6 +264,7 @@ const makeSocketIOListeners = (
         );
         dispatch(clearIntermediateImage());
       }
+
       dispatch(
         addLogEntry({
           timestamp: dateFormat(new Date(), 'isoDateTime'),
@@ -273,6 +279,17 @@ const makeSocketIOListeners = (
     onImageDeleted: (data: InvokeAI.ImageUrlAndUuidResponse) => {
       const { url, uuid } = data;
       dispatch(removeImage(uuid));
+
+      const { initialImagePath, maskPath } = getState().options;
+
+      if (initialImagePath === url) {
+        dispatch(setInitialImagePath(''));
+      }
+
+      if (maskPath === url) {
+        dispatch(setMaskPath(''));
+      }
+
       dispatch(
         addLogEntry({
           timestamp: dateFormat(new Date(), 'isoDateTime'),

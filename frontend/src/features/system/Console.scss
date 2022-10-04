@@ -1,0 +1,72 @@
+.console {
+  display: flex;
+  flex-direction: column;
+  background: var(--console-bg-color);
+  overflow: auto;
+  direction: column;
+  font-family: monospace;
+  padding: 0 1rem 1rem 3rem;
+  border-top-width: 0.3rem;
+  border-color: var(--console-border-color);
+
+  .console-info-color {
+    color: var(--error-level-info);
+  }
+
+  .console-warning-color {
+    color: var(--error-level-warning);
+  }
+
+  .console-error-color {
+    color: var(--status-bad-color);
+  }
+
+  .console-entry {
+    display: flex;
+    column-gap: 0.5rem;
+
+    .console-timestamp {
+      font-weight: semibold;
+    }
+
+    .console-message {
+      word-break: break-all;
+    }
+  }
+}
+
+.console-toggle-icon-button {
+  background: var(--console-icon-button-bg-color) !important;
+  position: fixed !important;
+  left: 0.5rem;
+  bottom: 0.5rem;
+
+  &:hover {
+    background: var(--console-icon-button-bg-color-hover) !important;
+  }
+
+  &.error-seen {
+    background: var(--status-bad-color) !important;
+    &:hover {
+      background: var(--status-bad-color) !important;
+    }
+  }
+}
+
+.console-autoscroll-icon-button {
+  background: var(--console-icon-button-bg-color) !important;
+  position: fixed !important;
+  left: 0.5rem;
+  bottom: 3rem;
+
+  &:hover {
+    background: var(--console-icon-button-bg-color-hover) !important;
+  }
+
+  &.autoscroll-enabled {
+    background: var(--btn-purple) !important;
+    &:hover {
+      background: var(--btn-purple-hover) !important;
+    }
+  }
+}

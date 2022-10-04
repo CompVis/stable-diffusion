@@ -1,0 +1,16 @@
+@use '../../../styles/Mixins/' as *;
+
+.text-to-image-workarea {
+  display: grid;
+  grid-template-columns: max-content auto max-content;
+  column-gap: 1rem;
+}
+
+.text-to-image-panel {
+  display: grid;
+  row-gap: 1rem;
+  grid-auto-rows: max-content;
+  height: $app-content-height;
+  overflow-y: scroll;
+  @include HideScrollbar;
+}

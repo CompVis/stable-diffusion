@@ -1,0 +1,34 @@
+.prompt-bar {
+  display: grid;
+  row-gap: 1rem;
+
+  input,
+  textarea {
+    background-color: var(--prompt-bg-color);
+    font-size: 1rem;
+    border: 2px solid var(--border-color);
+
+    &:hover {
+      border: 2px solid var(--border-color-light);
+    }
+
+    &:focus-visible {
+      border: 2px solid var(--prompt-border-color);
+      box-shadow: 0 0 10px 0 var(--prompt-box-shadow-color);
+    }
+
+    &[aria-invalid='true'] {
+      border: 2px solid var(--border-color-invalid);
+      box-shadow: 0 0 10px 0 var(--box-shadow-color-invalid);
+    }
+
+    &:disabled {
+      border: 2px solid var(--border-color);
+      box-shadow: none;
+    }
+  }
+
+  textarea {
+    min-height: 10rem;
+  }
+}

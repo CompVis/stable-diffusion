@@ -1,4 +1,3 @@
-import { Flex } from '@chakra-ui/react';
 import { createSelector } from '@reduxjs/toolkit';
 import { isEqual } from 'lodash';
 
@@ -13,8 +12,13 @@ import {
 } from '../options/optionsSlice';
 import DeleteImageModal from './DeleteImageModal';
 import { SystemState } from '../system/systemSlice';
-import SDButton from '../../common/components/SDButton';
+import IAIButton from '../../common/components/IAIButton';
 import { runESRGAN, runGFPGAN } from '../../app/socketio/actions';
+import IAIIconButton from '../../common/components/IAIIconButton';
+import { MdDelete, MdFace, MdHd, MdImage, MdInfo } from 'react-icons/md';
+import InvokePopover from './InvokePopover';
+import UpscaleOptions from '../options/AdvancedOptions/Upscale/UpscaleOptions';
+import FaceRestoreOptions from '../options/AdvancedOptions/FaceRestore/FaceRestoreOptions';
 
 const systemSelector = createSelector(
   (state: RootState) => state.system,
@@ -50,12 +54,16 @@ const CurrentImageButtons = ({
 }: CurrentImageButtonsProps) => {
   const dispatch = useAppDispatch();
 
-  const { intermediateImage } = useAppSelector(
-    (state: RootState) => state.gallery
+  const intermediateImage = useAppSelector(
+    (state: RootState) => state.gallery.intermediateImage
   );
 
-  const { upscalingLevel, gfpganStrength } = useAppSelector(
-    (state: RootState) => state.options
+  const upscalingLevel = useAppSelector(
+    (state: RootState) => state.options.upscalingLevel
+  );
+
+  const gfpganStrength = useAppSelector(
+    (state: RootState) => state.options.gfpganStrength
   );
 
   const { isProcessing, isConnected, isGFPGANAvailable, isESRGANAvailable } =
@@ -78,77 +86,83 @@ const CurrentImageButtons = ({
     setShouldShowImageDetails(!shouldShowImageDetails);
 
   return (
-    <Flex gap={2}>
-      <SDButton
-        label="Use as initial image"
-        colorScheme={'gray'}
-        flexGrow={1}
-        variant={'outline'}
+    <div className="current-image-options">
+      <IAIIconButton
+        icon={<MdImage />}
+        tooltip="Use As Initial Image"
+        aria-label="Use As Initial Image"
         onClick={handleClickUseAsInitialImage}
       />
 
-      <SDButton
-        label="Use all"
-        colorScheme={'gray'}
-        flexGrow={1}
-        variant={'outline'}
-        isDisabled={!['txt2img', 'img2img'].includes(image?.metadata?.image?.type)}
+      <IAIButton
+        label="Use All"
+        isDisabled={
+          !['txt2img', 'img2img'].includes(image?.metadata?.image?.type)
+        }
         onClick={handleClickUseAllParameters}
       />
 
-      <SDButton
-        label="Use seed"
-        colorScheme={'gray'}
-        flexGrow={1}
-        variant={'outline'}
+      <IAIButton
+        label="Use Seed"
         isDisabled={!image?.metadata?.image?.seed}
         onClick={handleClickUseSeed}
       />
 
-      <SDButton
-        label="Upscale"
-        colorScheme={'gray'}
-        flexGrow={1}
-        variant={'outline'}
-        isDisabled={
-          !isESRGANAvailable ||
-          Boolean(intermediateImage) ||
-          !(isConnected && !isProcessing) ||
-          !upscalingLevel
+      <InvokePopover
+        title="Restore Faces"
+        popoverOptions={<FaceRestoreOptions />}
+        actionButton={
+          <IAIButton
+            label={'Restore Faces'}
+            isDisabled={
+              !isGFPGANAvailable ||
+              Boolean(intermediateImage) ||
+              !(isConnected && !isProcessing) ||
+              !gfpganStrength
+            }
+            onClick={handleClickFixFaces}
+          />
         }
-        onClick={handleClickUpscale}
-      />
-      <SDButton
-        label="Fix faces"
-        colorScheme={'gray'}
-        flexGrow={1}
-        variant={'outline'}
-        isDisabled={
-          !isGFPGANAvailable ||
-          Boolean(intermediateImage) ||
-          !(isConnected && !isProcessing) ||
-          !gfpganStrength
+      >
+        <IAIIconButton icon={<MdFace />} aria-label="Restore Faces" />
+      </InvokePopover>
+
+      <InvokePopover
+        title="Upscale"
+        styleClass="upscale-popover"
+        popoverOptions={<UpscaleOptions />}
+        actionButton={
+          <IAIButton
+            label={'Upscale Image'}
+            isDisabled={
+              !isESRGANAvailable ||
+              Boolean(intermediateImage) ||
+              !(isConnected && !isProcessing) ||
+              !upscalingLevel
+            }
+            onClick={handleClickUpscale}
+          />
         }
-        onClick={handleClickFixFaces}
-      />
-      <SDButton
-        label="Details"
-        colorScheme={'gray'}
-        variant={shouldShowImageDetails ? 'solid' : 'outline'}
-        borderWidth={1}
-        flexGrow={1}
+      >
+        <IAIIconButton icon={<MdHd />} aria-label="Upscale" />
+      </InvokePopover>
+
+      <IAIIconButton
+        icon={<MdInfo />}
+        tooltip="Details"
+        aria-label="Details"
         onClick={handleClickShowImageDetails}
       />
+
       <DeleteImageModal image={image}>
-        <SDButton
-          label="Delete"
-          colorScheme={'red'}
-          flexGrow={1}
-          variant={'outline'}
+        <IAIIconButton
+          icon={<MdDelete />}
+          tooltip="Delete Image"
+          aria-label="Delete Image"
           isDisabled={Boolean(intermediateImage)}
         />
       </DeleteImageModal>
-    </Flex>
+    </div>
   );
 };
 

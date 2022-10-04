@@ -12,6 +12,9 @@ import { theme } from './app/theme';
 import Loading from './Loading';
 import App from './app/App';
 
+// Custom Styling
+import './styles/index.scss';
+
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <Provider store={store}>

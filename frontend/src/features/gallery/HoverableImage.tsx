@@ -119,7 +119,7 @@ const HoverableImage = memo((props: HoverableImageProps) => {
                 />
               </Tooltip>
             )}
-            {image?.metadata?.image?.seed && (
+            {image?.metadata?.image?.seed !== undefined && (
               <Tooltip label="Use seed">
                 <IconButton
                   aria-label="Use seed"

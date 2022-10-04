@@ -1,0 +1,19 @@
+.status {
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.status-good {
+  color: var(--status-good-color);
+  text-shadow: 0 0 10px var(--status-good-glow);
+}
+
+.status-bad {
+  color: var(--status-bad-color);
+  text-shadow: 0 0 10px var(--status-bad-glow);
+}
+
+.status-working {
+  color: var(--status-working-color);
+  text-shadow: 0 0 10px var(--status-working-glow);
+}

@@ -1,0 +1,38 @@
+@use '../../../styles/Mixins/' as *;
+
+.advanced-settings {
+  display: grid;
+  row-gap: 0.5rem;
+}
+
+.advanced-settings-item {
+  display: grid;
+  max-width: $options-bar-max-width;
+  border: none;
+  border-top: 0px;
+  border-radius: 0.4rem;
+
+  &[aria-expanded='true'] {
+    background-color: var(--tab-hover-color);
+    border-radius: 0 0 0.4rem 0.4rem;
+  }
+}
+
+.advanced-settings-panel {
+  background-color: var(--tab-panel-bg);
+  border-radius: 0 0 0.4rem 0.4rem;
+  border: 2px solid var(--tab-hover-color);
+}
+
+.advanced-settings-header {
+  border-radius: 0.4rem;
+
+  &[aria-expanded='true'] {
+    background-color: var(--tab-color);
+    border-radius: 0.4rem 0.4rem 0 0;
+  }
+
+  &:hover {
+    background-color: var(--tab-hover-color) !important;
+  }
+}

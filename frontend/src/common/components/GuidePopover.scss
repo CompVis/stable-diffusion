@@ -1,0 +1,20 @@
+.guide-popover-arrow {
+  background-color: var(--tab-panel-bg) !important;
+  box-shadow: none !important;
+}
+
+.guide-popover-content {
+  background-color: var(--background-color-secondary) !important;
+  border: none !important;
+}
+
+.guide-popover-guide-content {
+  background: var(--tab-panel-bg);
+  border: 2px solid var(--tab-hover-color);
+  border-radius: 0.4rem;
+  padding: 0.75rem 1rem 0.75rem 1rem;
+  display: grid;
+  grid-template-rows: repeat(auto-fill, 1fr);
+  grid-row-gap: 0.5rem;
+  justify-content: space-between;
+}

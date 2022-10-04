@@ -1,0 +1,52 @@
+.number-input {
+  display: grid;
+  grid-template-columns: max-content auto;
+  column-gap: 1rem;
+  align-items: center;
+
+  .number-input-label {
+    color: var(--text-color-secondary);
+    margin-right: 0;
+  }
+
+  .number-input-field {
+    display: grid;
+    grid-template-columns: auto max-content;
+    column-gap: 0.5rem;
+    align-items: center;
+    background-color: var(--background-color-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 0.2rem;
+  }
+
+  .number-input-entry {
+    border: none;
+    font-weight: bold;
+    width: 100%;
+    padding-inline-end: 0;
+
+    &:focus {
+      outline: none;
+      border: 2px solid var(--prompt-border-color);
+      box-shadow: 0 0 10px 0 var(--prompt-box-shadow-color);
+    }
+
+    &:disabled {
+      opacity: 0.2;
+    }
+  }
+
+  .number-input-stepper {
+    display: grid;
+    padding-right: 0.7rem;
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .number-input-stepper-button {
+      border: none;
+    }
+  }
+}

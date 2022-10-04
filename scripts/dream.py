@@ -108,7 +108,7 @@ def main():
     gen.free_gpu_mem = opt.free_gpu_mem
 
     # web server loops forever
-    if opt.web:
+    if opt.web or opt.gui:
         invoke_ai_web_server_loop(gen, gfpgan, codeformer, esrgan)
         sys.exit(0)
 
@@ -232,7 +232,7 @@ def main_loop(gen, opt, infile):
                 path     = os.path.join(opt.outdir,basename)
                 setattr(opt,attr,path)
 
-        # retrieve previous valueof seed if requested
+        # retrieve previous value of seed if requested
         if opt.seed is not None and opt.seed < 0:   
             try:
                 opt.seed = last_results[opt.seed][1]
@@ -299,13 +299,12 @@ def main_loop(gen, opt, infile):
                         postprocessed,
                         first_seed
                     )
-
                     path = file_writer.save_image_and_prompt_to_png(
                         image           = image,
                         dream_prompt    = formatted_dream_prompt,
                         metadata        = metadata_dumps(
                             opt,
-                            seeds      = [seed],
+                            seeds      = [seed if opt.variation_amount==0 and len(prior_variations)==0 else first_seed],
                             model_hash = gen.model_hash,
                         ),
                         name      = filename,
@@ -324,7 +323,6 @@ def main_loop(gen, opt, infile):
                 opt.last_operation='generate'
                 gen.prompt2image(
                     image_callback=image_writer,
-#                    step_callback=gen.write_intermediate_images(5,'./outputs/img-samples/intermediates'), #DEBUGGING ONLY - DELETE
                     catch_interrupts=catch_ctrl_c,
                     **vars(opt)
                 )
@@ -420,8 +418,8 @@ def prepare_image_metadata(
     if postprocessed and opt.save_original:
         filename = choose_postprocess_name(opt,prefix,seed)
     else:
-        filename = f'{prefix}.{seed}.png'        
-        
+        filename = f'{prefix}.{seed}.png'
+
     if opt.variation_amount > 0:
         first_seed             = first_seed or seed
         this_variation         = [[seed, opt.variation_amount]]
