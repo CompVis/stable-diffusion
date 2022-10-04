@@ -13,6 +13,9 @@ import webbrowser
 from deep_translator import GoogleTranslator
 from langdetect import detect
 from joblib import Parallel, delayed
+import torch
+from PIL import Image
+from RealESRGAN import RealESRGAN
 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 model_id = "CompVis/stable-diffusion-v1-4"
@@ -37,7 +40,7 @@ os.environ["good"] = "[]"
 os.environ["bad"] = "[]"
 num_iterations = 50
 gs = 7.5
-voronoi_in_images = True
+voronoi_in_images = False
 
 
 
@@ -133,7 +136,7 @@ prompt = "Photo of a cute smiling white-haired woman with pink eyes."
 prompt = "A muscular Jesus with and assault rifle, a cap and and a light saber."
 prompt = "A portrait of a cute smiling woman."
 prompt = "A woman with black skin, red hair, egyptian dress, yellow eyes."
-prompt = "Photo of a young cute black woman."
+prompt = "Photo of a red haired man with tilted head."
 print(f"The prompt is {prompt}")
 
 
@@ -168,9 +171,6 @@ def latent_to_image(latent):
          image = pipe(english_prompt, guidance_scale=gs, num_inference_steps=num_iterations)["sample"][0]
     return image
 
-import torch
-from PIL import Image
-from RealESRGAN import RealESRGAN
 
 sr_device = torch.device('cpu') #device #('mps')   #torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 esrmodel = RealESRGAN(sr_device, scale=4)
@@ -327,7 +327,8 @@ def load_img(path):
 model = pipe.vae
 
 def img_to_latent(path):
-    init_image = 1.8 * load_img(path).to(device)
+    #init_image = 1.8 * load_img(path).to(device)
+    init_image = load_img(path).to(device)
     init_image = repeat(init_image, '1 ... -> b ...', b=1)
     forced_latent = model.encode(init_image.to(device)).latent_dist.sample()
     new_fl = forced_latent.cpu().detach().numpy().flatten()
@@ -706,7 +707,7 @@ for iteration in range(30):
         for a in range(llambda):
             print(f"Voronoi in the image space! {a} / {llambda}")
             for i in range(len(indices)):
-                coefficients[i] = np.exp(2. * np.random.randn())
+                coefficients[i] = np.exp(np.random.randn())
             # Creating a forcedlatent.
             for i in range(512):
                 x = i / 511.
@@ -731,15 +732,18 @@ for iteration in range(30):
             #forcedlatent = model.encode(timage).latent_dist.sample().cpu().detach().numpy().flatten()
             #basic_new_fl = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
             basic_new_fl = img_to_latent(voronoi_name)
-            basic_new_fl = 0.8 * np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
+            basic_new_fl = np.sqrt(len(basic_new_fl) / np.sum(basic_new_fl**2)) * basic_new_fl
+            #basic_new_fl = 0.8 * np.sqrt(len(basic_new_fl) / np.sum(basic_new_fl**2)) * basic_new_fl
             if len(good) > 1:
                 print("Directly copying latent vars !!!")
-                forcedlatents += [4.6 * basic_new_fl]
+                #forcedlatents += [4.6 * basic_new_fl]
+                forcedlatents += [basic_new_fl]
             else:
                 epsilon = 1.0 * (((a + .5 - len(good)) / (llambda - len(good) - 1)) ** 2)
                 forcedlatent = (1. - epsilon) * basic_new_fl.flatten() + epsilon * np.random.randn(4*64*64)
                 forcedlatent = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
-                forcedlatents += [4.6 * forcedlatent]
+                forcedlatents += [forcedlatent]
+                #forcedlatents += [4.6 * forcedlatent]
     else:
         for a in range(llambda):
             print(f"Voronoi in the latent space! {a} / {llambda}")
@@ -750,7 +754,7 @@ for iteration in range(30):
                 #print(np.min(numpy_image))
                 #assert False
             for i in range(len(indices)):
-                coefficients[i] = np.exp(2. * np.random.randn())
+                coefficients[i] = np.exp(np.random.randn())
             for i in range(64):
                 x = i / 63.
                 for j in range(64):
@@ -776,6 +780,7 @@ for iteration in range(30):
                         forcedlatent[k][i][j] = float(latent[uu][k][i][j])
             #if a % 2 == 0:
             #    forcedlatent -= np.random.rand() * sauron
+            forcedlatent = forcedlatent.flatten()
             basic_new_fl = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
             if len(good) > 1:
                 forcedlatents += [basic_new_fl]
