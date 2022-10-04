@@ -52,7 +52,6 @@ eval "$(pyenv init -)"
 pyenv activate anaconda3-2022.05
 ### END OPTION 1 ###
 
-
 ### BEGIN OPTION 2: Installing standalone ###
 # Install cmake, protobuf, and rust:
 brew install cmake protobuf rust
@@ -80,6 +79,13 @@ cd InvokeAI
 # Make the directory in the repo for the symlink
 mkdir -p models/ldm/stable-diffusion-v1/
 
+# We will leave the big checkpoint wherever you stashed it for long-term storage,
+# and make a link to it from the repo's folder. This allows you to use it for
+# other repos, and if you need to delete Invoke AI, you won't have to download it again.
+
+# Make the directory in the repo for the symlink
+mkdir -p models/ldm/stable-diffusion-v1/
+
 # This is the folder where you put the checkpoint file `sd-v1-4.ckpt`
 PATH_TO_CKPT="$HOME/Downloads"
 
@@ -92,6 +98,7 @@ PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.y
 
 # For Intel: Create the environment & install packages
 PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-64 conda env create -f environment-mac.yml
+
 # END ARCHITECTURE-DEPENDENT STEP #
 
 # Activate the environment (you need to do this every time you want to run SD)
