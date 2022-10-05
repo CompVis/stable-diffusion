@@ -114,7 +114,7 @@ you can try starting `dream.py` with the `--precision=float32` flag:
 - [Web Server](docs/features/WEB.md)
 - [Reading Prompts From File](docs/features/PROMPTS.md#reading-prompts-from-a-file)
 - [Shortcut: Reusing Seeds](docs/features/OTHER.md#shortcuts-reusing-seeds)
-- [Weighted Prompts](docs/features/PROMPTS.md#weighted-prompts)
+- [Prompt Blending](docs/features/PROMPTS.md#prompt-blending)
 - [Thresholding and Perlin Noise Initialization Options](/docs/features/OTHER.md#thresholding-and-perlin-noise-initialization-options)
 - [Negative/Unconditioned Prompts](docs/features/PROMPTS.md#negative-and-unconditioned-prompts)
 - [Variations](docs/features/VARIATIONS.md)

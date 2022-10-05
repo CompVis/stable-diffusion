@@ -27,28 +27,12 @@ You may read a series of prompts from standard input by providing a filename of 
 ```bash
 (ldm) ~/stable-diffusion$ echo "a beautiful day" | python3 scripts/dream.py --from_file -
 ```
-
----
-
-## **Weighted Prompts**
-
-You may weight different sections of the prompt to tell the sampler to attach different levels of
-priority to them, by adding `:(number)` to the end of the section you wish to up- or downweight. For
-example consider this prompt:
-
-```bash
-tabby cat:0.25 white duck:0.75 hybrid
-```
-
-This will tell the sampler to invest 25% of its effort on the tabby cat aspect of the image and 75%
-on the white duck aspect (surprisingly, this example actually works). The prompt weights can use any
-combination of integers and floating point numbers, and they do not need to add up to 1.
-
 ---
 
 ## **Negative and Unconditioned Prompts**
 
-Any words between a pair of square brackets will try and be ignored by Stable Diffusion's model during generation of images.
+Any words between a pair of square brackets will instruct Stable
+Diffusion to attempt to ban the concept from the generated image.
 
 ```bash
 this is a test prompt [not really] to make you understand [cool] how this works.
@@ -88,3 +72,78 @@ Getting close - but there's no sense in having a saddle when our horse doesn't h
     * You can provide multiple words within the same bracket.
     * You can provide multiple brackets with multiple words in different places of your prompt. That works just fine.
     * To improve typical anatomy problems, you can add negative prompts like `[bad anatomy, extra legs, extra arms, extra fingers, poorly drawn hands, poorly drawn feet, disfigured, out of frame, tiling, bad art, deformed, mutated]`.
+
+---
+
+## **Prompt Blending**
+
+You may blend together different sections of the prompt to explore the
+AI's latent semantic space and generate interesting (and often
+surprising!) variations. The syntax is:
+
+```bash
+blue sphere:0.25 red cube:0.75 hybrid
+```
+
+This will tell the sampler to blend 25% of the concept of a blue
+sphere with 75% of the concept of a red cube. The blend weights can
+use any combination of integers and floating point numbers, and they
+do not need to add up to 1. Everything to the left of the `:XX` up to
+the previous `:XX` is used for merging, so the overall effect is:
+
+```bash
+0.25 * "blue sphere" + 0.75 * "white duck" + hybrid
+```
+
+Because you are exploring the "mind" of the AI, the AI's way of mixing
+two concepts may not match yours, leading to surprising effects. To
+illustrate, here are three images generated using various combinations
+of blend weights. As usual, unless you fix the seed, the prompts will give you
+different results each time you run them.
+
+### "blue sphere, red cube, hybrid"
+
+This example doesn't use melding at all and represents the default way
+of mixing concepts.
+
+<img src="../assets/prompt-blending/blue-sphere-red-cube-hybrid.png" width=256">
+
+It's interesting to see how the AI expressed the concept of "cube" as
+the four quadrants of the enclosing frame. If you look closely, there
+is depth there, so the enclosing frame is actually a cube.
+
+### "blue sphere:0.25 red cube:0.75 hybrid"
+
+<img src="../assets/prompt-blending/blue-sphere:0.25-red-cube:0.75-hybrid.png" width=256">
+
+Now that's interesting. We get neither a blue sphere nor a red cube,
+but a red sphere embedded in a brick wall, which represents a melding
+of concepts within the AI's "latent space" of semantic
+representations. Where is Ludwig Wittgenstein when you need him?
+
+### "blue sphere:0.75 red cube:0.25 hybrid"
+
+<img src="../assets/prompt-blending/blue-sphere:0.75-red-cube:0.25-hybrid.png" width=256">
+
+Definitely more blue-spherey. The cube is gone entirely, but it's
+really cool abstract art.
+
+### "blue sphere:0.5 red cube:0.5 hybrid"
+
+<img src="../assets/prompt-blending/blue-sphere:0.5-red-cube:0.5-hybrid.png" width=256">
+
+Whoa...! I see blue and red, but no spheres or cubes. Is the word
+"hybrid" summoning up the concept of some sort of scifi creature?
+Let's find out.
+
+### "blue sphere:0.5 red cube:0.5"
+
+<img src="../assets/prompt-blending/blue-sphere:0.5-red-cube:0.5.png" width=256">
+
+Indeed, removing the word "hybrid" produces an image that is more like
+what we'd expect.
+
+In conclusion, prompt blending is great for exploring creative space,
+but can be difficult to direct. A forthcoming release of InvokeAI will
+feature more deterministic prompt weighting.
+
