@@ -18,10 +18,7 @@ try:
     import readline
     readline_available = True
 except (ImportError,ModuleNotFoundError):
-    try:
-        import pyreadline3
-    except (ImportError,ModuleNotFoundError):
-        readline_available = False
+    readline_available = False
 
 IMG_EXTENSIONS     = ('.png','.jpg','.jpeg')
 COMMANDS = (
