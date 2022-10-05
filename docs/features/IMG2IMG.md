@@ -10,17 +10,38 @@ top of the image you provide, preserving the original's basic shape and layout. 
 the `--init_img` option as shown here:
 
 ```commandline
-dream> "waterfall and rainbow" --init_img=./init-images/crude_drawing.png --strength=0.5 -s100 -n4
+tree on a hill with a river, nature photograph, national geographic -I./test-pictures/tree-and-river-sketch.png -f 0.85
 ```
+
+This will take the original image shown here:
+
+<img src="https://user-images.githubusercontent.com/50542132/193946000-c42a96d8-5a74-4f8a-b4c3-5213e6cadcce.png" width=350>
+                                                                                                               
+and generate a new image based on it as shown here:
+
+<img src="https://user-images.githubusercontent.com/111189/194135515-53d4c060-e994-4016-8121-7c685e281ac9.png" width=350>
 
 The `--init_img (-I)` option gives the path to the seed picture. `--strength (-f)` controls how much
 the original will be modified, ranging from `0.0` (keep the original intact), to `1.0` (ignore the
-original completely). The default is `0.75`, and ranges from `0.25-0.75` give interesting results.
+original completely). The default is `0.75`, and ranges from `0.25-0.90` give interesting results. 
+Other relevant options include `-C` (classification free guidance scale), and `-s` (steps). Unlike `txt2img`, 
+adding steps will continuously change the resulting image and it will not converge.
 
 You may also pass a `-v<variation_amount>` option to generate `-n<iterations>` count variants on
 the original image. This is done by passing the first generated image
 back into img2img the requested number of times. It generates
 interesting variants.
+
+Note that the prompt makes a big difference. For example, this slight variation on the prompt produces
+a very different image:
+
+`photograph of a tree on a hill with a river`
+
+<img src="https://user-images.githubusercontent.com/111189/194135220-16b62181-b60c-4248-8989-4834a8fd7fbd.png" width=350>
+
+(When designing prompts, think about how the images scraped from the internet were captioned. Very few photographs will
+be labeled "photograph" or "photorealistic." They will, however, be captioned with the publication, photographer, camera
+model, or film settings.)
 
 If the initial image contains transparent regions, then Stable Diffusion will only draw within the
 transparent regions, a process called "inpainting". However, for this to work correctly, the color
@@ -28,6 +49,14 @@ information underneath the transparent needs to be preserved, not erased.
 
 More details can be found here:
 [Creating Transparent Images For Inpainting](./INPAINTING.md#creating-transparent-regions-for-inpainting)
+
+**IMPORTANT ISSUE** `img2img` does not work properly on initial images smaller than 512x512. Please scale your
+image to at least 512x512 before using it. Larger images are not a problem, but may run out of VRAM on your
+GPU card. To fix this, use the --fit option, which downscales the initial image to fit within the box specified
+by width x height:
+~~~
+tree on a hill with a river, national geographic -I./test-pictures/big-sketch.png -H512 -W512 --fit
+~~~
 
 ## How does it actually work, though?
 
