@@ -624,9 +624,7 @@ class Generate:
             img,
             width,
             height,
-        ) # this returns an Image
-
-        init_image   = self._create_init_image(image)                   # this returns a torch tensor
+        )
 
         # if image has a transparent area and no mask was provided, then try to generate mask
         if self._has_transparency(image) and not mask:
@@ -898,7 +896,7 @@ class Generate:
         image = 2.0 * image - 1.0
         return image.to(self.device)
 
-    def _create_init_mask(self, image):
+    def _create_init_mask(self, image, width, height, fit=True):
         # convert into a black/white mask
         image = self._image_to_mask(image)
         image = image.convert('RGB')
