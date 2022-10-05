@@ -238,7 +238,7 @@ class Args(object):
         if a['with_variations']:
             formatted_variations = ','.join(f'{seed}:{weight}' for seed, weight in (a["with_variations"]))
             switches.append(f'-V {formatted_variations}')
-        if 'variations' in a:
+        if 'variations' in a and len(a['variations'])>0:
             switches.append(f'-V {a["variations"]}')
         return ' '.join(switches)
 
