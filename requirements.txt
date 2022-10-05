@@ -33,4 +33,4 @@ dependency_injector==4.40.0
 eventlet
 git+https://github.com/openai/CLIP.git@main#egg=clip
 git+https://github.com/Birch-san/k-diffusion.git@mps#egg=k-diffusion
-git+https://github.com/lstein/GFPGAN@fix-dark-cast-images#egg=gfpgan
+git+https://github.com/TencentARC/GFPGAN.git#egg=gfpgan
