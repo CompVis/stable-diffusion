@@ -78,26 +78,14 @@ class Txt2Img2Img(Generator):
 
             x = self.get_noise(width,height,False)
 
-            # Other samplers not supported yet, so ignore previous sampler
-            if not isinstance(sampler,DDIMSampler):
-                print(
-                    f"\n>> Sampler '{sampler.__class__.__name__}' is not yet supported for img2img. Using DDIM sampler"
-                )
-                img_sampler = DDIMSampler(self.model, device=self.model.device)
-                img_sampler.make_schedule(
-                    ddim_num_steps=steps, ddim_eta=ddim_eta, verbose=False
-                )
-            else:
-                img_sampler = sampler
-            
-            z_enc = img_sampler.stochastic_encode(
+            z_enc = sampler.stochastic_encode(
                 samples,
                 torch.tensor([t_enc]).to(self.model.device),
                 noise=x
             )
 
             # decode it
-            samples = img_sampler.decode(
+            samples = sampler.decode(
                 z_enc,
                 c,
                 t_enc,
