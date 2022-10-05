@@ -183,6 +183,15 @@ def main_loop(gen, opt, infile):
                 completer.show_history()
                 continue
 
+            elif subcommand.startswith('search'):
+                search_str = command.replace('!search ','',1)
+                completer.show_history(search_str)
+                continue
+
+            elif subcommand.startswith('clear'):
+                completer.clear_history()
+                continue
+
             elif re.match('^(\d+)',subcommand):
                 command_no = re.match('^(\d+)',subcommand).groups()[0]
                 command    = completer.get_line(int(command_no))

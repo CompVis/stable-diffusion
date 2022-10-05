@@ -10,6 +10,7 @@ from PIL               import Image
 from ldm.dream.generator.base      import Generator
 from ldm.dream.generator.img2img   import Img2Img
 from ldm.dream.devices import choose_autocast
+from ldm.models.diffusion.ddim     import DDIMSampler
 
 class Embiggen(Generator):
     def __init__(self, model, precision):
@@ -349,7 +350,7 @@ class Embiggen(Generator):
                     prompt,
                     iterations     = 1,
                     seed           = seed,
-                    sampler        = sampler,
+                    sampler        = DDIMSampler(self.model, device=self.model.device),
                     steps          = steps,
                     cfg_scale      = cfg_scale,
                     conditioning   = conditioning,

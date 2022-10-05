@@ -193,6 +193,8 @@ class Args(object):
             switches.append('--grid')
         if a['seamless']:
             switches.append('--seamless')
+        if a['hires_fix']:
+            switches.append('--hires_fix')
 
         # img2img generations have parameters relevant only to them and have special handling
         if a['init_img'] and len(a['init_img'])>0:

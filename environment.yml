@@ -23,6 +23,7 @@ dependencies:
     - send2trash==1.8.0
     - pillow==9.2.0
     - einops==0.3.0
+    - pyreadline3
     - torch-fidelity==0.3.0
     - transformers==4.19.2
     - torchmetrics==0.6.0
