@@ -106,7 +106,7 @@ different results each time you run them.
 This example doesn't use melding at all and represents the default way
 of mixing concepts.
 
-<img src="../assets/prompt-blending/blue-sphere-red-cube-hybrid.png" width=256">
+<img src="../assets/prompt-blending/blue-sphere-red-cube-hybrid.png" width=256>
 
 It's interesting to see how the AI expressed the concept of "cube" as
 the four quadrants of the enclosing frame. If you look closely, there
@@ -114,7 +114,7 @@ is depth there, so the enclosing frame is actually a cube.
 
 ### "blue sphere:0.25 red cube:0.75 hybrid"
 
-<img src="../assets/prompt-blending/blue-sphere:0.25-red-cube:0.75-hybrid.png" width=256">
+<img src="../assets/prompt-blending/blue-sphere:0.25-red-cube:0.75-hybrid.png" width=256>
 
 Now that's interesting. We get neither a blue sphere nor a red cube,
 but a red sphere embedded in a brick wall, which represents a melding
@@ -123,14 +123,14 @@ representations. Where is Ludwig Wittgenstein when you need him?
 
 ### "blue sphere:0.75 red cube:0.25 hybrid"
 
-<img src="../assets/prompt-blending/blue-sphere:0.75-red-cube:0.25-hybrid.png" width=256">
+<img src="../assets/prompt-blending/blue-sphere:0.75-red-cube:0.25-hybrid.png" width=256>
 
 Definitely more blue-spherey. The cube is gone entirely, but it's
 really cool abstract art.
 
 ### "blue sphere:0.5 red cube:0.5 hybrid"
 
-<img src="../assets/prompt-blending/blue-sphere:0.5-red-cube:0.5-hybrid.png" width=256">
+<img src="../assets/prompt-blending/blue-sphere:0.5-red-cube:0.5-hybrid.png" width=256>
 
 Whoa...! I see blue and red, but no spheres or cubes. Is the word
 "hybrid" summoning up the concept of some sort of scifi creature?
@@ -138,7 +138,7 @@ Let's find out.
 
 ### "blue sphere:0.5 red cube:0.5"
 
-<img src="../assets/prompt-blending/blue-sphere:0.5-red-cube:0.5.png" width=256">
+<img src="../assets/prompt-blending/blue-sphere:0.5-red-cube:0.5.png" width=256>
 
 Indeed, removing the word "hybrid" produces an image that is more like
 what we'd expect.
