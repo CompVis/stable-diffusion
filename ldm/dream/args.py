@@ -189,7 +189,6 @@ class Args(object):
             switches.append(f'--perlin {a["perlin"]}')
         if a['threshold'] > 0:
             switches.append(f'--threshold {a["threshold"]}')
-            
         if a['grid']:
             switches.append('--grid')
         if a['seamless']:
