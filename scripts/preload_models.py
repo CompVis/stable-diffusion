@@ -72,6 +72,7 @@ if gfpgan:
 
         if not os.path.exists(model_dest):
             print('downloading gfpgan model file...')
+            os.makedirs(os.path.dirname(model_dest))
             urllib.request.urlretrieve(model_url,model_dest)
     except Exception:
         import traceback
