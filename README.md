@@ -40,7 +40,7 @@ pip install git+https://github.com/sberbank-ai/Real-ESRGAN.git
 wget https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth -P weights
 ```
 
-## Then run << python minisd.py >>.
+## Then run << python geneticsd.py >>.
 You should be asked for a prompt (just <<enter>> if you like the proposed hardcoded prompt), and then a window should be opened.
 
 ## Send feedback to [**Nevergrad Users**](https://www.facebook.com/groups/nevergradusers/)<br/>

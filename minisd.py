@@ -1,3 +1,4 @@
+assert False, "Deprecated! Use geneticsd.py instead."
 import random
 import os
 import time
@@ -40,7 +41,6 @@ os.environ["good"] = "[]"
 os.environ["bad"] = "[]"
 num_iterations = 50
 gs = 7.5
-voronoi_in_images = False
 
 
 
@@ -113,7 +113,6 @@ prompt = "Bizarre art."
 
 prompt = "Beautiful bizarre woman."
 prompt = "Yann LeCun as the grim reaper: bizarre art."
-prompt = "A star with flashy colors."
 prompt = "Un chat en sang et en armure joue de la batterie."
 prompt = "Photo of a cyberpunk Mark Zuckerberg killing Cthulhu with a light saber."
 prompt = "A ferocious cyborg bear."
@@ -137,6 +136,14 @@ prompt = "A muscular Jesus with and assault rifle, a cap and and a light saber."
 prompt = "A portrait of a cute smiling woman."
 prompt = "A woman with black skin, red hair, egyptian dress, yellow eyes."
 prompt = "Photo of a red haired man with tilted head."
+prompt = "A photo of Cleopatra with Egyptian Dress kissing Yoda."
+prompt = "A photo of Yoda fighting Meg Myers with light sabers."
+prompt = "A photo of Meg Myers, laughing, pulling Gandalf's hair."
+prompt = "A photo of Meg Myers laughing and pulling Gandalf's hair. Gandalf is stooping."
+prompt = "A star with flashy colors."
+prompt = "Portrait of a green haired woman with blue eyes."
+prompt = "Portrait of a female kung-fu master."
+prompt = "In a dark cave, in the middle of computers, a geek meets the devil."
 print(f"The prompt is {prompt}")
 
 
@@ -169,6 +176,7 @@ def latent_to_image(latent):
     os.environ["forcedlatent"] = str(list(latent.flatten()))  #str(list(forcedlatents[k].flatten()))            
     with autocast("cuda"):
          image = pipe(english_prompt, guidance_scale=gs, num_inference_steps=num_iterations)["sample"][0]
+    os.environ["forcedlatent"] = "[]"
     return image
 
 
@@ -333,6 +341,26 @@ def img_to_latent(path):
     forced_latent = model.encode(init_image.to(device)).latent_dist.sample()
     new_fl = forced_latent.cpu().detach().numpy().flatten()
     new_fl = np.sqrt(len(new_fl)) * new_fl / np.sqrt(np.sum(new_fl ** 2))
+    return new_fl
+
+def randomized_image_to_latent(image_name, scale=None, epsilon=None, c=None, f=None):
+    base_init_image = load_img(image_name).to(device)
+    new_base_init_image = base_init_image
+    c = np.exp(np.random.randn()) if c is None else c
+    f = np.exp(-3. * np.random.rand()) if f is None else f
+    init_image_shape = base_init_image.cpu().numpy().shape
+    init_image = c * new_base_init_image
+    init_image = repeat(init_image, '1 ... -> b ...', b=1)
+    forced_latent = 1. * model.encode(init_image.to(device)).latent_dist.sample()
+    new_fl = forced_latent.cpu().detach().numpy().flatten()
+    basic_new_fl = new_fl  #np.sqrt(len(new_fl) / sum(new_fl ** 2)) * new_fl
+    basic_new_fl = f * np.sqrt(len(new_fl) / np.sum(basic_new_fl**2)) * basic_new_fl
+    epsilon = 0.1 * np.exp(-3 * np.random.rand()) if epsilon is None else epsilon
+    new_fl = (1. - epsilon) * basic_new_fl + epsilon * np.random.randn(1*4*64*64)
+    scale = 2.8 + 3.6 * np.random.rand() if scale is None else scale
+    new_fl = scale * np.sqrt(len(new_fl)) * new_fl / np.sqrt(np.sum(new_fl ** 2))
+    #image = latent_to_image(np.asarray(new_fl)) #eval(os.environ["forcedlatent"])))
+    #image.save(f"rebuild_{f}_{scale}_{epsilon}_{c}.png")
     return new_fl
 
 if len(image_name) > 0:
@@ -694,17 +722,18 @@ for iteration in range(30):
     #for u in [u for u in range(len(onlyfiles)) if u not in [i[0] for i in indices]]:
     #    sauron += latent[u]
     #sauron = (1 / len([u for u in range(len(onlyfiles)) if u not in [i[0] for i in indices]])) * sauron
-    if len(bad) > 300:
-        bad = bad[(len(bad) - 300):]
+    if len(bad) > 500:
+        bad = bad[(len(bad) - 500):]
     print(to_native(f"{len(indices)} indices are selected."))
     #print(f"indices = {indices}")
     os.environ["good"] = str(good)
     os.environ["bad"] = str(bad)
     coefficients = np.zeros(len(indices))
-    if voronoi_in_images:
-        numpy_images = [np.array(image) for image in images]
-        image = np.array(numpy_images[0])
-        for a in range(llambda):
+    numpy_images = [np.array(image) for image in images]
+    for a in range(llambda):
+        voronoi_in_images = False #(a % 2 == 1) and len(good) > 1
+        if voronoi_in_images:
+            image = np.array(numpy_images[0])
             print(f"Voronoi in the image space! {a} / {llambda}")
             for i in range(len(indices)):
                 coefficients[i] = np.exp(np.random.randn())
@@ -731,7 +760,7 @@ for iteration in range(30):
             #timage = 2.*timage - 1.
             #forcedlatent = model.encode(timage).latent_dist.sample().cpu().detach().numpy().flatten()
             #basic_new_fl = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
-            basic_new_fl = img_to_latent(voronoi_name)
+            basic_new_fl = randomized_image_to_latent(voronoi_name)  #img_to_latent(voronoi_name)
             basic_new_fl = np.sqrt(len(basic_new_fl) / np.sum(basic_new_fl**2)) * basic_new_fl
             #basic_new_fl = 0.8 * np.sqrt(len(basic_new_fl) / np.sum(basic_new_fl**2)) * basic_new_fl
             if len(good) > 1:
@@ -744,8 +773,7 @@ for iteration in range(30):
                 forcedlatent = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
                 forcedlatents += [forcedlatent]
                 #forcedlatents += [4.6 * forcedlatent]
-    else:
-        for a in range(llambda):
+        else:
             print(f"Voronoi in the latent space! {a} / {llambda}")
             forcedlatent = np.zeros((4, 64, 64))
                 #print(type(numpy_image))
@@ -782,14 +810,16 @@ for iteration in range(30):
             #    forcedlatent -= np.random.rand() * sauron
             forcedlatent = forcedlatent.flatten()
             basic_new_fl = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
-            if len(good) > 1:
+            if len(good) > 1 or len(forcedlatents) < len(good) + 1:
                 forcedlatents += [basic_new_fl]
             else:
-                epsilon = 0.1 * (((a + .5 - len(good)) / (llambda - len(good) - 1)) ** 2)
+                epsilon = ((0.5 * (a + .5 - len(good)) / (llambda - len(good) - 1)) ** 2)
                 forcedlatent = (1. - epsilon) * basic_new_fl.flatten() + epsilon * np.random.randn(4*64*64)
-                forcedlatent = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
+                #forcedlatent = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
                 forcedlatents += [forcedlatent]
     #for uu in range(len(latent)):
     #    print(f"--> latent[{uu}] sum of sq / variable = {np.sum(latent[uu].flatten()**2) / len(latent[uu].flatten())}")
+    os.environ["good"] = "[]"
+    os.environ["bad"] = "[]"
             
 pygame.quit()

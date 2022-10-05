@@ -6,5 +6,5 @@
 #montage $( ls *`ls -ctr SD*.png | sed 's/.*image_//g' | tail -n 1 | sed 's/_.*//g'`_0_11.png | sort  ) $( ls *`ls -ctr SD*.png | sed 's/.*image_//g' | tail -n 1 | sed 's/_.*//g'`_0_4.png | sort  ) $( ls *`ls -ctr SD*.png | sed 's/.*image_//g' | tail -n 1 | sed 's/_.*//g'`_1_?.png | sort -n )  $( ls *`ls -ctr SD*.png | sed 's/.*image_//g' | tail -n 1 | sed 's/_.*//g'`_1_??.png | sort -n )  -mode concatenate -tile 5x history.png
 #montage $( ls *`ls -ctr SD*.png | sed 's/.*image_//g' | tail -n 1 | sed 's/_.*//g'`*.png | sort  )  -mode concatenate -tile 5x history.png
 #open history.png
-open $( ls *`ls -ctr SD*.png | sed 's/.*image_//g' | tail -n 1 | sed 's/_.*//g'`*.png | sort  ) 
+open $( ls *`ls -ctr SD*.png | sed 's/.*image_//g' | tail -n 1 | sed 's/_.*//g'`*.png | tail -n 15 | sort  ) 
 #cp history.png zuck3.png

@@ -148,6 +148,7 @@ prompt = "A star with flashy colors."
 prompt = "Portrait of a green haired woman with blue eyes."
 prompt = "Portrait of a female kung-fu master."
 prompt = "In a dark cave, in the middle of computers, a bearded red-haired geek with squared glasses meets the devil."
+prompt = "Photo of the devil, with horns. There are flames in the background."
 print(f"The prompt is {prompt}")
 
 

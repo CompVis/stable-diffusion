@@ -215,6 +215,17 @@ class StableDiffusionPipeline(DiffusionPipeline):
         latents_shape = (batch_size, self.unet.in_channels, height // 8, width // 8)
         latents_intermediate_shape = (batch_size, self.unet.in_channels, height // 8, width // 8)
         speedup = 1
+#        if len(os.environ["forcedlatent"]) < 5:
+#            forcedlatent = np.random.randn(4*64*64).reshape(4,64,64)
+#            for u in range(64):
+#                for v in range(64):
+#                    if (u-32)**2 + (v-32)**2 > (32*1.2)**2:
+#                        forcedlatent[0][u][v] = 0
+#                        forcedlatent[1][u][v] = 0
+#                        forcedlatent[2][u][v] = 0
+#                        forcedlatent[3][u][v] = 0
+#            os.environ["forcedlatent"] = str(list(forcedlatent.flatten()))
+
         if latents is None:
             latents = torch.randn(
                 latents_intermediate_shape,
@@ -363,7 +374,7 @@ class StableDiffusionPipeline(DiffusionPipeline):
                 latent_model_input = latent_model_input / ((sigma**2 + 1) ** 0.5)
 
             # predict the noise residual
-            print(f"text_embeddings.shape={text_embeddings.shape}")
+            #print(f"text_embeddings.shape={text_embeddings.shape}")
             noise_pred = self.unet(latent_model_input, t, encoder_hidden_states=text_embeddings).sample
 
             # perform guidance
@@ -380,6 +391,7 @@ class StableDiffusionPipeline(DiffusionPipeline):
         # scale and decode the image latents with vae
         #os.environ["latent_sd"] = str(list(latents.flatten().cpu().detach().numpy()))
         latents = 1 / 0.18215 * latents
+        #os.environ["latent_sd"] = str(list(latents.flatten().cpu().numpy()))
         image = self.vae.decode(latents).sample
 
         image = (image / 2 + 0.5).clamp(0, 1)
