@@ -61,6 +61,7 @@ def speak(text):
 all_selected = []        # List of all selected images, over all the run.
 all_selected_latent = [] # The corresponding latent variables.
 final_selection = []     # Selection of files during the final iteration.
+final_selection_latent = []     # Selection of files during the final iteration.
 forcedlatents = []       # Latent variables that we want to see soon.
 forcedgs = []            # forcedgs[i] is the guidance strength that we want to see for image number i.
 assert llambda < 16, "lambda < 16 for convenience in pygame."
@@ -149,6 +150,8 @@ prompt = "Portrait of a green haired woman with blue eyes."
 prompt = "Portrait of a female kung-fu master."
 prompt = "In a dark cave, in the middle of computers, a bearded red-haired geek with squared glasses meets the devil."
 prompt = "Photo of the devil, with horns. There are flames in the background."
+prompt = "Yann LeCun fighting Pinocchio with light sabers."
+prompt = "Yann LeCun attacks a triceratops with a lightsaber."
 print(f"The prompt is {prompt}")
 
 
@@ -213,12 +216,16 @@ def singleeg2(path_to_image):
 
 
 # realESRGan applied to many files.
-def eg(list_of_files):
+def eg(list_of_files, last_list_of_files):
     pretty_print("Should I convert images below to high resolution ?")
     print(list_of_files)
+    print("Last iteration:")
+    print(last_list_of_files)
     speak("Go to the text window!")
-    answer = input(" [y]es / [n]o ?")
-    if "y" in answer or "Y" in answer:
+    answer = input(" [y]es / [n]o / [j]ust the ones in last iteration ?")
+    if "y" in answer or "Y" in answer or "j" in answer or "J" in answer:
+        if j in answer or "J" in answer:
+            list_of_files = last_list_of_files
         #images = Parallel(n_jobs=12)(delayed(singleeg)(image) for image in list_of_files)
         #print(to_native(f"Created the super-resolution files {images}")) 
         for path_to_image in list_of_files:
@@ -226,10 +233,10 @@ def eg(list_of_files):
             print(to_native(f"Created the super-resolution file {output_filename}")) 
 
 # When we stop the run and check and propose to do super-resolution and/or animations.
-def stop_all(list_of_files, list_of_latent, last_list_of_latent):
+def stop_all(list_of_files, list_of_latent, last_list_of_files, last_list_of_latent):
     print(to_native("Your selected images and the last generation:"))
     print(list_of_files)
-    eg(list_of_files)
+    eg(list_of_files, last_list_of_files)
     pretty_print("Should we create animations ?")
     answer = input(" [y]es or [n]o or [j]ust the selection on the last panel ?")
     if "y" in answer or "Y" in answer or "j" in answer or "J" in answer:
@@ -237,7 +244,7 @@ def stop_all(list_of_files, list_of_latent, last_list_of_latent):
         if "j" in answer or "J" in answer:
             list_of_latent = last_list_of_latent
         pretty_print("Let us create animations!")
-        for c in sorted([0.5, 0.25, 0.125, 0.0625, 0.05, 0.04,0.03125]):
+        for c in sorted([0.0025, 0.005, 0.01, 0.02]):
             for idx in range(len(list_of_files)):
                 images = []
                 l = list_of_latent[idx].reshape(1,4,64,64)
@@ -381,6 +388,7 @@ for iteration in range(3000):   # Kind of an infinite loop.
     early_stop = []
     speak("Wait!")
     final_selection = []
+    final_selection_latent = []
     for k in range(llambda):
         if len(early_stop) > 0:
             break
@@ -451,7 +459,7 @@ for iteration in range(3000):   # Kind of an infinite loop.
                 pos = pygame.mouse.get_pos()
                 index = 3 * (pos[0] // 300) + (pos[1] // 300)
                 if pos[0] > X and pos[1] > Y /3 and pos[1] < 2*Y/3:
-                    stop_all(all_selected, all_selected_latent, final_selection)
+                    stop_all(all_selected, all_selected_latent, final_selection, final_selection_latent)
                     exit()
                 if index <= k:
                     pretty_print(("You clicked for requesting an early stopping."))
@@ -571,7 +579,7 @@ for iteration in range(3000):   # Kind of an infinite loop.
                         #onlyfiles = [str(f) for f in onlyfiles if "SD_" in str(f) and ".png" in str(f) and str(f) not in all_files and sentinel in str(f)]
                         assert len(onlyfiles) == len(latent)
                         assert len(all_selected) == len(all_selected_latent)
-                        stop_all(all_selected, all_selected_latent, final_selection) # + onlyfiles, all_selected_latent + latent)
+                        stop_all(all_selected, all_selected_latent, final_selection, final_selection_latent) # + onlyfiles, all_selected_latent + latent)
                         exit()
                     status = False
                     break
@@ -583,7 +591,8 @@ for iteration in range(3000):   # Kind of an infinite loop.
                     assert len(onlyfiles) == len(latent), f"{len(onlyfiles)} != {len(latent)}"
                     all_selected += [selected_filename]
                     all_selected_latent += [latent[index]]
-                    final_selection += [latent[index]]
+                    final_selection += [selected_filename]
+                    final_selection_latent += [latent[index]]
                     text2 = font.render(to_native(f'==> {len(all_selected)} chosen images! '), True, green, blue)
                     text2 = pygame.transform.rotate(text2, 90)
                     scrn.blit(text2, (X*3/4+X/16      - X/32, Y/3))
