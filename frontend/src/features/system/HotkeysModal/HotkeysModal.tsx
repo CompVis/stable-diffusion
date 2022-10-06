@@ -51,6 +51,16 @@ export default function HotkeysModal({ children }: HotkeysModalProps) {
       desc: 'Focus the prompt input area',
       hotkey: 'Alt+A',
     },
+    {
+      title: 'Previous Image',
+      desc: 'Display the previous image in the gallery',
+      hotkey: 'Arrow left',
+    },
+    {
+      title: 'Next Image',
+      desc: 'Display the next image in the gallery',
+      hotkey: 'Arrow right',
+    },
   ];
 
   const renderHotkeyModalItems = () => {
