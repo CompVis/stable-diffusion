@@ -21,6 +21,10 @@ Just click here and copy-paste your token:
 ## Install StableDiffusion as usual, plus a few more stuff.  Basically:
 
 You need homebrew.
+On a Mac, you need to do special stuff for the MPS: we recommend 
+[**This page**](https://towardsdatascience.com/gpu-acceleration-comes-to-pytorch-on-m1-macs-195c399efcc1)<br/>
+
+[
 You need to open a terminal. Then:
 ```
 mkdir stablediffusion
