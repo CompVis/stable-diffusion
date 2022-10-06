@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { clamp } from 'lodash';
+import _, { clamp } from 'lodash';
 import * as InvokeAI from '../../app/invokeai';
 
 export interface GalleryState {
@@ -85,6 +85,32 @@ export const gallerySlice = createSlice({
     clearIntermediateImage: (state) => {
       state.intermediateImage = undefined;
     },
+    selectNextImage: (state) => {
+      const { images, currentImage } = state;
+      if (currentImage) {
+        const currentImageIndex = images.findIndex(
+          (i) => i.uuid === currentImage.uuid
+        );
+        if (_.inRange(currentImageIndex, 0, images.length)) {
+          const newCurrentImage = images[currentImageIndex + 1];
+          state.currentImage = newCurrentImage;
+          state.currentImageUuid = newCurrentImage.uuid;
+        }
+      }
+    },
+    selectPrevImage: (state) => {
+      const { images, currentImage } = state;
+      if (currentImage) {
+        const currentImageIndex = images.findIndex(
+          (i) => i.uuid === currentImage.uuid
+        );
+        if (_.inRange(currentImageIndex, 1, images.length + 1)) {
+          const newCurrentImage = images[currentImageIndex - 1];
+          state.currentImage = newCurrentImage;
+          state.currentImageUuid = newCurrentImage.uuid;
+        }
+      }
+    },
     addGalleryImages: (
       state,
       action: PayloadAction<{
@@ -122,6 +148,8 @@ export const {
   setCurrentImage,
   addGalleryImages,
   setIntermediateImage,
+  selectNextImage,
+  selectPrevImage,
 } = gallerySlice.actions;
 
 export default gallerySlice.reducer;
