@@ -1,8 +1,10 @@
 import { Button } from '@chakra-ui/react';
+import { useHotkeys } from 'react-hotkeys-hook';
 import { MdPhotoLibrary } from 'react-icons/md';
 import { requestImages } from '../../app/socketio/actions';
 import { RootState, useAppDispatch } from '../../app/store';
 import { useAppSelector } from '../../app/store';
+import { selectNextImage, selectPrevImage } from './gallerySlice';
 import HoverableImage from './HoverableImage';
 
 /**
@@ -24,6 +26,22 @@ const ImageGallery = () => {
   const handleClickLoadMore = () => {
     dispatch(requestImages());
   };
+
+  useHotkeys(
+    'left',
+    () => {
+      dispatch(selectPrevImage());
+    },
+    []
+  );
+
+  useHotkeys(
+    'right',
+    () => {
+      dispatch(selectNextImage());
+    },
+    []
+  );
 
   return (
     <div className="image-gallery-container">

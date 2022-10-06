@@ -75,7 +75,8 @@ def main():
             precision      = opt.precision,
             gfpgan=gfpgan,
             codeformer=codeformer,
-            esrgan=esrgan
+            esrgan=esrgan,
+            free_gpu_mem=opt.free_gpu_mem,
             )
     except (FileNotFoundError, IOError, KeyError) as e:
         print(f'{e}. Aborting.')
@@ -104,8 +105,6 @@ def main():
 
     # preload the model
     gen.load_model()
-    #set additional option
-    gen.free_gpu_mem = opt.free_gpu_mem
 
     # web server loops forever
     if opt.web or opt.gui:

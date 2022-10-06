@@ -51,8 +51,9 @@ class KSampler(Sampler):
             schedule,
             steps=model.num_timesteps,
         )
-        self.ds    = None
-        self.s_in  = None
+        self.sigmas = None
+        self.ds     = None
+        self.s_in   = None
 
         def forward(self, x, sigma, uncond, cond, cond_scale):
             x_in = torch.cat([x] * 2)
@@ -140,7 +141,7 @@ class KSampler(Sampler):
             'uncond': unconditional_conditioning,
             'cond_scale': unconditional_guidance_scale,
         }
-        print(f'>> Sampling with k_{self.schedule}')
+        print(f'>> Sampling with k_{self.schedule} starting at step {len(self.sigmas)-S-1} of {len(self.sigmas)-1} ({S} new sampling steps)')
         return (
             K.sampling.__dict__[f'sample_{self.schedule}'](
                 model_wrap_cfg, x, sigmas, extra_args=extra_args,
@@ -149,6 +150,8 @@ class KSampler(Sampler):
             None,
         )
 
+    # this code will support inpainting if and when ksampler API modified or
+    # a workaround is found.
     @torch.no_grad()
     def p_sample(
             self,

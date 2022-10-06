@@ -174,7 +174,8 @@ class Generate:
             config                = None,
             gfpgan=None,
             codeformer=None,
-            esrgan=None
+            esrgan=None,
+            free_gpu_mem=False,
     ):
         models              = OmegaConf.load(conf)
         mconfig             = models[model]
@@ -201,6 +202,7 @@ class Generate:
         self.gfpgan = gfpgan
         self.codeformer = codeformer
         self.esrgan = esrgan
+        self.free_gpu_mem = free_gpu_mem
 
         # Note that in previous versions, there was an option to pass the
         # device to Generate(). However the device was then ignored, so
@@ -417,7 +419,8 @@ class Generate:
                 generator = self._make_txt2img()
 
             generator.set_variation(
-                self.seed, variation_amount, with_variations)
+                self.seed, variation_amount, with_variations
+            )
             results = generator.generate(
                 prompt,
                 iterations=iterations,
@@ -596,7 +599,8 @@ class Generate:
                 opt,
                 args,
                 image_callback = callback,
-                prefix         = prefix
+                prefix         = prefix,
+                precision      = self.precision,
             )
                 
         elif tool is None:
@@ -626,18 +630,14 @@ class Generate:
             height,
         )
 
+        if image.width < self.width and image.height < self.height:
+            print(f'>> WARNING: img2img and inpainting may produce unexpected results with initial images smaller than {self.width}x{self.height} in both dimensions')
+
         # if image has a transparent area and no mask was provided, then try to generate mask
-        if self._has_transparency(image) and not mask:
-            print(
-                '>> Initial image has transparent areas. Will inpaint in these regions.')
-            if self._check_for_erasure(image):
-                print(
-                    '>> WARNING: Colors underneath the transparent region seem to have been erased.\n',
-                    '>>          Inpainting will be suboptimal. Please preserve the colors when making\n',
-                    '>>          a transparency mask, or provide mask explicitly using --init_mask (-M).'
-                )
+        if self._has_transparency(image):
+            self._transparency_check_and_warning(image, mask)
             # this returns a torch tensor
-            init_mask = self._create_init_mask(image,width,height,fit=fit)
+            init_mask = self._create_init_mask(image, width, height, fit=fit)
             
         if (image.width * image.height) > (self.width * self.height):
             print(">> This input is larger than your defaults. If you run out of memory, please use a smaller image.")
@@ -771,7 +771,7 @@ class Generate:
                         if len(upscale) < 2:
                             upscale.append(0.75)
                         image = self.esrgan.process(
-                            image, upscale[1], seed, int(upscale[0]))
+                            image, upscale[1], seed, int(upscale[0]), precision=self.precision)
                     else:
                         print(">> ESRGAN is disabled. Image not upscaled.")
             except Exception as e:
@@ -952,6 +952,17 @@ class Generate:
                        (r, g, b) != (255, 255, 255):
                         colored += 1
         return colored == 0
+
+    def _transparency_check_and_warning(image, mask):
+        if not mask:
+            print(
+                '>> Initial image has transparent areas. Will inpaint in these regions.')
+            if self._check_for_erasure(image):
+                print(
+                    '>> WARNING: Colors underneath the transparent region seem to have been erased.\n',
+                    '>>          Inpainting will be suboptimal. Please preserve the colors when making\n',
+                    '>>          a transparency mask, or provide mask explicitly using --init_mask (-M).'
+                )
 
     def _squeeze_image(self, image):
         x, y, resize_needed = self._resolution_check(image.width, image.height)

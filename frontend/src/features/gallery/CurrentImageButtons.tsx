@@ -19,6 +19,8 @@ import { MdDelete, MdFace, MdHd, MdImage, MdInfo } from 'react-icons/md';
 import InvokePopover from './InvokePopover';
 import UpscaleOptions from '../options/AdvancedOptions/Upscale/UpscaleOptions';
 import FaceRestoreOptions from '../options/AdvancedOptions/FaceRestore/FaceRestoreOptions';
+import { useHotkeys } from 'react-hotkeys-hook';
+import { useToast } from '@chakra-ui/react';
 
 const systemSelector = createSelector(
   (state: RootState) => state.system,
@@ -54,6 +56,8 @@ const CurrentImageButtons = ({
 }: CurrentImageButtonsProps) => {
   const dispatch = useAppDispatch();
 
+  const toast = useToast();
+
   const intermediateImage = useAppSelector(
     (state: RootState) => state.gallery.intermediateImage
   );
@@ -71,19 +75,163 @@ const CurrentImageButtons = ({
 
   const handleClickUseAsInitialImage = () =>
     dispatch(setInitialImagePath(image.url));
+  useHotkeys(
+    'shift+i',
+    () => {
+      if (image) {
+        handleClickUseAsInitialImage();
+        toast({
+          title: 'Sent To Image To Image',
+          status: 'success',
+          duration: 2500,
+          isClosable: true,
+        });
+      } else {
+        toast({
+          title: 'No Image Loaded',
+          description: 'No image found to send to image to image module.',
+          status: 'error',
+          duration: 2500,
+          isClosable: true,
+        });
+      }
+    },
+    [image]
+  );
 
   const handleClickUseAllParameters = () =>
     dispatch(setAllParameters(image.metadata));
+  useHotkeys(
+    'a',
+    () => {
+      if (['txt2img', 'img2img'].includes(image?.metadata?.image?.type)) {
+        handleClickUseAllParameters();
+        toast({
+          title: 'Parameters Set',
+          status: 'success',
+          duration: 2500,
+          isClosable: true,
+        });
+      } else {
+        toast({
+          title: 'Parameters Not Set',
+          description: 'No metadata found for this image.',
+          status: 'error',
+          duration: 2500,
+          isClosable: true,
+        });
+      }
+    },
+    [image]
+  );
 
   // Non-null assertion: this button is disabled if there is no seed.
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const handleClickUseSeed = () => dispatch(setSeed(image.metadata.image.seed));
+  useHotkeys(
+    's',
+    () => {
+      if (image?.metadata?.image?.seed) {
+        handleClickUseSeed();
+        toast({
+          title: 'Seed Set',
+          status: 'success',
+          duration: 2500,
+          isClosable: true,
+        });
+      } else {
+        toast({
+          title: 'Seed Not Set',
+          description: 'Could not find seed for this image.',
+          status: 'error',
+          duration: 2500,
+          isClosable: true,
+        });
+      }
+    },
+    [image]
+  );
+
   const handleClickUpscale = () => dispatch(runESRGAN(image));
+  useHotkeys(
+    'u',
+    () => {
+      if (
+        isESRGANAvailable &&
+        Boolean(!intermediateImage) &&
+        isConnected &&
+        !isProcessing &&
+        upscalingLevel
+      ) {
+        handleClickUpscale();
+      } else {
+        toast({
+          title: 'Upscaling Failed',
+          status: 'error',
+          duration: 2500,
+          isClosable: true,
+        });
+      }
+    },
+    [
+      image,
+      isESRGANAvailable,
+      intermediateImage,
+      isConnected,
+      isProcessing,
+      upscalingLevel,
+    ]
+  );
 
   const handleClickFixFaces = () => dispatch(runGFPGAN(image));
+  useHotkeys(
+    'r',
+    () => {
+      if (
+        isGFPGANAvailable &&
+        Boolean(!intermediateImage) &&
+        isConnected &&
+        !isProcessing &&
+        gfpganStrength
+      ) {
+        handleClickFixFaces();
+      } else {
+        toast({
+          title: 'Face Restoration Failed',
+          status: 'error',
+          duration: 2500,
+          isClosable: true,
+        });
+      }
+    },
+    [
+      image,
+      isGFPGANAvailable,
+      intermediateImage,
+      isConnected,
+      isProcessing,
+      gfpganStrength,
+    ]
+  );
 
   const handleClickShowImageDetails = () =>
     setShouldShowImageDetails(!shouldShowImageDetails);
+  useHotkeys(
+    'i',
+    () => {
+      if (image) {
+        handleClickShowImageDetails();
+      } else {
+        toast({
+          title: 'Failed to load metadata',
+          status: 'error',
+          duration: 2500,
+          isClosable: true,
+        });
+      }
+    },
+    [image, shouldShowImageDetails]
+  );
 
   return (
     <div className="current-image-options">
