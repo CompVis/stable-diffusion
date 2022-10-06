@@ -22,7 +22,7 @@ export interface OptionsState {
   upscalingLevel: UpscalingLevel;
   upscalingStrength: number;
   shouldUseInitImage: boolean;
-  initialImagePath: string;
+  initialImagePath: string | null;
   maskPath: string;
   seamless: boolean;
   shouldFitToWidthHeight: boolean;
@@ -33,6 +33,8 @@ export interface OptionsState {
   shouldRunGFPGAN: boolean;
   shouldRandomizeSeed: boolean;
   showAdvancedOptions: boolean;
+  activeTab: number;
+  shouldShowImageDetails: boolean;
 }
 
 const initialOptionsState: OptionsState = {
@@ -49,7 +51,7 @@ const initialOptionsState: OptionsState = {
   seamless: false,
   shouldUseInitImage: false,
   img2imgStrength: 0.75,
-  initialImagePath: '',
+  initialImagePath: null,
   maskPath: '',
   shouldFitToWidthHeight: true,
   shouldGenerateVariations: false,
@@ -62,6 +64,8 @@ const initialOptionsState: OptionsState = {
   gfpganStrength: 0.8,
   shouldRandomizeSeed: true,
   showAdvancedOptions: true,
+  activeTab: 0,
+  shouldShowImageDetails: false,
 };
 
 const initialState: OptionsState = initialOptionsState;
@@ -121,7 +125,7 @@ export const optionsSlice = createSlice({
     setShouldUseInitImage: (state, action: PayloadAction<boolean>) => {
       state.shouldUseInitImage = action.payload;
     },
-    setInitialImagePath: (state, action: PayloadAction<string>) => {
+    setInitialImagePath: (state, action: PayloadAction<string | null>) => {
       const newInitialImagePath = action.payload;
       state.shouldUseInitImage = newInitialImagePath ? true : false;
       state.initialImagePath = newInitialImagePath;
@@ -269,6 +273,12 @@ export const optionsSlice = createSlice({
     setShowAdvancedOptions: (state, action: PayloadAction<boolean>) => {
       state.showAdvancedOptions = action.payload;
     },
+    setActiveTab: (state, action: PayloadAction<number>) => {
+      state.activeTab = action.payload;
+    },
+    setShouldShowImageDetails: (state, action: PayloadAction<boolean>) => {
+      state.shouldShowImageDetails = action.payload;
+    },
   },
 });
 
@@ -303,6 +313,8 @@ export const {
   setShouldRunESRGAN,
   setShouldRandomizeSeed,
   setShowAdvancedOptions,
+  setActiveTab,
+  setShouldShowImageDetails,
 } = optionsSlice.actions;
 
 export default optionsSlice.reducer;

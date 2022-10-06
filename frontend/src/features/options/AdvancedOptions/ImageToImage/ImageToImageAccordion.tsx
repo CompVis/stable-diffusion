@@ -8,7 +8,7 @@ import {
 import IAISwitch from '../../../../common/components/IAISwitch';
 import { setShouldUseInitImage } from '../../optionsSlice';
 
-export default function ImageToImage() {
+export default function ImageToImageAccordion() {
   const dispatch = useAppDispatch();
 
   const initialImagePath = useAppSelector(

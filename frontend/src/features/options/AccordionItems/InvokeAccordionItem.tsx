@@ -8,7 +8,7 @@ import React, { ReactElement } from 'react';
 import { Feature } from '../../../app/features';
 import GuideIcon from '../../../common/components/GuideIcon';
 
-interface InvokeAccordionItemProps {
+export interface InvokeAccordionItemProps {
   header: ReactElement;
   feature: Feature;
   options: ReactElement;

@@ -19,7 +19,7 @@ export default function ImageFit() {
 
   return (
     <IAISwitch
-      label="Fit initial image to output size"
+      label="Fit Initial Image To Output Size"
       isChecked={shouldFitToWidthHeight}
       onChange={handleChangeFit}
     />
