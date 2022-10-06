@@ -580,6 +580,10 @@ for iteration in range(3000):   # Kind of an infinite loop.
                     pygame.display.flip()
                 elif pos[0] > 1500:  # Not in the images.
                     if pos[1] < Y/3:
+                        indices = []
+                        good = []
+                        final_selection = []
+                        final_selection_latent = []
                         #filename = input(to_native("Filename (please provide the latent file, of the format SD*latent*.txt) ?\n"))
                         #status = False
                         #with open(filename, 'r') as f:
@@ -738,10 +742,11 @@ for iteration in range(3000):   # Kind of an infinite loop.
             #if a % 2 == 0:
             #    forcedlatent -= np.random.rand() * sauron
             forcedlatent = forcedlatent.flatten()
-            basic_new_fl = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
             if len(good) > 1 or len(forcedlatents) < len(good) + 1:
+                basic_new_fl = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
                 forcedlatents += [basic_new_fl]
             else:
+                basic_new_fl = forcedlatent
                 epsilon = ((0.5 * (a + .5 - len(good)) / (llambda - len(good) - 1)) ** 2)
                 forcedlatent = (1. - epsilon) * basic_new_fl.flatten() + epsilon * np.random.randn(4*64*64)
                 #forcedlatent = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent REMOVED!!
