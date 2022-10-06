@@ -18,6 +18,8 @@ const SeedOptions = () => {
       </Flex>
       <Flex gap={2}>
         <Threshold />
+      </Flex>
+      <Flex gap={2}>
         <Perlin />
       </Flex>
     </Flex>
