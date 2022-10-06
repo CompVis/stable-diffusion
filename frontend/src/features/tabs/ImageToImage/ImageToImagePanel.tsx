@@ -4,8 +4,8 @@ import { Feature } from '../../../app/features';
 import { RootState, useAppSelector } from '../../../app/store';
 import FaceRestore from '../../options/AdvancedOptions/FaceRestore/FaceRestore';
 import FaceRestoreOptions from '../../options/AdvancedOptions/FaceRestore/FaceRestoreOptions';
-import ImageToImageAccordion from '../../options/AdvancedOptions/ImageToImage/ImageToImageAccordion';
-import ImageToImageOptions from '../../options/AdvancedOptions/ImageToImage/ImageToImageOptions';
+import ImageFit from '../../options/AdvancedOptions/ImageToImage/ImageFit';
+import ImageToImageStrength from '../../options/AdvancedOptions/ImageToImage/ImageToImageStrength';
 import SeedOptions from '../../options/AdvancedOptions/Seed/SeedOptions';
 import Upscale from '../../options/AdvancedOptions/Upscale/Upscale';
 import UpscaleOptions from '../../options/AdvancedOptions/Upscale/UpscaleOptions';
@@ -18,12 +18,12 @@ import OutputOptions from '../../options/OutputOptions';
 import ProcessButtons from '../../options/ProcessButtons/ProcessButtons';
 import PromptInput from '../../options/PromptInput/PromptInput';
 
-export default function TextToImagePanel() {
+export default function ImageToImagePanel() {
   const showAdvancedOptions = useAppSelector(
     (state: RootState) => state.options.showAdvancedOptions
   );
 
-  const textToImageAccordions = {
+  const imageToImageAccordions = {
     seed: {
       header: (
         <Box flex="1" textAlign="left">
@@ -48,11 +48,6 @@ export default function TextToImagePanel() {
       feature: Feature.UPSCALE,
       options: <UpscaleOptions />,
     },
-    // img2img: {
-    //   header: <ImageToImageAccordion />,
-    //   feature: Feature.IMAGE_TO_IMAGE,
-    //   options: <ImageToImageOptions />,
-    // },
     other: {
       header: (
         <Box flex="1" textAlign="left">
@@ -65,13 +60,18 @@ export default function TextToImagePanel() {
   };
 
   return (
-    <div className="text-to-image-panel">
+    <div className="image-to-image-panel">
       <PromptInput />
       <ProcessButtons />
       <MainOptions />
+      <ImageToImageStrength
+        label="Image To Image Strength"
+        styleClass="main-option-block image-to-image-strength-main-option"
+      />
+      <ImageFit />
       <MainAdvancedOptions />
       {showAdvancedOptions ? (
-        <OptionsAccordion accordionInfo={textToImageAccordions} />
+        <OptionsAccordion accordionInfo={imageToImageAccordions} />
       ) : null}
     </div>
   );

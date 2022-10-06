@@ -7,7 +7,13 @@ import {
 import IAINumberInput from '../../../../common/components/IAINumberInput';
 import { setImg2imgStrength } from '../../optionsSlice';
 
-export default function ImageToImageStrength() {
+interface ImageToImageStrengthProps {
+  label?: string;
+  styleClass?: string;
+}
+
+export default function ImageToImageStrength(props: ImageToImageStrengthProps) {
+  const { label = 'Strength', styleClass } = props;
   const img2imgStrength = useAppSelector(
     (state: RootState) => state.options.img2imgStrength
   );
@@ -18,7 +24,7 @@ export default function ImageToImageStrength() {
 
   return (
     <IAINumberInput
-      label="Strength"
+      label={label}
       step={0.01}
       min={0.01}
       max={0.99}
@@ -26,6 +32,7 @@ export default function ImageToImageStrength() {
       value={img2imgStrength}
       width="90px"
       isInteger={false}
+      styleClass={styleClass}
     />
   );
 }

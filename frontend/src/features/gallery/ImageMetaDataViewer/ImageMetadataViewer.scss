@@ -1,0 +1,20 @@
+@use '../../../styles/Mixins/' as *;
+
+.image-metadata-viewer {
+  width: 100%;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background-color: var(--metadata-bg-color);
+  overflow: scroll;
+  max-height: calc($app-content-height - 4rem);
+  z-index: 1;
+}
+
+.image-json-viewer {
+  border-radius: 0.5rem;
+  margin: 0 0.5rem 1rem 0.5rem;
+  padding: 1rem;
+  overflow-x: scroll;
+  word-break: break-all;
+  background-color: var(--metadata-json-bg-color);
+}

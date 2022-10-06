@@ -7,12 +7,17 @@ import {
   Tooltip,
   useColorModeValue,
 } from '@chakra-ui/react';
-import { useAppDispatch } from '../../app/store';
+import { RootState, useAppDispatch, useAppSelector } from '../../app/store';
 import { setCurrentImage } from './gallerySlice';
-import { FaCheck, FaSeedling, FaTrashAlt } from 'react-icons/fa';
+import { FaCheck, FaImage, FaSeedling, FaTrashAlt } from 'react-icons/fa';
 import DeleteImageModal from './DeleteImageModal';
 import { memo, SyntheticEvent, useState } from 'react';
-import { setAllParameters, setSeed } from '../options/optionsSlice';
+import {
+  setActiveTab,
+  setAllParameters,
+  setInitialImagePath,
+  setSeed,
+} from '../options/optionsSlice';
 import * as InvokeAI from '../../app/invokeai';
 import { IoArrowUndoCircleOutline } from 'react-icons/io5';
 
@@ -32,6 +37,10 @@ const memoEqualityCheck = (
 const HoverableImage = memo((props: HoverableImageProps) => {
   const [isHovered, setIsHovered] = useState<boolean>(false);
   const dispatch = useAppDispatch();
+
+  const activeTab = useAppSelector(
+    (state: RootState) => state.options.activeTab
+  );
 
   const checkColor = useColorModeValue('green.600', 'green.300');
   const bgColor = useColorModeValue('gray.200', 'gray.700');
@@ -54,6 +63,14 @@ const HoverableImage = memo((props: HoverableImageProps) => {
   const handleClickSetSeed = (e: SyntheticEvent) => {
     e.stopPropagation();
     dispatch(setSeed(image.metadata.image.seed));
+  };
+
+  const handleSetInitImage = (e: SyntheticEvent) => {
+    e.stopPropagation();
+    dispatch(setInitialImagePath(image.url));
+    if (activeTab !== 1) {
+      dispatch(setActiveTab(1));
+    }
   };
 
   const handleClickImage = () => dispatch(setCurrentImage(image));
@@ -131,6 +148,16 @@ const HoverableImage = memo((props: HoverableImageProps) => {
                 />
               </Tooltip>
             )}
+            <Tooltip label="Send To Image To Image">
+              <IconButton
+                aria-label="Send To Image To Image"
+                icon={<FaImage />}
+                size="xs"
+                fontSize={16}
+                variant={'imageHoverIconButton'}
+                onClickCapture={handleSetInitImage}
+              />
+            </Tooltip>
           </Flex>
         )}
       </Flex>

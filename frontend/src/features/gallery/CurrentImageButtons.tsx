@@ -6,9 +6,11 @@ import * as InvokeAI from '../../app/invokeai';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { RootState } from '../../app/store';
 import {
+  setActiveTab,
   setAllParameters,
   setInitialImagePath,
   setSeed,
+  setShouldShowImageDetails,
 } from '../options/optionsSlice';
 import DeleteImageModal from './DeleteImageModal';
 import { SystemState } from '../system/systemSlice';
@@ -41,20 +43,18 @@ const systemSelector = createSelector(
 
 type CurrentImageButtonsProps = {
   image: InvokeAI.Image;
-  shouldShowImageDetails: boolean;
-  setShouldShowImageDetails: (b: boolean) => void;
 };
 
 /**
  * Row of buttons for common actions:
  * Use as init image, use all params, use seed, upscale, fix faces, details, delete.
  */
-const CurrentImageButtons = ({
-  image,
-  shouldShowImageDetails,
-  setShouldShowImageDetails,
-}: CurrentImageButtonsProps) => {
+const CurrentImageButtons = ({ image }: CurrentImageButtonsProps) => {
   const dispatch = useAppDispatch();
+
+  const shouldShowImageDetails = useAppSelector(
+    (state: RootState) => state.options.shouldShowImageDetails
+  );
 
   const toast = useToast();
 
@@ -73,8 +73,11 @@ const CurrentImageButtons = ({
   const { isProcessing, isConnected, isGFPGANAvailable, isESRGANAvailable } =
     useAppSelector(systemSelector);
 
-  const handleClickUseAsInitialImage = () =>
+  const handleClickUseAsInitialImage = () => {
     dispatch(setInitialImagePath(image.url));
+    dispatch(setActiveTab(1));
+  };
+
   useHotkeys(
     'shift+i',
     () => {
@@ -215,7 +218,8 @@ const CurrentImageButtons = ({
   );
 
   const handleClickShowImageDetails = () =>
-    setShouldShowImageDetails(!shouldShowImageDetails);
+    dispatch(setShouldShowImageDetails(!shouldShowImageDetails));
+
   useHotkeys(
     'i',
     () => {
@@ -237,8 +241,8 @@ const CurrentImageButtons = ({
     <div className="current-image-options">
       <IAIIconButton
         icon={<MdImage />}
-        tooltip="Use As Initial Image"
-        aria-label="Use As Initial Image"
+        tooltip="Send To Image To Image"
+        aria-label="Send To Image To Image"
         onClick={handleClickUseAsInitialImage}
       />
 

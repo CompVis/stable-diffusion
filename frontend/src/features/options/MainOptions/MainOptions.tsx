@@ -1,4 +1,3 @@
-import MainAdvancedOptions from './MainAdvancedOptions';
 import MainCFGScale from './MainCFGScale';
 import MainHeight from './MainHeight';
 import MainIterations from './MainIterations';
@@ -23,7 +22,6 @@ export default function MainOptions() {
           <MainHeight />
           <MainSampler />
         </div>
-        <MainAdvancedOptions />
       </div>
     </div>
   );

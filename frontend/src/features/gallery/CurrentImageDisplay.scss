@@ -27,7 +27,6 @@
 }
 
 .current-image-tools {
-  grid-area: current-image-tools;
   width: 100%;
   height: 100%;
   display: grid;
@@ -58,34 +57,37 @@
   align-items: center;
   display: grid;
   width: 100%;
+  grid-template-areas: 'current-image-content';
 
   img {
+    grid-area: current-image-content;
+    background-color: var(--img2img-img-bg-color);
     border-radius: 0.5rem;
     object-fit: contain;
     width: auto;
+    height: $app-gallery-height;
     max-height: $app-gallery-height;
   }
 }
 
+.current-image-metadata {
+  grid-area: current-image-preview;
+}
+
 .current-image-next-prev-buttons {
-  position: absolute;
-  top: 0;
-  left: 0;
+  grid-area: current-image-content;
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  width: calc(100% - 2rem);
-  padding: 0.5rem;
-  margin-left: 1rem;
   z-index: 1;
-  height: calc($app-metadata-height - 1rem);
+  height: 100%;
   pointer-events: none;
 }
 
 .next-prev-button-trigger-area {
   width: 7rem;
   height: 100%;
-  display: flex;
+  width: 100%;
+  display: grid;
   align-items: center;
   pointer-events: auto;
 
@@ -99,31 +101,8 @@
 }
 
 .next-prev-button {
-  font-size: 5rem;
-  fill: var(--text-color-secondary);
+  font-size: 4rem;
+  fill: var(--white);
   filter: drop-shadow(0 0 1rem var(--text-color-secondary));
   opacity: 70%;
-}
-
-.current-image-metadata-viewer {
-  border-radius: 0.5rem;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: calc(100% - 2rem);
-  padding: 0.5rem;
-  margin-left: 1rem;
-  background-color: var(--metadata-bg-color);
-  z-index: 1;
-  overflow: scroll;
-  height: calc($app-metadata-height - 1rem);
-}
-
-.current-image-json-viewer {
-  border-radius: 0.5rem;
-  margin: 0 0.5rem 1rem 0.5rem;
-  padding: 1rem;
-  overflow-x: scroll;
-  word-break: break-all;
-  background-color: var(--metadata-json-bg-color);
 }

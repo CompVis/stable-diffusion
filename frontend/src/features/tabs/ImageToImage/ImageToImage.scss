@@ -1,0 +1,132 @@
+@use '../../../styles/Mixins/' as *;
+
+.image-to-image-workarea {
+  display: grid;
+  grid-template-columns: max-content auto max-content;
+  column-gap: 1rem;
+}
+
+.image-to-image-panel {
+  display: grid;
+  row-gap: 1rem;
+  grid-auto-rows: max-content;
+  width: $options-bar-max-width;
+  height: $app-content-height;
+  overflow-y: scroll;
+  @include HideScrollbar;
+}
+
+.image-to-image-strength-main-option {
+  display: grid;
+  grid-template-columns: none !important;
+
+  .number-input-entry {
+    padding: 0 1rem;
+  }
+}
+
+.image-to-image-display {
+  border-radius: 0.5rem;
+  background-color: var(--background-color-secondary);
+  display: grid;
+
+  .current-image-options {
+    grid-auto-columns: max-content;
+    justify-self: center;
+    align-self: start;
+  }
+}
+
+.image-to-image-single-preview {
+  display: grid;
+  column-gap: 0.5rem;
+  padding: 0 1rem;
+  place-content: center;
+}
+
+.image-to-image-dual-preview-container {
+  display: grid;
+  grid-template-areas: 'img2img-preview';
+}
+
+.image-to-image-dual-preview {
+  grid-area: img2img-preview;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 0.5rem;
+  padding: 0 1rem;
+  place-content: center;
+
+  .current-image-preview {
+    img {
+      height: calc($app-gallery-height - 2rem);
+      max-height: calc($app-gallery-height - 2rem);
+    }
+  }
+}
+
+.img2img-metadata {
+  grid-area: img2img-preview;
+  z-index: 3;
+}
+
+.init-image-preview {
+  display: grid;
+  grid-template-areas: 'init-image-content';
+  justify-content: center;
+  align-items: center;
+  border-radius: 0.5rem;
+
+  .init-image-preview-header {
+    grid-area: init-image-content;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: auto max-content;
+    height: max-content;
+    align-items: center;
+    align-self: start;
+    padding: 1rem;
+    border-radius: 0.5rem;
+
+    h1 {
+      padding: 0.2rem 0.6rem;
+      border-radius: 0.4rem;
+      background-color: var(--tab-hover-color);
+      width: max-content;
+      font-weight: bold;
+      font-size: 0.85rem;
+    }
+  }
+
+  .init-image-image {
+    grid-area: init-image-content;
+
+    img {
+      border-radius: 0.5rem;
+      object-fit: contain;
+      background-color: var(--img2img-img-bg-color);
+      width: auto;
+      height: calc($app-gallery-height - 2rem);
+      max-height: calc($app-gallery-height - 2rem);
+    }
+  }
+}
+
+.image-to-image-upload-btn {
+  display: grid;
+  width: 100%;
+  height: $app-content-height;
+
+  button {
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    font-size: 1.5rem;
+    color: var(--text-color-secondary);
+    background-color: var(--background-color-secondary);
+
+    &:hover {
+      background-color: var(--img2img-img-bg-color);
+    }
+  }
+}

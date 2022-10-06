@@ -18,6 +18,7 @@ export const optionsSelector = createSelector(
       maskPath: options.maskPath,
       initialImagePath: options.initialImagePath,
       seed: options.seed,
+      activeTab: options.activeTab,
     };
   },
   {
@@ -55,6 +56,7 @@ const useCheckParameters = (): boolean => {
     maskPath,
     initialImagePath,
     seed,
+    activeTab,
   } = useAppSelector(optionsSelector);
 
   const { isProcessing, isConnected } = useAppSelector(systemSelector);
@@ -62,6 +64,10 @@ const useCheckParameters = (): boolean => {
   return useMemo(() => {
     // Cannot generate without a prompt
     if (!prompt || Boolean(prompt.match(/^[\s\r\n]+$/))) {
+      return false;
+    }
+
+    if (prompt && !initialImagePath && activeTab === 1) {
       return false;
     }
 
