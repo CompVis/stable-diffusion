@@ -599,7 +599,8 @@ class Generate:
                 opt,
                 args,
                 image_callback = callback,
-                prefix         = prefix
+                prefix         = prefix,
+                precision      = self.precision,
             )
                 
         elif tool is None:
@@ -770,7 +771,7 @@ class Generate:
                         if len(upscale) < 2:
                             upscale.append(0.75)
                         image = self.esrgan.process(
-                            image, upscale[1], seed, int(upscale[0]))
+                            image, upscale[1], seed, int(upscale[0]), precision=self.precision)
                     else:
                         print(">> ESRGAN is disabled. Image not upscaled.")
             except Exception as e:
