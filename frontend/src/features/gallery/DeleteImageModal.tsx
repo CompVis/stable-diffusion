@@ -27,6 +27,7 @@ import { deleteImage } from '../../app/socketio/actions';
 import { RootState } from '../../app/store';
 import { setShouldConfirmOnDelete, SystemState } from '../system/systemSlice';
 import * as InvokeAI from '../../app/invokeai';
+import { useHotkeys } from 'react-hotkeys-hook';
 
 interface DeleteImageModalProps {
   /**
@@ -66,6 +67,14 @@ const DeleteImageModal = forwardRef(
       dispatch(deleteImage(image));
       onClose();
     };
+
+    useHotkeys(
+      'del',
+      () => {
+        shouldConfirmOnDelete ? onOpen() : handleDelete();
+      },
+      [image, shouldConfirmOnDelete]
+    );
 
     const handleChangeShouldConfirmOnDelete = (
       e: ChangeEvent<HTMLInputElement>

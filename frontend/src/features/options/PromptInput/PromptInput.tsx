@@ -1,5 +1,5 @@
 import { FormControl, Textarea } from '@chakra-ui/react';
-import { ChangeEvent, KeyboardEvent } from 'react';
+import { ChangeEvent, KeyboardEvent, useRef } from 'react';
 import { RootState, useAppDispatch, useAppSelector } from '../../../app/store';
 import { generateImage } from '../../../app/socketio/actions';
 
@@ -9,6 +9,7 @@ import { isEqual } from 'lodash';
 import useCheckParameters, {
   systemSelector,
 } from '../../../common/hooks/useCheckParameters';
+import { useHotkeys } from 'react-hotkeys-hook';
 
 export const optionsSelector = createSelector(
   (state: RootState) => state.options,
@@ -28,6 +29,7 @@ export const optionsSelector = createSelector(
  * Prompt input text area.
  */
 const PromptInput = () => {
+  const promptRef = useRef<HTMLTextAreaElement>(null);
   const { prompt } = useAppSelector(optionsSelector);
   const { isProcessing } = useAppSelector(systemSelector);
   const dispatch = useAppDispatch();
@@ -36,6 +38,24 @@ const PromptInput = () => {
   const handleChangePrompt = (e: ChangeEvent<HTMLTextAreaElement>) => {
     dispatch(setPrompt(e.target.value));
   };
+
+  useHotkeys(
+    'ctrl+enter',
+    () => {
+      if (isReady) {
+        dispatch(generateImage());
+      }
+    },
+    [isReady]
+  );
+
+  useHotkeys(
+    'alt+a',
+    () => {
+      promptRef.current?.focus();
+    },
+    []
+  );
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && e.shiftKey === false && isReady) {
@@ -60,6 +80,7 @@ const PromptInput = () => {
           onKeyDown={handleKeyDown}
           resize="vertical"
           height={30}
+          ref={promptRef}
         />
       </FormControl>
     </div>
