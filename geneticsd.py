@@ -417,10 +417,10 @@ for iteration in range(3000):   # Kind of an infinite loop.
         scrn.blit(text0, ((X*3/4)/2 - X/32, Y/2+Y/8))
 
         text1 = font.render(to_native('Undo: click <here> for '), True, green, blue)
-        text1 = pygame.transform.rotate(text2, 90)
+        text1 = pygame.transform.rotate(text1, 90)
         scrn.blit(text1, (X*3/4+X/16+X/64 - X/32, Y/12))
         text1 = font.render(to_native('resetting your clicks.'), True, green, blue)
-        text1 = pygame.transform.rotate(text2, 90)
+        text1 = pygame.transform.rotate(text1, 90)
         scrn.blit(text1, (X*3/4+X/16+X/32 - X/32, Y/12))
         # Button for quitting and effects
         text2 = font.render(to_native(f'Total: {len(all_selected)} chosen images! '), True, green, blue)
