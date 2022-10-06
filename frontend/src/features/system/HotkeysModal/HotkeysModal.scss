@@ -1,0 +1,53 @@
+@use '../../../styles/Mixins/' as *;
+
+.hotkeys-modal {
+  display: grid;
+  padding: 1rem;
+  background-color: var(--settings-modal-bg) !important;
+  row-gap: 1rem;
+  font-family: Inter;
+
+  h1 {
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+}
+
+.hotkeys-modal-items {
+  display: grid;
+  row-gap: 0.5rem;
+  max-height: 32rem;
+  overflow-y: scroll;
+  @include HideScrollbar;
+}
+
+.hotkey-modal-item {
+  display: grid;
+  grid-template-columns: auto max-content;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--background-color);
+  padding: 0.5rem 1rem;
+  border-radius: 0.3rem;
+
+  .hotkey-info {
+    display: grid;
+
+    .hotkey-title {
+      font-weight: bold;
+    }
+
+    .hotkey-description {
+      font-size: 0.9rem;
+      color: var(--text-color-secondary);
+    }
+  }
+
+  .hotkey-key {
+    font-size: 0.8rem;
+    font-weight: bold;
+    border: 2px solid var(--settings-modal-bg);
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.3rem;
+  }
+}
