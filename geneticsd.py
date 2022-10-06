@@ -152,6 +152,8 @@ prompt = "In a dark cave, in the middle of computers, a bearded red-haired geek 
 prompt = "Photo of the devil, with horns. There are flames in the background."
 prompt = "Yann LeCun fighting Pinocchio with light sabers."
 prompt = "Yann LeCun attacks a triceratops with a lightsaber."
+prompt = "A cyberpunk man next to a cyberpunk woman."
+prompt = "A smiling woman with a Katana and electronic patches."
 print(f"The prompt is {prompt}")
 
 
@@ -337,6 +339,7 @@ def randomized_image_to_latent(image_name, scale=None, epsilon=None, c=None, f=N
     new_fl = scale * np.sqrt(len(new_fl)) * new_fl / np.sqrt(np.sum(new_fl ** 2))
     #image = latent_to_image(np.asarray(new_fl)) #eval(os.environ["forcedlatent"])))
     #image.save(f"rebuild_{f}_{scale}_{epsilon}_{c}.png")
+    #gs=7.5, f=0.12, scale=3.7, epsilon=0.01,1 c=2.05
     return new_fl
 
 # In case the user wants to start from a given image.
