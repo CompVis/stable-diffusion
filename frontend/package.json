@@ -23,6 +23,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-dropzone": "^14.2.2",
+    "react-hotkeys-hook": "^3.4.7",
     "react-icons": "^4.4.0",
     "react-redux": "^8.0.2",
     "redux-persist": "^6.0.0",
