@@ -1,0 +1,42 @@
+# This workflow:
+# - Sets up Node.js with a yarn cache
+# - Installs packages via yarn, using yarn.lock
+# - Builds the frontend bundle
+# - Commits the frontend bundle
+
+name: Frontend CI/CD [dev]
+
+on:
+  push:
+    branches: [ "development" ]
+    paths: 'frontend/**'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: 'frontend'
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js 18
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+        cache: 'yarn'
+        cache-dependency-path: '**/yarn.lock'
+    - name: install packages
+      run: yarn install --immutable --immutable-cache --check-cache
+    - name: build frontend bundle [dev]
+      run: yarn build-dev
+    - name: setup git config
+      run: |
+        git config user.name "GitHub Actions Bot"
+        git config user.email "<>"
+    - name: commit bundle [dev]
+      run: |
+        git add dist/* -f
+        git commit -m "[bot] builds dev bundle"
+        git push origin development
