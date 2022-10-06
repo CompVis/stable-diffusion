@@ -1,8 +1,7 @@
 import React from 'react';
-import { MdAddAPhoto } from 'react-icons/md';
 import { generateImage } from '../../../app/socketio/actions';
 import { useAppDispatch } from '../../../app/store';
-import IAIIconButton from '../../../common/components/IAIIconButton';
+import IAIButton from '../../../common/components/IAIButton';
 import useCheckParameters from '../../../common/hooks/useCheckParameters';
 
 export default function InvokeButton() {
@@ -14,9 +13,8 @@ export default function InvokeButton() {
   };
 
   return (
-    <IAIIconButton
-      icon={<MdAddAPhoto />}
-      tooltip="Invoke"
+    <IAIButton
+      label="Invoke"
       aria-label="Invoke"
       type="submit"
       isDisabled={!isReady}
