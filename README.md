@@ -20,7 +20,12 @@ Just click here and copy-paste your token:
 
 ## Install StableDiffusion as usual, plus a few more stuff.  Basically:
 
+You need homebrew.
+You need to open a terminal. Then:
 ```
+mkdir stablediffusion
+cd stablediffusion
+git clone git@github.com:teytaud/genetic-stable-diffusion.git .
 brew install wget
 conda env create -f environment.yaml
 conda activate ldm    # you can change that name in the environment.yaml file...
