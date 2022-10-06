@@ -21,6 +21,8 @@ class Generator():
         self.seed                = None
         self.latent_channels     = model.channels
         self.downsampling_factor = downsampling   # BUG: should come from model or config
+        self.perlin              = 0.0
+        self.threshold           = 0
         self.variation_amount    = 0
         self.with_variations     = []
 
