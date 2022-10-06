@@ -127,13 +127,12 @@ class KSampler(Sampler):
         # sigmas are now set up in make_schedule - we take the last steps items
         sigmas = self.sigmas[-S-1:]
 
+        x = torch.randn([batch_size, *shape], device=self.device) * sigmas[0]
+        # for GPU draw
+
         if x_T is not None:
-            x = x_T * sigmas[0]
-        else:
-            x = (
-                torch.randn([batch_size, *shape], device=self.device)
-                * sigmas[0]
-            )   # for GPU draw
+            x = x_T + x
+
         model_wrap_cfg = CFGDenoiser(self.model, threshold=threshold, warmup=max(0.8*S,S-10))
         extra_args = {
             'cond': conditioning,
