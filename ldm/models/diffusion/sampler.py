@@ -351,10 +351,11 @@ class Sampler(object):
         return x_dec
 
     def get_initial_image(self,x_T,shape,timesteps=None):
+        x = torch.randn(shape, device=self.device)
         if x_T is None:
-            return torch.randn(shape, device=self.device)
+            return x
         else:
-            return x_T
+            return x_T + x
     
     def p_sample(
             self,

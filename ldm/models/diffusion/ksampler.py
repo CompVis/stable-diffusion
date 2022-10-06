@@ -123,15 +123,15 @@ class KSampler(Sampler):
             if img_callback is not None:
                 img_callback(k_callback_values['x'],k_callback_values['i'])
 
-        # sigmas = self.model.get_sigmas(S)
-        # sigmas are now set up in make_schedule - we take the last steps items
+        # sigmas are set up in make_schedule - we take the last steps items
         sigmas = self.sigmas[-S-1:]
 
-        x = torch.randn([batch_size, *shape], device=self.device) * sigmas[0]
-        # for GPU draw
-
         if x_T is not None:
-            x = x_T + x
+            x = x_T * sigmas[0]
+#            x = x_T + torch.randn([batch_size, *shape], device=self.device) * sigmas[0]
+        else:
+            x = torch.randn([batch_size, *shape], device=self.device) * sigmas[0]
+
 
         model_wrap_cfg = CFGDenoiser(self.model, threshold=threshold, warmup=max(0.8*S,S-10))
         extra_args = {
@@ -194,11 +194,17 @@ class KSampler(Sampler):
 
         return img, None, None
 
+    # REVIEW THIS METHOD: it has never been tested. In particular,
+    # we should not be multiplying by self.sigmas[0] if we
+    # are at an intermediate step in img2img. See similar in
+    # sample() which does work.
     def get_initial_image(self,x_T,shape,steps):
+        x = (torch.randn(shape, device=self.device) * self.sigmas[0])
         if x_T is not None:
-            return x_T + x_T * self.sigmas[0]
+            return x_T + x
         else:
-            return (torch.randn(shape, device=self.device) * self.sigmas[0])
+            return x
+
         
     def prepare_to_sample(self,t_enc):
         self.t_enc      = t_enc
