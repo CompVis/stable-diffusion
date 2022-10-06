@@ -58,6 +58,7 @@ We thank them for all of their time and hard work.
 - [rabidcopy](https://github.com/rabidcopy)
 - [Dominic Letz](https://github.com/dominicletz)
 - [Dmitry T.](https://github.com/ArDiouscuros)
+- [Kent Keirsey](https://github.com/hipsterusername)
 
 ## **Original CompVis Authors:**
 
