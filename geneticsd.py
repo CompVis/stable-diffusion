@@ -154,7 +154,7 @@ prompt = "Yann LeCun fighting Pinocchio with light sabers."
 prompt = "Yann LeCun attacks a triceratops with a lightsaber."
 prompt = "A cyberpunk man next to a cyberpunk woman."
 prompt = "A smiling woman with a Katana and electronic patches."
-prompt = "Photo of a bearded, long-haired man and a blonde-haired woman. Cats and drums and computers on shelves in the background."
+prompt = "Photo of a bearded, long-haired man with glasses and a blonde-haired woman. Both are smiling. Cats and drums and computers on shelves in the background."
 print(f"The prompt is {prompt}")
 
 
@@ -747,9 +747,10 @@ for iteration in range(3000):   # Kind of an infinite loop.
                 forcedlatents += [basic_new_fl]
             else:
                 basic_new_fl = forcedlatent
+                coef =  np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2))
+                coef = np.exp(np.log(coef) * (a/llambda) )
                 epsilon = ((0.5 * (a + .5 - len(good)) / (llambda - len(good) - 1)) ** 2)
-                forcedlatent = (1. - epsilon) * basic_new_fl.flatten() + epsilon * np.random.randn(4*64*64)
-                #forcedlatent = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent REMOVED!!
+                forcedlatent = (1. - epsilon) * coef * basic_new_fl.flatten() + epsilon * np.random.randn(4*64*64)
                 forcedlatents += [forcedlatent]
     #for uu in range(len(latent)):
     #    print(f"--> latent[{uu}] sum of sq / variable = {np.sum(latent[uu].flatten()**2) / len(latent[uu].flatten())}")
