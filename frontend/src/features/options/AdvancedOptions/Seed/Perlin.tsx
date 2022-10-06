@@ -1,5 +1,9 @@
 import React from 'react';
-import { RootState, useAppDispatch, useAppSelector } from '../../../../app/store';
+import {
+  RootState,
+  useAppDispatch,
+  useAppSelector,
+} from '../../../../app/store';
 import IAINumberInput from '../../../../common/components/IAINumberInput';
 import { setPerlin } from '../../optionsSlice';
 
@@ -11,13 +15,13 @@ export default function Perlin() {
 
   return (
     <IAINumberInput
-        label='Perlin'
-        min={0}
-        max={1}
-        step={0.05}
-        onChange={handleChangePerlin}
-        value={perlin}
-        isInteger={false}
+      label="Perlin Noise"
+      min={0}
+      max={1}
+      step={0.05}
+      onChange={handleChangePerlin}
+      value={perlin}
+      isInteger={false}
     />
   );
 }
