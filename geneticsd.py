@@ -237,7 +237,7 @@ def eg(list_of_files, last_list_of_files):
     speak("Go to the text window!")
     answer = input(" [y]es / [n]o / [j]ust the ones in last iteration ?")
     if "y" in answer or "Y" in answer or "j" in answer or "J" in answer:
-        if j in answer or "J" in answer:
+        if "j" in answer or "J" in answer:
             list_of_files = last_list_of_files
         #images = Parallel(n_jobs=12)(delayed(singleeg)(image) for image in list_of_files)
         #print(to_native(f"Created the super-resolution files {images}")) 
@@ -605,7 +605,7 @@ for iteration in range(3000):   # Kind of an infinite loop.
                         #pretty_print("Easy! I exit now, you edit the file and you save it.")
                         #pretty_print("Then just relaunch me and provide the text and the image.")
                         #exit()
-                    if pos[1] < 2*Y/3:
+                    elif pos[1] < 2*Y/3:
                         #onlyfiles = [f for f in listdir(".") if isfile(join(mypath, f))]
                         #onlyfiles = [str(f) for f in onlyfiles if "SD_" in str(f) and ".png" in str(f) and str(f) not in all_files and sentinel in str(f)]
                         assert len(onlyfiles) == len(latent)
