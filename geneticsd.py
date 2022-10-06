@@ -1,4 +1,6 @@
 # A ton of imports.
+from gfpgan.utils import GFPGANer
+import cv2
 import random
 import os
 import time
@@ -196,6 +198,12 @@ esrmodel.load_weights('weights/RealESRGAN_x4.pth', download=True)
 esrmodel2 = RealESRGAN(sr_device, scale=2)
 esrmodel2.load_weights('weights/RealESRGAN_x2.pth', download=True)
 
+def fe(path):
+    fe = GFPGANer(model_path='GFPGANv1.3.pth', upscale=2, arch='clean', channel_multiplier=2)
+    img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+    _, _, output = fe.enhance(img, has_aligned=False, only_center_face=False, paste_back=True)
+    cv2.imwrite(path, output)
+
 def singleeg(path_to_image):
     image = Image.open(path_to_image).convert('RGB')
     sr_device = device #('mps')   #torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -204,6 +212,7 @@ def singleeg(path_to_image):
     print(f"Type after SR = {type(sr_image)}")
     output_filename = path_to_image + ".SR.png"
     sr_image.save(output_filename)
+    fe(output_filename)
     return output_filename
 
 # A version with x2.
@@ -215,6 +224,7 @@ def singleeg2(path_to_image):
     print(f"Type after SR = {type(sr_image)}")
     output_filename = path_to_image + ".SR.png"
     sr_image.save(output_filename)
+    fe(output_filename)
     return output_filename
 
 
@@ -265,6 +275,7 @@ def stop_all(list_of_files, list_of_latent, last_list_of_files, last_list_of_lat
                      image = latent_to_image(l + cc * (l1 - l) + ss * (l2 - l))
                      image_name = f"imgA{index}.png"
                      image.save(image_name)
+                     fe(image_name)
                      images += [image_name]
                      
                 print(to_native(f"Base images created for perturbation={c} and file {list_of_files[idx]}"))
@@ -297,6 +308,7 @@ X = 2000  # > 1500 = buttons
 Y = 900  
 scrn = pygame.display.set_mode((1700, Y + 100))
 font = pygame.font.Font('freesansbold.ttf', 22)
+minifont = pygame.font.Font('freesansbold.ttf', 11)
 bigfont = pygame.font.Font('freesansbold.ttf', 44)
 
 def load_img(path):
@@ -416,7 +428,7 @@ for iteration in range(3000):   # Kind of an infinite loop.
         text0 = font.render(to_native(f'... ... ... '), True, green, blue)
         scrn.blit(text0, ((X*3/4)/2 - X/32, Y/2+Y/8))
 
-        text1 = font.render(to_native('Undo: click <here> for '), True, green, blue)
+        text1 = minifont.render(to_native('Undo: click <here> for '), True, green, blue)
         text1 = pygame.transform.rotate(text1, 90)
         scrn.blit(text1, (X*3/4+X/16+X/64 - X/32, Y/12))
         text1 = font.render(to_native('resetting your clicks.'), True, green, blue)
@@ -447,6 +459,7 @@ for iteration in range(3000):   # Kind of an infinite loop.
         images += [image]
         filename = f"SD_{prompt.replace(' ','_')}_image_{sentinel}_{iteration:05d}_{k:05d}.png"  
         image.save(filename)
+        fe(filename)
         onlyfiles += [filename]
         imp = pygame.transform.scale(pygame.image.load(onlyfiles[-1]).convert(), (300, 300))
         scrn.blit(imp, (300 * (k // 3), 300 * (k % 3)))
@@ -742,15 +755,15 @@ for iteration in range(3000):   # Kind of an infinite loop.
             #if a % 2 == 0:
             #    forcedlatent -= np.random.rand() * sauron
             forcedlatent = forcedlatent.flatten()
+            basic_new_fl = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
             if len(good) > 1 or len(forcedlatents) < len(good) + 1:
-                basic_new_fl = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
                 forcedlatents += [basic_new_fl]
             else:
-                basic_new_fl = forcedlatent
+                epsilon = (( (a + .5 - len(good)) / (llambda - len(good) - 1)))
+                forcedlatent = (1. - epsilon) * basic_new_fl + epsilon * np.random.randn(4*64*64)
                 coef =  np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2))
-                coef = np.exp(np.log(coef) * (a/llambda) )
-                epsilon = ((0.5 * (a + .5 - len(good)) / (llambda - len(good) - 1)) ** 2)
-                forcedlatent = (1. - epsilon) * coef * basic_new_fl.flatten() + epsilon * np.random.randn(4*64*64)
+                forcedlatent = coef * forcedlatent
+                print("we get ", sum(forcedlatent) ** 2)
                 forcedlatents += [forcedlatent]
     #for uu in range(len(latent)):
     #    print(f"--> latent[{uu}] sum of sq / variable = {np.sum(latent[uu].flatten()**2) / len(latent[uu].flatten())}")

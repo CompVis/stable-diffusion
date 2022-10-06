@@ -46,6 +46,7 @@ pip install langdetect
 pip install deep-translator
 pip install git+https://github.com/sberbank-ai/Real-ESRGAN.git
 wget https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth -P weights
+wget https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth
 ```
 
 ## Then run << python geneticsd.py >>.
