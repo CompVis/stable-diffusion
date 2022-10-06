@@ -1,0 +1,48 @@
+# This workflow:
+# - Sets up Node.js with a yarn cache
+# - Installs packages via yarn, using yarn.lock
+# - Builds the frontend bundle
+# - Commits the frontend bundle
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: Frontend CI/CD [dev]
+
+on:
+  push:
+    branches: [ "development" ]
+    paths: 'frontend/**'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+    defaults:
+      run:
+        working-directory: 'frontend'
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'yarn'
+        cache-dependency-path: '**/yarn.lock' # THIS PATTERN did the trick for me.
+    - name: install packages
+      run: yarn install --immutable --immutable-cache --check-cache
+    - name: build frontend bundle [dev]
+      run: yarn build-dev
+    - name: setup git config
+      run: |
+        # setup the username and email. I tend to use 'GitHub Actions Bot' with no email by default
+        git config user.name "GitHub Actions Bot"
+        git config user.email "<>"
+    - name: commit bundle [dev]
+      run: |
+        git add dist/* -f
+        git commit -m "[bot] adds dev bundle"
+        git push origin development
