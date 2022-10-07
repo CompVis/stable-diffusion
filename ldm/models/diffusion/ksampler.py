@@ -98,6 +98,7 @@ class KSampler(Sampler):
             rho=7.,
             device=self.device,
         )
+        self.sigmas = self.karras_sigmas
         
     # ALERT: We are completely overriding the sample() method in the base class, which
     # means that inpainting will not work. To get this to work we need to be able to
@@ -171,8 +172,8 @@ class KSampler(Sampler):
                 img_callback(k_callback_values['x'],k_callback_values['i'])
 
         # sigmas are set up in make_schedule - we take the last steps items
-        total_steps = len(self.karras_sigmas)
-        sigmas = self.karras_sigmas[-S-1:]
+        total_steps = len(self.sigmas)
+        sigmas = self.sigmas[-S-1:]
         
         if x_T is not None:
             x = x_T + torch.randn([batch_size, *shape], device=self.device) * sigmas[0]
