@@ -157,6 +157,7 @@ prompt = "Yann LeCun attacks a triceratops with a lightsaber."
 prompt = "A cyberpunk man next to a cyberpunk woman."
 prompt = "A smiling woman with a Katana and electronic patches."
 prompt = "Photo of a bearded, long-haired man with glasses and a blonde-haired woman. Both are smiling. Cats and drums and computers on shelves in the background."
+prompt = "Photo of a nuclear mushroom in Paris."
 print(f"The prompt is {prompt}")
 
 

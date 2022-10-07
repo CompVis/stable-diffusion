@@ -356,7 +356,9 @@ def randomized_image_to_latent(image_name, scale=None, epsilon=None, c=None, f=N
 
 for i in range(500):
     latent =np.random.randn(4*64*64)
+    str_latent = str(list(latent))
     filename=f"build{i}.png"
-    latent_to_image(latent, 7.5).save(filename)
+    print(f"Creating {filename}")
+    latent_to_image(latent, 7.5, num_iterations=50).save(filename)
     with open(filename + ".latent.txt", 'w') as f:
         f.write(f"{str_latent}")
