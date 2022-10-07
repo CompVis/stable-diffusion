@@ -40,13 +40,13 @@ Please read the full license here: https://huggingface.co/spaces/CompVis/stable-
 
 # %%
 # !! {"metadata":{
-# !!   "cellView": "form",
-# !!   "id": "2g-f7cQmf2Nt"
+# !!   "id": "2g-f7cQmf2Nt",
+# !!   "cellView": "form"
 # !! }}
 #@markdown **NVIDIA GPU**
 import subprocess
 sub_p_res = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,memory.free', '--format=csv,noheader'], stdout=subprocess.PIPE).stdout.decode('utf-8')
-print(f"{sub_p_res[:-1]}")
+print(sub_p_res)
 
 # %%
 # !! {"metadata":{
@@ -54,35 +54,30 @@ print(f"{sub_p_res[:-1]}")
 # !!   "id": "TxIOPT0G5Lx1"
 # !! }}
 #@markdown **Model and Output Paths**
-models_path = "models" #@param {type:"string"}
-output_path = "output" #@param {type:"string"}
+# ask for the link
+print("Local Path Variables:\n")
+
+models_path = "/content/models" #@param {type:"string"}
+output_path = "/content/output" #@param {type:"string"}
 
 #@markdown **Google Drive Path Variables (Optional)**
 mount_google_drive = True #@param {type:"boolean"}
 force_remount = False
 
-try:
-   ipy = get_ipython()
-except:
-   ipy = 'could not get_ipython'
+if mount_google_drive:
+    from google.colab import drive # type: ignore
+    try:
+        drive_path = "/content/drive"
+        drive.mount(drive_path,force_remount=force_remount)
+        models_path_gdrive = "/content/drive/MyDrive/AI/models" #@param {type:"string"}
+        output_path_gdrive = "/content/drive/MyDrive/AI/StableDiffusion" #@param {type:"string"}
+        models_path = models_path_gdrive
+        output_path = output_path_gdrive
+    except:
+        print("...error mounting drive or with drive path variables")
+        print("...reverting to default path variables")
 
-if 'google.colab' in str(ipy):
-    if mount_google_drive:
-        from google.colab import drive # type: ignore
-        try:
-            drive_path = "/content/drive"
-            drive.mount(drive_path,force_remount=force_remount)
-            models_path_gdrive = "/content/drive/MyDrive/AI/models" #@param {type:"string"}
-            output_path_gdrive = "/content/drive/MyDrive/AI/StableDiffusion" #@param {type:"string"}
-            models_path = models_path_gdrive
-            output_path = output_path_gdrive
-        except:
-            print("..error mounting drive or with drive path variables")
-            print("..reverting to default path variables")
-
-import os, sys
-models_path = os.path.abspath(models_path)
-output_path = os.path.abspath(output_path)
+import os
 os.makedirs(models_path, exist_ok=True)
 os.makedirs(output_path, exist_ok=True)
 
@@ -91,48 +86,45 @@ print(f"output_path: {output_path}")
 
 # %%
 # !! {"metadata":{
-# !!   "cellView": "form",
-# !!   "id": "0MjQ9YBrqTcD"
+# !!   "id": "VRNl2mfepEIe",
+# !!   "cellView": "form"
 # !! }}
 #@markdown **Setup Environment**
-print_subprocess = False
 
-if 'google.colab' in str(ipy):
+setup_environment = True #@param {type:"boolean"}
+print_subprocess = False #@param {type:"boolean"}
+
+if setup_environment:
     import subprocess, time
     print("Setting up environment...")
     start_time = time.time()
     all_process = [
         ['pip', 'install', 'torch==1.12.1+cu113', 'torchvision==0.13.1+cu113', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'],
         ['pip', 'install', 'omegaconf==2.2.3', 'einops==0.4.1', 'pytorch-lightning==1.7.4', 'torchmetrics==0.9.3', 'torchtext==0.13.1', 'transformers==4.21.2', 'kornia==0.6.7'],
-        ['git', 'clone',  '-b', 'local', 'https://github.com/deforum/stable-diffusion'],
+        ['git', 'clone', 'https://github.com/deforum/stable-diffusion'],
+        ['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'],
+        ['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'],
         ['pip', 'install', 'accelerate', 'ftfy', 'jsonmerge', 'matplotlib', 'resize-right', 'timm', 'torchdiffeq'],
+        ['git', 'clone', 'https://github.com/shariqfarooq123/AdaBins.git'],
+        ['git', 'clone', 'https://github.com/isl-org/MiDaS.git'],
+        ['git', 'clone', 'https://github.com/MSFTserver/pytorch3d-lite.git'],
     ]
     for process in all_process:
         running = subprocess.run(process,stdout=subprocess.PIPE).stdout.decode('utf-8')
         if print_subprocess:
             print(running)
-
-    with open('stable-diffusion/src/k_diffusion/__init__.py', 'w') as f:
+    
+    print(subprocess.run(['git', 'clone', 'https://github.com/deforum/k-diffusion/'], stdout=subprocess.PIPE).stdout.decode('utf-8'))
+    with open('k-diffusion/k_diffusion/__init__.py', 'w') as f:
         f.write('')
-
-    sys.path.extend([
-        'stable-diffusion/',
-        'stable-diffusion/src',
-    ])
 
     end_time = time.time()
     print(f"Environment set up in {end_time-start_time:.0f} seconds")
-    
-else:
-
-    sys.path.extend([
-        'src'
-    ])
 
 # %%
 # !! {"metadata":{
-# !!   "cellView": "form",
-# !!   "id": "81qmVZbrm4uu"
+# !!   "id": "81qmVZbrm4uu",
+# !!   "cellView": "form"
 # !! }}
 #@markdown **Python Definitions**
 import json
@@ -161,6 +153,16 @@ from torch import autocast
 import re
 from scipy.ndimage import gaussian_filter
 
+sys.path.extend([
+    'src/taming-transformers',
+    'src/clip',
+    'stable-diffusion/',
+    'k-diffusion',
+    'pytorch3d-lite',
+    'AdaBins',
+    'MiDaS',
+])
+
 import py3d_tools as p3d
 
 from helpers import DepthModel, sampler_fn
@@ -168,9 +170,6 @@ from k_diffusion.external import CompVisDenoiser
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
-
-from transformers import logging
-logging.set_verbosity_error()
 
 def sanitize(prompt):
     whitelist = set('abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ')
@@ -365,10 +364,10 @@ def load_img(path, shape, use_alpha_as_mask=False):
 
     mask_image = None
     if use_alpha_as_mask:
-        # Split alpha channel into a mask_image
-        red, green, blue, alpha = Image.Image.split(image)
-        mask_image = alpha.convert('L')
-        image = image.convert('RGB')
+      # Split alpha channel into a mask_image
+      red, green, blue, alpha = Image.Image.split(image)
+      mask_image = alpha.convert('L')
+      image = image.convert('RGB')
 
     image = np.array(image).astype(np.float16) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
@@ -907,15 +906,17 @@ def generate(args, frame = 0, return_latent=False, return_sample=False, return_c
 # !!   "id": "CIUJ7lWI4v53"
 # !! }}
 #@markdown **Select and Load Model**
-model_config = "v1-inference.yaml" #@param ["custom","v1-inference.yaml"]
-model_checkpoint =  "sd-v1-4.ckpt" #@param ["custom","sd-v1-4-full-ema.ckpt","sd-v1-4.ckpt","sd-v1-3-full-ema.ckpt","sd-v1-3.ckpt","sd-v1-2-full-ema.ckpt","sd-v1-2.ckpt","sd-v1-1-full-ema.ckpt","sd-v1-1.ckpt", "robo-diffusion-v1.ckpt","wd-v1-3-float16.ckpt"]
 
+model_config = "v1-inference.yaml" #@param ["custom","v1-inference.yaml"]
+model_checkpoint =  "sd-v1-4.ckpt" #@param ["custom","sd-v1-4-full-ema.ckpt","sd-v1-4.ckpt","sd-v1-3-full-ema.ckpt","sd-v1-3.ckpt","sd-v1-2-full-ema.ckpt","sd-v1-2.ckpt","sd-v1-1-full-ema.ckpt","sd-v1-1.ckpt", "robo-diffusion-v1.ckpt","waifu-diffusion-v1-3.ckpt"]
+if model_checkpoint == "waifu-diffusion-v1-3.ckpt":
+    model_checkpoint = "model-epoch05-float16.ckpt"
 custom_config_path = "" #@param {type:"string"}
 custom_checkpoint_path = "" #@param {type:"string"}
 
-load_on_run_all = True
-half_precision = True
-check_sha256 = True
+load_on_run_all = True #@param {type: 'boolean'}
+half_precision = True # check
+check_sha256 = True #@param {type:"boolean"}
 
 model_map = {
     "sd-v1-4-full-ema.ckpt": {
@@ -963,9 +964,9 @@ model_map = {
         'url': 'https://huggingface.co/nousr/robo-diffusion/resolve/main/models/robo-diffusion-v1.ckpt',
         'requires_login': False,
         },
-    "wd-v1-3-float16.ckpt": {
-        'sha256': '4afab9126057859b34d13d6207d90221d0b017b7580469ea70cee37757a29edd',
-        'url': 'https://huggingface.co/hakurei/waifu-diffusion-v1-3/resolve/main/wd-v1-3-float16.ckpt',
+    "model-epoch05-float16.ckpt": {
+        'sha256': '26cf2a2e30095926bb9fd9de0c83f47adc0b442dbfdc3d667d43778e8b70bece',
+        'url': 'https://huggingface.co/hakurei/waifu-diffusion-v1-3/resolve/main/model-epoch05-float16.ckpt',
         'requires_login': False,
         },
 }
@@ -975,42 +976,41 @@ ckpt_config_path = custom_config_path if model_config == "custom" else os.path.j
 if os.path.exists(ckpt_config_path):
     print(f"{ckpt_config_path} exists")
 else:
-    ckpt_config_path = "configs/v1-inference.yaml"
-    
-ckpt_config_path = os.path.abspath(ckpt_config_path)
+    ckpt_config_path = "./stable-diffusion/configs/stable-diffusion/v1-inference.yaml"
+print(f"Using config: {ckpt_config_path}")
 
 # checkpoint path or download
 ckpt_path = custom_checkpoint_path if model_checkpoint == "custom" else os.path.join(models_path, model_checkpoint)
 ckpt_valid = True
 if os.path.exists(ckpt_path):
-    pass
+    print(f"{ckpt_path} exists")
 elif 'url' in model_map[model_checkpoint]:
     url = model_map[model_checkpoint]['url']
 
     # CLI dialogue to authenticate download
     if model_map[model_checkpoint]['requires_login']:
         print("This model requires an authentication token")
-        print("Please ensure you have accepted the terms of service before continuing.")
+        print("Please ensure you have accepted its terms of service before continuing.")
 
-        username = input("[What is your huggingface username?]: ")
-        token = input("[What is your huggingface token?]: ")
+        username = input("What is your huggingface username?:")
+        token = input("What is your huggingface token?:")
 
         _, path = url.split("https://")
 
         url = f"https://{username}:{token}@{path}"
 
     # contact server for model
-    print(f"..attempting to download {model_checkpoint}...this may take a while")
+    print(f"Attempting to download {model_checkpoint}...this may take a while")
     ckpt_request = requests.get(url)
     request_status = ckpt_request.status_code
 
     # inform user of errors
     if request_status == 403:
-        raise ConnectionRefusedError("You have not accepted the license for this model.")
+      raise ConnectionRefusedError("You have not accepted the license for this model.")
     elif request_status == 404:
-        raise ConnectionError("Could not make contact with server")
+      raise ConnectionError("Could not make contact with server")
     elif request_status != 200:
-        raise ConnectionError(f"Some other error has ocurred - response code: {request_status}")
+      raise ConnectionError(f"Some other error has ocurred - response code: {request_status}")
 
     # write to model path
     with open(os.path.join(models_path, model_checkpoint), 'wb') as model_file:
@@ -1018,40 +1018,38 @@ elif 'url' in model_map[model_checkpoint]:
 else:
     print(f"Please download model checkpoint and place in {os.path.join(models_path, model_checkpoint)}")
     ckpt_valid = False
-    
-print(f"config_path: {ckpt_config_path}")
-print(f"ckpt_path: {ckpt_path}")
 
 if check_sha256 and model_checkpoint != "custom" and ckpt_valid:
     import hashlib
-    print("..checking sha256")
+    print("\n...checking sha256")
     with open(ckpt_path, "rb") as f:
         bytes = f.read() 
         hash = hashlib.sha256(bytes).hexdigest()
         del bytes
     if model_map[model_checkpoint]["sha256"] == hash:
-        print("..hash is correct")
+        print("hash is correct\n")
     else:
-        print("..hash in not correct")
+        print("hash in not correct\n")
         ckpt_valid = False
 
-def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_precision=True,print_flag=False):
-    map_location = "cuda" # ["cpu", "cuda"]
-    print(f"..loading model")
+if ckpt_valid:
+    print(f"Using ckpt: {ckpt_path}")
+
+def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_precision=True):
+    map_location = "cuda" #@param ["cpu", "cuda"]
+    print(f"Loading model from {ckpt}")
     pl_sd = torch.load(ckpt, map_location=map_location)
     if "global_step" in pl_sd:
-        if print_flag:
-            print(f"Global Step: {pl_sd['global_step']}")
+        print(f"Global Step: {pl_sd['global_step']}")
     sd = pl_sd["state_dict"]
     model = instantiate_from_config(config.model)
     m, u = model.load_state_dict(sd, strict=False)
-    if print_flag:
-        if len(m) > 0 and verbose:
-            print("missing keys:")
-            print(m)
-        if len(u) > 0 and verbose:
-            print("unexpected keys:")
-            print(u)
+    if len(m) > 0 and verbose:
+        print("missing keys:")
+        print(m)
+    if len(u) > 0 and verbose:
+        print("unexpected keys:")
+        print(u)
 
     if half_precision:
         model = model.half().to(device)
@@ -1087,6 +1085,7 @@ if load_on_run_all and ckpt_valid:
 # !!   "cellView": "form",
 # !!   "id": "8HJN2TE3vh-J"
 # !! }}
+
 def DeforumAnimArgs():
 
     #@markdown ####**Animation:**
@@ -1180,9 +1179,9 @@ def get_inbetweens(key_frames, max_frames, integer=False, interp_method='Linear'
     key_frame_series = key_frame_series.astype(float)
     
     if interp_method == 'Cubic' and len(key_frames.items()) <= 3:
-        interp_method = 'Quadratic'    
+      interp_method = 'Quadratic'    
     if interp_method == 'Quadratic' and len(key_frames.items()) <= 2:
-        interp_method = 'Linear'
+      interp_method = 'Linear'
           
     key_frame_series[0] = key_frame_series[key_frame_series.first_valid_index()]
     key_frame_series[max_frames-1] = key_frame_series[key_frame_series.last_valid_index()]
@@ -1222,6 +1221,7 @@ def parse_key_frames(string, prompt_parser=None):
 # !! {"metadata":{
 # !!   "id": "2ujwkGZTcGev"
 # !! }}
+
 prompts = [
     "a beautiful forest by Asher Brown Durand, trending on Artstation", # the first prompt I want
     "a beautiful portrait of a woman by Artgerm, trending on Artstation", # the second prompt I want
@@ -1248,8 +1248,8 @@ animation_prompts = {
 
 # %%
 # !! {"metadata":{
-# !!   "cellView": "form",
-# !!   "id": "qH74gBWDd2oq"
+# !!   "id": "qH74gBWDd2oq",
+# !!   "cellView": "form"
 # !! }}
 #@markdown **Load Settings**
 override_settings_with_file = False #@param {type:"boolean"}
@@ -1600,25 +1600,25 @@ def render_animation(args, anim_args):
 
 def vid2frames(video_path, frames_path, n=1, overwrite=True):      
     if not os.path.exists(frames_path) or overwrite: 
-        try:
-            for f in pathlib.Path(video_in_frame_path).glob('*.jpg'):
-            	f.unlink()
-        except:
-            pass
-        assert os.path.exists(video_path), f"Video input {video_path} does not exist"
+      try:
+          for f in pathlib.Path(video_in_frame_path).glob('*.jpg'):
+              f.unlink()
+      except:
+          pass
+      assert os.path.exists(video_path), f"Video input {video_path} does not exist"
           
-        vidcap = cv2.VideoCapture(video_path)
-        success,image = vidcap.read()
-        count = 0
-        t=1
-        success = True
-        while success:
-            if count % n == 0:
-                cv2.imwrite(frames_path + os.path.sep + f"{t:05}.jpg" , image)     # save frame as JPEG file
-                t += 1
+      vidcap = cv2.VideoCapture(video_path)
+      success,image = vidcap.read()
+      count = 0
+      t=1
+      success = True
+      while success:
+        if count % n == 0:
+            cv2.imwrite(frames_path + os.path.sep + f"{t:05}.jpg" , image)     # save frame as JPEG file
+            t += 1
         success,image = vidcap.read()
         count += 1
-        print("Converted %d frames" % count)
+      print("Converted %d frames" % count)
     else: print("Frames already unpacked")
 
 def render_input_video(args, anim_args):
@@ -1670,17 +1670,17 @@ def render_interpolation(args, anim_args):
     print(f"Preparing for interpolation of the following...")
 
     for i, prompt in animation_prompts.items():
-        args.prompt = prompt
+      args.prompt = prompt
 
-        # sample the diffusion model
-        results = generate(args, return_c=True)
-        c, image = results[0], results[1]
-        prompts_c_s.append(c) 
+      # sample the diffusion model
+      results = generate(args, return_c=True)
+      c, image = results[0], results[1]
+      prompts_c_s.append(c) 
       
-        # display.clear_output(wait=True)
-        display.display(image)
+      # display.clear_output(wait=True)
+      display.display(image)
       
-        args.seed = next_seed(args)
+      args.seed = next_seed(args)
 
     display.clear_output(wait=True)
     print(f"Interpolation start...")
@@ -1688,51 +1688,51 @@ def render_interpolation(args, anim_args):
     frame_idx = 0
 
     if anim_args.interpolate_key_frames:
-        for i in range(len(prompts_c_s)-1):
-            dist_frames = list(animation_prompts.items())[i+1][0] - list(animation_prompts.items())[i][0]
-            if dist_frames <= 0:
-                print("key frames duplicated or reversed. interpolation skipped.")
-                return
+      for i in range(len(prompts_c_s)-1):
+        dist_frames = list(animation_prompts.items())[i+1][0] - list(animation_prompts.items())[i][0]
+        if dist_frames <= 0:
+          print("key frames duplicated or reversed. interpolation skipped.")
+          return
         else:
-            for j in range(dist_frames):
-                # interpolate the text embedding
-                prompt1_c = prompts_c_s[i]
-                prompt2_c = prompts_c_s[i+1]  
-                args.init_c = prompt1_c.add(prompt2_c.sub(prompt1_c).mul(j * 1/dist_frames))
+          for j in range(dist_frames):
+            # interpolate the text embedding
+            prompt1_c = prompts_c_s[i]
+            prompt2_c = prompts_c_s[i+1]  
+            args.init_c = prompt1_c.add(prompt2_c.sub(prompt1_c).mul(j * 1/dist_frames))
 
-                # sample the diffusion model
-                results = generate(args)
-                image = results[0]
+            # sample the diffusion model
+            results = generate(args)
+            image = results[0]
 
-                filename = f"{args.timestring}_{frame_idx:05}.png"
-                image.save(os.path.join(args.outdir, filename))
-                frame_idx += 1
+            filename = f"{args.timestring}_{frame_idx:05}.png"
+            image.save(os.path.join(args.outdir, filename))
+            frame_idx += 1
 
-                display.clear_output(wait=True)
-                display.display(image)
+            display.clear_output(wait=True)
+            display.display(image)
 
-                args.seed = next_seed(args)
+            args.seed = next_seed(args)
 
     else:
-        for i in range(len(prompts_c_s)-1):
-            for j in range(anim_args.interpolate_x_frames+1):
-                # interpolate the text embedding
-                prompt1_c = prompts_c_s[i]
-                prompt2_c = prompts_c_s[i+1]  
-                args.init_c = prompt1_c.add(prompt2_c.sub(prompt1_c).mul(j * 1/(anim_args.interpolate_x_frames+1)))
+      for i in range(len(prompts_c_s)-1):
+        for j in range(anim_args.interpolate_x_frames+1):
+          # interpolate the text embedding
+          prompt1_c = prompts_c_s[i]
+          prompt2_c = prompts_c_s[i+1]  
+          args.init_c = prompt1_c.add(prompt2_c.sub(prompt1_c).mul(j * 1/(anim_args.interpolate_x_frames+1)))
 
-                # sample the diffusion model
-                results = generate(args)
-                image = results[0]
+          # sample the diffusion model
+          results = generate(args)
+          image = results[0]
 
-                filename = f"{args.timestring}_{frame_idx:05}.png"
-                image.save(os.path.join(args.outdir, filename))
-                frame_idx += 1
+          filename = f"{args.timestring}_{frame_idx:05}.png"
+          image.save(os.path.join(args.outdir, filename))
+          frame_idx += 1
 
-                display.clear_output(wait=True)
-                display.display(image)
+          display.clear_output(wait=True)
+          display.display(image)
 
-                args.seed = next_seed(args)
+          args.seed = next_seed(args)
 
     # generate the last prompt
     args.init_c = prompts_c_s[-1]
@@ -1827,7 +1827,7 @@ fps = 12 #@param {type:"number"}
 use_manual_settings = False #@param {type:"boolean"}
 image_path = "/content/drive/MyDrive/AI/StableDiffusion/2022-09/20220903000939_%05d.png" #@param {type:"string"}
 mp4_path = "/content/drive/MyDrive/AI/StableDiffu'/content/drive/MyDrive/AI/StableDiffusion/2022-09/sion/2022-09/20220903000939.mp4" #@param {type:"string"}
-render_steps = False  #@param {type: 'boolean'}
+render_steps = True  #@param {type: 'boolean'}
 path_name_modifier = "x0_pred" #@param ["x0_pred","x"]
 
 
@@ -1889,25 +1889,15 @@ else:
 # !!   "accelerator": "GPU",
 # !!   "colab": {
 # !!     "collapsed_sections": [],
-# !!     "private_outputs": true,
-# !!     "provenance": []
+# !!     "provenance": [],
+# !!     "private_outputs": true
 # !!   },
-# !!   "gpuClass": "premium",
+# !!   "gpuClass": "standard",
 # !!   "kernelspec": {
-# !!     "display_name": "Python 3 (ipykernel)",
-# !!     "language": "python",
+# !!     "display_name": "Python 3",
 # !!     "name": "python3"
 # !!   },
 # !!   "language_info": {
-# !!     "codemirror_mode": {
-# !!       "name": "ipython",
-# !!       "version": 3
-# !!     },
-# !!     "file_extension": ".py",
-# !!     "mimetype": "text/x-python",
-# !!     "name": "python",
-# !!     "nbconvert_exporter": "python",
-# !!     "pygments_lexer": "ipython3",
-# !!     "version": "3.9.13"
+# !!     "name": "python"
 # !!   }
 # !! }}
