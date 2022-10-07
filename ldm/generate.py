@@ -155,6 +155,7 @@ class Generate:
         self.precision      = precision
         self.strength       = 0.75
         self.seamless       = False
+        self.hires_fix      = False
         self.embedding_path = embedding_path
         self.model          = None     # empty for now
         self.sampler        = None
@@ -270,6 +271,7 @@ class Generate:
            height                          // height of image, in multiples of 64 (512)
            cfg_scale                       // how strongly the prompt influences the image (7.5) (must be >1)
            seamless                        // whether the generated image should tile
+           hires_fix                        // whether the Hires Fix should be applied during generation
            init_img                        // path to an initial image
            strength                        // strength for noising/unnoising init_img. 0.0 preserves image exactly, 1.0 replaces it completely
            gfpgan_strength                 // strength for GFPGAN. 0.0 preserves image exactly, 1.0 replaces it completely
@@ -303,6 +305,7 @@ class Generate:
         width = width or self.width
         height = height or self.height
         seamless = seamless or self.seamless
+        hires_fix = hires_fix or self.hires_fix
         cfg_scale = cfg_scale or self.cfg_scale
         ddim_eta = ddim_eta or self.ddim_eta
         iterations = iterations or self.iterations

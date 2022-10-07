@@ -37,6 +37,7 @@ def build_opt(post_data, seed, gfpgan_model_exists):
     setattr(opt, 'seed', None if int(post_data['seed']) == -1 else int(post_data['seed']))
     setattr(opt, 'threshold', float(post_data['threshold']))
     setattr(opt, 'perlin', float(post_data['perlin']))
+    setattr(opt, 'hires_fix', 'hires_fix' in post_data)
     setattr(opt, 'variation_amount', float(post_data['variation_amount']) if int(post_data['seed']) != -1 else 0)
     setattr(opt, 'with_variations', [])
     setattr(opt, 'embiggen', None)

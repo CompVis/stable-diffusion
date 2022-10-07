@@ -375,6 +375,7 @@ class GeneratorService:
           upscale          = upscale,
           sampler_name     = jobRequest.sampler_name,
           seamless         = jobRequest.seamless,
+          hires_fix        = jobRequest.hires_fix,
           embiggen         = jobRequest.embiggen,
           embiggen_tiles   = jobRequest.embiggen_tiles,
           step_callback    = lambda sample, step: self.__on_progress(jobRequest, sample, step),

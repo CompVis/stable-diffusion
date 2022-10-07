@@ -14,10 +14,13 @@ export enum Feature {
   FACE_CORRECTION,
   IMAGE_TO_IMAGE,
 }
-
+/** For each tooltip in the UI, the below feature definitions & props will pull relevant information into the tooltip.
+ * 
+ * To-do: href & GuideImages are placeholders, and are not currently utilized, but will be updated (along with the tooltip UI) as feature and UI development and we get a better idea on where things "forever homes" will be . 
+ */
 export const FEATURES: Record<Feature, FeatureHelpInfo> = {
   [Feature.PROMPT]: {
-    text: 'This field will take all prompt text, including both content and stylistic terms. CLI Commands will not work in the prompt.',
+    text: 'This field will take all prompt text, including both content and stylistic terms. While weights can be included in the prompt, standard CLI Commands/parameters will not work.',
     href: 'link/to/docs/feature3.html',
     guideImage: 'asset/path.gif',
   },
@@ -27,17 +30,16 @@ export const FEATURES: Record<Feature, FeatureHelpInfo> = {
     guideImage: 'asset/path.gif',
   },
   [Feature.OTHER]: {
-    text: 'Additional Options',
-    href: 'link/to/docs/feature3.html',
+    text: 'These options will enable alternative processing modes for Invoke. Seamless tiling will work to generate repeating patterns in the output. High Resolution Optimization performs a two-step generation cycle, and should be used at higher resolutions when you desire a more coherent image/composition. ',    href: 'link/to/docs/feature3.html',
     guideImage: 'asset/path.gif',
   },
   [Feature.SEED]: {
-    text: 'Seed values provide an initial set of noise which guide the denoising process.',
+    text: 'Seed values provide an initial set of noise which guide the denoising process, and can be randomized or populated with a seed from a previous invocation. The Threshold feature can be used to mitigate undesirable outcomes at higher CFG values (try between 0-10), and Perlin can be used to add Perlin noise into the denoising process - Both serve to add variation to your outputs. ',
     href: 'link/to/docs/feature3.html',
     guideImage: 'asset/path.gif',
   },
   [Feature.VARIATIONS]: {
-    text: 'Try a variation with an amount of between 0 and 1 to change the output image for the set seed.',
+    text: 'Try a variation with an amount of between 0 and 1 to change the output image for the set seed - Interesting variations on the seed are found between 0.1 and 0.3.',
     href: 'link/to/docs/feature3.html',
     guideImage: 'asset/path.gif',
   },
@@ -47,8 +49,8 @@ export const FEATURES: Record<Feature, FeatureHelpInfo> = {
     guideImage: 'asset/path.gif',
   },
   [Feature.FACE_CORRECTION]: {
-    text: 'Using GFPGAN or CodeFormer, Face Correction will attempt to identify faces in outputs, and correct any defects/abnormalities. Higher values will apply a stronger corrective pressure on outputs.',
-    href: 'link/to/docs/feature2.html',
+    text: 'Using GFPGAN, Face Correction will attempt to identify faces in outputs, and correct any defects/abnormalities. Higher values will apply a stronger corrective pressure on outputs, resulting in more appealing faces (with less respect for accuracy of the original subject).',
+    href: 'link/to/docs/feature3.html',
     guideImage: 'asset/path.gif',
   },
   [Feature.IMAGE_TO_IMAGE]: {

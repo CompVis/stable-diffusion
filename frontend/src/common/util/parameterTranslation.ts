@@ -29,6 +29,7 @@ export const frontendToBackendParameters = (
     sampler,
     seed,
     seamless,
+    hiresFix,
     shouldUseInitImage,
     img2imgStrength,
     initialImagePath,
@@ -59,6 +60,7 @@ export const frontendToBackendParameters = (
     sampler_name: sampler,
     seed,
     seamless,
+    hires_fix: hiresFix,
     progress_images: shouldDisplayInProgress,
   };
 
@@ -123,6 +125,7 @@ export const backendToFrontendParameters = (parameters: {
     sampler_name,
     seed,
     seamless,
+    hires_fix,
     progress_images,
     variation_amount,
     with_variations,
@@ -185,6 +188,7 @@ export const backendToFrontendParameters = (parameters: {
     options.sampler = sampler_name;
     options.seed = seed;
     options.seamless = seamless;
+    options.hiresFix = hires_fix;
   }
 
   return options;

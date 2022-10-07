@@ -493,6 +493,7 @@ def parameters_to_generated_image_metadata(parameters):
         "height",
         "extra",
         "seamless",
+        "hires_fix",
     ]
 
     rfc_dict = {}

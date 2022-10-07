@@ -723,6 +723,7 @@ class InvokeAIWebServer:
                 'height',
                 'extra',
                 'seamless',
+                'hires_fix',
             ]
 
             rfc_dict = {}
