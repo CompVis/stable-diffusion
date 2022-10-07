@@ -136,7 +136,7 @@ prompt = "A woman with black skin, red hair, egyptian dress, yellow eyes."
 prompt = "Photo of a young cute black woman."
 prompt = "Photo of a woman with cyborg implants."
 prompt = "Photo of a man and a woman. Cats and drums and computers on shelves in the background."
-prompt = "A man with colorful hair."
+prompt = "A 40yo smiling woman."
 print(f"The prompt is {prompt}")
 
 
@@ -354,10 +354,10 @@ def randomized_image_to_latent(image_name, scale=None, epsilon=None, c=None, f=N
     image.save(f"ln3_rebuild_ni{num_iterations}_gs{gs}_f{f}_scale{scale}_epsilon{epsilon}_c{c}.png")
     return new_fl
 
-for i in range(500):
+for i in range(800):
     latent =np.random.randn(4*64*64)
     str_latent = str(list(latent))
-    filename=f"build{i}.png"
+    filename=f"build{i}_{prompt.replace(' ', '_')}.png"
     print(f"Creating {filename}")
     latent_to_image(latent, 7.5, num_iterations=50).save(filename)
     with open(filename + ".latent.txt", 'w') as f:

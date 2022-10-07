@@ -20,7 +20,7 @@ Just click here and copy-paste your token:
 
 ## Install StableDiffusion as usual, plus a few more stuff.  Basically:
 
-You need homebrew.
+If you are using MACOS, you need homebrew.
 On a Mac, you need to do special stuff for the MPS: we recommend 
 [**This page**](https://towardsdatascience.com/gpu-acceleration-comes-to-pytorch-on-m1-macs-195c399efcc1)<br/>
 
@@ -29,10 +29,10 @@ You need to open a terminal. Then:
 mkdir stablediffusion
 cd stablediffusion
 git clone git@github.com:teytaud/genetic-stable-diffusion.git .
-brew install wget
+brew install wget    # If working on Mac
 conda env create -f environment.yaml
-conda activate ldm    # you can change that name in the environment.yaml file...
-conda install pytorch torchvision -c pytorch
+conda activate gsd    # you can change that name in the environment.yaml file...
+conda install pytorch torchvision -c pytorch  # Replaced by the webpage above, if MACOS
 pip install transformers diffusers invisible-watermark
 pip install -e .
 pip install pygame

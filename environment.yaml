@@ -1,4 +1,4 @@
-name: ldm
+name: gsd
 channels:
   - pytorch
   - defaults
