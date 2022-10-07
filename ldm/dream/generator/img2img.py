@@ -49,6 +49,7 @@ class Img2Img(Generator):
                 img_callback = step_callback,
                 unconditional_guidance_scale=cfg_scale,
                 unconditional_conditioning=uc,
+                init_latent = self.init_latent,  # changes how noising is performed in ksampler
             )
 
             return self.sample_to_image(samples)

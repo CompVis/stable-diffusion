@@ -174,9 +174,14 @@ class KSampler(Sampler):
         # sigmas are set up in make_schedule - we take the last steps items
         total_steps = len(self.sigmas)
         sigmas = self.sigmas[-S-1:]
-        
+
+        # x_T is variation noise. When an init image is provided (in x0) we need to add
+        # more randomness to the starting image.
         if x_T is not None:
-            x = x_T + torch.randn([batch_size, *shape], device=self.device) * sigmas[0]
+            if x0 is not None:
+                x = x_T + torch.randn_like(x0, device=self.device) * sigmas[0]
+            else:
+                x = x_T * sigmas[0]
         else:
             x = torch.randn([batch_size, *shape], device=self.device) * sigmas[0]
 
