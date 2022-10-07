@@ -848,6 +848,7 @@ class Generate:
             print(
                 f'>> loaded input image of size {image.width}x{image.height}'
             )
+        image = ImageOps.exif_transpose(image)
         return image
 
     def _create_init_image(self, image, width, height, fit=True):
@@ -856,7 +857,6 @@ class Generate:
             image = self._fit_image(image, (width, height))
         else:
             image = self._squeeze_image(image)
-
         image = np.array(image).astype(np.float32) / 255.0
         image = image[None].transpose(0, 3, 1, 2)
         image = torch.from_numpy(image)
@@ -873,7 +873,6 @@ class Generate:
             image = self._fit_image(image, (width, height))
         else:
             image = self._squeeze_image(image)
-
         image = image.resize((image.width//downsampling, image.height //
                               downsampling), resample=Image.Resampling.NEAREST)
         image = np.array(image)
