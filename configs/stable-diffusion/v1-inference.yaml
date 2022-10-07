@@ -32,7 +32,7 @@ model:
         placeholder_strings: ["*"]
         initializer_words: ['face', 'man', 'photo', 'africanmale']
         per_image_tokens: false
-        num_vectors_per_token: 6
+        num_vectors_per_token: 1
         progressive_words: False
 
     unet_config:
