@@ -952,7 +952,7 @@ class Generate:
                         colored += 1
         return colored == 0
 
-    def _transparency_check_and_warning(image, mask):
+    def _transparency_check_and_warning(self,image, mask):
         if not mask:
             print(
                 '>> Initial image has transparent areas. Will inpaint in these regions.')
