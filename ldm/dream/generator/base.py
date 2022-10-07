@@ -124,8 +124,8 @@ class Generator():
         raise NotImplementedError("get_noise() must be implemented in a descendent class")
     
     def get_perlin_noise(self,width,height):
-        return torch.stack([rand_perlin_2d((height, width), (8, 8)).to(self.model.device) for _ in range(self.latent_channels)], dim=0)
-
+        fixdevice = 'cpu' if (self.model.device.type == 'mps') else self.model.device
+        return torch.stack([rand_perlin_2d((height, width), (8, 8), device = self.model.device).to(fixdevice) for _ in range(self.latent_channels)], dim=0).to(self.model.device)
     
     def new_seed(self):
         self.seed = random.randrange(0, np.iinfo(np.uint32).max)
