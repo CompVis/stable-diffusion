@@ -49,21 +49,16 @@ class InvokeAIWebServer:
         engineio_logger = True if args.web_verbose else False
         max_http_buffer_size = 10000000
 
-        # CORS Allowed Setup
-        cors_allowed_origins = [
-            'http://127.0.0.1:5173',
-            'http://localhost:5173',
-            'http://localhost:9090'
-        ]
-        additional_allowed_origins = (
-            opt.cors if opt.cors else []
-        )  # additional CORS allowed origins
-        cors_allowed_origins.append(f'http://{self.host}:{self.port}')
-        if self.host == '127.0.0.1' or self.host == '0.0.0.0':
-            cors_allowed_origins.append(f'http://localhost:{self.port}')
-        cors_allowed_origins = (
-            cors_allowed_origins + additional_allowed_origins
-        )
+        socketio_args = {
+            'logger': logger,
+            'engineio_logger': engineio_logger,
+            'max_http_buffer_size': max_http_buffer_size,
+            'ping_interval': (50, 50),
+            'ping_timeout': 60,
+        }
+
+        if opt.cors:
+            socketio_args['cors_allowed_origins'] = opt.cors
 
         self.app = Flask(
             __name__, static_url_path='', static_folder='../frontend/dist/'
@@ -71,12 +66,7 @@ class InvokeAIWebServer:
 
         self.socketio = SocketIO(
             self.app,
-            logger=logger,
-            engineio_logger=engineio_logger,
-            max_http_buffer_size=max_http_buffer_size,
-            cors_allowed_origins=cors_allowed_origins,
-            ping_interval=(50, 50),
-            ping_timeout=60,
+            **socketio_args
         )
 
         # Keep Server Alive Route
