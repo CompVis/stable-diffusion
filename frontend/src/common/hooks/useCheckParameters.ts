@@ -106,6 +106,7 @@ const useCheckParameters = (): boolean => {
     shouldGenerateVariations,
     seedWeights,
     seed,
+    activeTab,
   ]);
 };
 

@@ -72,8 +72,8 @@ export default function ImageGallery() {
 
       {shouldShowGallery && (
         <Resizable
-          defaultSize={{ width: 'auto', height: '100%' }}
-          minWidth={'18%'}
+          defaultSize={{ width: '300', height: '100%' }}
+          minWidth={'300'}
           className="image-gallery-popup"
         >
           <div className="image-gallery-header">

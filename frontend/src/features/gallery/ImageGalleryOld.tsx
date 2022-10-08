@@ -126,4 +126,4 @@ const ImageGalleryOld = () => {
   );
 };
 
-export default ImageGallery;
+export default ImageGalleryOld;
