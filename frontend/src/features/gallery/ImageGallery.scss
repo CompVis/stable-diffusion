@@ -1,10 +1,77 @@
 @use '../../styles/Mixins/' as *;
 
+.image-gallery-area {
+  .image-gallery-popup-btn {
+    @include Button(
+      $btn-width: 3rem,
+      $btn-height: 3rem,
+      $icon-size: 22px,
+      $btn-color: var(--btn-grey),
+      $btn-color-hover: var(--btn-grey-hover)
+    );
+  }
+}
+
+.image-gallery-popup {
+  background-color: var(--tab-color);
+  position: fixed !important;
+  top: 0;
+  right: 0;
+  padding: 1rem;
+  animation: slideOut 0.3s ease-out;
+  display: grid;
+  grid-auto-rows: max-content;
+  row-gap: 1rem;
+  border-left-width: 0.2rem;
+  border-color: var(--gallery-resizeable-color);
+}
+
+.image-gallery-header {
+  display: grid;
+  grid-template-columns: auto max-content;
+  align-items: center;
+
+  h1 {
+    font-weight: bold;
+  }
+}
+
+.image-gallery-close-btn {
+  background-color: var(--btn-load-more) !important;
+  &:hover {
+    background-color: var(--btn-load-more-hover) !important;
+  }
+}
+
 .image-gallery-container {
   display: grid;
-  row-gap: 1rem;
-  grid-auto-rows: max-content;
-  min-width: 16rem;
+  gap: 1rem;
+  max-height: $app-gallery-popover-height;
+  overflow-y: scroll;
+  @include HideScrollbar;
+}
+
+.image-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, auto));
+  gap: 0.6rem;
+  justify-items: center;
+}
+
+.image-gallery-load-more-btn {
+  background-color: var(--btn-load-more) !important;
+  font-size: 0.85rem !important;
+  font-family: Inter;
+
+  &:disabled {
+    &:hover {
+      background-color: var(--btn-load-more) !important;
+    }
+  }
+
+  &:hover {
+    background-color: var(--btn-load-more-hover) !important;
+  }
 }
 
 .image-gallery-container-placeholder {
@@ -16,36 +83,12 @@
 
   p {
     color: var(--subtext-color-bright);
+    font-family: Inter;
   }
 
   svg {
     width: 5rem;
     height: 5rem;
     color: var(--svg-color);
-  }
-}
-
-.image-gallery {
-  display: grid;
-  grid-template-columns: repeat(2, max-content);
-  gap: 0.6rem;
-  justify-items: center;
-  max-height: $app-gallery-height;
-  overflow-y: scroll;
-  @include HideScrollbar;
-}
-
-.image-gallery-load-more-btn {
-  background-color: var(--btn-load-more) !important;
-  font-size: 0.85rem !important;
-
-  &:disabled {
-    &:hover {
-      background-color: var(--btn-load-more) !important;
-    }
-  }
-
-  &:hover {
-    background-color: var(--btn-load-more-hover) !important;
   }
 }

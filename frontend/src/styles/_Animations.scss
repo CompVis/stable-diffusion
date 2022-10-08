@@ -1,0 +1,8 @@
+@keyframes slideOut {
+  from {
+    transform: translateX(10rem);
+  }
+  to {
+    transform: translateX(0);
+  }
+}

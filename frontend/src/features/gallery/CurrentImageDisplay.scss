@@ -11,21 +11,6 @@
   border-radius: 0.5rem;
 }
 
-.current-image-display-placeholder {
-  background-color: var(--background-color-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-
-  svg {
-    width: 10rem;
-    height: 10rem;
-    color: var(--svg-color);
-  }
-}
-
 .current-image-tools {
   width: 100%;
   height: 100%;
@@ -105,4 +90,21 @@
   fill: var(--white);
   filter: drop-shadow(0 0 1rem var(--text-color-secondary));
   opacity: 70%;
+}
+
+.current-image-display-placeholder {
+  background-color: var(--background-color-secondary);
+  display: grid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 0.5rem;
+
+  svg {
+    width: 10rem;
+    height: 10rem;
+    color: var(--svg-color);
+  }
 }

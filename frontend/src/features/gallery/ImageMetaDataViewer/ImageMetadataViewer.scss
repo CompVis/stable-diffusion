@@ -6,8 +6,8 @@
   padding: 1rem;
   background-color: var(--metadata-bg-color);
   overflow: scroll;
-  max-height: calc($app-content-height - 4rem);
-  z-index: 1;
+  max-height: $app-metadata-height;
+  z-index: 10;
 }
 
 .image-json-viewer {

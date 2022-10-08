@@ -7,6 +7,7 @@ import { FaAngleDoubleDown, FaCode, FaMinus } from 'react-icons/fa';
 import { createSelector } from '@reduxjs/toolkit';
 import { isEqual } from 'lodash';
 import { Resizable } from 're-resizable';
+import { useHotkeys } from 'react-hotkeys-hook';
 
 const logSelector = createSelector(
   (state: RootState) => state.system,
@@ -65,6 +66,14 @@ const Console = () => {
     dispatch(errorSeen());
     dispatch(setShouldShowLogViewer(!shouldShowLogViewer));
   };
+
+  useHotkeys(
+    '`',
+    () => {
+      dispatch(setShouldShowLogViewer(!shouldShowLogViewer));
+    },
+    [shouldShowLogViewer]
+  );
 
   return (
     <>

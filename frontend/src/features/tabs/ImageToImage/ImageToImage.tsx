@@ -1,15 +1,16 @@
 import React from 'react';
-import ImageGallery from '../../gallery/ImageGallery';
-import ImageToImageDisplay from './ImageToImageDisplay';
-
 import ImageToImagePanel from './ImageToImagePanel';
+import ImageToImageDisplay from './ImageToImageDisplay';
+import ImageGallery from '../../gallery/ImageGallery';
 
 export default function ImageToImage() {
   return (
     <div className="image-to-image-workarea">
       <ImageToImagePanel />
-      <ImageToImageDisplay />
-      <ImageGallery />
+      <div className="image-to-image-display-area">
+        <ImageToImageDisplay />
+        <ImageGallery />
+      </div>
     </div>
   );
 }
