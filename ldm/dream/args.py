@@ -82,6 +82,7 @@ with metadata_from_png():
 
 import argparse
 from argparse import Namespace, RawTextHelpFormatter
+import pydoc
 import shlex
 import json
 import hashlib
@@ -115,6 +116,36 @@ PRECISION_CHOICES = [
 APP_ID      = 'lstein/stable-diffusion'
 APP_VERSION = 'v1.15'
 
+class ArgFormatter(argparse.RawTextHelpFormatter):
+        # use defined argument order to display usage
+    def _format_usage(self, usage, actions, groups, prefix):
+        if prefix is None:
+            prefix = 'usage: '
+
+        # if usage is specified, use that
+        if usage is not None:
+            usage = usage % dict(prog=self._prog)
+
+        # if no optionals or positionals are available, usage is just prog
+        elif usage is None and not actions:
+            usage = 'invoke>'
+        elif usage is None:
+            prog='invoke>'
+            # build full usage string
+            action_usage = self._format_actions_usage(actions, groups) # NEW
+            usage = ' '.join([s for s in [prog, action_usage] if s])
+            # omit the long line wrapping code
+        # prefix with 'usage:'
+        return '%s%s\n\n' % (prefix, usage)
+
+class PagingArgumentParser(argparse.ArgumentParser):
+    '''
+    A custom ArgumentParser that uses pydoc to page its output.
+    '''
+    def print_help(self, file=None):
+        text = self.format_help()
+        pydoc.pager(text)
+    
 class Args(object):
     def __init__(self,arg_parser=None,cmd_parser=None):
         '''
@@ -480,8 +511,8 @@ class Args(object):
 
     # This creates the parser that processes commands on the dream> command line
     def _create_dream_cmd_parser(self):
-        parser = argparse.ArgumentParser(
-            formatter_class=RawTextHelpFormatter,
+        parser = PagingArgumentParser(
+            formatter_class=ArgFormatter,
             description=
             """
             *Image generation:*
