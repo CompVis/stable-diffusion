@@ -2,6 +2,7 @@
 
 .App {
   display: grid;
+  width: max-content;
 }
 
 .app-content {
@@ -14,6 +15,7 @@
   grid-auto-rows: max-content;
   width: $app-width;
   height: $app-height;
+  min-width: min-content;
 }
 
 .app-console {
