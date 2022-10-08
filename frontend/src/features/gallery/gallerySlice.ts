@@ -18,7 +18,7 @@ const initialState: GalleryState = {
   currentImageUuid: '',
   images: [],
   areMoreImagesAvailable: true,
-  shouldShowGallery: true,
+  shouldShowGallery: false,
 };
 
 export const gallerySlice = createSlice({
