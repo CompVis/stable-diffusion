@@ -8,6 +8,9 @@ $app-width: calc(100vw - $app-cutoff);
 $app-height: calc(100vh - $app-cutoff);
 $app-content-height: calc(100vh - $app-content-height-cutoff);
 $app-gallery-height: calc(100vh - ($app-content-height-cutoff + 6rem));
+$app-gallery-popover-height: calc(
+  100vh - ($app-content-height-cutoff - 2.5rem)
+);
 $app-metadata-height: calc(100vh - ($app-content-height-cutoff + 4.4rem));
 
 // option bar

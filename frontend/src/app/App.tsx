@@ -26,7 +26,9 @@ const App = () => {
         <SiteHeader />
         <InvokeTabs />
       </div>
-      <Console />
+      <div className="app-console">
+        <Console />
+      </div>
     </div>
   ) : (
     <Loading />

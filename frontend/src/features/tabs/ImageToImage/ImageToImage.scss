@@ -2,7 +2,7 @@
 
 .image-to-image-workarea {
   display: grid;
-  grid-template-columns: max-content auto max-content;
+  grid-template-columns: max-content auto;
   column-gap: 1rem;
 }
 
@@ -14,6 +14,22 @@
   height: $app-content-height;
   overflow-y: scroll;
   @include HideScrollbar;
+}
+
+.image-to-image-display-area {
+  display: grid;
+  grid-template-areas: 'image-to-image-display-area';
+
+  .image-to-image-display {
+    grid-area: image-to-image-display-area;
+  }
+
+  .image-gallery-area {
+    grid-area: image-to-image-display-area;
+    z-index: 2;
+    place-self: end;
+    margin: 1rem;
+  }
 }
 
 .image-to-image-strength-main-option {
@@ -52,7 +68,7 @@
 .image-to-image-dual-preview {
   grid-area: img2img-preview;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: max-content max-content;
   column-gap: 0.5rem;
   padding: 0 1rem;
   place-content: center;

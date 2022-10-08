@@ -1,14 +1,16 @@
 import React from 'react';
+import TextToImagePanel from './TextToImagePanel';
 import CurrentImageDisplay from '../../gallery/CurrentImageDisplay';
 import ImageGallery from '../../gallery/ImageGallery';
-import TextToImagePanel from './TextToImagePanel';
 
 export default function TextToImage() {
   return (
     <div className="text-to-image-workarea">
       <TextToImagePanel />
-      <CurrentImageDisplay />
-      <ImageGallery />
+      <div className="text-to-image-display">
+        <CurrentImageDisplay />
+        <ImageGallery />
+      </div>
     </div>
   );
 }
