@@ -89,16 +89,16 @@ This will create InvokeAI folder where you will follow the rest of the steps.
 
 ```
 # for the pre-release weights use the -l or --liaon400m switch
-(ldm) ~/InvokeAI$ python3 scripts/dream.py -l
+(ldm) ~/InvokeAI$ python3 scripts/invoke.py -l
 
 # for the post-release weights do not use the switch
-(ldm) ~/InvokeAI$ python3 scripts/dream.py
+(ldm) ~/InvokeAI$ python3 scripts/invoke.py
 
 # for additional configuration switches and arguments, use -h or --help
-(ldm) ~/InvokeAI$ python3 scripts/dream.py -h
+(ldm) ~/InvokeAI$ python3 scripts/invoke.py -h
 ```
 
-9. Subsequently, to relaunch the script, be sure to run "conda activate ldm" (step 5, second command), enter the `InvokeAI` directory, and then launch the dream script (step 8). If you forget to activate the ldm environment, the script will fail with multiple `ModuleNotFound` errors.
+9. Subsequently, to relaunch the script, be sure to run "conda activate ldm" (step 5, second command), enter the `InvokeAI` directory, and then launch the invoke script (step 8). If you forget to activate the ldm environment, the script will fail with multiple `ModuleNotFound` errors.
 
 ## Updating to newer versions of the script
 

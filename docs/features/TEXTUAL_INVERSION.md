@@ -56,22 +56,22 @@ configs/stable_diffusion/v1-finetune.yaml (currently set to 4000000)
 ## **Run the Model**
 
 Once the model is trained, specify the trained .pt or .bin file when starting
-dream using
+invoke using
 
 ```bash
-python3 ./scripts/dream.py --embedding_path /path/to/embedding.pt
+python3 ./scripts/invoke.py --embedding_path /path/to/embedding.pt
 ```
 
-Then, to utilize your subject at the dream prompt
+Then, to utilize your subject at the invoke prompt
 
 ```bash
-dream> "a photo of *"
+invoke> "a photo of *"
 ```
 
 This also works with image2image
 
 ```bash
-dream> "waterfall and rainbow in the style of *" --init_img=./init-images/crude_drawing.png --strength=0.5 -s100 -n4
+invoke> "waterfall and rainbow in the style of *" --init_img=./init-images/crude_drawing.png --strength=0.5 -s100 -n4
 ```
 
 For .pt files it's also possible to train multiple tokens (modify the

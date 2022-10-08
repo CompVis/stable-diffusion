@@ -101,13 +101,13 @@ you may instead create a shortcut to it from within `models\ldm\stable-diffusion
 
     ```bash
     # for the pre-release weights
-    python scripts\dream.py -l
+    python scripts\invoke.py -l
 
     # for the post-release weights
-    python scripts\dream.py
+    python scripts\invoke.py
     ```
 
-10. Subsequently, to relaunch the script, first activate the Anaconda command window (step 3),enter the InvokeAI directory (step 5, `cd \path\to\InvokeAI`), run `conda activate ldm` (step 6b), and then launch the dream script (step 9).
+10. Subsequently, to relaunch the script, first activate the Anaconda command window (step 3),enter the InvokeAI directory (step 5, `cd \path\to\InvokeAI`), run `conda activate ldm` (step 6b), and then launch the invoke script (step 9).
 
     **Note:** Tildebyte has written an alternative
     ["Easy peasy Windows install"](https://github.com/invoke-ai/InvokeAI/wiki/Easy-peasy-Windows-install)

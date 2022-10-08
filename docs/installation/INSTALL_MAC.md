@@ -137,10 +137,10 @@ ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" \
 python scripts/preload_models.py
 
 # now you can run SD in CLI mode
-python scripts/dream.py --full_precision  # (1)!
+python scripts/invoke.py --full_precision  # (1)!
 
 # or run the web interface!
-python scripts/dream.py --web
+python scripts/invoke.py --web
 
 # The original scripts should work as well.
 python scripts/orig_scripts/txt2img.py \
@@ -155,7 +155,7 @@ it isn't required but wont hurt.
 
 ## Common problems
 
-After you followed all the instructions and try to run dream.py, you might
+After you followed all the instructions and try to run invoke.py, you might
 get several errors. Here's the errors I've seen and found solutions for.
 
 ### Is it slow?
@@ -220,9 +220,9 @@ There are several causes of these errors:
    "(ldm)" then you activated it. If it begins with "(base)" or something else
    you haven't.
 
-2. You might've run `./scripts/preload_models.py` or `./scripts/dream.py`
+2. You might've run `./scripts/preload_models.py` or `./scripts/invoke.py`
    instead of `python ./scripts/preload_models.py` or
-   `python ./scripts/dream.py`. The cause of this error is long so it's below.
+   `python ./scripts/invoke.py`. The cause of this error is long so it's below.
 
     <!-- I could not find out where the error is, otherwise would have marked it as a footnote -->
 
@@ -519,7 +519,7 @@ use ARM packages, and use `nomkl` as described above.
 May appear when just starting to generate, e.g.:
 
 ```bash
-dream> clouds
+invoke> clouds
 Generating:   0%|                                                              | 0/1 [00:00<?, ?it/s]/Users/[...]/dev/stable-diffusion/ldm/modules/embedding_manager.py:152: UserWarning: The operator 'aten::nonzero' is not currently supported on the MPS backend and will fall back to run on the CPU. This may have performance implications. (Triggered internally at /Users/runner/work/_temp/anaconda/conda-bld/pytorch_1662016319283/work/aten/src/ATen/mps/MPSFallback.mm:11.)
   placeholder_idx = torch.where(
                                                                                                     loc("mps_add"("(mpsFileLoc): /AppleInternal/Library/BuildRoots/20d6c351-ee94-11ec-bcaf-7247572f23b4/Library/Caches/com.apple.xbs/Sources/MetalPerformanceShadersGraph/mpsgraph/MetalPerformanceShadersGraph/Core/Files/MPSGraphUtilities.mm":219:0)): error: input types 'tensor<2x1280xf32>' and 'tensor<*xf16>' are not broadcast compatible

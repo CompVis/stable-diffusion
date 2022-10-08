@@ -6,9 +6,9 @@ title: Prompting Features
 
 ## **Reading Prompts from a File**
 
-You can automate `dream.py` by providing a text file with the prompts you want to run, one line per
+You can automate `invoke.py` by providing a text file with the prompts you want to run, one line per
 prompt. The text file must be composed with a text editor (e.g. Notepad) and not a word processor.
-Each line should look like what you would type at the dream> prompt:
+Each line should look like what you would type at the invoke> prompt:
 
 ```bash
 a beautiful sunny day in the park, children playing -n4 -C10
@@ -16,16 +16,16 @@ stormy weather on a mountain top, goats grazing     -s100
 innovative packaging for a squid's dinner           -S137038382
 ```
 
-Then pass this file's name to `dream.py` when you invoke it:
+Then pass this file's name to `invoke.py` when you invoke it:
 
 ```bash
-(ldm) ~/stable-diffusion$ python3 scripts/dream.py --from_file "path/to/prompts.txt"
+(ldm) ~/stable-diffusion$ python3 scripts/invoke.py --from_file "path/to/prompts.txt"
 ```
 
 You may read a series of prompts from standard input by providing a filename of `-`:
 
 ```bash
-(ldm) ~/stable-diffusion$ echo "a beautiful day" | python3 scripts/dream.py --from_file -
+(ldm) ~/stable-diffusion$ echo "a beautiful day" | python3 scripts/invoke.py --from_file -
 ```
 ---
 

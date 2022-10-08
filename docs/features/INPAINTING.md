@@ -8,7 +8,7 @@ title: Inpainting
 
 Inpainting is really cool. To do it, you start with an initial image and use a photoeditor to make
 one or more regions transparent (i.e. they have a "hole" in them). You then provide the path to this
-image at the dream> command line using the `-I` switch. Stable Diffusion will only paint within the
+image at the invoke> command line using the `-I` switch. Stable Diffusion will only paint within the
 transparent region.
 
 There's a catch. In the current implementation, you have to prepare the initial image correctly so
@@ -17,13 +17,13 @@ applications will by default erase the color information under the transparent p
 them with white or black, which will lead to suboptimal inpainting. You also must take care to
 export the PNG file in such a way that the color information is preserved.
 
-If your photoeditor is erasing the underlying color information, `dream.py` will give you a big fat
+If your photoeditor is erasing the underlying color information, `invoke.py` will give you a big fat
 warning. If you can't find a way to coax your photoeditor to retain color values under transparent
 areas, then you can combine the `-I` and `-M` switches to provide both the original unedited image
 and the masked (partially transparent) image:
 
 ```bash
-dream> "man with cat on shoulder" -I./images/man.png -M./images/man-transparent.png
+invoke> "man with cat on shoulder" -I./images/man.png -M./images/man-transparent.png
 ```
 
 We are hoping to get rid of the need for this workaround in an upcoming release.
@@ -69,7 +69,7 @@ We are hoping to get rid of the need for this workaround in an upcoming release.
 
 ![step6](../assets/step6.png)
 
-7. After following the inpainting instructions above (either through the CLI or the Web UI), marvel at your newfound ability to selectively dream. Lookin' good!
+7. After following the inpainting instructions above (either through the CLI or the Web UI), marvel at your newfound ability to selectively invoke. Lookin' good!
 
 ![step7](../assets/step7.png)
 

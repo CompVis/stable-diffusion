@@ -24,7 +24,7 @@ _This repository was formally known as lstein/stable-diffusion_
 [CI checks on dev badge]: https://flat.badgen.net/github/checks/invoke-ai/InvokeAI/development?label=CI%20status%20on%20dev&cache=900&icon=github
 [CI checks on dev link]: https://github.com/invoke-ai/InvokeAI/actions?query=branch%3Adevelopment
 [CI checks on main badge]: https://flat.badgen.net/github/checks/invoke-ai/InvokeAI/main?label=CI%20status%20on%20main&cache=900&icon=github
-[CI checks on main link]: https://github.com/invoke-ai/InvokeAI/actions/workflows/test-dream-conda.yml
+[CI checks on main link]: https://github.com/invoke-ai/InvokeAI/actions/workflows/test-invoke-conda.yml
 [discord badge]: https://flat.badgen.net/discord/members/ZmtBAhwWhy?icon=discord
 [discord link]: https://discord.gg/ZmtBAhwWhy
 [github forks badge]: https://flat.badgen.net/github/forks/invoke-ai/InvokeAI?icon=github
@@ -94,10 +94,10 @@ You wil need one of the following:
 
 Precision is auto configured based on the device. If however you encounter
 errors like 'expected type Float but found Half' or 'not implemented for Half'
-you can try starting `dream.py` with the `--precision=float32` flag:
+you can try starting `invoke.py` with the `--precision=float32` flag:
 
 ```bash
-(ldm) ~/stable-diffusion$ python scripts/dream.py --precision=float32
+(ldm) ~/stable-diffusion$ python scripts/invoke.py --precision=float32
 ```
 
 ### Features
@@ -130,7 +130,7 @@ you can try starting `dream.py` with the `--precision=float32` flag:
 
 - vNEXT (TODO 2022)
 
-  - Deprecated `--full_precision` / `-F`. Simply omit it and `dream.py` will auto
+  - Deprecated `--full_precision` / `-F`. Simply omit it and `invoke.py` will auto
     configure. To switch away from auto use the new flag like `--precision=float32`.
 
 - v1.14 (11 September 2022)
@@ -156,7 +156,7 @@ you can try starting `dream.py` with the `--precision=float32` flag:
   - A new configuration file scheme that allows new models (including upcoming
     stable-diffusion-v1.5) to be added without altering the code.
     ([David Wager](https://github.com/maddavid12))
-  - Can specify --grid on dream.py command line as the default.
+  - Can specify --grid on invoke.py command line as the default.
   - Miscellaneous internal bug and stability fixes.
   - Works on M1 Apple hardware.
   - Multiple bug fixes.

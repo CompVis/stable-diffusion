@@ -106,8 +106,8 @@ Running Embiggen with 512x512 tiles on an existing image, scaling up by a factor
 and doing the same again (default ESRGAN strength is 0.75, default overlap between tiles is 0.25):
 
 ```bash
-dream > a photo of a forest at sunset -s 100 -W 512 -H 512 -I outputs/forest.png -f 0.4 -embiggen 2.5
-dream > a photo of a forest at sunset -s 100 -W 512 -H 512 -I outputs/forest.png -f 0.4 -embiggen 2.5 0.75 0.25
+invoke > a photo of a forest at sunset -s 100 -W 512 -H 512 -I outputs/forest.png -f 0.4 -embiggen 2.5
+invoke > a photo of a forest at sunset -s 100 -W 512 -H 512 -I outputs/forest.png -f 0.4 -embiggen 2.5 0.75 0.25
 ```
 
 If your starting image was also 512x512 this should have taken 9 tiles.
@@ -118,7 +118,7 @@ If there weren't enough clouds in the sky of that forest you just made
 tiles:
 
 ```bash
-dream> a photo of puffy clouds over a forest at sunset -s 100 -W 512 -H 512 -I outputs/000002.seed.png -f 0.5 -embiggen_tiles 1 2 3
+invoke> a photo of puffy clouds over a forest at sunset -s 100 -W 512 -H 512 -I outputs/000002.seed.png -f 0.5 -embiggen_tiles 1 2 3
 ```
 
 ## Fixing Previously-Generated Images
@@ -129,7 +129,7 @@ syntax `!fix path/to/file.png <embiggen>`. For example, you can rewrite the
 previous command to look like this:
 
 ~~~~
-dream> !fix ./outputs/000002.seed.png -embiggen_tiles 1 2 3
+invoke> !fix ./outputs/000002.seed.png -embiggen_tiles 1 2 3
 ~~~~
 
 A new file named `000002.seed.fixed.png` will be created in the output directory. Note that
