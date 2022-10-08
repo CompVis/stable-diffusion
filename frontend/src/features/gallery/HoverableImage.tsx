@@ -69,8 +69,6 @@ const HoverableImage = memo((props: HoverableImageProps) => {
       onMouseOut={handleMouseOut}
     >
       <Image
-        width={80}
-        height={80}
         objectFit="cover"
         rounded={'md'}
         src={url}
