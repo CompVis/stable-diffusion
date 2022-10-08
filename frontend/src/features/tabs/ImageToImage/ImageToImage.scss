@@ -18,17 +18,11 @@
 
 .image-to-image-display-area {
   display: grid;
-  grid-template-areas: 'image-to-image-display-area';
-
-  .image-to-image-display {
-    grid-area: image-to-image-display-area;
-  }
+  column-gap: 0.5rem;
 
   .image-gallery-area {
-    grid-area: image-to-image-display-area;
     z-index: 2;
-    place-self: end;
-    margin: 1rem;
+    height: 100%;
   }
 }
 
@@ -45,6 +39,7 @@
   border-radius: 0.5rem;
   background-color: var(--background-color-secondary);
   display: grid;
+  height: $app-content-height;
 
   .current-image-options {
     grid-auto-columns: max-content;
@@ -68,7 +63,7 @@
 .image-to-image-dual-preview {
   grid-area: img2img-preview;
   display: grid;
-  grid-template-columns: max-content max-content;
+  grid-template-columns: 1fr 1fr;
   column-gap: 0.5rem;
   padding: 0 1rem;
   place-content: center;

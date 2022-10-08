@@ -2,10 +2,15 @@
 
 .image-gallery-area {
   .image-gallery-popup-btn {
+    position: absolute;
+    top: 50%;
+    right: 1rem;
+    border-radius: 0.5rem 0 0 0.5rem;
+    padding: 0 0.5rem;
     @include Button(
-      $btn-width: 3rem,
-      $btn-height: 3rem,
-      $icon-size: 22px,
+      $btn-width: 1rem,
+      $btn-height: 6rem,
+      $icon-size: 20px,
       $btn-color: var(--btn-grey),
       $btn-color-hover: var(--btn-grey-hover)
     );
@@ -14,15 +19,14 @@
 
 .image-gallery-popup {
   background-color: var(--tab-color);
-  position: fixed !important;
-  top: 0;
-  right: 0;
   padding: 1rem;
   animation: slideOut 0.3s ease-out;
   display: grid;
   grid-auto-rows: max-content;
   row-gap: 1rem;
+  border-radius: 0.5rem;
   border-left-width: 0.2rem;
+  min-width: 300px;
   border-color: var(--gallery-resizeable-color);
 }
 

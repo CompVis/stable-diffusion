@@ -21,6 +21,10 @@ export default function ImageGallery() {
     shouldShowGallery,
   } = useAppSelector((state: RootState) => state.gallery);
 
+  const activeTab = useAppSelector(
+    (state: RootState) => state.options.activeTab
+  );
+
   const dispatch = useAppDispatch();
 
   const handleShowGalleryToggle = () => {
@@ -77,8 +81,10 @@ export default function ImageGallery() {
         <Resizable
           defaultSize={{ width: '300', height: '100%' }}
           minWidth={'300'}
+          maxWidth={activeTab == 1 ? '300' : '600'}
           className="image-gallery-popup"
         >
+          {/* <div className="image-gallery-popup"></div> */}
           <div className="image-gallery-header">
             <h1>Your Invocations</h1>
             <IconButton

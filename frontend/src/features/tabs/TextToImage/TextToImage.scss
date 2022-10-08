@@ -18,16 +18,17 @@
 .text-to-image-display {
   display: grid;
   grid-template-areas: 'text-to-image-display';
+  column-gap: 0.5rem;
 
   .current-image-display,
   .current-image-display-placeholder {
     grid-area: text-to-image-display;
+    height: $app-content-height;
   }
 
   .image-gallery-area {
-    grid-area: text-to-image-display;
+    height: 100%;
     z-index: 2;
     place-self: end;
-    margin: 1rem;
   }
 }
