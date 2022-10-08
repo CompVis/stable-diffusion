@@ -5,6 +5,7 @@ import { useHotkeys } from 'react-hotkeys-hook';
 import { MdClear, MdPhotoLibrary } from 'react-icons/md';
 import { requestImages } from '../../app/socketio/actions';
 import { RootState, useAppDispatch, useAppSelector } from '../../app/store';
+import IAIIconButton from '../../common/components/IAIIconButton';
 import {
   selectNextImage,
   selectPrevImage,
@@ -61,13 +62,15 @@ export default function ImageGallery() {
   return (
     <div className="image-gallery-area">
       {!shouldShowGallery && (
-        <Button
-          colorScheme="teal"
+        <IAIIconButton
+          tooltip="Show Gallery"
+          tooltipPlacement="top"
+          aria-label="Show Gallery"
           onClick={handleShowGalleryToggle}
           className="image-gallery-popup-btn"
         >
           <MdPhotoLibrary />
-        </Button>
+        </IAIIconButton>
       )}
 
       {shouldShowGallery && (

@@ -100,7 +100,7 @@ const Console = () => {
         </Resizable>
       )}
       {shouldShowLogViewer && (
-        <Tooltip label={shouldAutoscroll ? 'Autoscroll On' : 'Autoscroll Off'}>
+        <Tooltip hasArrow label={shouldAutoscroll ? 'Autoscroll On' : 'Autoscroll Off'}>
           <IconButton
             className={`console-autoscroll-icon-button ${
               shouldAutoscroll && 'autoscroll-enabled'
@@ -113,7 +113,7 @@ const Console = () => {
           />
         </Tooltip>
       )}
-      <Tooltip label={shouldShowLogViewer ? 'Hide Console' : 'Show Console'}>
+      <Tooltip hasArrow label={shouldShowLogViewer ? 'Hide Console' : 'Show Console'}>
         <IconButton
           className={`console-toggle-icon-button ${
             (hasError || !wasErrorSeen) && 'error-seen'
