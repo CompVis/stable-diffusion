@@ -5,7 +5,7 @@ import clip
 from einops import rearrange, repeat
 from transformers import CLIPTokenizer, CLIPTextModel
 import kornia
-from ldm.dream.devices import choose_torch_device
+from ldm.invoke.devices import choose_torch_device
 
 from ldm.modules.x_transformer import (
     Encoder,

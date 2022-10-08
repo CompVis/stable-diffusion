@@ -1,17 +1,17 @@
 """
-Readline helper functions for dream.py (linux and mac only).
+Readline helper functions for invoke.py.
 You may import the global singleton `completer` to get access to the
 completer object itself. This is useful when you want to autocomplete
 seeds:
 
- from ldm.dream.readline import completer
+ from ldm.invoke.readline import completer
  completer.add_seed(18247566)
  completer.add_seed(9281839)
 """
 import os
 import re
 import atexit
-from ldm.dream.args import Args
+from ldm.invoke.args import Args
 
 # ---------------readline utilities---------------------
 try:
@@ -20,7 +20,7 @@ try:
 except (ImportError,ModuleNotFoundError):
     readline_available = False
 
-IMG_EXTENSIONS     = ('.png','.jpg','.jpeg')
+IMG_EXTENSIONS     = ('.png','.jpg','.jpeg','.PNG','.JPG','.JPEG','.gif','.GIF')
 COMMANDS = (
     '--steps','-s',
     '--seed','-S',
@@ -74,7 +74,7 @@ class Completer(object):
 
     def complete(self, text, state):
         '''
-        Completes dream command line.
+        Completes invoke command line.
         BUG: it doesn't correctly complete files that have spaces in the name.
         '''
         buffer = readline.get_line_buffer()
@@ -287,7 +287,7 @@ def get_completer(opt:Args)->Completer:
         readline.parse_and_bind('set skip-completed-text on')
         readline.parse_and_bind('set show-all-if-ambiguous on')
 
-        histfile = os.path.join(os.path.expanduser(opt.outdir), '.dream_history')
+        histfile = os.path.join(os.path.expanduser(opt.outdir), '.invoke_history')
         try:
             readline.read_history_file(histfile)
             readline.set_history_length(1000)

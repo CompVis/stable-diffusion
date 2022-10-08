@@ -10,11 +10,11 @@ import warnings
 import time
 import traceback
 sys.path.append('.')    # corrects a weird problem on Macs
-from ldm.dream.readline import get_completer
-from ldm.dream.args import Args, metadata_dumps, metadata_from_png, dream_cmd_from_png
-from ldm.dream.pngwriter import PngWriter, retrieve_metadata, write_metadata
-from ldm.dream.image_util import make_grid
-from ldm.dream.log import write_log
+from ldm.invoke.readline import get_completer
+from ldm.invoke.args import Args, metadata_dumps, metadata_from_png, dream_cmd_from_png
+from ldm.invoke.pngwriter import PngWriter, retrieve_metadata, write_metadata
+from ldm.invoke.image_util import make_grid
+from ldm.invoke.log import write_log
 from omegaconf import OmegaConf
 from backend.invoke_ai_web_server import InvokeAIWebServer
 
@@ -45,7 +45,7 @@ def main():
     try:
         gfpgan, codeformer, esrgan = None, None, None
         if opt.restore or opt.esrgan:
-            from ldm.dream.restoration import Restoration
+            from ldm.invoke.restoration import Restoration
             restoration = Restoration()
             if opt.restore:
                 gfpgan, codeformer = restoration.load_face_restore_models(opt.gfpgan_dir, opt.gfpgan_model_path)
@@ -256,7 +256,7 @@ def main_loop(gen, opt, infile):
         if opt.with_variations is not None:
             opt.with_variations = split_variations(opt.with_variations)
 
-        if opt.prompt_as_dir:
+        if opt.prompt_as_dir and operation == 'generate':
             # sanitize the prompt to a valid folder name
             subdir = path_filter.sub('_', opt.prompt)[:name_max].rstrip(' .')
 
@@ -274,6 +274,12 @@ def main_loop(gen, opt, infile):
             if not os.path.exists(opt.outdir):
                 os.makedirs(opt.outdir)
             current_outdir = opt.outdir
+
+        # write out the history at this point
+        if operation == 'postprocess':
+            completer.add_history(f'!fix {command}')
+        else:
+            completer.add_history(command)
 
         # Here is where the images are actually generated!
         last_results = []
@@ -380,13 +386,9 @@ def main_loop(gen, opt, infile):
             continue
 
         print('Outputs:')
-        log_path = os.path.join(current_outdir, 'dream_log')
+        log_path = os.path.join(current_outdir, 'invoke_log')
         output_cntr = write_log(results, log_path ,('txt', 'md'), output_cntr)
         print()
-        if operation == 'postprocess':
-            completer.add_history(f'!fix {command}')
-        else:
-            completer.add_history(command)
 
     print('goodbye!')
 
@@ -422,6 +424,7 @@ def do_postprocess (gen, opt, callback):
             opt                 = opt,
         )
     except OSError:
+        print(traceback.format_exc(), file=sys.stderr)
         print(f'** {file_path}: file could not be read')
         return
     except (KeyError, AttributeError):

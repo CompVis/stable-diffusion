@@ -1,15 +1,15 @@
 '''
-ldm.dream.generator.embiggen descends from ldm.dream.generator
-and generates with ldm.dream.generator.img2img
+ldm.invoke.generator.embiggen descends from ldm.invoke.generator
+and generates with ldm.invoke.generator.img2img
 '''
 
 import torch
 import numpy as  np
 from tqdm import trange
 from PIL               import Image
-from ldm.dream.generator.base      import Generator
-from ldm.dream.generator.img2img   import Img2Img
-from ldm.dream.devices import choose_autocast
+from ldm.invoke.generator.base      import Generator
+from ldm.invoke.generator.img2img   import Img2Img
+from ldm.invoke.devices import choose_autocast
 from ldm.models.diffusion.ddim     import DDIMSampler
 
 class Embiggen(Generator):
@@ -107,7 +107,7 @@ class Embiggen(Generator):
             initsuperwidth = round(initsuperwidth*embiggen[0])
             initsuperheight = round(initsuperheight*embiggen[0])
             if embiggen[1] > 0:  # No point in ESRGAN upscaling if strength is set zero
-                from ldm.dream.restoration.realesrgan import ESRGAN
+                from ldm.invoke.restoration.realesrgan import ESRGAN
                 esrgan = ESRGAN()
                 print(
                     f'>> ESRGAN upscaling init image prior to cutting with Embiggen with strength {embiggen[1]}')

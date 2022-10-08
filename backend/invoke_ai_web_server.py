@@ -12,9 +12,9 @@ from PIL import Image
 from uuid import uuid4
 from threading import Event
 
-from ldm.dream.args import Args, APP_ID, APP_VERSION, calculate_init_img_hash
-from ldm.dream.pngwriter import PngWriter, retrieve_metadata
-from ldm.dream.conditioning import split_weighted_subprompts
+from ldm.invoke.args import Args, APP_ID, APP_VERSION, calculate_init_img_hash
+from ldm.invoke.pngwriter import PngWriter, retrieve_metadata
+from ldm.invoke.conditioning import split_weighted_subprompts
 
 from backend.modules.parameters import parameters_to_command
 
@@ -157,7 +157,7 @@ class InvokeAIWebServer:
         self.init_image_path = os.path.join(self.result_path, 'init-images/')
         self.mask_image_path = os.path.join(self.result_path, 'mask-images/')
         # txt log
-        self.log_path = os.path.join(self.result_path, 'dream_log.txt')
+        self.log_path = os.path.join(self.result_path, 'invoke_log.txt')
         # make all output paths
         [
             os.makedirs(path, exist_ok=True)

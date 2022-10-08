@@ -90,8 +90,8 @@ import re
 import copy
 import base64
 import functools
-import ldm.dream.pngwriter
-from ldm.dream.conditioning import split_weighted_subprompts
+import ldm.invoke.pngwriter
+from ldm.invoke.conditioning import split_weighted_subprompts
 
 SAMPLER_CHOICES = [
     'ddim',
@@ -811,7 +811,7 @@ def metadata_from_png(png_file_path) -> Args:
     an Args object containing the image metadata. Note that this
     returns a single Args object, not multiple.
     '''
-    meta = ldm.dream.pngwriter.retrieve_metadata(png_file_path)
+    meta = ldm.invoke.pngwriter.retrieve_metadata(png_file_path)
     if 'sd-metadata' in meta and len(meta['sd-metadata'])>0 :
         return metadata_loads(meta)[0]
     else:

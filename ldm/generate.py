@@ -19,7 +19,7 @@ import cv2
 import skimage
 
 from omegaconf import OmegaConf
-from ldm.dream.generator.base import downsampling
+from ldm.invoke.generator.base import downsampling
 from PIL import Image, ImageOps
 from torch import nn
 from pytorch_lightning import seed_everything, logging
@@ -28,13 +28,11 @@ from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 from ldm.models.diffusion.ksampler import KSampler
-from ldm.dream.pngwriter import PngWriter
-from ldm.dream.args import metadata_from_png
-from ldm.dream.image_util import InitImageResizer
-from ldm.dream.devices import choose_torch_device, choose_precision
-from ldm.dream.conditioning import get_uc_and_c
-
-
+from ldm.invoke.pngwriter import PngWriter
+from ldm.invoke.args import metadata_from_png
+from ldm.invoke.image_util import InitImageResizer
+from ldm.invoke.devices import choose_torch_device, choose_precision
+from ldm.invoke.conditioning import get_uc_and_c
 
 def fix_func(orig):
     if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
@@ -297,9 +295,9 @@ class Generate:
             def process_image(image,seed):
                 image.save(f{'images/seed.png'})
 
-        The callback used by the prompt2png() can be found in ldm/dream_util.py. It contains code
-        to create the requested output directory, select a unique informative name for each image, and
-        write the prompt into the PNG metadata.
+        The code used to save images to a directory can be found in ldm/invoke/pngwriter.py. 
+        It contains code to create the requested output directory, select a unique informative
+        name for each image, and write the prompt into the PNG metadata.
         """
         # TODO: convert this into a getattr() loop
         steps = steps or self.steps
@@ -524,7 +522,7 @@ class Generate:
             )
 
         elif tool == 'outcrop':
-            from ldm.dream.restoration.outcrop import Outcrop
+            from ldm.invoke.restoration.outcrop import Outcrop
             extend_instructions = {}
             for direction,pixels in _pairwise(opt.outcrop):
                 extend_instructions[direction]=int(pixels)
@@ -561,7 +559,7 @@ class Generate:
                 image_callback = callback,
             )
         elif tool == 'outpaint':
-            from ldm.dream.restoration.outpaint import Outpaint
+            from ldm.invoke.restoration.outpaint import Outpaint
             restorer = Outpaint(image,self)
             return restorer.process(
                 opt,
@@ -620,39 +618,39 @@ class Generate:
 
     def _make_base(self):
         if not self.generators.get('base'):
-            from ldm.dream.generator import Generator
+            from ldm.invoke.generator import Generator
             self.generators['base'] = Generator(self.model, self.precision)
         return self.generators['base']
 
     def _make_img2img(self):
         if not self.generators.get('img2img'):
-            from ldm.dream.generator.img2img import Img2Img
+            from ldm.invoke.generator.img2img import Img2Img
             self.generators['img2img'] = Img2Img(self.model, self.precision)
         return self.generators['img2img']
 
     def _make_embiggen(self):
         if not self.generators.get('embiggen'):
-            from ldm.dream.generator.embiggen import Embiggen
+            from ldm.invoke.generator.embiggen import Embiggen
             self.generators['embiggen'] = Embiggen(self.model, self.precision)
         return self.generators['embiggen']
 
     def _make_txt2img(self):
         if not self.generators.get('txt2img'):
-            from ldm.dream.generator.txt2img import Txt2Img
+            from ldm.invoke.generator.txt2img import Txt2Img
             self.generators['txt2img'] = Txt2Img(self.model, self.precision)
             self.generators['txt2img'].free_gpu_mem = self.free_gpu_mem
         return self.generators['txt2img']
 
     def _make_txt2img2img(self):
         if not self.generators.get('txt2img2'):
-            from ldm.dream.generator.txt2img2img import Txt2Img2Img
+            from ldm.invoke.generator.txt2img2img import Txt2Img2Img
             self.generators['txt2img2'] = Txt2Img2Img(self.model, self.precision)
             self.generators['txt2img2'].free_gpu_mem = self.free_gpu_mem
         return self.generators['txt2img2']
 
     def _make_inpaint(self):
         if not self.generators.get('inpaint'):
-            from ldm.dream.generator.inpaint import Inpaint
+            from ldm.invoke.generator.inpaint import Inpaint
             self.generators['inpaint'] = Inpaint(self.model, self.precision)
         return self.generators['inpaint']
 
@@ -783,7 +781,7 @@ class Generate:
 
         print(msg)
 
-    # Be warned: config is the path to the model config file, not the dream conf file!
+    # Be warned: config is the path to the model config file, not the invoke conf file!
     # Also note that we can get config and weights from self, so why do we need to
     # pass them as args?
     def _load_model_from_config(self, config, weights):

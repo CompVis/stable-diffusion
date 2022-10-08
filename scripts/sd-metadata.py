@@ -2,11 +2,11 @@
 
 import sys
 import json
-from ldm.dream.pngwriter import retrieve_metadata
+from ldm.invoke.pngwriter import retrieve_metadata
 
 if len(sys.argv) < 2:
     print("Usage: file2prompt.py <file1.png> <file2.png> <file3.png>...")
-    print("This script opens up the indicated dream.py-generated PNG file(s) and prints out their metadata.")
+    print("This script opens up the indicated invoke.py-generated PNG file(s) and prints out their metadata.")
     exit(-1)
 
 filenames = sys.argv[1:]

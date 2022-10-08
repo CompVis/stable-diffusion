@@ -2,7 +2,7 @@
 import k_diffusion as K
 import torch
 import torch.nn as nn
-from ldm.dream.devices import choose_torch_device
+from ldm.invoke.devices import choose_torch_device
 from ldm.models.diffusion.sampler import Sampler
 from ldm.util import rand_perlin_2d
 from ldm.modules.diffusionmodules.util import (

@@ -1,11 +1,11 @@
 '''
-ldm.dream.generator.img2img descends from ldm.dream.generator
+ldm.invoke.generator.img2img descends from ldm.invoke.generator
 '''
 
 import torch
 import numpy as  np
-from ldm.dream.devices             import choose_autocast
-from ldm.dream.generator.base      import Generator
+from ldm.invoke.devices             import choose_autocast
+from ldm.invoke.generator.base      import Generator
 from ldm.models.diffusion.ddim     import DDIMSampler
 
 class Img2Img(Generator):

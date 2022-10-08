@@ -14,7 +14,7 @@ from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.util import ismap
 import time
 from omegaconf import OmegaConf
-from ldm.dream.devices import choose_torch_device
+from ldm.invoke.devices import choose_torch_device
 
 def download_models(mode):
 

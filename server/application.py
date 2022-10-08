@@ -10,7 +10,7 @@ from flask_cors import CORS
 from flask_socketio import SocketIO
 from omegaconf import OmegaConf
 from dependency_injector.wiring import inject, Provide
-from ldm.dream.args import Args
+from ldm.invoke.args import Args
 from server import views
 from server.containers import Container
 from server.services import GeneratorService, SignalService

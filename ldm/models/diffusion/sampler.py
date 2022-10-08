@@ -8,7 +8,7 @@ import torch
 import numpy as np
 from tqdm import tqdm
 from functools import partial
-from ldm.dream.devices import choose_torch_device
+from ldm.invoke.devices import choose_torch_device
 
 from ldm.modules.diffusionmodules.util import (
     make_ddim_sampling_parameters,
