@@ -57,8 +57,8 @@
 
 .image-gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, auto));
-  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fill, minmax(80px, auto));
+  gap: 0.5rem;
   justify-items: center;
 }
 
