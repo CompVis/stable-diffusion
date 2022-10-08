@@ -88,6 +88,7 @@ export default function InvokeTabs() {
       tabsToRender.push(
         <Tooltip
           key={key}
+          hasArrow
           label={tab_dict[key as keyof typeof tab_dict].tooltip}
           placement={'right'}
         >
