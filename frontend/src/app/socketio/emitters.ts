@@ -6,6 +6,7 @@ import {
   addLogEntry,
   setIsProcessing,
 } from '../../features/system/systemSlice';
+import { tabMap, tab_dict } from '../../features/tabs/InvokeTabs';
 import * as InvokeAI from '../invokeai';
 
 /**
@@ -23,8 +24,14 @@ const makeSocketIOEmitters = (
     emitGenerateImage: () => {
       dispatch(setIsProcessing(true));
 
+      const options = { ...getState().options };
+
+      if (tabMap[options.activeTab] === 'txt2img') {
+        options.shouldUseInitImage = false;
+      }
+
       const { generationParameters, esrganParameters, gfpganParameters } =
-        frontendToBackendParameters(getState().options, getState().system);
+        frontendToBackendParameters(options, getState().system);
 
       socketio.emit(
         'generateImage',

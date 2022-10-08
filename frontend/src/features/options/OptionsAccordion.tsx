@@ -1,34 +1,25 @@
-import {
-  Box,
-  Accordion,
-  ExpandedIndex,
-  // ExpandedIndex,
-} from '@chakra-ui/react';
-
-// import { RootState } from '../../app/store';
-// import { useAppDispatch, useAppSelector } from '../../app/store';
-
-// import { setOpenAccordions } from '../system/systemSlice';
-
-import OutputOptions from './OutputOptions';
-import ImageToImageOptions from './AdvancedOptions/ImageToImage/ImageToImageOptions';
-import { Feature } from '../../app/features';
-import SeedOptions from './AdvancedOptions/Seed/SeedOptions';
-import Upscale from './AdvancedOptions/Upscale/Upscale';
-import UpscaleOptions from './AdvancedOptions/Upscale/UpscaleOptions';
-import FaceRestore from './AdvancedOptions/FaceRestore/FaceRestore';
-import FaceRestoreOptions from './AdvancedOptions/FaceRestore/FaceRestoreOptions';
-import ImageToImage from './AdvancedOptions/ImageToImage/ImageToImage';
+import { Accordion, ExpandedIndex } from '@chakra-ui/react';
 import { RootState, useAppDispatch, useAppSelector } from '../../app/store';
 import { setOpenAccordions } from '../system/systemSlice';
-import InvokeAccordionItem from './AccordionItems/InvokeAccordionItem';
-import Variations from './AdvancedOptions/Variations/Variations';
-import VariationsOptions from './AdvancedOptions/Variations/VariationsOptions';
+import InvokeAccordionItem, {
+  InvokeAccordionItemProps,
+} from './AccordionItems/InvokeAccordionItem';
+import { ReactElement } from 'react';
+
+type OptionsAccordionType = {
+  [optionAccordionKey: string]: InvokeAccordionItemProps;
+};
+
+type OptionAccordionsType = {
+  accordionInfo: OptionsAccordionType;
+};
 
 /**
  * Main container for generation and processing parameters.
  */
-const OptionsAccordion = () => {
+const OptionsAccordion = (props: OptionAccordionsType) => {
+  const { accordionInfo } = props;
+
   const openAccordions = useAppSelector(
     (state: RootState) => state.system.openAccordions
   );
@@ -41,6 +32,23 @@ const OptionsAccordion = () => {
   const handleChangeAccordionState = (openAccordions: ExpandedIndex) =>
     dispatch(setOpenAccordions(openAccordions));
 
+  const renderAccordions = () => {
+    const accordionsToRender: ReactElement[] = [];
+    if (accordionInfo) {
+      Object.keys(accordionInfo).forEach((key) => {
+        accordionsToRender.push(
+          <InvokeAccordionItem
+            key={key}
+            header={accordionInfo[key as keyof typeof accordionInfo].header}
+            feature={accordionInfo[key as keyof typeof accordionInfo].feature}
+            options={accordionInfo[key as keyof typeof accordionInfo].options}
+          />
+        );
+      });
+    }
+    return accordionsToRender;
+  };
+
   return (
     <Accordion
       defaultIndex={openAccordions}
@@ -49,49 +57,7 @@ const OptionsAccordion = () => {
       onChange={handleChangeAccordionState}
       className="advanced-settings"
     >
-      <InvokeAccordionItem
-        header={
-          <Box flex="1" textAlign="left">
-            Seed
-          </Box>
-        }
-        feature={Feature.SEED}
-        options={<SeedOptions />}
-      />
-
-      <InvokeAccordionItem
-        header={<Variations />}
-        feature={Feature.VARIATIONS}
-        options={<VariationsOptions />}
-      />
-
-      <InvokeAccordionItem
-        header={<FaceRestore />}
-        feature={Feature.FACE_CORRECTION}
-        options={<FaceRestoreOptions />}
-      />
-
-      <InvokeAccordionItem
-        header={<Upscale />}
-        feature={Feature.UPSCALE}
-        options={<UpscaleOptions />}
-      />
-
-      <InvokeAccordionItem
-        header={<ImageToImage />}
-        feature={Feature.IMAGE_TO_IMAGE}
-        options={<ImageToImageOptions />}
-      />
-
-      <InvokeAccordionItem
-        header={
-          <Box flex="1" textAlign="left">
-            Other
-          </Box>
-        }
-        feature={Feature.OTHER}
-        options={<OutputOptions />}
-      />
+      {renderAccordions()}
     </Accordion>
   );
 };

@@ -15,6 +15,8 @@ type ImageUploaderProps = {
    * Callback to handle a file being rejected.
    */
   fileRejectionCallback: (rejection: FileRejection) => void;
+  // Styling
+  styleClass?: string;
 };
 
 /**
@@ -25,6 +27,7 @@ const ImageUploader = ({
   children,
   fileAcceptedCallback,
   fileRejectionCallback,
+  styleClass,
 }: ImageUploaderProps) => {
   const onDrop = useCallback(
     (acceptedFiles: Array<File>, fileRejections: Array<FileRejection>) => {
@@ -52,7 +55,7 @@ const ImageUploader = ({
   };
 
   return (
-    <Box {...getRootProps()} flexGrow={3}>
+    <Box {...getRootProps()} flexGrow={3} className={`${styleClass}`}>
       <input {...getInputProps({ multiple: false })} />
       {cloneElement(children, {
         onClick: handleClickUploadIcon,

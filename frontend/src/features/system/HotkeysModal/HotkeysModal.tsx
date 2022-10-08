@@ -61,6 +61,16 @@ export default function HotkeysModal({ children }: HotkeysModalProps) {
       desc: 'Display the next image in the gallery',
       hotkey: 'Arrow right',
     },
+    {
+      title: 'Change Tabs',
+      desc: 'Switch to another workspace',
+      hotkey: '1-6',
+    },
+    {
+      title: 'Theme Toggle',
+      desc: 'Switch between dark and light modes',
+      hotkey: 'Shift+D',
+    },
   ];
 
   const renderHotkeyModalItems = () => {

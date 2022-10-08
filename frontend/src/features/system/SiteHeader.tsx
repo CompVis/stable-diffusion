@@ -1,4 +1,5 @@
 import { IconButton, Link, useColorMode } from '@chakra-ui/react';
+import { useHotkeys } from 'react-hotkeys-hook';
 
 import { FaSun, FaMoon, FaGithub } from 'react-icons/fa';
 import { MdHelp, MdKeyboard, MdSettings } from 'react-icons/md';
@@ -14,6 +15,14 @@ import StatusIndicator from './StatusIndicator';
  */
 const SiteHeader = () => {
   const { colorMode, toggleColorMode } = useColorMode();
+
+  useHotkeys(
+    'shift+d',
+    () => {
+      toggleColorMode();
+    },
+    [colorMode, toggleColorMode]
+  );
 
   const colorModeIcon = colorMode == 'light' ? <FaMoon /> : <FaSun />;
 
