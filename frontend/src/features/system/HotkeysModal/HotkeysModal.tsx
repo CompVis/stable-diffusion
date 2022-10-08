@@ -24,6 +24,11 @@ export default function HotkeysModal({ children }: HotkeysModalProps) {
     { title: 'Invoke', desc: 'Generate an image', hotkey: 'Ctrl+Enter' },
     { title: 'Cancel', desc: 'Cancel image generation', hotkey: 'Shift+X' },
     {
+      title: 'Toggle Gallery',
+      desc: 'Open and close the gallery drawer',
+      hotkey: 'G',
+    },
+    {
       title: 'Set Seed',
       desc: 'Use the seed of the current image',
       hotkey: 'S',
@@ -70,6 +75,11 @@ export default function HotkeysModal({ children }: HotkeysModalProps) {
       title: 'Theme Toggle',
       desc: 'Switch between dark and light modes',
       hotkey: 'Shift+D',
+    },
+    {
+      title: 'Console Toggle',
+      desc: 'Open and close console',
+      hotkey: '`',
     },
   ];
 

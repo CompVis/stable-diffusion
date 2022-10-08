@@ -11,12 +11,14 @@ export interface GalleryState {
   areMoreImagesAvailable: boolean;
   latest_mtime?: number;
   earliest_mtime?: number;
+  shouldShowGallery: boolean;
 }
 
 const initialState: GalleryState = {
   currentImageUuid: '',
   images: [],
   areMoreImagesAvailable: true,
+  shouldShowGallery: true,
 };
 
 export const gallerySlice = createSlice({
@@ -138,6 +140,9 @@ export const gallerySlice = createSlice({
         state.areMoreImagesAvailable = areMoreImagesAvailable;
       }
     },
+    setShouldShowGallery: (state, action: PayloadAction<boolean>) => {
+      state.shouldShowGallery = action.payload;
+    },
   },
 });
 
@@ -150,6 +155,7 @@ export const {
   setIntermediateImage,
   selectNextImage,
   selectPrevImage,
+  setShouldShowGallery,
 } = gallerySlice.actions;
 
 export default gallerySlice.reducer;
