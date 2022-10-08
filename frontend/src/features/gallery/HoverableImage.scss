@@ -16,8 +16,9 @@
   }
 
   .hoverable-image-image {
-    width: 80px;
-    height: 80px;
+    width: 100%;
+    max-width: 100%;
+    max-height: 100%;
   }
 
   .hoverable-image-content {
