@@ -70,7 +70,7 @@ additional 64 pixels to the top of the image:
 invoke> !fix images/curly.png --out_direction top 64
 ~~~
 
-(you can abbreviate ``--out_direction` as `-D`.
+(you can abbreviate `--out_direction` as `-D`.
 
 The result is shown here:
 
