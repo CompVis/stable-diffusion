@@ -35,7 +35,31 @@ See the paper to see how they were obtained.
 
 ### Examples
 
-Let's see some examples now
+Let's see some examples now. This would be with the un-personalized, original SD model:
+
+```bash
+python scripts/txt2img.py --prompt "Roman city on top of a ridge, sci-fi illustration by Greg Rutkowski #sci-fi detailed vivid colors gothic concept illustration by James Gurney and Zdzislaw Beksiński vivid vivid colorsg concept illustration colorful interior" --seed 332 --plms  --aesthetic_steps 0 --W 768 --aesthetic_embedding aesthetic_embeddings/laion_7plus.pt
+```
+
+![sample](assets/grid-0131.png)
+
+If we now personalize it with the LAION embedding, note how the images get more floral patterns, as this is one common pattern of the LAION aesthetics dataset:
+
+```bash
+python scripts/txt2img.py --prompt "Roman city on top of a ridge, sci-fi illustration by Greg Rutkowski #sci-fi detailed vivid colors gothic concept illustration by James Gurney and Zdzislaw Beksiński vivid vivid colorsg concept illustration colorful interior" --seed 332 --plms  --aesthetic_steps 5 --W 768 --aesthetic_embedding aesthetic_embeddings/laion_7plus.pt
+```
+
+![sample](assets/grid-0133.png)
+
+Increasing the number of steps more...
+
+```bash
+python scripts/txt2img.py --prompt "Roman city on top of a ridge, sci-fi illustration by Greg Rutkowski #sci-fi detailed vivid colors gothic concept illustration by James Gurney and Zdzislaw Beksiński vivid vivid colorsg concept illustration colorful interior" --seed 332 --plms  --aesthetic_steps 8 --W 768 --aesthetic_embedding aesthetic_embeddings/laion_7plus.pt
+```
+
+![sample](assets/grid-0135.png)
+
+Let's see another example:
 
 ```bash
 python scripts/txt2img.py --prompt "A portal towards other dimension" --plms  --seed 332 --aesthetic_steps 15 --aesthetic_embedding aesthetic_embeddings/sac_8plus.pt
@@ -60,29 +84,7 @@ python scripts/txt2img.py --prompt "A portal towards other dimension" --plms  --
 
 Note that since we have used the SAC dataset for the personalization, the optimized results are more biased towards fantasy aesthetics.
 
-Now we turn to another example. This would be with the original SD model:
-
-```bash
-python scripts/txt2img.py --prompt "Roman city on top of a ridge, sci-fi illustration by Greg Rutkowski #sci-fi detailed vivid colors gothic concept illustration by James Gurney and Zdzislaw Beksiński vivid vivid colorsg concept illustration colorful interior" --seed 332 --plms  --aesthetic_steps 0 --W 768 --aesthetic_embedding aesthetic_embeddings/laion_7plus.pt
-```
-
-![sample](assets/grid-0131.png)
-
-If we now personalize it with the LAION embedding, note how the images get more floral patterns, as this is one common pattern of the LAION aesthetics dataset:
-
-```bash
-python scripts/txt2img.py --prompt "Roman city on top of a ridge, sci-fi illustration by Greg Rutkowski #sci-fi detailed vivid colors gothic concept illustration by James Gurney and Zdzislaw Beksiński vivid vivid colorsg concept illustration colorful interior" --seed 332 --plms  --aesthetic_steps 5 --W 768 --aesthetic_embedding aesthetic_embeddings/laion_7plus.pt
-```
-
-![sample](assets/grid-0133.png)
-
-Increasing the number of steps more...
-
-```bash
-python scripts/txt2img.py --prompt "Roman city on top of a ridge, sci-fi illustration by Greg Rutkowski #sci-fi detailed vivid colors gothic concept illustration by James Gurney and Zdzislaw Beksiński vivid vivid colorsg concept illustration colorful interior" --seed 332 --plms  --aesthetic_steps 8 --W 768 --aesthetic_embedding aesthetic_embeddings/laion_7plus.pt
-```
-
-![sample](assets/grid-0135.png)
+Now we turn to another example. 
 
 To see more examples, have a look at https://arxiv.org/abs/2209.12330
 
