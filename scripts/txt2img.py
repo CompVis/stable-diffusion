@@ -236,7 +236,7 @@ def main():
         "--aesthetic_steps",
         type=int,
         help="number of steps for the aesthetic personalization",
-        default=5,
+        default=10,
     )
     parser.add_argument(
         "--aesthetic_lr",
@@ -348,7 +348,8 @@ def main():
                             x_samples_ddim.cpu().permute(0, 2, 3, 1).numpy()
                         )
 
-                        x_checked_image, has_nsfw_concept = check_safety(x_samples_ddim)
+                        # x_checked_image, has_nsfw_concept = check_safety(x_samples_ddim)
+                        x_checked_image = x_samples_ddim
 
                         x_checked_image_torch = torch.from_numpy(
                             x_checked_image
