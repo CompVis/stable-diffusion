@@ -171,6 +171,14 @@ class KSampler(Sampler):
             if img_callback is not None:
                 img_callback(k_callback_values['x'],k_callback_values['i'])
 
+        # if make_schedule() hasn't been called, we do it now
+        if self.sigmas is None:
+            self.make_schedule(
+                ddim_num_steps=S,
+                ddim_eta = eta,
+                verbose = False,
+            )
+
         # sigmas are set up in make_schedule - we take the last steps items
         total_steps = len(self.sigmas)
         sigmas = self.sigmas[-S-1:]
