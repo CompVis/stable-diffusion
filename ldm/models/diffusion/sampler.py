@@ -20,6 +20,7 @@ from ldm.modules.diffusionmodules.util import (
 class Sampler(object):
     def __init__(self, model, schedule='linear', steps=None, device=None, **kwargs):
         self.model = model
+        self.ddim_timesteps = None
         self.ddpm_num_timesteps = steps
         self.schedule = schedule
         self.device   = device or choose_torch_device()
@@ -156,6 +157,14 @@ class Sampler(object):
         # this has to come in the same format as the conditioning, # e.g. as encoded tokens, ...
         **kwargs,
     ):
+
+        # check to see if make_schedule() has run, and if not, run it
+        if self.ddim_timesteps is None:
+            self.make_schedule(
+                ddim_num_steps=S,
+                ddim_eta = eta,
+                verbose = False,
+            )
 
         ts = self.get_timesteps(S)
 
