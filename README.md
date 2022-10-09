@@ -155,7 +155,8 @@ you can try starting `invoke.py` with the `--precision=float32` flag:
   - Extensive metadata now written into PNG files, allowing reliable regeneration of images
     and tweaking of previous settings.
   - Command-line completion in `invoke.py` now works on Windows, Linux and Mac platforms.
-  - Improved command-line completion behavior and new commands added:
+  - Improved <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/CLI.m">command-line completion behavior</a>.
+    New commands added:
        * List command-line history with `!history`
        * Search command-line history with `!search`
        * Clear history with `!clear`
