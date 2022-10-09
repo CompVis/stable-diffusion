@@ -92,10 +92,10 @@ ln -s "$PATH_TO_CKPT/sd-v1-4.ckpt" models/ldm/stable-diffusion-v1/model.ckpt
 
 # BEGIN ARCHITECTURE-DEPENDENT STEP #
 # For M1: Create the environment & install packages
-PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yaml
+PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-arm64 conda env create -f environment-mac.yml
 
 # For Intel: Create the environment & install packages
-PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-64 conda env create -f environment-mac.yaml
+PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-64 conda env create -f environment-mac.yml
 # END ARCHITECTURE-DEPENDENT STEP #
 
 # Activate the environment (you need to do this every time you want to run SD)
@@ -347,7 +347,7 @@ python scripts/preload_models.py
     ```
 
 The InvokeAI version includes this fix in
-[environment-mac.yaml](https://github.com/invoke-ai/InvokeAI/blob/main/environment-mac.yaml).
+[environment-mac.yml](https://github.com/invoke-ai/InvokeAI/blob/main/environment-mac.yml).
 
 ### "Could not build wheels for tokenizers"
 
