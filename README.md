@@ -41,10 +41,13 @@ _This repository was formally known as lstein/stable-diffusion_
 [latest release link]: https://github.com/invoke-ai/InvokeAI/releases
 </div>
 
-This is a fork of [CompVis/stable-diffusion](https://github.com/CompVis/stable-diffusion), the open
-source text-to-image generator. It provides a streamlined process with various new features and
-options to aid the image generation process. It runs on Windows, Mac and Linux machines, and runs on
-GPU cards with as little as 4 GB or RAM.
+This is a fork of
+[CompVis/stable-diffusion](https://github.com/CompVis/stable-diffusion),
+the open source text-to-image generator. It provides a streamlined
+process with various new features and options to aid the image
+generation process. It runs on Windows, Mac and Linux machines, with
+GPU cards with as little as 4 GB or RAM. It provides both a polished
+Web interface, and an easy-to-use command-line interface.
 
 _Note: This fork is rapidly evolving. Please use the
 [Issues](https://github.com/invoke-ai/InvokeAI/issues) tab to report bugs and make feature
@@ -109,6 +112,7 @@ you can try starting `invoke.py` with the `--precision=float32` flag:
 
 #### Major Features
 
+- [Web Server](docs/features/WEB.md)
 - [Interactive Command Line Interface](docs/features/CLI.md)
 - [Image To Image](docs/features/IMG2IMG.md)
 - [Inpainting Support](docs/features/INPAINTING.md)
@@ -116,7 +120,6 @@ you can try starting `invoke.py` with the `--precision=float32` flag:
 - [Upscaling, face-restoration and outpainting](docs/features/POSTPROCESS.md)
 - [Seamless Tiling](docs/features/OTHER.md#seamless-tiling)
 - [Google Colab](docs/features/OTHER.md#google-colab)
-- [Web Server](docs/features/WEB.md)
 - [Reading Prompts From File](docs/features/PROMPTS.md#reading-prompts-from-a-file)
 - [Shortcut: Reusing Seeds](docs/features/OTHER.md#shortcuts-reusing-seeds)
 - [Prompt Blending](docs/features/PROMPTS.md#prompt-blending)
