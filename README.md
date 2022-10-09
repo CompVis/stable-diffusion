@@ -46,7 +46,7 @@ This is a fork of
 the open source text-to-image generator. It provides a streamlined
 process with various new features and options to aid the image
 generation process. It runs on Windows, Mac and Linux machines, with
-GPU cards with as little as 4 GB or RAM. It provides both a polished
+GPU cards with as little as 4 GB of RAM. It provides both a polished
 Web interface, and an easy-to-use command-line interface.
 
 _Note: This fork is rapidly evolving. Please use the
