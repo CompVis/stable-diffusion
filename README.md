@@ -68,7 +68,7 @@ python scripts/txt2img.py --prompt "Roman city on top of a ridge, sci-fi illustr
 
 ![sample](assets/grid-0131.png)
 
-If we now personalized it with the LAION embedding, note how the images get more floral patterns, as this is one common pattern of the LAION aesthetics dataset:
+If we now personalize it with the LAION embedding, note how the images get more floral patterns, as this is one common pattern of the LAION aesthetics dataset:
 
 ```bash
 python scripts/txt2img.py --prompt "Roman city on top of a ridge, sci-fi illustration by Greg Rutkowski #sci-fi detailed vivid colors gothic concept illustration by James Gurney and Zdzislaw Beksiński vivid vivid colorsg concept illustration colorful interior" --seed 332 --plms  --aesthetic_steps 5 --W 768 --aesthetic_embedding aesthetic_embeddings/laion_7plus.pt
