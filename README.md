@@ -136,7 +136,7 @@ The previous prompt was personalized with the LAION aesthetics embedding, so it 
 ```bash
 python scripts/txt2img.py --prompt "robotic cat with wings" --plms --seed 7 --ckpt ../stable-diffusion/ema-only-epoch\=000142.ckpt  --aesthetic_steps 0 --aesthetic_embedding aesthetic_embeddings/laion_7plus.pt
 ```
-
+![sample](assets/grid-0035.png)
 
 Another example:
 
