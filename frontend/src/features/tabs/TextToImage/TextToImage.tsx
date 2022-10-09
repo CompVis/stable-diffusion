@@ -6,7 +6,7 @@ import { RootState, useAppSelector } from '../../../app/store';
 
 export default function TextToImage() {
   const shouldShowGallery = useAppSelector(
-    (state: RootState) => state.gallery.shouldShowGallery
+    (state: RootState) => state.options.shouldShowGallery
   );
 
   return (

@@ -55,12 +55,31 @@
   @include HideScrollbar;
 }
 
-.image-gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(80px, auto));
-  gap: 0.5rem;
-  justify-items: center;
+.masonry-grid {
+  display: -webkit-box; /* Not needed if autoprefixing */
+  display: -ms-flexbox; /* Not needed if autoprefixing */
+  display: flex;
+  margin-left: 0.5rem; /* gutter size offset */
+  width: auto;
 }
+.masonry-grid_column {
+  padding-left: 0.5rem; /* gutter size */
+  background-clip: padding-box;
+}
+
+/* Style your items */
+.masonry-grid_column > .hoverable-image {
+  /* change div to reference your elements you put in <Masonry> */
+  background: var(--tab-color);
+  margin-bottom: 0.5rem;
+}
+
+// .image-gallery {
+//   display: grid;
+//   grid-template-columns: repeat(auto-fill, minmax(80px, auto));
+//   gap: 0.5rem;
+//   justify-items: center;
+// }
 
 .image-gallery-load-more-btn {
   background-color: var(--btn-load-more) !important;
