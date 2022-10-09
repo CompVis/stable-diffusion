@@ -143,7 +143,7 @@ you can try starting `invoke.py` with the `--precision=float32` flag:
   - Completely new WebGUI - launch with `python3 scripts/invoke.py --web`
   - Support for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/INPAINTING.md">inpainting</a> and <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/OUTPAINTING.md">outpainting</a>
   - img2img runs on all k* samplers
-  - Support for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/PROMPTS.md#negative-and-unconditioned-prompts>negative prompts</a>
+  - Support for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/PROMPTS.md#negative-and-unconditioned-prompts">negative prompts</a>
   - Support for CodeFormer face reconstruction
   - Support for Textual Inversion on Macintoshes
   - Support in both WebGUI and CLI for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/POSTPROCESS.md">post-processing of previously-generated images</a>
@@ -151,7 +151,7 @@ you can try starting `invoke.py` with the `--precision=float32` flag:
     and "embiggen" upscaling. See the `!fix` command.
   - New `--hires` option on `invoke>` line allows <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/CLI.m#this-is-an-example-of-txt2img">larger images to be created without duplicating elements</a>, at the cost of some performance.
   - New `--perlin` and `--threshold` options allow you to add and control variation
-    during image generation (see <a href=""https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/OTHER.md#thresholding-and-perlin-noise-initialization-options">Thresholding and Perlin Noise Initialization</a>
+    during image generation (see <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/OTHER.md#thresholding-and-perlin-noise-initialization-options">Thresholding and Perlin Noise Initialization</a>
   - Extensive metadata now written into PNG files, allowing reliable regeneration of images
     and tweaking of previous settings.
   - Command-line completion in `invoke.py` now works on Windows, Linux and Mac platforms.
