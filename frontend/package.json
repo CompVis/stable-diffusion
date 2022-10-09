@@ -25,6 +25,7 @@
     "react-dropzone": "^14.2.2",
     "react-hotkeys-hook": "^3.4.7",
     "react-icons": "^4.4.0",
+    "react-masonry-css": "^1.0.16",
     "react-redux": "^8.0.2",
     "redux-persist": "^6.0.0",
     "socket.io": "^4.5.2",

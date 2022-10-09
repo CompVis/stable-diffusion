@@ -1,0 +1,59 @@
+.hoverable-image {
+  display: grid;
+  grid-template-areas: 'hoverable-image';
+  transition: transform 0.2s ease-out;
+
+  &:hover {
+    cursor: pointer;
+    border-radius: 0.5rem;
+    z-index: 2;
+  }
+
+  .hoverable-image-image,
+  .hoverable-image-content,
+  .hoverable-image-icons {
+    grid-area: hoverable-image;
+  }
+
+  .hoverable-image-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  .hoverable-image-content {
+    display: grid;
+    place-items: center;
+
+    .hoverable-image-check {
+      fill: var(--status-good-color);
+    }
+  }
+
+  .hoverable-image-icons {
+    grid-area: hoverable-image;
+    position: absolute;
+    bottom: -2rem;
+    display: grid;
+    grid-template-columns: repeat(2, max-content);
+    border-radius: 0.4rem;
+    background-color: var(--background-color-secondary);
+    padding: 0.2rem;
+    gap: 0.2rem;
+    grid-auto-rows: max-content;
+    place-self: center;
+
+    button {
+      width: 12px;
+      height: 12px;
+      border-radius: 0.2rem;
+      padding: 10px 0;
+      svg {
+        width: 12px;
+        height: 12px;
+      }
+    }
+  }
+}

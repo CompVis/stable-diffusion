@@ -75,7 +75,6 @@ git clone https://github.com/invoke-ai/InvokeAI.git
 cd InvokeAI
 
 ### WAIT FOR THE CHECKPOINT FILE TO DOWNLOAD, THEN PROCEED ###
->>>>>>> Updates INSTALL_MAC.md
 
 # We will leave the big checkpoint wherever you stashed it for long-term storage,
 # and make a link to it from the repo's folder. This allows you to use it for
