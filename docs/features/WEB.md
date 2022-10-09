@@ -25,7 +25,7 @@ wildcard `0.0.0.0`. For example:
 While most of the WebGUI's features are intuitive, here is a guided
 walkthrough through its various components.
 
-<img src="../assets/invoke-web-server.png-1" width=350>
+<img src="../assets/invoke-web-server-1.png" width=350>
 
 The screenshot above shows the Text to Image tab of the WebGUI. There
 are three main sections:
@@ -53,7 +53,7 @@ There are also a series of icons to the left of the control panel (see
 highlighted area in the screenshot below) which select among a series
 of tabs for performing different types of operations.
 
-<img src="../assets/invoke-web-server.png-2">
+<img src="../assets/invoke-web-server-2.png">
 
 From top to bottom, these are:
 
