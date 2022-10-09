@@ -229,7 +229,7 @@ from the top on the left-hand side of the screen:
 
 This will bring you to a screen similar to the one shown here:
 
-<img src="../assets/invoke-web-server-6.png" width=350>
+<img src="../assets/invoke-web-server-6.png" width=640>
 
 Drag-and-drop the Lincoln-and-Parrot image into the Image panel, or
 click the blank area to get an upload dialog. The image will load into
@@ -241,7 +241,7 @@ but this image will be replaced in the next step.)
 shoulder* and press Invoke. A derived image will appear to the right
 of the original one:
 
-<img src="../assets/invoke-web-server-7.png" width=350>
+<img src="../assets/invoke-web-server-7.png" width=640>
 
 12. Experiment with the different settings. The most influential one
 in Image to Image is *Image to Image Strength* located about midway
@@ -270,7 +270,7 @@ the same prompt "old sea captain with raven on shoulder" try Invoking
 an image. This time, only the parrot will be replaced, leaving the
 rest of the original image intact:
 
-<img src="../assets/invoke-web-server-8.png" width=350>
+<img src="../assets/invoke-web-server-8.png" width=640>
 
 ## Parting remarks
 
