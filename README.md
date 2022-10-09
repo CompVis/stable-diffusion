@@ -150,6 +150,8 @@ you can try starting `invoke.py` with the `--precision=float32` flag:
     and "embiggen" upscaling. See the `!fix` command.
   - New `--hires` option on `invoke>` line allows larger images to be created without
     duplicating elements, at the cost of some performance.
+  - New `--perlin` and `--threshold` options allow you to add and control variation
+    during image generation (see [docs/features/OTHER.md#thresholding-and-perlin-noise-initialization-options])
   - Extensive metadata now written into PNG files, allowing reliable regeneration of images
     and tweaking of previous settings.
   - Command-line completion in `invoke.py` now works on Windows, Linux and Mac platforms.
