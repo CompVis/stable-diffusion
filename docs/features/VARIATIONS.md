@@ -34,7 +34,7 @@ First we let SD create a series of images in the usual way, in this case
 requesting six iterations:
 
 ```bash
-dream> lucy lawless as xena, warrior princess, character portrait, high resolution -n6
+invoke> lucy lawless as xena, warrior princess, character portrait, high resolution -n6
 ...
 Outputs:
 ./outputs/Xena/000001.1579445059.png: "prompt" -s50 -W512 -H512 -C7.5 -Ak_lms -S1579445059
@@ -57,7 +57,7 @@ differing by a variation amount of 0.2. This number ranges from `0` to `1.0`,
 with higher numbers being larger amounts of variation.
 
 ```bash
-dream> "prompt" -n6 -S3357757885 -v0.2
+invoke> "prompt" -n6 -S3357757885 -v0.2
 ...
 Outputs:
 ./outputs/Xena/000002.784039624.png: "prompt" -s50 -W512 -H512 -C7.5 -Ak_lms -V 784039624:0.2 -S3357757885
@@ -89,7 +89,7 @@ We combine the two variations using `-V` (`--with_variations`). Again, we must
 provide the seed for the originally-chosen image in order for this to work.
 
 ```bash
-dream> "prompt"  -S3357757885 -V3647897225,0.1,1614299449,0.1
+invoke> "prompt"  -S3357757885 -V3647897225,0.1,1614299449,0.1
 Outputs:
 ./outputs/Xena/000003.1614299449.png: "prompt" -s50 -W512 -H512 -C7.5 -Ak_lms -V 3647897225:0.1,1614299449:0.1 -S3357757885
 ```
@@ -105,7 +105,7 @@ latter, using both the `-V` (combining) and `-v` (variation strength) options.
 Note that we use `-n6` to generate 6 variations:
 
 ```bash
-dream> "prompt" -S3357757885 -V3647897225,0.1,1614299449,0.1 -v0.05 -n6
+invoke> "prompt" -S3357757885 -V3647897225,0.1,1614299449,0.1 -v0.05 -n6
 Outputs:
 ./outputs/Xena/000004.3279757577.png: "prompt" -s50 -W512 -H512 -C7.5 -Ak_lms -V 3647897225:0.1,1614299449:0.1,3279757577:0.05 -S3357757885
 ./outputs/Xena/000004.2853129515.png: "prompt" -s50 -W512 -H512 -C7.5 -Ak_lms -V 3647897225:0.1,1614299449:0.1,2853129515:0.05 -S3357757885

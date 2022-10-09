@@ -1,6 +1,6 @@
 import argparse
 import os
-from ldm.dream.args import PRECISION_CHOICES
+from ldm.invoke.args import PRECISION_CHOICES
 
 
 def create_cmd_parser():

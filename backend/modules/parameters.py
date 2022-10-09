@@ -15,7 +15,7 @@ SAMPLER_CHOICES = [
 
 def parameters_to_command(params):
     """
-    Converts dict of parameters into a `dream.py` REPL command.
+    Converts dict of parameters into a `invoke.py` REPL command.
     """
 
     switches = list()

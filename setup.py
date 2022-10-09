@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='stable-diffusion',
-    version='1.15.0-dev',
+    name='invoke-ai',
+    version='2.0.0',
     description='',
     packages=find_packages(),
     install_requires=[

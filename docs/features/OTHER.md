@@ -22,10 +22,10 @@ Output Example: ![Colab Notebook](../assets/colab_notebook.png)
 
 The seamless tiling mode causes generated images to seamlessly tile with itself. To use it, add the
 `--seamless` option when starting the script which will result in all generated images to tile, or
-for each `dream>` prompt as shown here:
+for each `invoke>` prompt as shown here:
 
 ```python
-dream> "pond garden with lotus by claude monet" --seamless -s100 -n4
+invoke> "pond garden with lotus by claude monet" --seamless -s100 -n4
 ```
 
 ---
@@ -42,12 +42,12 @@ Here's an example of using this to do a quick refinement. It also illustrates us
 switch to turn on upscaling and face enhancement (see previous section):
 
 ```bash
-dream> a cute child playing hopscotch -G0.5
+invoke> a cute child playing hopscotch -G0.5
 [...]
 outputs/img-samples/000039.3498014304.png: "a cute child playing hopscotch" -s50 -W512 -H512 -C7.5 -mk_lms -S3498014304
 
 # I wonder what it will look like if I bump up the steps and set facial enhancement to full strength?
-dream> a cute child playing hopscotch -G1.0 -s100 -S -1
+invoke> a cute child playing hopscotch -G1.0 -s100 -S -1
 reusing previous seed 3498014304
 [...]
 outputs/img-samples/000040.3498014304.png: "a cute child playing hopscotch" -G1.0 -s100 -W512 -H512 -C7.5 -mk_lms -S3498014304

@@ -4,9 +4,9 @@ import copy
 import base64
 import mimetypes
 import os
-from ldm.dream.args import Args, metadata_dumps
+from ldm.invoke.args import Args, metadata_dumps
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from ldm.dream.pngwriter import PngWriter
+from ldm.invoke.pngwriter import PngWriter
 from threading import Event
 
 def build_opt(post_data, seed, gfpgan_model_exists):

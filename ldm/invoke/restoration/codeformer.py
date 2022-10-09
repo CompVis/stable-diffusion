@@ -8,7 +8,7 @@ pretrained_model_url = 'https://github.com/sczhou/CodeFormer/releases/download/v
 
 class CodeFormerRestoration():
     def __init__(self,
-            codeformer_dir='ldm/dream/restoration/codeformer',
+            codeformer_dir='ldm/invoke/restoration/codeformer',
             codeformer_model_path='weights/codeformer.pth') -> None:
         self.model_path = os.path.join(codeformer_dir, codeformer_model_path)
         self.codeformer_model_exists = os.path.isfile(self.model_path)
@@ -27,7 +27,7 @@ class CodeFormerRestoration():
             from basicsr.utils.download_util import load_file_from_url
             from basicsr.utils import img2tensor, tensor2img
             from facexlib.utils.face_restoration_helper import FaceRestoreHelper
-            from ldm.dream.restoration.codeformer_arch import CodeFormer
+            from ldm.invoke.restoration.codeformer_arch import CodeFormer
             from torchvision.transforms.functional import normalize
             from PIL import Image
             
@@ -35,7 +35,7 @@ class CodeFormerRestoration():
             
             cf = cf_class(dim_embd=512, codebook_size=1024, n_head=8, n_layers=9, connect_list=['32', '64', '128', '256']).to(device)
             
-            checkpoint_path = load_file_from_url(url=pretrained_model_url, model_dir=os.path.abspath('ldm/dream/restoration/codeformer/weights'), progress=True)
+            checkpoint_path = load_file_from_url(url=pretrained_model_url, model_dir=os.path.abspath('ldm/invoke/restoration/codeformer/weights'), progress=True)
             checkpoint = torch.load(checkpoint_path)['params_ema']
             cf.load_state_dict(checkpoint)
             cf.eval()

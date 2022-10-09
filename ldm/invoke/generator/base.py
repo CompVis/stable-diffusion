@@ -1,5 +1,5 @@
 '''
-Base class for ldm.dream.generator.*
+Base class for ldm.invoke.generator.*
 including img2img, txt2img, and inpaint
 '''
 import torch
@@ -9,7 +9,7 @@ from tqdm import tqdm, trange
 from PIL               import Image
 from einops import rearrange, repeat
 from pytorch_lightning import seed_everything
-from ldm.dream.devices import choose_autocast
+from ldm.invoke.devices import choose_autocast
 from ldm.util import rand_perlin_2d
 
 downsampling = 8
@@ -21,6 +21,8 @@ class Generator():
         self.seed                = None
         self.latent_channels     = model.channels
         self.downsampling_factor = downsampling   # BUG: should come from model or config
+        self.perlin              = 0.0
+        self.threshold           = 0
         self.variation_amount    = 0
         self.with_variations     = []
 

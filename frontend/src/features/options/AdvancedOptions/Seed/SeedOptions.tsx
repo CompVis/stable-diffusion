@@ -16,8 +16,12 @@ const SeedOptions = () => {
         <Seed />
         <ShuffleSeed />
       </Flex>
-      <Threshold />
-      <Perlin />
+      <Flex gap={2}>
+        <Threshold />
+      </Flex>
+      <Flex gap={2}>
+        <Perlin />
+      </Flex>
     </Flex>
   );
 };

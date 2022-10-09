@@ -1,10 +1,10 @@
 '''
-ldm.dream.generator.txt2img inherits from ldm.dream.generator
+ldm.invoke.generator.txt2img inherits from ldm.invoke.generator
 '''
 
 import torch
 import numpy as  np
-from ldm.dream.generator.base import Generator
+from ldm.invoke.generator.base import Generator
 
 class Txt2Img(Generator):
     def __init__(self, model, precision):

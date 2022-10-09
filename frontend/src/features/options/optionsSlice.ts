@@ -252,7 +252,9 @@ export const optionsSlice = createSlice({
       if (steps) state.steps = steps;
       if (cfg_scale) state.cfgScale = cfg_scale;
       if (threshold) state.threshold = threshold;
+      if (typeof threshold === 'undefined') state.threshold = 0;
       if (perlin) state.perlin = perlin;
+      if (typeof perlin === 'undefined') state.perlin = 0;      
       if (typeof seamless === 'boolean') state.seamless = seamless;
       if (width) state.width = width;
       if (height) state.height = height;

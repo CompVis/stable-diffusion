@@ -5,7 +5,7 @@ from torch import nn, Tensor
 import torch.nn.functional as F
 from typing import Optional, List
 
-from ldm.dream.restoration.vqgan_arch import *
+from ldm.invoke.restoration.vqgan_arch import *
 from basicsr.utils import get_root_logger
 from basicsr.utils.registry import ARCH_REGISTRY
 

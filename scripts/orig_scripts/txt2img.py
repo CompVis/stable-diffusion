@@ -18,7 +18,7 @@ import torch.nn as nn
 from ldm.util                  import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
-from ldm.dream.devices         import choose_torch_device
+from ldm.invoke.devices         import choose_torch_device
 
 def chunk(it, size):
     it = iter(it)

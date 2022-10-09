@@ -8,8 +8,8 @@ hide:
 
 ## **Interactive Command Line Interface**
 
-The `dream.py` script, located in `scripts/dream.py`, provides an interactive
-interface to image generation similar to the "dream mothership" bot that Stable
+The `invoke.py` script, located in `scripts/dream.py`, provides an interactive
+interface to image generation similar to the "invoke mothership" bot that Stable
 AI provided on its Discord server.
 
 Unlike the `txt2img.py` and `img2img.py` scripts provided in the original
@@ -34,21 +34,21 @@ The script is confirmed to work on Linux, Windows and Mac systems.
     currently rudimentary, but a much better replacement is on its way.
 
 ```bash
-(ldm) ~/stable-diffusion$ python3 ./scripts/dream.py
+(ldm) ~/stable-diffusion$ python3 ./scripts/invoke.py
 * Initializing, be patient...
 Loading model from models/ldm/text2img-large/model.ckpt
 (...more initialization messages...)
 
 * Initialization done! Awaiting your command...
-dream> ashley judd riding a camel -n2 -s150
+invoke> ashley judd riding a camel -n2 -s150
 Outputs:
    outputs/img-samples/00009.png: "ashley judd riding a camel" -n2 -s150 -S 416354203
    outputs/img-samples/00010.png: "ashley judd riding a camel" -n2 -s150 -S 1362479620
 
-dream> "there's a fly in my soup" -n6 -g
+invoke> "there's a fly in my soup" -n6 -g
     outputs/img-samples/00011.png: "there's a fly in my soup" -n6 -g -S 2685670268
     seeds for individual rows: [2685670268, 1216708065, 2335773498, 822223658, 714542046, 3395302430]
-dream> q
+invoke> q
 
 # this shows how to retrieve the prompt stored in the saved image's metadata
 (ldm) ~/stable-diffusion$ python ./scripts/images2prompt.py outputs/img_samples/*.png
@@ -57,10 +57,10 @@ dream> q
 00011.png: "there's a fly in my soup" -n6 -g -S 2685670268
 ```
 
-![dream-py-demo](../assets/dream-py-demo.png)
+![invoke-py-demo](../assets/dream-py-demo.png)
 
-The `dream>` prompt's arguments are pretty much identical to those used in the
-Discord bot, except you don't need to type "!dream" (it doesn't hurt if you do).
+The `invoke>` prompt's arguments are pretty much identical to those used in the
+Discord bot, except you don't need to type "!invoke" (it doesn't hurt if you do).
 A significant change is that creation of individual images is now the default
 unless `--grid` (`-g`) is given. A full list is given in
 [List of prompt arguments](#list-of-prompt-arguments).
@@ -73,7 +73,7 @@ the location of the model weight files.
 
 ### List of arguments recognized at the command line
 
-These command-line arguments can be passed to `dream.py` when you first run it
+These command-line arguments can be passed to `invoke.py` when you first run it
 from the Windows, Mac or Linux command line. Some set defaults that can be
 overridden on a per-prompt basis (see [List of prompt arguments]
 (#list-of-prompt-arguments). Others
@@ -112,15 +112,15 @@ These arguments are deprecated but still work:
 | --laion400m        | -l         | False               | Use older LAION400m weights; use `--model=laion400m` instead |
 
 **A note on path names:** On Windows systems, you may run into
-  problems when passing the dream script standard backslashed path
+  problems when passing the invoke script standard backslashed path
   names because the Python interpreter treats "\" as an escape.
   You can either double your slashes (ick): C:\\\\path\\\\to\\\\my\\\\file, or
   use Linux/Mac style forward slashes (better): C:/path/to/my/file.
 
 ## List of prompt arguments
 
-After the dream.py script initializes, it will present you with a
-**dream>** prompt. Here you can enter information to generate images
+After the invoke.py script initializes, it will present you with a
+**invoke>** prompt. Here you can enter information to generate images
 from text (txt2img), to embellish an existing image or sketch
 (img2img), or to selectively alter chosen regions of the image
 (inpainting).
@@ -128,13 +128,13 @@ from text (txt2img), to embellish an existing image or sketch
 ### This is an example of txt2img:
 
 ~~~~
-dream> waterfall and rainbow -W640 -H480
+invoke> waterfall and rainbow -W640 -H480
 ~~~~
 
 This will create the requested image with the dimensions 640 (width)
 and 480 (height).
 
-Here are the dream> command that apply to txt2img:
+Here are the invoke> command that apply to txt2img:
 
 | Argument           |  Shortcut  |  Default            |  Description |
 |--------------------|------------|---------------------|--------------|
@@ -167,7 +167,7 @@ the nearest multiple of 64.
 ### This is an example of img2img:	
 
 ~~~~
-dream> waterfall and rainbow -I./vacation-photo.png -W640 -H480 --fit
+invoke> waterfall and rainbow -I./vacation-photo.png -W640 -H480 --fit
 ~~~~
 
 This will modify the indicated vacation photograph by making it more
@@ -188,7 +188,7 @@ accepts additional options:
 ### This is an example of inpainting:
 
 ~~~~
-dream> waterfall and rainbow -I./vacation-photo.png -M./vacation-mask.png -W640 -H480 --fit
+invoke> waterfall and rainbow -I./vacation-photo.png -M./vacation-mask.png -W640 -H480 --fit
 ~~~~
 
 This will do the same thing as img2img, but image alterations will
@@ -224,20 +224,20 @@ Some examples:
 
 Upscale to 4X its original size and fix faces using codeformer:
 ~~~
-dream> !fix 0000045.4829112.png -G1 -U4 -ft codeformer
+invoke> !fix 0000045.4829112.png -G1 -U4 -ft codeformer
 ~~~
 
 Use the GFPGAN algorithm to fix faces, then upscale to 3X using --embiggen:
 
 ~~~
-dream> !fix 0000045.4829112.png -G0.8 -ft gfpgan
+invoke> !fix 0000045.4829112.png -G0.8 -ft gfpgan
 >> fixing outputs/img-samples/0000045.4829112.png
 >> retrieved seed 4829112 and prompt "boy enjoying a banana split"
 >> GFPGAN - Restoring Faces for image seed:4829112
 Outputs:
 [1] outputs/img-samples/000017.4829112.gfpgan-00.png: !fix "outputs/img-samples/0000045.4829112.png" -s 50 -S  -W 512 -H 512 -C 7.5 -A k_lms -G 0.8
 
-dream> !fix 000017.4829112.gfpgan-00.png --embiggen 3
+invoke> !fix 000017.4829112.gfpgan-00.png --embiggen 3
 ...lots of text...
 Outputs:
 [2] outputs/img-samples/000018.2273800735.embiggen-00.png: !fix "outputs/img-samples/000017.243781548.gfpgan-00.png" -s 50 -S 2273800735 -W 512 -H 512 -C 7.5 -A k_lms --embiggen 3.0 0.75 0.25
@@ -251,9 +251,9 @@ provide either the name of a file in the current output directory, or
 a full file path.
 
 ~~~
-dream> !fetch 0000015.8929913.png
+invoke> !fetch 0000015.8929913.png
 # the script returns the next line, ready for editing and running:
-dream> a fantastic alien landscape -W 576 -H 512 -s 60 -A plms -C 7.5
+invoke> a fantastic alien landscape -W 576 -H 512 -s 60 -A plms -C 7.5
 ~~~
 
 Note that this command may behave unexpectedly if given a PNG file that
@@ -261,7 +261,7 @@ was not generated by InvokeAI.
 
 ## !history
 
-The dream script keeps track of all the commands you issue during a
+The invoke script keeps track of all the commands you issue during a
 session, allowing you to re-run them. On Mac and Linux systems, it
 also writes the command-line history out to disk, giving you access to
 the most recent 1000 commands issued.
@@ -272,7 +272,7 @@ issued during the session (Windows), or the most recent 1000 commands
 where "NNN" is the history line number. For example:
 
 ~~~
-dream> !history
+invoke> !history
 ...
 [14] happy woman sitting under tree wearing broad hat and flowing garment
 [15] beautiful woman sitting under tree wearing broad hat and flowing garment
@@ -280,8 +280,8 @@ dream> !history
 [20] watercolor of beautiful woman sitting under tree wearing broad hat and flowing garment -v0.2 -n6 -S2878767194
 [21] surrealist painting of beautiful woman sitting under tree wearing broad hat and flowing garment -v0.2 -n6 -S2878767194
 ...
-dream> !20
-dream> watercolor of beautiful woman sitting under tree wearing broad hat and flowing garment -v0.2 -n6 -S2878767194
+invoke> !20
+invoke> watercolor of beautiful woman sitting under tree wearing broad hat and flowing garment -v0.2 -n6 -S2878767194
 ~~~
 
 ## !search <search string>
@@ -290,7 +290,7 @@ This is similar to !history but it only returns lines that contain
 `search string`. For example:
 
 ~~~
-dream> !search surreal
+invoke> !search surreal
 [21] surrealist painting of beautiful woman sitting under tree wearing broad hat and flowing garment -v0.2 -n6 -S2878767194
 ~~~
 
@@ -312,16 +312,16 @@ command completion.
 - To paste a cut section back in, position the cursor where you want to paste, and type CTRL-Y
 
 Windows users can get similar, but more limited, functionality if they
-launch dream.py with the "winpty" program and have the `pyreadline3`
+launch invoke.py with the "winpty" program and have the `pyreadline3`
 library installed:
 
 ~~~
-> winpty python scripts\dream.py
+> winpty python scripts\invoke.py
 ~~~
 
-On the Mac and Linux platforms, when you exit dream.py, the last 1000
+On the Mac and Linux platforms, when you exit invoke.py, the last 1000
 lines of your command-line history will be saved. When you restart
-dream.py, you can access the saved history using the up-arrow key.
+invoke.py, you can access the saved history using the up-arrow key.
 
 In addition, limited command-line completion is installed. In various
 contexts, you can start typing your command and press tab. A list of
@@ -334,7 +334,7 @@ will attempt to complete pathnames for you. This is most handy for the
 the path with a slash ("/") or "./". For example:
 
 ~~~
-dream> zebra with a mustache -I./test-pictures<TAB>
+invoke> zebra with a mustache -I./test-pictures<TAB>
 -I./test-pictures/Lincoln-and-Parrot.png  -I./test-pictures/zebra.jpg        -I./test-pictures/madonna.png
 -I./test-pictures/bad-sketch.png          -I./test-pictures/man_with_eagle/
 ```

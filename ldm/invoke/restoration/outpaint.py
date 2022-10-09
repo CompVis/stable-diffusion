@@ -13,8 +13,6 @@ class Outpaint(object):
         seed   = old_opt.seed
         prompt = old_opt.prompt
 
-        print(f'DEBUG: old seed={seed}, old prompt = {prompt}')
-
         def wrapped_callback(img,seed,**kwargs):
             image_callback(img,seed,use_prefix=prefix,**kwargs)
 

@@ -4,7 +4,7 @@ title: Changelog
 
 # :octicons-log-16: Changelog
 
-## v1.13 <small>(in process)</small>
+## v1.13
 
 - Supports a Google Colab notebook for a standalone server running on Google
   hardware [Arturo Mendivil](https://github.com/artmen1516)
@@ -12,10 +12,10 @@ title: Changelog
   [Kevin Gibbons](https://github.com/bakkot)
 - WebUI supports incremental display of in-progress images during generation
   [Kevin Gibbons](https://github.com/bakkot)
-- Output directory can be specified on the dream> command line.
+- Output directory can be specified on the invoke> command line.
 - The grid was displaying duplicated images when not enough images to fill the
   final row [Muhammad Usama](https://github.com/SMUsamaShah)
-- Can specify --grid on dream.py command line as the default.
+- Can specify --grid on invoke.py command line as the default.
 - Miscellaneous internal bug and stability fixes.
 
 ---
@@ -24,14 +24,14 @@ title: Changelog
 
 - Improved file handling, including ability to read prompts from standard input.
   (kudos to [Yunsaki](https://github.com/yunsaki)
-- The web server is now integrated with the dream.py script. Invoke by adding
-  --web to the dream.py command arguments.
+- The web server is now integrated with the invoke.py script. Invoke by adding
+  --web to the invoke.py command arguments.
 - Face restoration and upscaling via GFPGAN and Real-ESGAN are now automatically
   enabled if the GFPGAN directory is located as a sibling to Stable Diffusion.
   VRAM requirements are modestly reduced. Thanks to both
   [Blessedcoolant](https://github.com/blessedcoolant) and
   [Oceanswave](https://github.com/oceanswave) for their work on this.
-- You can now swap samplers on the dream> command line.
+- You can now swap samplers on the invoke> command line.
   [Blessedcoolant](https://github.com/blessedcoolant)
 
 ---
@@ -45,7 +45,7 @@ title: Changelog
   back to the previous command, but will work on all images generated with the
   -n# switch.
 - Variant generation support temporarily disabled pending more general solution.
-- Created a feature branch named **yunsaki-morphing-dream** which adds
+- Created a feature branch named **yunsaki-morphing-invoke** which adds
   experimental support for iteratively modifying the prompt and its parameters.
   Please
   see[ Pull Request #86](https://github.com/lstein/stable-diffusion/pull/86) for
@@ -75,7 +75,7 @@ title: Changelog
 
 ## v1.08 <small>(24 August 2022)</small>
 
-- Escape single quotes on the dream> command before trying to parse. This avoids
+- Escape single quotes on the invoke> command before trying to parse. This avoids
   parse errors.
 - Removed instruction to get Python3.8 as first step in Windows install.
   Anaconda3 does it for you.
@@ -112,7 +112,7 @@ title: Changelog
   can be regenerated with the indicated key
 
 - It should no longer be possible for one image to overwrite another
-- You can use the "cd" and "pwd" commands at the dream> prompt to set and
+- You can use the "cd" and "pwd" commands at the invoke> prompt to set and
   retrieve the path of the output directory.
 
 ## v1.04 <small>(22 August 2022 - after the drop)</small>
@@ -139,5 +139,5 @@ title: Changelog
 - added k_lms sampling. **Please run "conda env update -f environment.yaml" to
   load the k_lms dependencies!!**
 - use half precision arithmetic by default, resulting in faster execution and
-  lower memory requirements Pass argument --full_precision to dream.py to get
+  lower memory requirements Pass argument --full_precision to invoke.py to get
   slower but more accurate image generation

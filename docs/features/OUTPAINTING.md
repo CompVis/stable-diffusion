@@ -31,7 +31,7 @@ Pretty nice, but it's annoying that the top of her head is cut
 off. She's also a bit off center. Let's fix that!
 
 ~~~~
-dream> !fix images/curly.png --outcrop top 64 right 64
+invoke> !fix images/curly.png --outcrop top 64 right 64
 ~~~~
 
 This is saying to apply the `outcrop` extension by extending the top
@@ -67,7 +67,7 @@ differences. Starting with the same image, here is how we would add an
 additional 64 pixels to the top of the image:
 
 ~~~
-dream> !fix images/curly.png --out_direction top 64
+invoke> !fix images/curly.png --out_direction top 64
 ~~~
 
 (you can abbreviate ``--out_direction` as `-D`.

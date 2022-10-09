@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from main import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
-from ldm.dream.devices import choose_torch_device
+from ldm.invoke.devices import choose_torch_device
 
 def make_batch(image, mask, device):
     image = np.array(Image.open(image).convert("RGB"))

@@ -20,39 +20,33 @@ The default face restoration module is GFPGAN. The default upscale is
 Real-ESRGAN. For an alternative face restoration module, see [CodeFormer
 Support] below.
 
-As of version 1.14, environment.yaml will install the Real-ESRGAN package into
-the standard install location for python packages, and will put GFPGAN into a
-subdirectory of "src" in the InvokeAI directory. (The reason for this is
-that the standard GFPGAN distribution has a minor bug that adversely affects
-image color.) Upscaling with Real-ESRGAN should "just work" without further
-intervention. Simply pass the --upscale (-U) option on the dream> command line,
-or indicate the desired scale on the popup in the Web GUI.
+As of version 1.14, environment.yaml will install the Real-ESRGAN
+package into the standard install location for python packages, and
+will put GFPGAN into a subdirectory of "src" in the InvokeAI
+directory. Upscaling with Real-ESRGAN should "just work" without
+further intervention. Simply pass the --upscale (-U) option on the
+invoke> command line, or indicate the desired scale on the popup in
+the Web GUI.
 
-For **GFPGAN** to work, there is one additional step needed. You will need to
-download and copy the GFPGAN
-[models file](https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.4.pth)
-into **src/gfpgan/experiments/pretrained_models**. On Mac and Linux systems,
-here's how you'd do it using **wget**:
+**GFPGAN** requires a series of downloadable model files to
+work. These are loaded when you run `scripts/preload_models.py`. If
+GFPAN is failing with an error, please run the following from the
+InvokeAI directory:
 
-```bash
-wget https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.4.pth -P src/gfpgan/experiments/pretrained_models/
-```
+~~~~
+python scripts/preload_models.py
+~~~~
 
-Make sure that you're in the InvokeAI directory when you do this.
+If you do not run this script in advance, the GFPGAN module will attempt
+to download the models files the first time you try to perform facial
+reconstruction. 
 
-Alternatively, if you have GFPGAN installed elsewhere, or if you are using an
-earlier version of this package which asked you to install GFPGAN in a sibling
-directory, you may use the `--gfpgan_dir` argument with `dream.py` to set a
-custom path to your GFPGAN directory. _There are other GFPGAN related boot
-arguments if you wish to customize further._
-
-!!! warning "Internet connection needed"
-
-    Users whose GPU machines are isolated from the Internet (e.g.
-    on a University cluster) should be aware that the first time you run dream.py with GFPGAN and
-    Real-ESRGAN turned on, it will try to download model files from the Internet. To rectify this, you
-    may run `python3 scripts/preload_models.py` after you have installed GFPGAN and all its
-    dependencies.
+Alternatively, if you have GFPGAN installed elsewhere, or if you are
+using an earlier version of this package which asked you to install
+GFPGAN in a sibling directory, you may use the `--gfpgan_dir` argument
+with `invoke.py` to set a custom path to your GFPGAN directory. _There
+are other GFPGAN related boot arguments if you wish to customize
+further._
 
 ## Usage
 
@@ -94,13 +88,13 @@ too.
 ### Example Usage
 
 ```bash
-dream> superman dancing with a panda bear -U 2 0.6 -G 0.4
+invoke> superman dancing with a panda bear -U 2 0.6 -G 0.4
 ```
 
 This also works with img2img:
 
 ```bash
-dream> a man wearing a pineapple hat -I path/to/your/file.png -U 2 0.5 -G 0.6
+invoke> a man wearing a pineapple hat -I path/to/your/file.png -U 2 0.5 -G 0.6
 ```
 
 !!! note
@@ -124,15 +118,15 @@ actions.
 This repo also allows you to perform face restoration using
 [CodeFormer](https://github.com/sczhou/CodeFormer).
 
-In order to setup CodeFormer to work, you need to download the models like with
-GFPGAN. You can do this either by running `preload_models.py` or by manually
-downloading the
-[model file](https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth)
+In order to setup CodeFormer to work, you need to download the models
+like with GFPGAN. You can do this either by running
+`preload_models.py` or by manually downloading the [model
+file](https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth)
 and saving it to `ldm/restoration/codeformer/weights` folder.
 
-You can use `-ft` prompt argument to swap between CodeFormer and the default
-GFPGAN. The above mentioned `-G` prompt argument will allow you to control the
-strength of the restoration effect.
+You can use `-ft` prompt argument to swap between CodeFormer and the
+default GFPGAN. The above mentioned `-G` prompt argument will allow
+you to control the strength of the restoration effect.
 
 ### Usage:
 
@@ -168,7 +162,7 @@ previously-generated file. Just use the syntax `!fix path/to/file.png
 just run:
 
 ```
-dream> !fix ./outputs/img-samples/000044.2945021133.png -G 0.8 -U 2
+invoke> !fix ./outputs/img-samples/000044.2945021133.png -G 0.8 -U 2
 ```
 
 A new file named `000044.2945021133.fixed.png` will be created in the output
@@ -178,5 +172,5 @@ unlike the behavior at generate time.
 ### Disabling:
 
 If, for some reason, you do not wish to load the GFPGAN and/or ESRGAN libraries,
-you can disable them on the dream.py command line with the `--no_restore` and
+you can disable them on the invoke.py command line with the `--no_restore` and
 `--no_upscale` options, respectively.

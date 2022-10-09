@@ -136,7 +136,7 @@ $TAG_STABLE_DIFFUSION
 
 ## Startup
 
-If you're on a **Linux container** the `dream` script is **automatically
+If you're on a **Linux container** the `invoke` script is **automatically
 started** and the output dir set to the Docker volume you created earlier.
 
 If you're **directly on macOS follow these startup instructions**.  
@@ -148,14 +148,14 @@ half-precision requires autocast and won't work.
 By default the images are saved in `outputs/img-samples/`.
 
 ```Shell
-python3 scripts/dream.py --full_precision
+python3 scripts/invoke.py --full_precision
 ```
 
 You'll get the script's prompt. You can see available options or quit.
 
 ```Shell
-dream> -h
-dream> q
+invoke> -h
+invoke> q
 ```
 
 ## Text to Image
@@ -166,10 +166,10 @@ Then increase steps to 100 or more for good (but slower) results.
 The prompt can be in quotes or not.
 
 ```Shell
-dream> The hulk fighting with sheldon cooper -s5 -n1
-dream> "woman closeup highly detailed"  -s 150
+invoke> The hulk fighting with sheldon cooper -s5 -n1
+invoke> "woman closeup highly detailed"  -s 150
 # Reuse previous seed and apply face restoration
-dream> "woman closeup highly detailed"  --steps 150 --seed -1 -G 0.75
+invoke> "woman closeup highly detailed"  --steps 150 --seed -1 -G 0.75
 ```
 
 You'll need to experiment to see if face restoration is making it better or
@@ -210,28 +210,28 @@ If you're on a Docker container, copy your input image into the Docker volume
 docker cp /Users/<your-user>/Pictures/sketch-mountains-input.jpg dummy:/data/
 ```
 
-Try it out generating an image (or more). The `dream` script needs absolute
+Try it out generating an image (or more). The `invoke` script needs absolute
 paths to find the image so don't use `~`.
 
 If you're on your Mac
 
 ```Shell
-dream> "A fantasy landscape, trending on artstation" -I /Users/<your-user>/Pictures/sketch-mountains-input.jpg --strength 0.75  --steps 100 -n4
+invoke> "A fantasy landscape, trending on artstation" -I /Users/<your-user>/Pictures/sketch-mountains-input.jpg --strength 0.75  --steps 100 -n4
 ```
 
 If you're on a Linux container on your Mac
 
 ```Shell
-dream> "A fantasy landscape, trending on artstation" -I /data/sketch-mountains-input.jpg --strength 0.75  --steps 50 -n1
+invoke> "A fantasy landscape, trending on artstation" -I /data/sketch-mountains-input.jpg --strength 0.75  --steps 50 -n1
 ```
 
 ## Web Interface
 
-You can use the `dream` script with a graphical web interface. Start the web
+You can use the `invoke` script with a graphical web interface. Start the web
 server with:
 
 ```Shell
-python3 scripts/dream.py --full_precision --web
+python3 scripts/invoke.py --full_precision --web
 ```
 
 If it's running on your Mac point your Mac web browser to http://127.0.0.1:9090

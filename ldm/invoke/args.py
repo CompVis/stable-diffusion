@@ -1,7 +1,7 @@
 """Helper class for dealing with image generation arguments.
 
 The Args class parses both the command line (shell) arguments, as well as the
-command string passed at the dream> prompt. It serves as the definitive repository
+command string passed at the invoke> prompt. It serves as the definitive repository
 of all the arguments used by Generate and their default values, and implements the
 preliminary metadata standards discussed here:
 
@@ -19,7 +19,7 @@ To use:
      print('oops')
      sys.exit(-1)
 
-  # read in a command passed to the dream> prompt:
+  # read in a command passed to the invoke> prompt:
   opts = opt.parse_cmd('do androids dream of electric sheep? -H256 -W1024 -n4')
 
   # The Args object acts like a namespace object
@@ -64,7 +64,7 @@ To generate a dict representing RFC266 metadata:
 This will generate an RFC266 dictionary that can then be turned into a JSON
 and written to the PNG file. The optional seeds, weights, model_hash and
 postprocesser arguments are not available to the opt object and so must be
-provided externally. See how dream.py does it.
+provided externally. See how invoke.py does it.
 
 Note that this function was originally called format_metadata() and a wrapper
 is provided that issues a deprecation notice.
@@ -91,8 +91,8 @@ import re
 import copy
 import base64
 import functools
-import ldm.dream.pngwriter
-from ldm.dream.conditioning import split_weighted_subprompts
+import ldm.invoke.pngwriter
+from ldm.invoke.conditioning import split_weighted_subprompts
 
 SAMPLER_CHOICES = [
     'ddim',
@@ -151,7 +151,7 @@ class Args(object):
         '''
         Initialize new Args class. It takes two optional arguments, an argparse
         parser for switches given on the shell command line, and an argparse
-        parser for switches given on the dream> CLI line. If one or both are
+        parser for switches given on the invoke> CLI line. If one or both are
         missing, it creates appropriate parsers internally.
         '''
         self._arg_parser   = arg_parser or self._create_arg_parser()
@@ -168,7 +168,7 @@ class Args(object):
             return None
 
     def parse_cmd(self,cmd_string):
-        '''Parse a dream>-style command string '''
+        '''Parse a invoke>-style command string '''
         command = cmd_string.replace("'", "\\'")
         try:
             elements = shlex.split(command)
@@ -269,7 +269,7 @@ class Args(object):
         if a['with_variations']:
             formatted_variations = ','.join(f'{seed}:{weight}' for seed, weight in (a["with_variations"]))
             switches.append(f'-V {formatted_variations}')
-        if 'variations' in a:
+        if 'variations' in a and len(a['variations'])>0:
             switches.append(f'-V {a["variations"]}')
         return ' '.join(switches)
 
@@ -509,23 +509,23 @@ class Args(object):
         )
         return parser
 
-    # This creates the parser that processes commands on the dream> command line
+    # This creates the parser that processes commands on the invoke> command line
     def _create_dream_cmd_parser(self):
         parser = PagingArgumentParser(
             formatter_class=ArgFormatter,
             description=
             """
             *Image generation:*
-                 dream> a fantastic alien landscape -W576 -H512 -s60 -n4
+                 invoke> a fantastic alien landscape -W576 -H512 -s60 -n4
 
             *postprocessing*
                 !fix applies upscaling/facefixing to a previously-generated image.
-                dream> !fix 0000045.4829112.png -G1 -U4 -ft codeformer
+                invoke> !fix 0000045.4829112.png -G1 -U4 -ft codeformer
 
             *History manipulation*
             !fetch retrieves the command used to generate an earlier image.
-                dream> !fetch 0000015.8929913.png
-                dream> a fantastic alien landscape -W 576 -H 512 -s 60 -A plms -C 7.5
+                invoke> !fetch 0000015.8929913.png
+                invoke> a fantastic alien landscape -W 576 -H 512 -s 60 -A plms -C 7.5
 
             !history lists all the commands issued during the current session.
 
@@ -842,7 +842,7 @@ def metadata_from_png(png_file_path) -> Args:
     an Args object containing the image metadata. Note that this
     returns a single Args object, not multiple.
     '''
-    meta = ldm.dream.pngwriter.retrieve_metadata(png_file_path)
+    meta = ldm.invoke.pngwriter.retrieve_metadata(png_file_path)
     if 'sd-metadata' in meta and len(meta['sd-metadata'])>0 :
         return metadata_loads(meta)[0]
     else:

@@ -23,16 +23,16 @@ class Restoration():
 
     # Face Restore Models
     def load_gfpgan(self, gfpgan_dir, gfpgan_model_path):
-        from ldm.dream.restoration.gfpgan import GFPGAN
+        from ldm.invoke.restoration.gfpgan import GFPGAN
         return GFPGAN(gfpgan_dir, gfpgan_model_path)
 
     def load_codeformer(self):
-        from ldm.dream.restoration.codeformer import CodeFormerRestoration
+        from ldm.invoke.restoration.codeformer import CodeFormerRestoration
         return CodeFormerRestoration()
 
     # Upscale Models
     def load_esrgan(self, esrgan_bg_tile=400):
-        from ldm.dream.restoration.realesrgan import ESRGAN
+        from ldm.invoke.restoration.realesrgan import ESRGAN
         esrgan = ESRGAN(esrgan_bg_tile)
         print('>> ESRGAN Initialized')
         return esrgan;

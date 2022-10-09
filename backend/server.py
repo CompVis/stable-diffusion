@@ -30,10 +30,10 @@ from send2trash import send2trash
 
 
 from ldm.generate import Generate
-from ldm.dream.restoration import Restoration
-from ldm.dream.pngwriter import PngWriter, retrieve_metadata
-from ldm.dream.args import APP_ID, APP_VERSION, calculate_init_img_hash
-from ldm.dream.conditioning import split_weighted_subprompts
+from ldm.invoke.restoration import Restoration
+from ldm.invoke.pngwriter import PngWriter, retrieve_metadata
+from ldm.invoke.args import APP_ID, APP_VERSION, calculate_init_img_hash
+from ldm.invoke.conditioning import split_weighted_subprompts
 
 from modules.parameters import parameters_to_command
 
@@ -125,7 +125,7 @@ class CanceledException(Exception):
 
 try:
     gfpgan, codeformer, esrgan = None, None, None
-    from ldm.dream.restoration.base import Restoration
+    from ldm.invoke.restoration.base import Restoration
 
     restoration = Restoration()
     gfpgan, codeformer = restoration.load_face_restore_models()
@@ -164,7 +164,7 @@ init_image_path = os.path.join(result_path, "init-images/")
 mask_image_path = os.path.join(result_path, "mask-images/")
 
 # txt log
-log_path = os.path.join(result_path, "dream_log.txt")
+log_path = os.path.join(result_path, "invoke_log.txt")
 
 # make all output paths
 [

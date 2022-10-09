@@ -1,11 +1,11 @@
 '''
-ldm.dream.generator.txt2img inherits from ldm.dream.generator
+ldm.invoke.generator.txt2img inherits from ldm.invoke.generator
 '''
 
 import torch
 import numpy as  np
 import math
-from ldm.dream.generator.base  import Generator
+from ldm.invoke.generator.base  import Generator
 from ldm.models.diffusion.ddim import DDIMSampler
 
 
@@ -64,7 +64,7 @@ class Txt2Img2Img(Generator):
             )
             
             print(
-                  f"\n>> Interpolating from {init_width}x{init_height} to {width}x{height}"
+                  f"\n>> Interpolating from {init_width}x{init_height} to {width}x{height} using DDIM sampling"
                  )
             
             # resizing
@@ -75,17 +75,19 @@ class Txt2Img2Img(Generator):
             )
 
             t_enc = int(strength * steps)
+            ddim_sampler = DDIMSampler(self.model, device=self.model.device)
+            ddim_sampler.make_schedule(
+                    ddim_num_steps=steps, ddim_eta=ddim_eta, verbose=False
+            )
 
-            x = self.get_noise(width,height,False)
-
-            z_enc = sampler.stochastic_encode(
+            z_enc = ddim_sampler.stochastic_encode(
                 samples,
                 torch.tensor([t_enc]).to(self.model.device),
-                noise=x
+                noise=self.get_noise(width,height,False)
             )
 
             # decode it
-            samples = sampler.decode(
+            samples = ddim_sampler.decode(
                 z_enc,
                 c,
                 t_enc,

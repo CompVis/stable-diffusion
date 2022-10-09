@@ -1,4 +1,4 @@
-name: Test Dream with Conda
+name: Test Invoke with Conda
 on:
   push:
     branches:
@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, macos-12 ]
-    name: Test dream.py on ${{ matrix.os }} with conda
+    name: Test invoke.py on ${{ matrix.os }} with conda
     runs-on: ${{ matrix.os }}
     steps:
       - run: |
@@ -85,9 +85,9 @@ jobs:
           fi
           # Utterly hacky, but I don't know how else to do this
           if [[ ${{ github.ref }} == 'refs/heads/master' ]]; then
-            time ${{ steps.vars.outputs.PYTHON_BIN }} scripts/dream.py --from_file tests/preflight_prompts.txt
+            time ${{ steps.vars.outputs.PYTHON_BIN }} scripts/invoke.py --from_file tests/preflight_prompts.txt
           elif [[ ${{ github.ref }} == 'refs/heads/development' ]]; then
-            time ${{ steps.vars.outputs.PYTHON_BIN }} scripts/dream.py --from_file tests/dev_prompts.txt
+            time ${{ steps.vars.outputs.PYTHON_BIN }} scripts/invoke.py --from_file tests/dev_prompts.txt
           fi
           mkdir -p outputs/img-samples
       - name: Archive results

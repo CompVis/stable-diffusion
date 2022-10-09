@@ -12,12 +12,12 @@ import shlex
 from threading import Thread
 import time
 from flask_socketio import SocketIO, join_room, leave_room
-from ldm.dream.args import Args
-from ldm.dream.generator import embiggen
+from ldm.invoke.args import Args
+from ldm.invoke.generator import embiggen
 from PIL import Image
 
-from ldm.dream.pngwriter import PngWriter
-from ldm.dream.server import CanceledException
+from ldm.invoke.pngwriter import PngWriter
+from ldm.invoke.server import CanceledException
 from ldm.generate import Generate
 from server.models import DreamResult, JobRequest, PaginatedItems, ProgressType, Signal
 

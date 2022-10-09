@@ -1,12 +1,12 @@
 '''
-ldm.dream.generator.inpaint descends from ldm.dream.generator
+ldm.invoke.generator.inpaint descends from ldm.invoke.generator
 '''
 
 import torch
 import numpy as  np
 from einops import rearrange, repeat
-from ldm.dream.devices             import choose_autocast
-from ldm.dream.generator.img2img   import Img2Img
+from ldm.invoke.devices             import choose_autocast
+from ldm.invoke.generator.img2img   import Img2Img
 from ldm.models.diffusion.ddim     import DDIMSampler
 from ldm.models.diffusion.ksampler import KSampler
 
@@ -27,7 +27,7 @@ class Inpaint(Img2Img):
         # klms samplers not supported yet, so ignore previous sampler
         if isinstance(sampler,KSampler):
             print(
-                f">> sampler '{sampler.__class__.__name__}' is not yet supported for inpainting, using DDIMSampler instead."
+                f">> Using recommended DDIM sampler for inpainting."
             )
             sampler = DDIMSampler(self.model, device=self.model.device)
         

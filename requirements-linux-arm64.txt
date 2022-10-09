@@ -20,6 +20,6 @@ torchmetrics==0.6.0
 transformers==4.19.2
 -e git+https://github.com/openai/CLIP.git@main#egg=clip
 -e git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
-git+https://github.com/lstein/k-diffusion.git@master#egg=k-diffusion
--e git+https://github.com/lstein/GFPGAN@fix-dark-cast-images#egg=gfpgan
+-e git+https://github.com/lstein/k-diffusion.git@master#egg=k-diffusion
+-e git+https://github.com/TencentARC/GFPGAN.git#egg=gfpgan
 -e .

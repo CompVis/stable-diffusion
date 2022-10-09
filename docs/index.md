@@ -28,7 +28,7 @@ template: main.html
 [CI checks on dev badge]: https://flat.badgen.net/github/checks/lstein/stable-diffusion/development?label=CI%20status%20on%20dev&cache=900&icon=github
 [CI checks on dev link]: https://github.com/lstein/stable-diffusion/actions?query=branch%3Adevelopment
 [CI checks on main badge]: https://flat.badgen.net/github/checks/lstein/stable-diffusion/main?label=CI%20status%20on%20main&cache=900&icon=github
-[CI checks on main link]: https://github.com/lstein/stable-diffusion/actions/workflows/test-dream-conda.yml
+[CI checks on main link]: https://github.com/lstein/stable-diffusion/actions/workflows/test-invoke-conda.yml
 [discord badge]: https://flat.badgen.net/discord/members/htRgbc7e?icon=discord
 [discord link]: https://discord.com/invite/htRgbc7e
 [github forks badge]: https://flat.badgen.net/github/forks/lstein/stable-diffusion?icon=github
@@ -85,21 +85,21 @@ You wil need one of the following:
 
 !!! note
 
-    If you are have a Nvidia 10xx series card (e.g. the 1080ti), please run the dream script in
+    If you are have a Nvidia 10xx series card (e.g. the 1080ti), please run the invoke script in
     full-precision mode as shown below.
 
     Similarly, specify full-precision mode on Apple M1 hardware.
 
-    To run in full-precision mode, start `dream.py` with the `--full_precision` flag:
+    To run in full-precision mode, start `invoke.py` with the `--full_precision` flag:
 
     ```bash
-    (ldm) ~/stable-diffusion$ python scripts/dream.py --full_precision
+    (ldm) ~/stable-diffusion$ python scripts/invoke.py --full_precision
     ```
 ## :octicons-log-16: Latest Changes
 
 ### vNEXT <small>(TODO 2022)</small>
 
-  - Deprecated `--full_precision` / `-F`. Simply omit it and `dream.py` will auto
+  - Deprecated `--full_precision` / `-F`. Simply omit it and `invoke.py` will auto
     configure. To switch away from auto use the new flag like `--precision=float32`.
 
 ### v1.14 <small>(11 September 2022)</small>
@@ -124,7 +124,7 @@ You wil need one of the following:
   [Kevin Gibbons](https://github.com/bakkot)
 - A new configuration file scheme that allows new models (including upcoming stable-diffusion-v1.5)
   to be added without altering the code. ([David Wager](https://github.com/maddavid12))
-- Can specify --grid on dream.py command line as the default.
+- Can specify --grid on invoke.py command line as the default.
 - Miscellaneous internal bug and stability fixes.
 - Works on M1 Apple hardware.
 - Multiple bug fixes.

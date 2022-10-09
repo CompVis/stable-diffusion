@@ -51,7 +51,7 @@ rm ${PIP_LOG}
 
 ### **QUESTION**
 
-`dream.py` crashes with the complaint that it can't find `ldm.simplet2i.py`. Or it complains that
+`invoke.py` crashes with the complaint that it can't find `ldm.simplet2i.py`. Or it complains that
 function is being passed incorrect parameters.
 
 ### **SOLUTION**
@@ -63,7 +63,7 @@ Reinstall the stable diffusion modules. Enter the `stable-diffusion` directory a
 
 ### **QUESTION**
 
-`dream.py` dies, complaining of various missing modules, none of which starts with `ldm``.
+`invoke.py` dies, complaining of various missing modules, none of which starts with `ldm``.
 
 ### **SOLUTION**
 
