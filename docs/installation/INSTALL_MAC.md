@@ -350,7 +350,6 @@ python scripts/preload_models.py
     ```
 
 The InvokeAI version includes this fix in
-
 [environment-mac.yml](https://github.com/invoke-ai/InvokeAI/blob/main/environment-mac.yml).
 
 ### "Could not build wheels for tokenizers"
