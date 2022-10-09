@@ -136,8 +136,27 @@ you can try starting `invoke.py` with the `--precision=float32` flag:
 
 ### Latest Changes
 
-- vNEXT (TODO 2022)
+- v2.0.0 (9 October 2022)
 
+  - `dream.py` script renamed `invoke.py`. A `dream.py` script wrapper remains
+    for backward compatibility.
+  - Completely new WebGUI - launch with `python3 scripts/invoke.py --web`
+  - Support for inpainting and outpainting
+  - img2img runs on all k* samplers
+  - Support for CodeFormer face reconstruction
+  - Support for Textual Inversion on Macintoshes
+  - Support in both WebGUI and CLI for post-processing of previously-generated images
+    using facial reconstruction, ESRGAN upscaling, outcropping (similar to DALL-E infinite canvas),
+    and "embiggen" upscaling. See the `!fix` command.
+  - New `--hires` option on `invoke>` line allows larger images to be created without
+    duplicating elements, at the cost of some performance.
+  - Extensive metadata now written into PNG files, allowing reliable regeneration of images
+    and tweaking of previous settings.
+  - Command-line completion in `invoke.py` now works on Windows, Linux and Mac platforms.
+  - Improved command-line completion behavior and new commands added:
+       * List command-line history with `!history`
+       * Search command-line history with `!search`
+       * Clear history with `!clear`
   - Deprecated `--full_precision` / `-F`. Simply omit it and `invoke.py` will auto
     configure. To switch away from auto use the new flag like `--precision=float32`.
 
