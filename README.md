@@ -2,14 +2,7 @@
 
 # InvokeAI: A Stable Diffusion Toolkit
 
-_Note: This fork is rapidly evolving. Please use the
-[Issues](https://github.com/invoke-ai/InvokeAI/issues) tab to
-report bugs and make feature requests. Be sure to use the provided
-templates. They will help aid diagnose issues faster._
-
-_This repository was formally known as lstein/stable-diffusion_
-
-# **Table of Contents**
+_Formally known as lstein/stable-diffusion_
 
 ![project logo](docs/assets/logo.png)
 
@@ -47,7 +40,9 @@ the open source text-to-image generator. It provides a streamlined
 process with various new features and options to aid the image
 generation process. It runs on Windows, Mac and Linux machines, with
 GPU cards with as little as 4 GB of RAM. It provides both a polished
-Web interface, and an easy-to-use command-line interface.
+Web interface (see below), and an easy-to-use command-line interface.
+
+<div align="center"><img src="docs/assets/invoke-web-server-1.png" width=640></div>
 
 _Note: This fork is rapidly evolving. Please use the
 [Issues](https://github.com/invoke-ai/InvokeAI/issues) tab to report bugs and make feature
