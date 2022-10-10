@@ -414,7 +414,7 @@ X = 2000  # > 1500 = buttons
 Y = 900  
 scrn = pygame.display.set_mode((1700, Y + 100))
 font = pygame.font.Font('freesansbold.ttf', 22)
-minifont = pygame.font.Font('freesansbold.ttf', 11)
+minifont = pygame.font.Font('freesansbold.ttf', 15)
 bigfont = pygame.font.Font('freesansbold.ttf', 44)
 
 def load_img(path):
@@ -538,7 +538,7 @@ for iteration in range(3000):   # Kind of an infinite loop.
         text1 = minifont.render(to_native('Undo: click <here> for '), True, green, blue)
         text1 = pygame.transform.rotate(text1, 90)
         scrn.blit(text1, (X*3/4+X/16+X/64 - X/32, Y/12))
-        text1 = font.render(to_native('resetting your clicks.'), True, green, blue)
+        text1 = minifont.render(to_native('resetting your clicks.'), True, green, blue)
         text1 = pygame.transform.rotate(text1, 90)
         scrn.blit(text1, (X*3/4+X/16+X/32 - X/32, Y/12))
         # Button for quitting and effects
