@@ -122,7 +122,7 @@ In order to setup CodeFormer to work, you need to download the models
 like with GFPGAN. You can do this either by running
 `preload_models.py` or by manually downloading the [model
 file](https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth)
-and saving it to `ldm/restoration/codeformer/weights` folder.
+and saving it to `ldm/invoke/restoration/codeformer/weights` folder.
 
 You can use `-ft` prompt argument to swap between CodeFormer and the
 default GFPGAN. The above mentioned `-G` prompt argument will allow
