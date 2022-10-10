@@ -98,7 +98,7 @@ PIP_EXISTS_ACTION=w CONDA_SUBDIR=osx-64 conda env create -f environment-mac.yml
 # END ARCHITECTURE-DEPENDENT STEP #
 
 # Activate the environment (you need to do this every time you want to run SD)
-conda activate ldm
+conda activate invokeai
 
 # This will download some bits and pieces and make take a while
 python scripts/preload_models.py
