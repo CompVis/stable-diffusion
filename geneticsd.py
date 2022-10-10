@@ -29,6 +29,7 @@ os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 model_id = "CompVis/stable-diffusion-v1-4"
 device = "mps" #torch.device("mps")
 
+# Let us define colors.
 white = (255, 255, 255)
 green = (0, 255, 0)
 darkgreen = (0, 128, 0)
@@ -36,7 +37,8 @@ red = (255, 0, 0)
 blue = (0, 0, 128)
 black = (0, 0, 0)
 
-os.environ["skl"] = "nn"
+# A few environment variables and variables.
+os.environ["skl"] = "tree"
 os.environ["epsilon"] = "0.005"
 os.environ["decay"] = "0."
 os.environ["ngoptim"] = "DiscreteLenglerOnePlusOne"
@@ -57,7 +59,7 @@ def speak(text):
      noise.say(text)
      noise.runAndWait()
 
-# Let us define our latent var combinators.
+# Let us define our latent var combinators (including the cross-over Voronoi).
 def multi_combine(latent, indices, llambda):
     """outputs = multi_combine(latent, indices, llambda)
 
@@ -77,58 +79,41 @@ Output:
     a vector of llambda latent variables.
 """
     outputs = []
+    good_indices = [i[0] for i in indices]
     for a in range(llambda):
-        voronoi_in_images = False
-        if voronoi_in_images:  # This is not used for now.
-            image = np.array(numpy_images[0])
-            print(f"Voronoi in the image space! {a} / {llambda}")
-            for i in range(len(indices)):
-                coefficients[i] = np.exp(np.random.randn())
-            # Creating a forcedlatent.
-            for i in range(512):
-                x = i / 511.
-                for j in range(512):
-                    y = j / 511 
-                    mindistances = 10000000000.
-                    for u in range(len(indices)):
-                        distance = coefficients[u] * np.linalg.norm( np.array((x, y)) - np.array((indices[u][2], indices[u][1])) )
-                        if distance < mindistances:
-                            mindistances = distance
-                            uu = indices[u][0]
-                    image[i][j][:] = numpy_images[uu][i][j][:]
-            # Conversion before using img2latent
-            pil_image = Image.fromarray(image)
-            #voronoi_name = f"voronoi{a}_iteration{iteration}.png"
-            #pil_image.save(voronoi_name)
-
-            #timage = np.array([image]).astype(np.float32) / 255.0
-            #timage = timage.transpose(0, 3, 1, 2)
-            #timage = torch.from_numpy(timage).to(device)
-            #timage = repeat(timage, '1 ... -> b ...', b=1)
-            #timage = 2.*timage - 1.
-            #forcedlatent = model.encode(timage).latent_dist.sample().cpu().detach().numpy().flatten()
-            #basic_new_fl = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
-            basic_new_fl = randomized_image_to_latent(voronoi_name)  #img_to_latent(voronoi_name)
-            basic_new_fl = np.sqrt(len(basic_new_fl) / np.sum(basic_new_fl**2)) * basic_new_fl
-            #basic_new_fl = 0.8 * np.sqrt(len(basic_new_fl) / np.sum(basic_new_fl**2)) * basic_new_fl
-            if len(good) > 1:
-                print("Directly copying latent vars !!!")
-                #forcedlatents += [4.6 * basic_new_fl]
-                outputs += [basic_new_fl]
-            else:
-                epsilon = 1.0 * (((a + .5 - len(good)) / (llambda - len(good) - 1)) ** 2)
-                forcedlatent = (1. - epsilon) * basic_new_fl.flatten() + epsilon * np.random.randn(4*64*64)
-                forcedlatent = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
-                outputs += [forcedlatent]
-                #forcedlatents += [4.6 * forcedlatent]
-        else:
+#        voronoi_in_images = False
+#        if voronoi_in_images:  # This is not used for now.
+#            image = np.array(numpy_images[0])
+#            print(f"Voronoi in the image space! {a} / {llambda}")
+#            for i in range(len(indices)):
+#                coefficients[i] = np.exp(np.random.randn())
+#            # Creating a forcedlatent.
+#            for i in range(512):
+#                x = i / 511.
+#                for j in range(512):
+#                    y = j / 511 
+#                    mindistances = 10000000000.
+#                    for u in range(len(indices)):
+#                        distance = coefficients[u] * np.linalg.norm( np.array((x, y)) - np.array((indices[u][2], indices[u][1])) )
+#                        if distance < mindistances:
+#                            mindistances = distance
+#                            uu = indices[u][0]
+#                    image[i][j][:] = numpy_images[uu][i][j][:]
+#            pil_image = Image.fromarray(image)
+#            basic_new_fl = randomized_image_to_latent(voronoi_name)
+#            basic_new_fl = np.sqrt(len(basic_new_fl) / np.sum(basic_new_fl**2)) * basic_new_fl
+#            if len(good_indices) > 1:
+#                print("Directly copying latent vars !!!")
+#                outputs += [basic_new_fl]
+#            else:
+#                epsilon = 1.0 * (((a + .5 - len(good)) / (llambda - len(good) - 1)) ** 2)
+#                forcedlatent = (1. - epsilon) * basic_new_fl.flatten() + epsilon * np.random.randn(4*64*64)
+#                forcedlatent = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
+#                outputs += [forcedlatent]
+#        else:
+        if True:
             print(f"Voronoi in the latent space! {a} / {llambda}")
             forcedlatent = np.zeros((4, 64, 64))
-                #print(type(numpy_image))
-                #print(numpy_image.shape)
-                #print(np.max(numpy_image))
-                #print(np.min(numpy_image))
-                #assert False
             for i in range(64):
                 x = i / 63.
                 for j in range(64):
@@ -150,19 +135,18 @@ Output:
                         assert k < len(latent[uu]), k
                         assert i < len(latent[uu][k]), i
                         assert j < len(latent[uu][k][i]), j
-                        forcedlatent[k][i][j] = float(latent[uu][k][i][j] if (len(good) > 1 or mindistances < 0.5 * np.min([mindistancesv[v] for v in range(len(mindistancesv)) if v != uu])) else np.random.randn())
-            #if a % 2 == 0:
-            #    forcedlatent -= np.random.rand() * sauron
+                        forcedlatent[k][i][j] = float(latent[uu][k][i][j] if (len(good_indices) < 2 or mindistances < 0.5 * np.min([mindistancesv[v] for v in range(len(mindistancesv)) if v != uu])) else np.random.randn())
             forcedlatent = forcedlatent.flatten()
             basic_new_fl = np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2)) * forcedlatent
-            if len(good) > 1 or len(forcedlatents) < len(good) + 1:
+            if len(good_indices) > 1:
+                print(f"Directly copying for {a} / {llambda}")
                 outputs += [basic_new_fl]
             else:
+                print("Perturbating the generation!")
                 epsilon = (( (a + .5 - len(good)) / (llambda - len(good) - 1)))
                 forcedlatent = (1. - epsilon) * basic_new_fl + epsilon * np.random.randn(4*64*64)
                 coef =  np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2))
                 forcedlatent = coef * forcedlatent
-                # print("we get ", sum(forcedlatent) ** 2)
                 outputs += [forcedlatent]
     return outputs
 
@@ -201,8 +185,6 @@ prompt = random.choice([
      "Photo of Meg Myers with an Egyptian dress",
      "Photo of Schwarzy as a ballet dancer",
     ])
-
-
 name = random.choice(["Mark Zuckerbeg", "Zendaya", "Yann LeCun", "Scarlett Johansson", "Superman", "Meg Myers"])
 prompt = f"Photo of {name} as a sumo-tori."
 
@@ -273,11 +255,12 @@ prompt = "A ninja fighting a dinosaur with a cucumber."
 print(f"The prompt is {prompt}")
 
 
+# A welcome message.
 print(pyfiglet.figlet_format("Welcome in Genetic Stable Diffusion !"))
 print(pyfiglet.figlet_format("First, let us choose the text :-)!"))
 
 
-
+# Possibly changing the prompt.
 print(f"Francais: Proposez un nouveau texte si vous ne voulez pas dessiner << {prompt} >>.\n")
 speak("Hey!")
 user_prompt = input(f"English: Enter a new prompt if you prefer something else than << {prompt} >>.\n")
@@ -290,9 +273,9 @@ english_prompt = GoogleTranslator(source='auto', target='en').translate(prompt)
 def to_native(stri):
     return GoogleTranslator(source='en', target=language).translate(stri)
 
+# We have all we need for a pretty printing.
 def pretty_print(stri):
     print(pyfiglet.figlet_format(to_native(stri)))
-
 print(f"{to_native('Working on')} {english_prompt}, a.k.a {prompt}.")
 
 
@@ -311,12 +294,14 @@ esrmodel.load_weights('weights/RealESRGAN_x4.pth', download=True)
 esrmodel2 = RealESRGAN(sr_device, scale=2)
 esrmodel2.load_weights('weights/RealESRGAN_x2.pth', download=True)
 
+# Face enhancing.
 def fe(path):
     fe = GFPGANer(model_path='GFPGANv1.3.pth', upscale=2, arch='clean', channel_multiplier=2)
     img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
     _, _, output = fe.enhance(img, has_aligned=False, only_center_face=False, paste_back=True)
     cv2.imwrite(path, output)
 
+# RealESRGan for convenient super-resolution.
 def singleeg(path_to_image):
     image = Image.open(path_to_image).convert('RGB')
     sr_device = device #('mps')   #torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -360,6 +345,20 @@ def eg(list_of_files, last_list_of_files):
 
 # When we stop the run and check and propose to do super-resolution and/or animations.
 def stop_all(list_of_files, list_of_latent, last_list_of_files, last_list_of_latent):
+    print(to_native("Do you want to run 300 variations of your last click ?"))
+    res = input("[Y]es or [N]o")
+    if "y" in res or "Y" in res:
+        pretty_print("Generating 300 variations (you can Ctrl-C if you are bored).")
+        pretty_print("You can rerun afterwards, and resume from your favorite one.")
+        all_new_latents = multi_combine([list_of_latent[-1]], [(0, .5, .5)], 300)
+        for i, l in enumerate(all_new_latents):
+            img = latent_to_image(l)
+            image_name = f"variation_{i}.png"
+            img.save(image_name)
+            str_latent = str(list(l))
+            with open(image_name + ".latent.txt", 'w') as f:
+                f.write(f"{str_latent}")
+        exit()
     print(to_native("Your selected images and the last generation:"))
     print(list_of_files)
     eg(list_of_files, last_list_of_files)
@@ -398,20 +397,14 @@ def stop_all(list_of_files, list_of_latent, last_list_of_files, last_list_of_lat
                 gif_name = list_of_files[idx] + "_" + str(c) + ".gif"
                 frame_one.save(gif_name, format="GIF", append_images=frames,
                       save_all=True, duration=100, loop=0)    
-                #webbrowser.open(os.environ["PWD"] + "/" + gif_name)
     
-    #pretty_print("Should we create a meme ?")
-    #answer = input(" [y]es or [n]o ?")
-    #if "y" in answer or "Y" in answer:
-    #    url = 'https://imgflip.com/memegenerator'
-    #    webbrowser.open(url)
     pretty_print("Good bye!")
     exit()
 
 
       
 
-
+# Optionally, we start from an image (possibly a drawing, or toys, or whatever).
 pretty_print("Now let us choose (if you want) an image as a start.")
 image_name = input(to_native("Name of image for starting ? (enter if no start image)"))
 
@@ -430,12 +423,13 @@ def load_img(path):
     print(to_native(f"loaded input image of size ({w}, {h}) from {path}"))
     w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
     image = image.resize((512, 512), resample=PIL.Image.LANCZOS)
-    #image = image.resize((w, h), resample=PIL.Image.LANCZOS)
     image = np.array(image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
     image = torch.from_numpy(image)
     return 2.*image - 1.
 
+
+# We need the model for the image to latent conversions.
 model = pipe.vae
 
 def img_to_latent(path):
@@ -463,9 +457,6 @@ def randomized_image_to_latent(image_name, scale=None, epsilon=None, c=None, f=N
     new_fl = (1. - epsilon) * basic_new_fl + epsilon * np.random.randn(1*4*64*64)
     scale = 2.8 + 3.6 * np.random.rand() if scale is None else scale
     new_fl = scale * np.sqrt(len(new_fl)) * new_fl / np.sqrt(np.sum(new_fl ** 2))
-    #image = latent_to_image(np.asarray(new_fl)) #eval(os.environ["forcedlatent"])))
-    #image.save(f"rebuild_{f}_{scale}_{epsilon}_{c}.png")
-    #gs=7.5, f=0.12, scale=3.7, epsilon=0.01,1 c=2.05
     return new_fl
 
 # In case the user wants to start from a given image.
@@ -510,6 +501,7 @@ if len(image_name) > 0:
             else:
                 new_fl = basic_new_fl
             forcedlatents += [new_fl]
+
 
 # We start the big time consuming loop!
 for iteration in range(3000):   # Kind of an infinite loop.
@@ -623,14 +615,6 @@ for iteration in range(3000):   # Kind of an infinite loop.
     pygame.draw.rect(scrn, red, pygame.Rect(X*3/4, 2*Y/3, X*3/4+X/16+X/32, Y), 2)
     pygame.draw.rect(scrn, red, pygame.Rect(0, Y, X/2, Y+100), 2)
 
-    # Button for loading a starting point
-    #text1 = font.render('Manually edit an image.', True, green, blue)
-    #text1 = pygame.transform.rotate(text1, 90)
-    #scrn.blit(text1, (X*3/4+X/16 - X/32, 0))
-    #text1 = font.render('& latent    ', True, green, blue)
-    #text1 = pygame.transform.rotate(text1, 90)
-    #scrn.blit(text1, (X*3/4+X/16+X/32 - X/32, 0))
-
     # Button for stopping now.
     text2 = font.render(to_native('Click <here>,'), True, green, blue)
     text2 = pygame.transform.rotate(text2, 90)
@@ -709,22 +693,12 @@ for iteration in range(3000):   # Kind of an infinite loop.
                     scrn.blit(text4, (300, Y + 30))
                     pygame.display.flip()
                 elif pos[0] > 1500:  # Not in the images.
-                    if pos[1] < Y/3:
+                    if pos[1] < Y/3:  # Reinitialize the clicks!
                         indices = []
                         good = []
                         final_selection = []
                         final_selection_latent = []
-                        #filename = input(to_native("Filename (please provide the latent file, of the format SD*latent*.txt) ?\n"))
-                        #status = False
-                        #with open(filename, 'r') as f:
-                        #     latent = f.read()
-                        #break
-                        #pretty_print("Easy! I exit now, you edit the file and you save it.")
-                        #pretty_print("Then just relaunch me and provide the text and the image.")
-                        #exit()
                     elif pos[1] < 2*Y/3:
-                        #onlyfiles = [f for f in listdir(".") if isfile(join(mypath, f))]
-                        #onlyfiles = [str(f) for f in onlyfiles if "SD_" in str(f) and ".png" in str(f) and str(f) not in all_files and sentinel in str(f)]
                         assert len(onlyfiles) == len(latent)
                         assert len(all_selected) == len(all_selected_latent)
                         stop_all(all_selected, all_selected_latent, final_selection, final_selection_latent) # + onlyfiles, all_selected_latent + latent)
@@ -733,7 +707,7 @@ for iteration in range(3000):   # Kind of an infinite loop.
                     break
                 index = 3 * (pos[0] // 300) + (pos[1] // 300)
                 pygame.draw.circle(scrn, red, [pos[0], pos[1]], 13, 0)
-                if index <= max_created_index:
+                if index <= max_created_index:  # The user has clicked on an image!
                     selected_filename = to_native("Selected") + onlyfiles[index]
                     shutil.copyfile(onlyfiles[index], selected_filename)
                     assert len(onlyfiles) == len(latent), f"{len(onlyfiles)} != {len(latent)}"
@@ -746,6 +720,7 @@ for iteration in range(3000):   # Kind of an infinite loop.
                     scrn.blit(text2, (X*3/4+X/16      - X/32, Y/3))
                     if index not in five_best and len(five_best) < 5:
                         five_best += [index]
+                        good += [list(latent[index].flatten())]
                     indices += [[index, (pos[0] - (pos[0] // 300) * 300) / 300, (pos[1] - (pos[1] // 300) * 300) / 300]]
                     # Update the button for new generation.
                     pygame.draw.rect(scrn, black, pygame.Rect(X*3/4, 2*Y/3, X*3/4+X/16+X/32, Y))
@@ -757,9 +732,6 @@ for iteration in range(3000):   # Kind of an infinite loop.
                     text3 = pygame.transform.rotate(text3, 90)
                     scrn.blit(text3, (X*3/4+X/16+X/32 - X/32, Y*2/3))
                     pygame.display.flip()
-                    #text3Rect = text3.get_rect()
-                    #text3Rect.center = (750+750*3/4, 1000)
-                    good += [list(latent[index].flatten())]
                 else:
                     speak("Bad click ! Click on an image.")
                     pretty_print("Bad click! Click on image.")
@@ -781,21 +753,17 @@ for iteration in range(3000):   # Kind of an infinite loop.
     os.environ["mu"] = str(len(indices))
     forcedlatents = []
     bad += [list(latent[u].flatten()) for u in range(len(onlyfiles)) if u not in [i[0] for i in indices]]
-    #sauron = 0 * latent[0]
-    #for u in [u for u in range(len(onlyfiles)) if u not in [i[0] for i in indices]]:
-    #    sauron += latent[u]
-    #sauron = (1 / len([u for u in range(len(onlyfiles)) if u not in [i[0] for i in indices]])) * sauron
+
+    # No more than 500 bad images.
     if len(bad) > 500:
         bad = bad[(len(bad) - 500):]
     print(to_native(f"{len(indices)} indices are selected."))
-    #print(f"indices = {indices}")
+
+    # This is hackish, we communicate with the diffusers code using environment variables... sorry.
     os.environ["good"] = str(good)
     os.environ["bad"] = str(bad)
     numpy_images = [np.array(image) for image in images]
-    
     forcedlatents += multi_combine(latent, indices, llambda)
-    #for uu in range(len(latent)):
-    #    print(f"--> latent[{uu}] sum of sq / variable = {np.sum(latent[uu].flatten()**2) / len(latent[uu].flatten())}")
     os.environ["good"] = "[]"
     os.environ["bad"] = "[]"
             
