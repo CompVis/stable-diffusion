@@ -13,7 +13,7 @@ template: main.html
 -->
 <div align="center" markdown>
 
-# :material-script-text-outline: Stable Diffusion Dream Script
+# :material-script-text-outline: InvokeAI: A Stable Diffusion Toolkit
 
 ![project logo](assets/logo.png)
 
@@ -46,10 +46,11 @@ template: main.html
 
 </div>
 
-This is a fork of [CompVis/stable-diffusion](https://github.com/CompVis/stable-diffusion), the open
-source text-to-image generator. It provides a streamlined process with various new features and
-options to aid the image generation process. It runs on Windows, Mac and Linux machines, and runs on
-GPU cards with as little as 4 GB or RAM.
+This is an implementation of Stable Diffusion, the open source
+text-to-image and image-to-image generator. It provides a streamlined
+process with various new features and options to aid the image
+generation process. It runs on Windows, Mac and Linux machines, and
+runs on GPU cards with as little as 4 GB or RAM.
 
 !!! note
 
@@ -97,9 +98,30 @@ You wil need one of the following:
     ```
 ## :octicons-log-16: Latest Changes
 
-### vNEXT <small>(TODO 2022)</small>
-
-  - Deprecated `--full_precision` / `-F`. Simply omit it and `invoke.py` will auto
+### v2.0.0 <small>(9 October 2022)</small>
+- `dream.py` script renamed `invoke.py`. A `dream.py` script wrapper remains
+    for backward compatibility.
+- Completely new WebGUI - launch with `python3 scripts/invoke.py --web`
+- Support for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/INPAINTING.md">inpainting</a> and <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/OUTPAINTING.md">outpainting</a>
+- img2img runs on all k* samplers
+- Support for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/PROMPTS.md#negative-and-unconditioned-prompts">negative prompts</a>
+- Support for CodeFormer face reconstruction
+- Support for Textual Inversion on Macintoshes
+- Support in both WebGUI and CLI for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/POSTPROCESS.md">post-processing of previously-generated images</a>
+    using facial reconstruction, ESRGAN upscaling, outcropping (similar to DALL-E infinite canvas),
+    and "embiggen" upscaling. See the `!fix` command.
+- New `--hires` option on `invoke>` line allows <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/CLI.m#this-is-an-example-of-txt2img">larger images to be created without duplicating elements</a>, at the cost of some performance.
+- New `--perlin` and `--threshold` options allow you to add and control variation
+    during image generation (see <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/OTHER.md#thresholding-and-perlin-noise-initialization-options">Thresholding and Perlin Noise Initialization</a>
+- Extensive metadata now written into PNG files, allowing reliable regeneration of images
+    and tweaking of previous settings.
+- Command-line completion in `invoke.py` now works on Windows, Linux and Mac platforms.
+- Improved <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/CLI.m">command-line completion behavior</a>.
+    New commands added:
+       * List command-line history with `!history`
+       * Search command-line history with `!search`
+       * Clear history with `!clear`
+- Deprecated `--full_precision` / `-F`. Simply omit it and `invoke.py` will auto
     configure. To switch away from auto use the new flag like `--precision=float32`.
 
 ### v1.14 <small>(11 September 2022)</small>
