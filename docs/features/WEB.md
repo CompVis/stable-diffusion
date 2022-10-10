@@ -25,7 +25,7 @@ wildcard `0.0.0.0`. For example:
 While most of the WebGUI's features are intuitive, here is a guided
 walkthrough through its various components.
 
-<img src="../assets/invoke-web-server-1.png" width=640>
+![Invoke Web Server - Major Components](../assets/invoke-web-server-1.png){:width="640px"}
 
 The screenshot above shows the Text to Image tab of the WebGUI. There
 are three main sections:
@@ -53,7 +53,7 @@ There are also a series of icons to the left of the control panel (see
 highlighted area in the screenshot below) which select among a series
 of tabs for performing different types of operations.
 
-<img src="../assets/invoke-web-server-2.png" width=512>
+![Invoke Web Server - Control Panel](../assets/invoke-web-server-2.png){:width="512px"}
 
 From top to bottom, these are:
 
@@ -188,8 +188,8 @@ box will appear. Leave *Strength* at 0.8 and press *Restore Faces". If
 all goes well, the eyes and other aspects of the face will be improved
 (see the second screenshot)
 
-<img src="../assets/invoke-web-server-3.png">
-<img src="../assets/invoke-web-server-4.png">
+![Invoke Web Server - Original Image](../assets/invoke-web-server-3.png)
+![Invoke Web Server - Retouched Image](../assets/invoke-web-server-4.png)
 
 The facial reconstruction *Strength* field adjusts how aggressively
 the face library will try to alter the face. It can be as high as 1.0,
@@ -225,11 +225,11 @@ Download these images to your local machine now to continue with the walkthrough
 10. Click on the *Image to Image* tab icon, which is the second icon
 from the top on the left-hand side of the screen:
 
-<img src="../assets/invoke-web-server-5.png">
+![Invoke Web Server - Image to Image Icon](../assets/invoke-web-server-5.png)
 
 This will bring you to a screen similar to the one shown here:
 
-<img src="../assets/invoke-web-server-6.png" width=640>
+![Invoke Web Server - Image to Image Tab](../assets/invoke-web-server-6.png){:width="640px"}
 
 Drag-and-drop the Lincoln-and-Parrot image into the Image panel, or
 click the blank area to get an upload dialog. The image will load into
@@ -241,7 +241,7 @@ but this image will be replaced in the next step.)
 shoulder* and press Invoke. A derived image will appear to the right
 of the original one:
 
-<img src="../assets/invoke-web-server-7.png" width=640>
+![Invoke Web Server - Image to Image example](../assets/invoke-web-server-7.png){:width="640px"}
 
 12. Experiment with the different settings. The most influential one
 in Image to Image is *Image to Image Strength* located about midway
@@ -270,7 +270,7 @@ the same prompt "old sea captain with raven on shoulder" try Invoking
 an image. This time, only the parrot will be replaced, leaving the
 rest of the original image intact:
 
-<img src="../assets/invoke-web-server-8.png" width=640>
+![Invoke Web Server - Inpainting](../assets/invoke-web-server-8.png){:width="640px"}
 
 14. Would you like to modify a previously-generated image using the
 Image to Image facility? Easy! While in the Image to Image panel,
@@ -282,7 +282,7 @@ You can do the same from the Text to Image tab by clicking on the
 picture icon above the central image panel. The screenshot below
 shows where the "use as initial image" icons are located.
 
-<img src="../assets/invoke-web-server-9.png" width=640>
+![Invoke Web Server - Use as Image Links](../assets/invoke-web-server-9.png){:width="640px"}
 
 ## Parting remarks
 
