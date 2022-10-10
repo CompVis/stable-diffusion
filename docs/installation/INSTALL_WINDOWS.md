@@ -56,9 +56,9 @@ cd InvokeAI
 
 ```
 conda env create       (step 6a)
-conda activate ldm     (step 6b)
+conda activate invokeai     (step 6b)
 ```
-    This will install all python requirements and activate the "ldm" environment
+    This will install all python requirements and activate the "invokeai" environment
     which sets PATH and other environment variables properly.
 
     Note that the long form of the first command is `conda env create -f environment.yml`. If the
@@ -107,7 +107,7 @@ you may instead create a shortcut to it from within `models\ldm\stable-diffusion
     python scripts\invoke.py
     ```
 
-10. Subsequently, to relaunch the script, first activate the Anaconda command window (step 3),enter the InvokeAI directory (step 5, `cd \path\to\InvokeAI`), run `conda activate ldm` (step 6b), and then launch the invoke script (step 9).
+10. Subsequently, to relaunch the script, first activate the Anaconda command window (step 3),enter the InvokeAI directory (step 5, `cd \path\to\InvokeAI`), run `conda activate invokeai` (step 6b), and then launch the invoke script (step 9).
 
     **Note:** Tildebyte has written an alternative
     ["Easy peasy Windows install"](https://github.com/invoke-ai/InvokeAI/wiki/Easy-peasy-Windows-install)

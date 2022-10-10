@@ -40,23 +40,23 @@ This will create InvokeAI folder where you will follow the rest of the steps.
 ```
 
 5. Use anaconda to copy necessary python packages, create a new python
-   environment named `ldm` and activate the environment.
+   environment named `invokeai` and activate the environment.
 
 
 ```
 (base) ~/InvokeAI$ conda env create
-(base) ~/InvokeAI$ conda activate ldm
-(ldm) ~/InvokeAI$
+(base) ~/InvokeAI$ conda activate invokeai
+(invokeai) ~/InvokeAI$
 ```
 
-    After these steps, your command prompt will be prefixed by `(ldm)` as shown
+    After these steps, your command prompt will be prefixed by `(invokeai)` as shown
     above.
 
 6. Load a couple of small machine-learning models required by stable diffusion:
 
 
 ```
-(ldm) ~/InvokeAI$ python3 scripts/preload_models.py
+(invokeai) ~/InvokeAI$ python3 scripts/preload_models.py
 ```
 
     !!! note
@@ -81,24 +81,24 @@ This will create InvokeAI folder where you will follow the rest of the steps.
 
 
 ```
-(ldm) ~/InvokeAI$ mkdir -p models/ldm/stable-diffusion-v1
-(ldm) ~/InvokeAI$ ln -sf /path/to/sd-v1-4.ckpt models/ldm/stable-diffusion-v1/model.ckpt
+(invokeai) ~/InvokeAI$ mkdir -p models/ldm/stable-diffusion-v1
+(invokeai) ~/InvokeAI$ ln -sf /path/to/sd-v1-4.ckpt models/ldm/stable-diffusion-v1/model.ckpt
 ```
 
 8. Start generating images!
 
 ```
 # for the pre-release weights use the -l or --liaon400m switch
-(ldm) ~/InvokeAI$ python3 scripts/invoke.py -l
+(invokeai) ~/InvokeAI$ python3 scripts/invoke.py -l
 
 # for the post-release weights do not use the switch
-(ldm) ~/InvokeAI$ python3 scripts/invoke.py
+(invokeai) ~/InvokeAI$ python3 scripts/invoke.py
 
 # for additional configuration switches and arguments, use -h or --help
-(ldm) ~/InvokeAI$ python3 scripts/invoke.py -h
+(invokeai) ~/InvokeAI$ python3 scripts/invoke.py -h
 ```
 
-9. Subsequently, to relaunch the script, be sure to run "conda activate ldm" (step 5, second command), enter the `InvokeAI` directory, and then launch the invoke script (step 8). If you forget to activate the ldm environment, the script will fail with multiple `ModuleNotFound` errors.
+9. Subsequently, to relaunch the script, be sure to run "conda activate invokeai" (step 5, second command), enter the `InvokeAI` directory, and then launch the invoke script (step 8). If you forget to activate the 'invokeai' environment, the script will fail with multiple `ModuleNotFound` errors.
 
 ## Updating to newer versions of the script
 
@@ -106,7 +106,7 @@ This will create InvokeAI folder where you will follow the rest of the steps.
 This distribution is changing rapidly. If you used the `git clone` method (step 5) to download the InvokeAI directory, then to update to the latest and greatest version, launch the Anaconda window, enter `InvokeAI` and type:
 
 ```
-(ldm) ~/InvokeAI$ git pull
+(invokeai) ~/InvokeAI$ git pull
 ```
 
 This will bring your local copy into sync with the remote one.
