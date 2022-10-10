@@ -55,8 +55,9 @@ cards with as little as 4 GB or RAM.
 
 Quick links:
 <ul>
-<li><a href="https://github.com/invoke-ai/InvokeAI">InvokeAI Downloads and Source Code</a>
-<li><a href="https://invoke-ai.github.io/InvokeAI/">InvokeAI Documentation and Tutorials</a>
+<li><a href="https://github.com/invoke-ai/InvokeAI">Downloads and Source Code</a>
+<li><a href="https://invoke-ai.github.io/InvokeAI/">Documentation and Tutorials</a>
+<li><a href="https://discord.gg/NwVCmKwY">Discord Server</a>
 <li><a href="https://github.com/invoke-ai/InvokeAI/issues">Bug Reports</a>
 <li><a href="https://github.com/invoke-ai/InvokeAI/discussions">Discussions, suggestions and Q&A</a>
 </ul>
