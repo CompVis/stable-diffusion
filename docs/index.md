@@ -46,17 +46,20 @@ template: main.html
 
 </div>
 
-This is an implementation of Stable Diffusion, the open source
-text-to-image and image-to-image generator. It provides a streamlined
-process with various new features and options to aid the image
-generation process. It runs on Windows, Mac and Linux machines, and
-runs on GPU cards with as little as 4 GB or RAM.
+<a href="https://github.com/invoke-ai/InvokeAI">InvokeAI</a> is an
+implementation of Stable Diffusion, the open source text-to-image and
+image-to-image generator. It provides a streamlined process with
+various new features and options to aid the image generation
+process. It runs on Windows, Mac and Linux machines, and runs on GPU
+cards with as little as 4 GB or RAM.
 
-!!! note
-
-    This fork is rapidly evolving. Please use the
-    [Issues](https://github.com/invoke-ai/InvokeAI/issues) tab to report bugs and make feature
-    requests. Be sure to use the provided templates. They will help aid diagnose issues faster.
+Quick links:
+<ul>
+<li><a href="https://github.com/invoke-ai/InvokeAI">InvokeAI Downloads and Source Code</a>
+<li><a href="https://invoke-ai.github.io/InvokeAI/">InvokeAI Documentation and Tutorials</a>
+<li><a href="https://github.com/invoke-ai/InvokeAI/issues">Bug Reports</a>
+<li><a href="https://github.com/invoke-ai/InvokeAI/discussions">Discussions, suggestions and Q&A</a>
+</ul>
 
 ## :octicons-package-dependencies-24: Installation
 
