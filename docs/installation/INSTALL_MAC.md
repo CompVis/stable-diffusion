@@ -24,9 +24,7 @@ First you need to download a large checkpoint file.
 3. Accept the terms and click Access Repository
 4. Download [sd-v1-4.ckpt (4.27 GB)](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/blob/main/sd-v1-4.ckpt) and note where you have saved it (probably the Downloads folder). You may want to move it somewhere else for longer term storage - SD needs this file to run.
 
-While that is downloading, open Terminal and run the following
-commands one at a time, reading the comments and taking care to run
-the appropriate command for your Mac's architecture (Intel or M1).
+While that is downloading, open Terminal and run the following commands one at a time, reading the comments and taking care to run the appropriate command for your Mac's architecture (Intel or M1).
 
 Do not just copy and paste the whole thing into your terminal!
 
@@ -42,6 +40,7 @@ Do not just copy and paste the whole thing into your terminal!
 #
 # If you are familiar with python environments, you'll know there are other options
 # for setting up the environment - you are on your own if you go one of those routes.
+
 ##### BEGIN TWO DIFFERENT OPTIONS #####
 
 ### BEGIN OPTION 1: Installing alongside pyenv ###
@@ -74,10 +73,7 @@ curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o M
 git clone https://github.com/invoke-ai/InvokeAI.git
 cd InvokeAI
 
-# Download the checkpoint file, and then proceed
-
-# Make the directory in the repo for the symlink
-mkdir -p models/ldm/stable-diffusion-v1/
+### WAIT FOR THE CHECKPOINT FILE TO DOWNLOAD, THEN PROCEED ###
 
 # We will leave the big checkpoint wherever you stashed it for long-term storage,
 # and make a link to it from the repo's folder. This allows you to use it for
