@@ -163,34 +163,6 @@ you can try starting `invoke.py` with the `--precision=float32` flag:
   - Deprecated `--full_precision` / `-F`. Simply omit it and `invoke.py` will auto
     configure. To switch away from auto use the new flag like `--precision=float32`.
 
-- v1.14 (11 September 2022)
-
-  - Memory optimizations for small-RAM cards. 512x512 now possible on 4 GB GPUs.
-  - Full support for Apple hardware with M1 or M2 chips.
-  - Add "seamless mode" for circular tiling of image. Generates beautiful effects.
-    ([prixt](https://github.com/prixt)).
-  - Inpainting support.
-  - Improved web server GUI.
-  - Lots of code and documentation cleanups.
-
-- v1.13 (3 September 2022
-
-  - Support image variations (see [VARIATIONS](docs/features/VARIATIONS.md)
-    ([Kevin Gibbons](https://github.com/bakkot) and many contributors and reviewers)
-  - Supports a Google Colab notebook for a standalone server running on Google hardware
-    [Arturo Mendivil](https://github.com/artmen1516)
-  - WebUI supports GFPGAN/ESRGAN facial reconstruction and upscaling
-    [Kevin Gibbons](https://github.com/bakkot)
-  - WebUI supports incremental display of in-progress images during generation
-    [Kevin Gibbons](https://github.com/bakkot)
-  - A new configuration file scheme that allows new models (including upcoming
-    stable-diffusion-v1.5) to be added without altering the code.
-    ([David Wager](https://github.com/maddavid12))
-  - Can specify --grid on invoke.py command line as the default.
-  - Miscellaneous internal bug and stability fixes.
-  - Works on M1 Apple hardware.
-  - Multiple bug fixes.
-
 For older changelogs, please visit the **[CHANGELOG](docs/features/CHANGELOG.md)**.
 
 ### Troubleshooting

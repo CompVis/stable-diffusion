@@ -1,14 +1,59 @@
 # **Changelog**
 
-## v1.13 (in process)
+- v2.0.0 (9 October 2022)
 
-- Supports a Google Colab notebook for a standalone server running on Google hardware [Arturo Mendivil](https://github.com/artmen1516)
-- WebUI supports GFPGAN/ESRGAN facial reconstruction and upscaling [Kevin Gibbons](https://github.com/bakkot)
-- WebUI supports incremental display of in-progress images during generation [Kevin Gibbons](https://github.com/bakkot)
-- Output directory can be specified on the invoke> command line.
-- The grid was displaying duplicated images when not enough images to fill the final row [Muhammad Usama](https://github.com/SMUsamaShah)
-- Can specify --grid on invoke.py command line as the default.
-- Miscellaneous internal bug and stability fixes.
+  - `dream.py` script renamed `invoke.py`. A `dream.py` script wrapper remains
+    for backward compatibility.
+  - Completely new WebGUI - launch with `python3 scripts/invoke.py --web`
+  - Support for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/INPAINTING.md">inpainting</a> and <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/OUTPAINTING.md">outpainting</a>
+  - img2img runs on all k* samplers
+  - Support for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/PROMPTS.md#negative-and-unconditioned-prompts">negative prompts</a>
+  - Support for CodeFormer face reconstruction
+  - Support for Textual Inversion on Macintoshes
+  - Support in both WebGUI and CLI for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/POSTPROCESS.md">post-processing of previously-generated images</a>
+    using facial reconstruction, ESRGAN upscaling, outcropping (similar to DALL-E infinite canvas),
+    and "embiggen" upscaling. See the `!fix` command.
+  - New `--hires` option on `invoke>` line allows <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/CLI.m#this-is-an-example-of-txt2img">larger images to be created without duplicating elements</a>, at the cost of some performance.
+  - New `--perlin` and `--threshold` options allow you to add and control variation
+    during image generation (see <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/OTHER.md#thresholding-and-perlin-noise-initialization-options">Thresholding and Perlin Noise Initialization</a>
+  - Extensive metadata now written into PNG files, allowing reliable regeneration of images
+    and tweaking of previous settings.
+  - Command-line completion in `invoke.py` now works on Windows, Linux and Mac platforms.
+  - Improved <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/CLI.m">command-line completion behavior</a>.
+    New commands added:
+       * List command-line history with `!history`
+       * Search command-line history with `!search`
+       * Clear history with `!clear`
+  - Deprecated `--full_precision` / `-F`. Simply omit it and `invoke.py` will auto
+    configure. To switch away from auto use the new flag like `--precision=float32`.
+
+- v1.14 (11 September 2022)
+
+  - Memory optimizations for small-RAM cards. 512x512 now possible on 4 GB GPUs.
+  - Full support for Apple hardware with M1 or M2 chips.
+  - Add "seamless mode" for circular tiling of image. Generates beautiful effects.
+    ([prixt](https://github.com/prixt)).
+  - Inpainting support.
+  - Improved web server GUI.
+  - Lots of code and documentation cleanups.
+
+- v1.13 (3 September 2022
+
+  - Support image variations (see [VARIATIONS](docs/features/VARIATIONS.md)
+    ([Kevin Gibbons](https://github.com/bakkot) and many contributors and reviewers)
+  - Supports a Google Colab notebook for a standalone server running on Google hardware
+    [Arturo Mendivil](https://github.com/artmen1516)
+  - WebUI supports GFPGAN/ESRGAN facial reconstruction and upscaling
+    [Kevin Gibbons](https://github.com/bakkot)
+  - WebUI supports incremental display of in-progress images during generation
+    [Kevin Gibbons](https://github.com/bakkot)
+  - A new configuration file scheme that allows new models (including upcoming
+    stable-diffusion-v1.5) to be added without altering the code.
+    ([David Wager](https://github.com/maddavid12))
+  - Can specify --grid on invoke.py command line as the default.
+  - Miscellaneous internal bug and stability fixes.
+  - Works on M1 Apple hardware.
+  - Multiple bug fixes.
 
 ---
 
