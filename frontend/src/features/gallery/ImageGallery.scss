@@ -21,8 +21,8 @@
   background-color: var(--tab-color);
   padding: 1rem;
   animation: slideOut 0.3s ease-out;
-  display: grid;
-  grid-auto-rows: max-content;
+  display: flex;
+  flex-direction: column;
   row-gap: 1rem;
   border-radius: 0.5rem;
   border-left-width: 0.2rem;
@@ -31,8 +31,7 @@
 }
 
 .image-gallery-header {
-  display: grid;
-  grid-template-columns: auto max-content;
+  display: flex;
   align-items: center;
 
   h1 {
@@ -48,7 +47,8 @@
 }
 
 .image-gallery-container {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
   max-height: $app-gallery-popover-height;
   overflow-y: scroll;
@@ -75,7 +75,7 @@
 }
 
 // .image-gallery {
-//   display: grid;
+//   display: flex;
 //   grid-template-columns: repeat(auto-fill, minmax(80px, auto));
 //   gap: 0.5rem;
 //   justify-items: center;
@@ -98,7 +98,7 @@
 }
 
 .image-gallery-container-placeholder {
-  display: grid;
+  display: flex;
   background-color: var(--background-color-secondary);
   border-radius: 0.5rem;
   place-items: center;
