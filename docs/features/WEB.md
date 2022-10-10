@@ -272,6 +272,18 @@ rest of the original image intact:
 
 <img src="../assets/invoke-web-server-8.png" width=640>
 
+14. Would you like to modify a previously-generated image using the
+Image to Image facility? Easy! While in the Image to Image panel,
+hover over any of the gallery images to see a little menu of icons pop
+up.  Click the picture icon to instantly send the selected image to
+Image to Image as the initial image.
+
+You can do the same from the Text to Image tab by clicking on the
+picture icon above the central image panel. The screenshot below
+shows where the "use as initial image" icons are located.
+
+<img src="../assets/invoke-web-server-9.png" width=640>
+
 ## Parting remarks
 
 This concludes the walkthrough, but there are several more features that you
