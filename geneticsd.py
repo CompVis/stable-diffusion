@@ -150,7 +150,7 @@ Output:
                         assert k < len(latent[uu]), k
                         assert i < len(latent[uu][k]), i
                         assert j < len(latent[uu][k][i]), j
-                        forcedlatent[k][i][j] = float(latent[uu][k][i][j]) if mindistances < 0.5 * np.min([mindistancesv[v] for v in range(len(mindistancesv)) if v != uu]) else np.random.randn()
+                        forcedlatent[k][i][j] = float(latent[uu][k][i][j] if (len(good) > 1 or mindistances < 0.5 * np.min([mindistancesv[v] for v in range(len(mindistancesv)) if v != uu])) else np.random.randn())
             #if a % 2 == 0:
             #    forcedlatent -= np.random.rand() * sauron
             forcedlatent = forcedlatent.flatten()
@@ -268,6 +268,8 @@ prompt = "Photo of a bearded, long-haired man with glasses and a blonde-haired w
 prompt = "Photo of a nuclear mushroom in Paris."
 prompt = "A photo of a cute woman with green hair, a red dress, and a gun. Futuristic backgroundd."
 prompt = "Three cute monsters."
+prompt = "A photo of a ninja holding a cucumber and facing a dinosaur."
+prompt = "A ninja fighting a dinosaur with a cucumber."
 print(f"The prompt is {prompt}")
 
 
@@ -487,25 +489,27 @@ if len(image_name) > 0:
         latent_file = image_name + ".latent.txt"
         print(to_native(f"Trying to load latent variables in {latent_file}."))
         f = open(latent_file, "r")
-        print(to_native("File opened."))
         latent_str = f.read()
         print("Latent string read.")
         latent_found = True
-        for i in range(llambda):
-            basic_new_fl = np.asarray(eval(latent_str))
-            if i > 0:
-                basic_new_fl = f * np.sqrt(len(new_fl) / np.sum(basic_new_fl**2)) * basic_new_fl
-                epsilon = .7 * ((i-1)/(llambda-1)) #1.0 / 2**(2 + (llambda - i) / 6)
-                #print(f"{i} -- {i % 7} {c} {f} {epsilon}")
-                new_fl = (1. - epsilon) * basic_new_fl + epsilon * np.random.randn(1*4*64*64)
-            else:
-                new_fl = basic_new_fl
-            new_fl = 6. * np.sqrt(len(new_fl)) * new_fl / np.sqrt(np.sum(new_fl ** 2))
-            forcedlatents += [new_fl]
     except:
         print(to_native("No latent file: guessing."))
         for i in range(llambda):
             forcedlatents += [randomized_image_to_latent(image_name)]  #img_to_latent(voronoi_name)
+    if latent_found:
+        print(to_native("File opened."))
+        for i in range(llambda):
+            basic_new_fl = np.asarray(eval(latent_str))
+            if i > 0:
+                f = np.exp(-3. * np.random.rand())
+                basic_new_fl = f * np.sqrt(len(new_fl) / np.sum(basic_new_fl**2)) * basic_new_fl
+                epsilon = .7 * ((i-1)/(llambda-1)) #1.0 / 2**(2 + (llambda - i) / 6)
+                #print(f"{i} -- {i % 7} {c} {f} {epsilon}")
+                new_fl = (1. - epsilon) * basic_new_fl + epsilon * np.random.randn(1*4*64*64)
+                new_fl = np.sqrt(len(new_fl)) * new_fl / np.sqrt(np.sum(new_fl ** 2))
+            else:
+                new_fl = basic_new_fl
+            forcedlatents += [new_fl]
 
 # We start the big time consuming loop!
 for iteration in range(3000):   # Kind of an infinite loop.
@@ -788,6 +792,7 @@ for iteration in range(3000):   # Kind of an infinite loop.
     os.environ["good"] = str(good)
     os.environ["bad"] = str(bad)
     numpy_images = [np.array(image) for image in images]
+    
     forcedlatents += multi_combine(latent, indices, llambda)
     #for uu in range(len(latent)):
     #    print(f"--> latent[{uu}] sum of sq / variable = {np.sum(latent[uu].flatten()**2) / len(latent[uu].flatten())}")
