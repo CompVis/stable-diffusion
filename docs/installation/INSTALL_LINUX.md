@@ -107,6 +107,7 @@ This distribution is changing rapidly. If you used the `git clone` method (step 
 
 ```
 (invokeai) ~/InvokeAI$ git pull
+(invokeai) ~/InvokeAI$ conda env update -f environment.yml
 ```
 
 This will bring your local copy into sync with the remote one.
