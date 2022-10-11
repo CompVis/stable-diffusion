@@ -51,6 +51,7 @@ gs = 7.5
 sentinel = str(random.randint(0,100000)) + "XX" +  str(random.randint(0,100000))
 all_files = []
 llambda = 15
+sigma = 1.
 
 # Creating the voice engine.
 noise = pyttsx3.init()
@@ -143,7 +144,7 @@ Output:
                 outputs += [basic_new_fl]
             else:
                 print("Perturbating the generation!")
-                epsilon = (( (a + .5 - len(good)) / (llambda - len(good) - 1)))
+                epsilon = sigma * (( (a + .5 - len(good)) / (llambda - len(good) - 1)))
                 forcedlatent = (1. - epsilon) * basic_new_fl + epsilon * np.random.randn(4*64*64)
                 coef =  np.sqrt(len(forcedlatent) / np.sum(forcedlatent**2))
                 forcedlatent = coef * forcedlatent
@@ -763,6 +764,8 @@ for iteration in range(3000):   # Kind of an infinite loop.
     os.environ["good"] = str(good)
     os.environ["bad"] = str(bad)
     numpy_images = [np.array(image) for image in images]
+    if len(np.unique([i(0) for i in indices])) == 1:
+       sigma = 0.7 * sigma
     forcedlatents += multi_combine(latent, indices, llambda)
     os.environ["good"] = "[]"
     os.environ["bad"] = "[]"
