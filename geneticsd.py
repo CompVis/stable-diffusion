@@ -695,18 +695,21 @@ for iteration in range(3000):   # Kind of an infinite loop.
                     scrn.blit(text4, (300, Y + 30))
                     pygame.display.flip()
                 elif pos[0] > 1500:  # Not in the images.
+                    print(to_native("Right hand panel."))
                     if pos[1] < Y/3:  # Reinitialize the clicks!
+                        print(to_native("Reinitialize clicks."))
                         indices = []
                         good = []
                         final_selection = []
                         final_selection_latent = []
+                        break
                     elif pos[1] < 2*Y/3:
+                        print(to_native("stop all"))
                         assert len(onlyfiles) == len(latent)
                         assert len(all_selected) == len(all_selected_latent)
                         stop_all(all_selected, all_selected_latent, final_selection, final_selection_latent) # + onlyfiles, all_selected_latent + latent)
                         exit()
                         status = False
-                    break
                 index = 3 * (pos[0] // 300) + (pos[1] // 300)
                 pygame.draw.circle(scrn, red, [pos[0], pos[1]], 13, 0)
                 if index <= max_created_index:  # The user has clicked on an image!
