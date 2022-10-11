@@ -89,7 +89,7 @@ You wil need one of the following:
 
 #### Disk
 
-- At least 6 GB of free disk space for the machine learning model, Python, and all its dependencies.
+- At least 12 GB of free disk space for the machine learning model, Python, and all its dependencies.
 
 **Note**
 
