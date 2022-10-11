@@ -9,10 +9,12 @@
 laion400m:
     config:  configs/latent-diffusion/txt2img-1p4B-eval.yaml
     weights: models/ldm/text2img-large/model.ckpt
+    description: Latent Diffusion LAION400M model
     width: 256
     height: 256
 stable-diffusion-1.4:
     config:  configs/stable-diffusion/v1-inference.yaml
     weights: models/ldm/stable-diffusion-v1/model.ckpt
+    description: Stable Diffusion inference model version 1.4
     width: 512
     height: 512
