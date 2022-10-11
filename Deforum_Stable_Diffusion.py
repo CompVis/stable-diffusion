@@ -1885,6 +1885,27 @@ else:
     display.display( display.HTML(f'<video controls loop><source src="{data_url}" type="video/mp4"></video>') )
 
 # %%
+# !! {"metadata":{
+# !!   "id": "RoECylTun7AA"
+# !! }}
+"""
+# Disconnect when finished
+"""
+
+# %%
+# !! {"metadata":{
+# !!   "cellView": "form",
+# !!   "id": "bfXpWRgSn-eH"
+# !! }}
+skip_disconnect_for_run_all = True #@param {type: 'boolean'}
+
+if skip_disconnect_for_run_all == True:
+    print('Skipping disconnect, uncheck skip_disconnect_for_run_all if you want to run it')
+else:
+    from google.colab import runtime
+    runtime.unassign()
+
+# %%
 # !! {"main_metadata":{
 # !!   "accelerator": "GPU",
 # !!   "colab": {
