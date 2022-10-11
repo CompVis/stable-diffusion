@@ -703,7 +703,7 @@ for iteration in range(3000):   # Kind of an infinite loop.
                         assert len(all_selected) == len(all_selected_latent)
                         stop_all(all_selected, all_selected_latent, final_selection, final_selection_latent) # + onlyfiles, all_selected_latent + latent)
                         exit()
-                    status = False
+                        status = False
                     break
                 index = 3 * (pos[0] // 300) + (pos[1] // 300)
                 pygame.draw.circle(scrn, red, [pos[0], pos[1]], 13, 0)
