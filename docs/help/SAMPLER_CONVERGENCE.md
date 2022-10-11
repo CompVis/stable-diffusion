@@ -1,8 +1,8 @@
 ---
-title: SAMPLER CONVERGENCE
+title: Sampler Convergence
 ---
 
-## *Sampler Convergence*
+# :material-palette-advanced: *Sampler Convergence*
 
 As features keep increasing, making the right choices for your needs can become increasingly difficult. What sampler to use? And for how many steps? Do you change the CFG value? Do you use prompt weighting? Do you allow variations?
 
@@ -21,6 +21,8 @@ Looking for a short version? Here's a TL;DR in 3 tables.
 | `K_HEUN` and `K_DPM_2`  converge in less steps (but are slower).  |
 | `K_DPM_2_A` and `K_EULER_A` incorporate a lot of creativity/variability. |
 
+<div align="center" markdown>
+
 | Sampler   | (3 sample avg) it/s (M1 Max 64GB, 512x512)  |
 |---|---|
 |  `DDIM` | 1.89  |
@@ -31,6 +33,8 @@ Looking for a short version? Here's a TL;DR in 3 tables.
 |  `K_DPM_2` | 0.95 (slower)  |
 |  `K_DPM_2_A` | 0.95 (slower)  |
 |  `K_EULER_A` | 1.86  |
+
+</div>
 
 | Suggestions  |
 |:---|

@@ -1,6 +1,5 @@
 ---
 title: Home
-template: main.html
 ---
 
 <!--
@@ -13,7 +12,7 @@ template: main.html
 -->
 <div align="center" markdown>
 
-# :material-script-text-outline: InvokeAI: A Stable Diffusion Toolkit
+# ^^**InvokeAI: A Stable Diffusion Toolkit**^^ :tools: <br> <small>Formally known as lstein/stable-diffusion</small>
 
 ![project logo](assets/logo.png)
 
@@ -29,8 +28,8 @@ template: main.html
 [CI checks on dev link]: https://github.com/invoke-ai/InvokeAI/actions?query=branch%3Adevelopment
 [CI checks on main badge]: https://flat.badgen.net/github/checks/invoke-ai/InvokeAI/main?label=CI%20status%20on%20main&cache=900&icon=github
 [CI checks on main link]: https://github.com/invoke-ai/InvokeAI/actions/workflows/test-invoke-conda.yml
-[discord badge]: https://flat.badgen.net/discord/members/htRgbc7e?icon=discord
-[discord link]: https://discord.com/invite/htRgbc7e
+[discord badge]: https://flat.badgen.net/discord/members/ZmtBAhwWhy?icon=discord
+[discord link]: https://discord.gg/ZmtBAhwWhy
 [github forks badge]: https://flat.badgen.net/github/forks/invoke-ai/InvokeAI?icon=github
 [github forks link]: https://useful-forks.github.io/?repo=lstein%2Fstable-diffusion
 [github open issues badge]: https://flat.badgen.net/github/open-issues/invoke-ai/InvokeAI?icon=github
@@ -53,14 +52,13 @@ various new features and options to aid the image generation
 process. It runs on Windows, Mac and Linux machines, and runs on GPU
 cards with as little as 4 GB or RAM.
 
-Quick links:
-<ul>
-<li><a href="https://github.com/invoke-ai/InvokeAI">Downloads and Source Code</a>
-<li><a href="https://invoke-ai.github.io/InvokeAI/">Documentation and Tutorials</a>
-<li><a href="https://discord.gg/NwVCmKwY">Discord Server</a>
-<li><a href="https://github.com/invoke-ai/InvokeAI/issues">Bug Reports</a>
-<li><a href="https://github.com/invoke-ai/InvokeAI/discussions">Discussions, suggestions and Q&A</a>
-</ul>
+**Quick links**: [<a href="https://discord.gg/NwVCmKwY">Discord Server</a>] [<a href="https://github.com/invoke-ai/InvokeAI/">Code and Downloads</a>] [<a href="https://github.com/invoke-ai/InvokeAI/issues">Bug Reports</a>] [<a href="https://github.com/invoke-ai/InvokeAI/discussions">Discussion, Ideas & Q&A</a>]
+
+<div align="center"><img src="assets/invoke-web-server-1.png" width=640></div>
+
+!!! note
+
+    This fork is rapidly evolving. Please use the [Issues tab](https://github.com/invoke-ai/InvokeAI/issues) to report bugs and make feature requests. Be sure to use the provided templates. They will help aid diagnose issues faster.
 
 ## :octicons-package-dependencies-24: Installation
 
@@ -98,7 +96,7 @@ You wil need one of the following:
     To run in full-precision mode, start `invoke.py` with the `--full_precision` flag:
 
     ```bash
-    (ldm) ~/stable-diffusion$ python scripts/invoke.py --full_precision
+    (invokeai) ~/InvokeAI$ python scripts/invoke.py --full_precision
     ```
 ## :octicons-log-16: Latest Changes
 

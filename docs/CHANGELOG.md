@@ -1,4 +1,8 @@
-# **Changelog**
+---
+title: Changelog
+---
+
+# :octicons-log-16: **Changelog**
 
 - v2.0.0 (9 October 2022)
 
@@ -39,7 +43,7 @@
 
 - v1.13 (3 September 2022
 
-  - Support image variations (see [VARIATIONS](docs/features/VARIATIONS.md)
+  - Support image variations (see [VARIATIONS](features/VARIATIONS.md)
     ([Kevin Gibbons](https://github.com/bakkot) and many contributors and reviewers)
   - Supports a Google Colab notebook for a standalone server running on Google hardware
     [Arturo Mendivil](https://github.com/artmen1516)
@@ -179,4 +183,4 @@
 
 ## Links
 
-- **[Read Me](../readme.md)**
+- **[Read Me](index.md)**

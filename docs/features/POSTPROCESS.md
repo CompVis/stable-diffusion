@@ -1,7 +1,8 @@
-
 ---
 title: Postprocessing
 ---
+
+# :material-image-edit: Postprocessing
 
 ## Intro
 

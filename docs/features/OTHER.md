@@ -6,13 +6,9 @@ title: Others
 
 ## **Google Colab**
 
-Stable Diffusion AI Notebook: <a
-href="https://colab.research.google.com/github/lstein/stable-diffusion/blob/main/notebooks/Stable_Diffusion_AI_Notebook.ipynb"
-target="_parent">
-<img
-src="https://colab.research.google.com/assets/colab-badge.svg"
-alt="Open In Colab"/></a> <br> Open and follow instructions to use an isolated environment running
-Dream.<br>
+Stable Diffusion AI Notebook: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lstein/stable-diffusion/blob/main/notebooks/Stable_Diffusion_AI_Notebook.ipynb)
+
+Open and follow instructions to use an isolated environment running Dream.
 
 Output Example: ![Colab Notebook](../assets/colab_notebook.png)
 
@@ -71,24 +67,30 @@ combination of integers and floating point numbers, and they do not need to add 
 
 ---
 
-## Thresholding and Perlin Noise Initialization Options
+## **Thresholding and Perlin Noise Initialization Options**
 
 Two new options are the thresholding (`--threshold`) and the perlin noise initialization (`--perlin`) options. Thresholding limits the range of the latent values during optimization, which helps combat oversaturation with higher CFG scale values. Perlin noise initialization starts with a percentage (a value ranging from 0 to 1) of perlin noise mixed into the initial noise. Both features allow for more variations and options in the course of generating images.
 
-For better intuition into what these options do in practice, [here is a graphic demonstrating them both](../assets/truncation_comparison.jpg) in use. In generating this graphic, perlin noise at initialization was programmatically varied going across on the diagram by values 0.0, 0.1, 0.2, 0.4, 0.5, 0.6, 0.8, 0.9, 1.0; and the threshold was varied going down from
+For better intuition into what these options do in practice:
+
+![here is a graphic demonstrating them both](../assets/truncation_comparison.jpg)
+
+In generating this graphic, perlin noise at initialization was programmatically varied going across on the diagram by values 0.0, 0.1, 0.2, 0.4, 0.5, 0.6, 0.8, 0.9, 1.0; and the threshold was varied going down from
 0, 1, 2, 3, 4, 5, 10, 20, 100. The other options are fixed, so the initial prompt is as follows (no thresholding or perlin noise):
 
-```
-    a portrait of a beautiful young lady -S 1950357039 -s 100 -C 20 -A k_euler_a --threshold 0 --perlin 0
+```bash
+invoke> "a portrait of a beautiful young lady" -S 1950357039 -s 100 -C 20 -A k_euler_a --threshold 0 --perlin 0
 ```
 
 Here's an example of another prompt used when setting the threshold to 5 and perlin noise to 0.2:
 
-```
-    a portrait of a beautiful young lady -S 1950357039 -s 100 -C 20 -A k_euler_a --threshold 5 --perlin 0.2
+```bash
+invoke> "a portrait of a beautiful young lady" -S 1950357039 -s 100 -C 20 -A k_euler_a --threshold 5 --perlin 0.2
 ```
 
-Note: currently the thresholding feature is only implemented for the k-diffusion style samplers, and empirically appears to work best with `k_euler_a` and `k_dpm_2_a`. Using 0 disables thresholding. Using 0 for perlin noise disables using perlin noise for initialization. Finally, using 1 for perlin noise uses only perlin noise for initialization.
+!!! note
+
+    currently the thresholding feature is only implemented for the k-diffusion style samplers, and empirically appears to work best with `k_euler_a` and `k_dpm_2_a`. Using 0 disables thresholding. Using 0 for perlin noise disables using perlin noise for initialization. Finally, using 1 for perlin noise uses only perlin noise for initialization.
 
 ---
 
