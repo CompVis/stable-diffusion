@@ -1,5 +1,7 @@
 ---
 title: F.A.Q.
+hide:
+  - toc
 ---
 
 # :material-frequently-asked-questions: F.A.Q.
@@ -63,7 +65,7 @@ Reinstall the stable diffusion modules. Enter the `stable-diffusion` directory a
 
 ### **QUESTION**
 
-`invoke.py` dies, complaining of various missing modules, none of which starts with `ldm``.
+`invoke.py` dies, complaining of various missing modules, none of which starts with `ldm`.
 
 ### **SOLUTION**
 
@@ -87,9 +89,7 @@ Usually this will be sufficient, but if you start to see errors about
 missing or incorrect modules, use the command `pip install -e .`
 and/or `conda env update` (These commands won't break anything.)
 
-`pip install -e .` and/or
-
-`conda env update -f environment.yaml`
+`pip install -e .` and/or `conda env update -f environment.yaml`
 
 (These commands won't break anything.)
 

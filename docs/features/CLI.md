@@ -34,7 +34,7 @@ The script is confirmed to work on Linux, Windows and Mac systems.
     currently rudimentary, but a much better replacement is on its way.
 
 ```bash
-(ldm) ~/stable-diffusion$ python3 ./scripts/invoke.py
+(invokeai) ~/stable-diffusion$ python3 ./scripts/invoke.py
 * Initializing, be patient...
 Loading model from models/ldm/text2img-large/model.ckpt
 (...more initialization messages...)
@@ -51,7 +51,7 @@ invoke> "there's a fly in my soup" -n6 -g
 invoke> q
 
 # this shows how to retrieve the prompt stored in the saved image's metadata
-(ldm) ~/stable-diffusion$ python ./scripts/images2prompt.py outputs/img_samples/*.png
+(invokeai) ~/stable-diffusion$ python ./scripts/images2prompt.py outputs/img_samples/*.png
 00009.png: "ashley judd riding a camel" -s150 -S 416354203
 00010.png: "ashley judd riding a camel" -s150 -S 1362479620
 00011.png: "there's a fly in my soup" -n6 -g -S 2685670268

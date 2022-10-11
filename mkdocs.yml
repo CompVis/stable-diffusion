@@ -2,7 +2,7 @@
 site_name: Stable Diffusion Toolkit Docs
 site_url: https://invoke-ai.github.io/InvokeAI
 site_author: mauwii
-dev_addr: "127.0.0.1:8080"
+dev_addr: '127.0.0.1:8080'
 
 # Repository
 repo_name: 'invoke-ai/InvokeAI'
@@ -26,6 +26,7 @@ theme:
         name: Switch to dark mode
     - media: '(prefers-color-scheme: dark)'
       scheme: slate
+      primary: blue
       toggle:
         icon: material/lightbulb-outline
         name: Switch to light mode

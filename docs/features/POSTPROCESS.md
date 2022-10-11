@@ -34,13 +34,13 @@ work. These are loaded when you run `scripts/preload_models.py`. If
 GFPAN is failing with an error, please run the following from the
 InvokeAI directory:
 
-~~~~
+```bash
 python scripts/preload_models.py
-~~~~
+```
 
 If you do not run this script in advance, the GFPGAN module will attempt
 to download the models files the first time you try to perform facial
-reconstruction. 
+reconstruction.
 
 Alternatively, if you have GFPGAN installed elsewhere, or if you are
 using an earlier version of this package which asked you to install
@@ -89,13 +89,13 @@ too.
 ### Example Usage
 
 ```bash
-invoke> superman dancing with a panda bear -U 2 0.6 -G 0.4
+invoke> "superman dancing with a panda bear" -U 2 0.6 -G 0.4
 ```
 
 This also works with img2img:
 
 ```bash
-invoke> a man wearing a pineapple hat -I path/to/your/file.png -U 2 0.5 -G 0.6
+invoke> "a man wearing a pineapple hat" -I path/to/your/file.png -U 2 0.5 -G 0.6
 ```
 
 !!! note
@@ -129,14 +129,14 @@ You can use `-ft` prompt argument to swap between CodeFormer and the
 default GFPGAN. The above mentioned `-G` prompt argument will allow
 you to control the strength of the restoration effect.
 
-### Usage:
+### Usage
 
 The following command will perform face restoration with CodeFormer instead of
 the default gfpgan.
 
 `<prompt> -G 0.8 -ft codeformer`
 
-### Other Options:
+### Other Options
 
 - `-cf` - cf or CodeFormer Fidelity takes values between `0` and `1`. 0 produces
   high quality results but low accuracy and 1 produces lower quality results but
@@ -162,7 +162,7 @@ previously-generated file. Just use the syntax `!fix path/to/file.png
 2X for a file named `./outputs/img-samples/000044.2945021133.png`,
 just run:
 
-```
+```bash
 invoke> !fix ./outputs/img-samples/000044.2945021133.png -G 0.8 -U 2
 ```
 
@@ -170,7 +170,7 @@ A new file named `000044.2945021133.fixed.png` will be created in the output
 directory. Note that the `!fix` command does not replace the original file,
 unlike the behavior at generate time.
 
-### Disabling:
+### Disabling
 
 If, for some reason, you do not wish to load the GFPGAN and/or ESRGAN libraries,
 you can disable them on the invoke.py command line with the `--no_restore` and

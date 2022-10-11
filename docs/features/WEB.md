@@ -9,7 +9,7 @@ server (see screenshot). To use it, run the `invoke.py` script by
 adding the `--web` option:
 
 ```bash
-(ldm) ~/InvokeAI$ python3 scripts/invoke.py --web
+(invokeai) ~/InvokeAI$ python3 scripts/invoke.py --web
 ```
 
 You can then connect to the server by pointing your web browser at
@@ -19,7 +19,7 @@ either the IP address of the host you are running it on, or the
 wildcard `0.0.0.0`. For example:
 
 ```bash
-(ldm) ~/InvokeAI$ python3 scripts/invoke.py --web --host 0.0.0.0
+(invokeai) ~/InvokeAI$ python3 scripts/invoke.py --web --host 0.0.0.0
 ```
 
 # Quick guided walkthrough of the WebGUI's features
@@ -55,7 +55,9 @@ There are also a series of icons to the left of the control panel (see
 highlighted area in the screenshot below) which select among a series
 of tabs for performing different types of operations.
 
+<figure markdown>
 ![Invoke Web Server - Control Panel](../assets/invoke-web-server-2.png){:width="512px"}
+</figure>
 
 From top to bottom, these are:
 
@@ -88,51 +90,51 @@ using its IP address or domain name.
 
 #### Basics
 
-3. Generate an image by typing *strawberry sushi* into the large
+1. Generate an image by typing *strawberry sushi* into the large
 prompt field on the upper left and then clicking on the Invoke button
 (the one with the Camera icon). After a short wait, you'll see a large
 image of sushi in the image panel, and a new thumbnail in the gallery
 on the right.
 
-If you need more room on the screen, you can turn the gallery  off
-by clicking on the **x** to the right of "Your Invocations". You can
-turn it back on later by clicking the image icon that appears in the
-gallery's place.
+    If you need more room on the screen, you can turn the gallery  off
+    by clicking on the **x** to the right of "Your Invocations". You can
+    turn it back on later by clicking the image icon that appears in the
+    gallery's place.
 
-The images are written into the directory indicated by the `--outdir`
-option provided at script launch time. By default, this is
-`outputs/img-samples` under the InvokeAI directory.
+    The images are written into the directory indicated by the `--outdir`
+    option provided at script launch time. By default, this is
+    `outputs/img-samples` under the InvokeAI directory.
 
-4. Generate a bunch of strawberry sushi images by increasing the
+2. Generate a bunch of strawberry sushi images by increasing the
 number of requested images by adjusting the Images counter just below
 the Camera button. As each is generated, it will be added to the
 gallery. You can switch the active image by clicking on the gallery
 thumbnails.
 
-5. Try playing with different settings, including image width and
+3. Try playing with different settings, including image width and
 height, the Sampler, the Steps and the CFG scale.
 
-Image *Width* and *Height* do what you'd expect. However, be aware that
-larger images consume more VRAM memory and take longer to generate.
+    Image *Width* and *Height* do what you'd expect. However, be aware that
+    larger images consume more VRAM memory and take longer to generate.
 
-The *Sampler* controls how the AI selects the image to display. Some
-samplers are more "creative" than others and will produce a wider
-range of variations (see next section). Some samplers run faster than
-others.
+    The *Sampler* controls how the AI selects the image to display. Some
+    samplers are more "creative" than others and will produce a wider
+    range of variations (see next section). Some samplers run faster than
+    others.
 
-*Steps* controls how many noising/denoising/sampling steps the AI will
-take. The higher this value, the more refined the image will be, but
-the longer the image will take to generate. A typical strategy is to
-generate images with a low number of steps in order to select one to
-work on further, and then regenerate it using a higher number of
-steps.
+    *Steps* controls how many noising/denoising/sampling steps the AI will
+    take. The higher this value, the more refined the image will be, but
+    the longer the image will take to generate. A typical strategy is to
+    generate images with a low number of steps in order to select one to
+    work on further, and then regenerate it using a higher number of
+    steps.
 
-The *CFG Scale* controls how hard the AI tries to match the generated
-image to the input prompt. You can go as high or low as you like, but
-generally values greater than 20 won't improve things much, and values
-lower than 5 will produce unexpected images. There are complex
-interactions between *Steps*, *CFG Scale* and the *Sampler*, so
-experiment to find out what works for you.
+    The *CFG Scale* controls how hard the AI tries to match the generated
+    image to the input prompt. You can go as high or low as you like, but
+    generally values greater than 20 won't improve things much, and values
+    lower than 5 will produce unexpected images. There are complex
+    interactions between *Steps*, *CFG Scale* and the *Sampler*, so
+    experiment to find out what works for you.
 
 6. To regenerate a previously-generated image, select the image you
 want and click *Use All*. This loads the text prompt and other
@@ -140,8 +142,8 @@ original settings into the control panel. If you then press *Invoke*
 it will regenerate the image exactly. You can also selectively modify
 the prompt or other settings to tweak the image.
 
-Alternatively, you may click on *Use Seed* to load just the image's
-seed, and leave other settings unchanged.
+    Alternatively, you may click on *Use Seed* to load just the image's
+    seed, and leave other settings unchanged.
 
 7. To regenerate a Stable Diffusion image that was generated by
 another SD package, you need to know its text prompt and its
@@ -154,21 +156,21 @@ steps and dimensions, but it will (usually) be close.
 
 #### Variations on a theme
 
-5. Let's try generating some variations. Select your favorite sushi
+1. Let's try generating some variations. Select your favorite sushi
 image from the gallery to load it. Then select "Use All" from the list
 of buttons above. This will load up all the settings used to generate
 this image, including its unique seed.
 
-Go down to the Variations section of the Control Panel and set the
-button to On. Set Variation Amount to 0.2 to generate a modest
-number of variations on the image, and also set the Image counter to
-4. Press the `invoke` button. This will generate a series of related
-images. To obtain smaller variations, just lower the Variation
-Amount. You may also experiment with changing the Sampler. Some
-samplers generate more variability than others. *k_euler_a* is
-particularly creative, while *ddim* is pretty conservative.
+    Go down to the Variations section of the Control Panel and set the
+    button to On. Set Variation Amount to 0.2 to generate a modest
+    number of variations on the image, and also set the Image counter to
+    `4`. Press the `invoke` button. This will generate a series of related
+    images. To obtain smaller variations, just lower the Variation
+    Amount. You may also experiment with changing the Sampler. Some
+    samplers generate more variability than others. *k_euler_a* is
+    particularly creative, while *ddim* is pretty conservative.
 
-6. For even more variations, experiment with increasing the setting
+2. For even more variations, experiment with increasing the setting
 for *Perlin*. This adds a bit of noise to the image generation
 process. Note that values of Perlin noise greater than 0.15 produce
 poor images for several of the samplers.
@@ -181,7 +183,7 @@ particular issues with generating reallistic eyes. InvokeAI provides
 the ability to reconstruct faces using either the GFPGAN or CodeFormer
 libraries. For more information see [POSTPROCESS](POSTPROCESS.md).
   
-7. Invoke a prompt that generates a mangled face. A prompt that often
+1. Invoke a prompt that generates a mangled face. A prompt that often
 gives this is "portrait of a lawyer, 3/4 shot" (this is not intended
 as a slur against lawyers!) Once you have an image that needs some
 touching up, load it into the Image panel, and press the button with
@@ -190,15 +192,16 @@ box will appear. Leave *Strength* at 0.8 and press *Restore Faces". If
 all goes well, the eyes and other aspects of the face will be improved
 (see the second screenshot)
 
-![Invoke Web Server - Original Image](../assets/invoke-web-server-3.png)
-![Invoke Web Server - Retouched Image](../assets/invoke-web-server-4.png)
+    ![Invoke Web Server - Original Image](../assets/invoke-web-server-3.png)
 
-The facial reconstruction *Strength* field adjusts how aggressively
-the face library will try to alter the face. It can be as high as 1.0,
-but be aware that this often softens the face airbrush style, losing
-some details. The default 0.8 is usually sufficient.
+    ![Invoke Web Server - Retouched Image](../assets/invoke-web-server-4.png)
 
-8. "Upscaling" is the process of increasing the size of an image while
+    The facial reconstruction *Strength* field adjusts how aggressively
+    the face library will try to alter the face. It can be as high as 1.0,
+    but be aware that this often softens the face airbrush style, losing
+    some details. The default 0.8 is usually sufficient.
+
+2. "Upscaling" is the process of increasing the size of an image while
 retaining the sharpness. InvokeAI uses an external library called
 "ESRGAN" to do this. To invoke upscaling, simply select an image and
 press the *HD* button above it. You can select between 2X and 4X
@@ -206,7 +209,7 @@ upscaling, and adjust the upscaling strength, which has much the same
 meaning as in facial reconstruction. Try running this on one of your
 previously-generated images.
 
-9. Finally, you can run facial reconstruction and/or upscaling
+3. Finally, you can run facial reconstruction and/or upscaling
 automatically after each Invocation. Go to the Advanced Options
 section of the Control Panel and turn on *Restore Face* and/or
 *Upscale*.
@@ -224,28 +227,32 @@ and
 [Lincoln-and-Parrot-512-transparent.png](../assets/Lincoln-and-Parrot-512-transparent.png).
 Download these images to your local machine now to continue with the walkthrough.
 
-10. Click on the *Image to Image* tab icon, which is the second icon
+1. Click on the *Image to Image* tab icon, which is the second icon
 from the top on the left-hand side of the screen:
 
-![Invoke Web Server - Image to Image Icon](../assets/invoke-web-server-5.png)
+    <figure markdown>
+    ![Invoke Web Server - Image to Image Icon](../assets/invoke-web-server-5.png)
+    </figure>
 
-This will bring you to a screen similar to the one shown here:
+    This will bring you to a screen similar to the one shown here:
 
-![Invoke Web Server - Image to Image Tab](../assets/invoke-web-server-6.png){:width="640px"}
+    <figure markdown>
+    ![Invoke Web Server - Image to Image Tab](../assets/invoke-web-server-6.png){:width="640px"}
+    </figure>
 
-Drag-and-drop the Lincoln-and-Parrot image into the Image panel, or
+2. Drag-and-drop the Lincoln-and-Parrot image into the Image panel, or
 click the blank area to get an upload dialog. The image will load into
 an area marked *Initial Image*. (The WebGUI will also load the most
 recently-generated image from the gallery into a section on the left,
 but this image will be replaced in the next step.)
 
-11. Go to the prompt box and type *old sea captain with raven on
+3. Go to the prompt box and type *old sea captain with raven on
 shoulder* and press Invoke. A derived image will appear to the right
 of the original one:
 
-![Invoke Web Server - Image to Image example](../assets/invoke-web-server-7.png){:width="640px"}
+    ![Invoke Web Server - Image to Image example](../assets/invoke-web-server-7.png){:width="640px"}
 
-12. Experiment with the different settings. The most influential one
+4. Experiment with the different settings. The most influential one
 in Image to Image is *Image to Image Strength* located about midway
 down the control panel. By default it is set to 0.75, but can range
 from 0.0 to 0.99. The higher the value, the more of the original image
@@ -255,7 +262,7 @@ the Sampler and CFG Scale also influence the final result. You can
 also generate variations in the same way as described in Text to
 Image.
 
-13. What if we only want to change certain part(s) of the image and
+5. What if we only want to change certain part(s) of the image and
 leave the rest intact? This is called Inpainting, and a future version
 of the InvokeAI web server will provide an interactive painting canvas
 on which you can directly draw the areas you wish to Inpaint into. For
@@ -263,18 +270,20 @@ now, you can achieve this effect by using an external photoeditor tool
 to make one or more regions of the image transparent as described in
 [INPAINTING.md] and uploading that.
 
-The file
-[Lincoln-and-Parrot-512-transparent.png](../assets/Lincoln-and-Parrot-512-transparent.png)
-is a version of the earlier image in which the area around the parrot
-has been replaced with transparency. Click on the "x" in the upper
-right of the Initial Image and upload the transparent version. Using
-the same prompt "old sea captain with raven on shoulder" try Invoking
-an image. This time, only the parrot will be replaced, leaving the
-rest of the original image intact:
+    The file
+    [Lincoln-and-Parrot-512-transparent.png](../assets/Lincoln-and-Parrot-512-transparent.png)
+    is a version of the earlier image in which the area around the parrot
+    has been replaced with transparency. Click on the "x" in the upper
+    right of the Initial Image and upload the transparent version. Using
+    the same prompt "old sea captain with raven on shoulder" try Invoking
+    an image. This time, only the parrot will be replaced, leaving the
+    rest of the original image intact:
 
+<figure markdown>
 ![Invoke Web Server - Inpainting](../assets/invoke-web-server-8.png){:width="640px"}
+</figure>
 
-14. Would you like to modify a previously-generated image using the
+6. Would you like to modify a previously-generated image using the
 Image to Image facility? Easy! While in the Image to Image panel,
 hover over any of the gallery images to see a little menu of icons pop
 up.  Click the picture icon to instantly send the selected image to
@@ -299,19 +308,15 @@ updates!
 ## Reference
 
 ### Additional Options
-  `--web_develop`    -   Starts the web server in development mode.
-  
-  `--web_verbose`    -   Enables verbose logging
-  
-  `--cors [CORS ...]`    -   Additional allowed origins, comma-separated
-  
-  `--host HOST`    -   Web server: Host or IP to listen on. Set to 0.0.0.0 to
-  accept traffic from other devices on your network.
-                        
-  `--port PORT`    -   Web server: Port to listen on
-  
-  `--gui`    -   Start InvokeAI GUI - This is the "desktop mode" version of the web app. It uses Flask 
-  to create a desktop app experience of the webserver.
+
+ parameter <img width=160 align="right"> | effect
+-- | --
+`--web_develop` | Starts the web server in development mode.
+`--web_verbose` | Enables verbose logging
+`--cors [CORS ...]` | Additional allowed origins, comma-separated
+`--host HOST` | Web server: Host or IP to listen on. Set to 0.0.0.0 to accept traffic from other devices on your network.
+`--port PORT` | Web server: Port to listen on
+`--gui` | Start InvokeAI GUI - This is the "desktop mode" version of the web app. It uses Flask to create a desktop app experience of the webserver.
 
 ### Web Specific Features
 

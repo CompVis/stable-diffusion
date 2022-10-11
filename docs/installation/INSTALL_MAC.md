@@ -124,18 +124,18 @@ While that is downloading, open Terminal and run the following commands one at a
     conda activate invokeai
 
     # This will download some bits and pieces and make take a while
-    python scripts/preload_models.py
+    (invokeai) python scripts/preload_models.py
 
     # Run SD!
-    python scripts/dream.py
+    (invokeai) python scripts/dream.py
 
     # or run the web interface!
-    python scripts/invoke.py --web
+    (invokeai) python scripts/invoke.py --web
 
     # The original scripts should work as well.
-    python scripts/orig_scripts/txt2img.py \
-      --prompt "a photograph of an astronaut riding a horse" \
-      --plms
+    (invokeai) python scripts/orig_scripts/txt2img.py \
+        --prompt "a photograph of an astronaut riding a horse" \
+        --plms
     ```
     !!! info
 
@@ -207,7 +207,7 @@ conda update \
 There are several causes of these errors:
 
 1. Did you remember to `conda activate ldm`? If your terminal prompt begins with
-   "(ldm)" then you activated it. If it begins with "(base)" or something else
+   "(invokeai)" then you activated it. If it begins with "(base)" or something else
    you haven't.
 
 2. You might've run `./scripts/preload_models.py` or `./scripts/invoke.py`
@@ -224,7 +224,7 @@ There are several causes of these errors:
     conda env remove -n ldm
     conda env create -f environment-mac.yml
     ```
-    
+
 4. If you have activated the ldm virtual environment and tried rebuilding it,
    maybe the problem could be that I have something installed that you don't and
    you'll just need to manually install it. Make sure you activate the virtual
@@ -289,7 +289,7 @@ should actually be the _same python_, which you can verify by comparing the
 output of `python3 -V` and `python -V`.
 
 ```bash
-(ldm) % which python
+(invokeai) % which python
 /Users/name/miniforge3/envs/ldm/bin/python
 ```
 

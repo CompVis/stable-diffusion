@@ -23,13 +23,13 @@ As the default backend is not available on Windows, if you're using that
 platform, set the environment variable `PL_TORCH_DISTRIBUTED_BACKEND` to `gloo`
 
 ```bash
-python3 ./main.py --base ./configs/stable-diffusion/v1-finetune.yaml \
-                  --actual_resume ./models/ldm/stable-diffusion-v1/model.ckpt \
-                  -t \
-                  -n my_cat \
-                  --gpus 0 \
-                  --data_root D:/textual-inversion/my_cat \
-                  --init_word 'cat'
+python3 ./main.py -t \
+    --base ./configs/stable-diffusion/v1-finetune.yaml \
+    --actual_resume ./models/ldm/stable-diffusion-v1/model.ckpt \
+    -n my_cat \
+    --gpus 0 \
+    --data_root D:/textual-inversion/my_cat \
+    --init_word 'cat'
 ```
 
 During the training process, files will be created in
@@ -59,7 +59,8 @@ Once the model is trained, specify the trained .pt or .bin file when starting
 invoke using
 
 ```bash
-python3 ./scripts/invoke.py --embedding_path /path/to/embedding.pt
+python3 ./scripts/invoke.py \
+    --embedding_path /path/to/embedding.pt
 ```
 
 Then, to utilize your subject at the invoke prompt
@@ -80,9 +81,9 @@ LDM checkpoints using:
 
 ```bash
 python3 ./scripts/merge_embeddings.py \
-        --manager_ckpts /path/to/first/embedding.pt \
-        [</path/to/second/embedding.pt>,[...]] \
-        --output_path /path/to/output/embedding.pt
+    --manager_ckpts /path/to/first/embedding.pt \
+    [</path/to/second/embedding.pt>,[...]] \
+    --output_path /path/to/output/embedding.pt
 ```
 
 Credit goes to rinongal and the repository

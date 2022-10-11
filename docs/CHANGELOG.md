@@ -4,7 +4,7 @@ title: Changelog
 
 # :octicons-log-16: **Changelog**
 
-- v2.0.0 (9 October 2022)
+## v2.0.0 <small>(9 October 2022)</small>
 
   - `dream.py` script renamed `invoke.py`. A `dream.py` script wrapper remains
     for backward compatibility.
@@ -31,7 +31,7 @@ title: Changelog
   - Deprecated `--full_precision` / `-F`. Simply omit it and `invoke.py` will auto
     configure. To switch away from auto use the new flag like `--precision=float32`.
 
-- v1.14 (11 September 2022)
+## v1.14 <small>(11 September 2022)</small>
 
   - Memory optimizations for small-RAM cards. 512x512 now possible on 4 GB GPUs.
   - Full support for Apple hardware with M1 or M2 chips.
@@ -41,7 +41,7 @@ title: Changelog
   - Improved web server GUI.
   - Lots of code and documentation cleanups.
 
-- v1.13 (3 September 2022
+## v1.13 <small>(3 September 2022)</small>
 
   - Support image variations (see [VARIATIONS](features/VARIATIONS.md)
     ([Kevin Gibbons](https://github.com/bakkot) and many contributors and reviewers)
@@ -61,7 +61,7 @@ title: Changelog
 
 ---
 
-## v1.12 (28 August 2022)
+## v1.12 <small>(28 August 2022)</small>
 
 - Improved file handling, including ability to read prompts from standard input.
   (kudos to [Yunsaki](https://github.com/yunsaki)
@@ -75,7 +75,7 @@ title: Changelog
 
 ---
 
-## v1.11 (26 August 2022)
+## v1.11 <small>(26 August 2022)</small>
 
 - NEW FEATURE: Support upscaling and face enhancement using the GFPGAN module. (kudos to [Oceanswave](https://github.com/Oceanswave)
 - You now can specify a seed of -1 to use the previous image's seed, -2 to use the seed for the image generated before that, etc.
@@ -88,13 +88,13 @@ title: Changelog
 
 ---
 
-## v1.10 (25 August 2022)
+## v1.10 <small>(25 August 2022)</small>
 
 - A barebones but fully functional interactive web server for online generation of txt2img and img2img.
 
 ---
 
-## v1.09 (24 August 2022)
+## v1.09 <small>(24 August 2022)</small>
 
 - A new -v option allows you to generate multiple variants of an initial image
   in img2img mode. (kudos to [Oceanswave](https://github.com/Oceanswave). [
@@ -104,7 +104,7 @@ title: Changelog
 
 ---
 
-## v1.08 (24 August 2022)
+## v1.08 <small>(24 August 2022)</small>
 
 - Escape single quotes on the invoke> command before trying to parse. This avoids
   parse errors.
@@ -115,7 +115,7 @@ title: Changelog
 
 ---
 
-## v1.07 (23 August 2022)
+## v1.07 <small>(23 August 2022)</small>
 
 - Image filenames will now never fill gaps in the sequence, but will be assigned the
   next higher name in the chosen directory. This ensures that the alphabetic and chronological
@@ -123,14 +123,14 @@ title: Changelog
 
 ---
 
-## v1.06 (23 August 2022)
+## v1.06 <small>(23 August 2022)</small>
 
 - Added weighted prompt support contributed by [xraxra](https://github.com/xraxra)
 - Example of using weighted prompts to tweak a demonic figure contributed by [bmaltais](https://github.com/bmaltais)
 
 ---
 
-## v1.05 (22 August 2022 - after the drop)
+## v1.05 <small>(22 August 2022 - after the drop)</small>
 
 - Filenames now use the following formats:
   000010.95183149.png -- Two files produced by the same command (e.g. -n2),
@@ -148,7 +148,7 @@ title: Changelog
 
 ---
 
-## v1.04 (22 August 2022 - after the drop)
+## v1.04 <small>(22 August 2022 - after the drop)</small>
 
 - Updated README to reflect installation of the released weights.
 - Suppressed very noisy and inconsequential warning when loading the frozen CLIP
@@ -156,14 +156,14 @@ title: Changelog
 
 ---
 
-## v1.03 (22 August 2022)
+## v1.03 <small>(22 August 2022)</small>
 
 - The original txt2img and img2img scripts from the CompViz repository have been moved into
   a subfolder named "orig_scripts", to reduce confusion.
 
 ---
 
-## v1.02 (21 August 2022)
+## v1.02 <small>(21 August 2022)</small>
 
 - A copy of the prompt and all of its switches and options is now stored in the corresponding
   image in a tEXt metadata field named "Dream". You can read the prompt using scripts/images2prompt.py,
@@ -172,7 +172,7 @@ title: Changelog
 
 ---
 
-## v1.01 (21 August 2022)
+## v1.01 <small>(21 August 2022)</small>
 
 - added k_lms sampling.
   **Please run "conda env update" to load the k_lms dependencies!!**
