@@ -768,7 +768,7 @@ for iteration in range(3000):   # Kind of an infinite loop.
     os.environ["good"] = str(good)
     os.environ["bad"] = str(bad)
     numpy_images = [np.array(image) for image in images]
-    if len(np.unique([i(0) for i in indices])) == 1:
+    if len(np.unique([i[0] for i in indices])) == 1:
        sigma = 0.7 * sigma
     forcedlatents += multi_combine(latent, indices, llambda)
     os.environ["good"] = "[]"
