@@ -1,8 +1,8 @@
 ---
-title: Prompting Features
+title: Prompting-Features
 ---
 
-# :octicons-command-palette-16: Prompting Features
+# :octicons-command-palette-24: Prompting-Features
 
 ## **Reading Prompts from a File**
 
