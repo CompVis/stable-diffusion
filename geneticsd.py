@@ -249,10 +249,10 @@ prompt = "A cyberpunk man next to a cyberpunk woman."
 prompt = "A smiling woman with a Katana and electronic patches."
 prompt = "Photo of a bearded, long-haired man with glasses and a blonde-haired woman. Both are smiling. Cats and drums and computers on shelves in the background."
 prompt = "Photo of a nuclear mushroom in Paris."
-prompt = "A photo of a cute woman with green hair, a red dress, and a gun. Futuristic backgroundd."
 prompt = "Three cute monsters."
 prompt = "A photo of a ninja holding a cucumber and facing a dinosaur."
 prompt = "A ninja fighting a dinosaur with a cucumber."
+prompt = "A photo of a cyberpunk cute woman with green hair, a red dress, and a gun. Futuristic backgroundd."
 print(f"The prompt is {prompt}")
 
 
@@ -477,6 +477,7 @@ if len(image_name) > 0:
     print(np.min(base_init_image.cpu().detach().numpy().flatten()))
     
     forcedlatents = []
+    latent_found = False
     try:
         latent_file = image_name + ".latent.txt"
         print(to_native(f"Trying to load latent variables in {latent_file}."))
