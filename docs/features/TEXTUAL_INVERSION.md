@@ -1,8 +1,8 @@
 ---
-title: Textual Inversion
+title: Textual-Inversion
 ---
 
-# :material-file-document-plus-outline: Textual Inversion
+# :material-file-document: Textual Inversion
 
 ## **Personalizing Text-to-Image Generation**
 
