@@ -154,6 +154,7 @@ def main_loop(gen, opt, infile):
             elif subcommand.startswith('switch'):
                 model_name = command.replace('!switch ','',1)
                 gen.set_model(model_name)
+                completer.add_history(command)
                 continue
         
             elif subcommand.startswith('models'):

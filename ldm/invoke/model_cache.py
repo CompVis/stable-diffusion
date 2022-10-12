@@ -195,15 +195,17 @@ class ModelCache(object):
             torch.cuda.empty_cache()
 
     def _model_to_cpu(self,model):
-        if self._has_cuda():
+        if self.device != 'cpu':
             model.cond_stage_model.device = 'cpu'
             model.first_stage_model.to('cpu')
             model.cond_stage_model.to('cpu') 
             model.model.to('cpu')
-        return model.to('cpu')
+            return model.to('cpu')
+        else:
+            return model
 
     def _model_from_cpu(self,model):
-        if self._has_cuda():
+        if self.device != 'cpu':
             model.to(self.device)
             model.first_stage_model.to(self.device)
             model.cond_stage_model.to(self.device)
