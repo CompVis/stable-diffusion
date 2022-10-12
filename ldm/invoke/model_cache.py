@@ -122,7 +122,7 @@ class ModelCache(object):
 
     def _check_memory(self):
         avail_memory = psutil.virtual_memory()[1]
-        if avail_memory + AVG_MODEL_SIZE < self.min_avail_mem:
+        if AVG_MODEL_SIZE + self.min_avail_mem > avail_memory:
             least_recent_model = self._pop_oldest_model()
             if least_recent_model is not None:
                 del self.models[least_recent_model]
@@ -171,6 +171,10 @@ class ModelCache(object):
         # model.to doesn't change the cond_stage_model.device used to move the tokenizer output, so set it here
         model.cond_stage_model.device = self.device
         model.eval()
+
+        for m in model.modules():
+            if isinstance(m, (torch.nn.Conv2d, torch.nn.ConvTranspose2d)):
+                m._orig_padding_mode = m.padding_mode
 
         # usage statistics
         toc = time.time()

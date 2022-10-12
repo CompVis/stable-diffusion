@@ -679,11 +679,6 @@ class Generate:
             )
 
         self._set_sampler()
-
-        for m in self.model.modules():
-            if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
-                m._orig_padding_mode = m.padding_mode
-
         self.model_name = model_name
         return self.model
 
