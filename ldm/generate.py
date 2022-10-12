@@ -172,6 +172,7 @@ class Generate:
         # device to Generate(). However the device was then ignored, so
         # it wasn't actually doing anything. This logic could be reinstated.
         device_type = choose_torch_device()
+        print(f'>> Using device_type {device_type}')
         self.device = torch.device(device_type)
         if full_precision:
             if self.precision != 'auto':
