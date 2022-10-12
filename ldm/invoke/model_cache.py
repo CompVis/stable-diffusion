@@ -20,22 +20,35 @@ from ldm.util import instantiate_from_config
 
 GIGS=2**30
 AVG_MODEL_SIZE=2.1*GIGS
+DEFAULT_MIN_AVAIL=2*GIGS
 
 class ModelCache(object):
-    def __init__(self, config:OmegaConf, device_type:str, precision:str, min_free_mem=2*GIGS):
+    def __init__(self, config:OmegaConf, device_type:str, precision:str, min_avail_mem=DEFAULT_MIN_AVAIL):
+        '''
+        Initialize with the path to the models.yaml config file,
+        the torch device type, and precision. The optional
+        min_avail_mem argument specifies how much unused system
+        (CPU) memory to preserve. The cache of models in RAM will
+        grow until this value is approached. Default is 2G.
+        '''
         # prevent nasty-looking CLIP log message
         transformers.logging.set_verbosity_error()
         self.config = config
         self.precision = precision
         self.device = torch.device(device_type)
-        self.min_free_mem = min_free_mem
+        self.min_avail_mem = min_avail_mem
         self.models = {}
         self.stack = []  # this is an LRU FIFO
         self.current_model = None
 
     def get_model(self, model_name:str):
+        '''
+        Given a model named identified in models.yaml, return
+        the model object. If in RAM will load into GPU VRAM.
+        If on disk, will load from there.
+        '''
         if model_name not in self.config:
-            print(f'"{model_name}" is not a known model name. Please check your models.yaml file')
+            print(f'** "{model_name}" is not a known model name. Please check your models.yaml file')
             return None
 
         if self.current_model != model_name:
@@ -43,22 +56,42 @@ class ModelCache(object):
         
         if model_name in self.models:
             requested_model = self.models[model_name]['model']
-            self._model_from_cpu(requested_model)
+            print(f'>> Retrieving model {model_name} from system RAM cache')
+            self.models[model_name]['model'] = self._model_from_cpu(requested_model)
             width = self.models[model_name]['width']
             height = self.models[model_name]['height']
+            hash = self.models[model_name]['hash']
         else:
             self._check_memory()
-            requested_model, width, height = self._load_model(model_name)
-            self.models[model_name] = {}
-            self.models[model_name]['model'] = requested_model
-            self.models[model_name]['width'] = width
-            self.models[model_name]['height'] = height
-
+            try:
+                requested_model, width, height, hash = self._load_model(model_name)
+                self.models[model_name] = {}
+                self.models[model_name]['model'] = requested_model
+                self.models[model_name]['width'] = width
+                self.models[model_name]['height'] = height
+                self.models[model_name]['hash'] = hash
+            except Exception as e:
+                print(f'** model {model_name} could not be loaded: {str(e)}') 
+                return {}
+        
         self.current_model = model_name
         self._push_newest_model(model_name)
-        return requested_model, width, height
+        return {
+            'model':requested_model,
+            'width':width,
+            'height':height,
+            'hash': hash
+        }
 
-    def list_models(self):
+    def list_models(self) -> dict:
+        '''
+        Return a dict of models in the format:
+        { model_name1: {'status': ('active'|'cached'|'not loaded'),
+                        'description': description,
+                       },
+          model_name2: { etc }
+        '''
+        result = {}
         for name in self.config:
             try:
                 description = self.config[name].description
@@ -70,28 +103,26 @@ class ModelCache(object):
                 status = 'cached'
             else:
                 status = 'not loaded'
-            print(f'{name:20s} {status:>10s}  {description}')
-            
+            result[name]={}
+            result[name]['status']=status
+            result[name]['description']=description
+        return result
+    
+    def print_models(self):
+        '''
+        Print a table of models, their descriptions, and load status
+        '''
+        models = self.list_models()
+        for name in models:
+            print(f'{name:20s} {models[name]["status"]:>10s}  {models[name]["description"]}')
 
     def _check_memory(self):
-        free_memory = psutil.virtual_memory()[4]
-        print(f'DEBUG: free memory = {free_memory}, min_mem = {self.min_free_mem}')
-        while free_memory + AVG_MODEL_SIZE < self.min_free_mem:
-
-            print(f'DEBUG: free memory = {free_memory}')
+        avail_memory = psutil.virtual_memory()[1]
+        if avail_memory + AVG_MODEL_SIZE < self.min_avail_mem:
             least_recent_model = self._pop_oldest_model()
-            if least_recent_model is None:
-                return
-
-            print(f'DEBUG: clearing {least_recent_model} from cache (refcount = {getrefcount(self.models[least_recent_model]["model"])})')
-            del self.models[least_recent_model]['model']
-            gc.collect()
-
-            new_free_memory = psutil.virtual_memory()[4]
-            if new_free_memory <= free_memory:
-                print(f'>> **Unable to free memory for model caching.**')
-                break;
-            free_memory = new_free_memory
+            if least_recent_model is not None:
+                del self.models[least_recent_model]
+                gc.collect()
 
         
     def _load_model(self, model_name:str):
@@ -106,18 +137,20 @@ class ModelCache(object):
         width = mconfig.width
         height = mconfig.height
 
-        print(f'>> Loading {model_name} weights from {weights}')
+        print(f'>> Loading {model_name} from {weights}')
 
         # for usage statistics
         if self._has_cuda():
             torch.cuda.reset_peak_memory_stats()
+            torch.cuda.empty_cache()
+
         tic = time.time()
 
         # this does the work
         c     = OmegaConf.load(config)
         with open(weights,'rb') as f:
             weight_bytes = f.read()
-        self.model_hash  = self._cached_sha256(weights,weight_bytes)
+        model_hash  = self._cached_sha256(weights,weight_bytes)
         pl_sd = torch.load(io.BytesIO(weight_bytes), map_location='cpu')
         del weight_bytes
         sd    = pl_sd['state_dict']
@@ -143,39 +176,40 @@ class ModelCache(object):
                 '\n>> Current VRAM usage:'
                 '%4.2fG' % (torch.cuda.memory_allocated() / 1e9),
             )
-        return model, width, height
+        return model, width, height, model_hash
         
     def unload_model(self, model_name:str):
         if model_name not in self.models:
             return
-        print(f'>> Unloading model {model_name}')
+        print(f'>> Caching model {model_name} in system RAM')
         model = self.models[model_name]['model']
-        self._model_to_cpu(model)
+        self.models[model_name]['model'] = self._model_to_cpu(model)
         gc.collect()
         if self._has_cuda():
             torch.cuda.empty_cache()
 
     def _model_to_cpu(self,model):
         if self._has_cuda():
-            print(f'DEBUG: moving model to cpu')
             model.first_stage_model.to('cpu')
             model.cond_stage_model.to('cpu') 
             model.model.to('cpu')
+        return model.to('cpu')
 
     def _model_from_cpu(self,model):
         if self._has_cuda():
-            print(f'DEBUG: moving model into {self.device.type}')
             model.to(self.device)
             model.first_stage_model.to(self.device)
             model.cond_stage_model.to(self.device)
+        return model
 
     def _pop_oldest_model(self):
         '''
         Remove the first element of the FIFO, which ought
-        to be the least recently accessed model.
+        to be the least recently accessed model. Do not
+        pop the last one, because it is in active use!
         '''
-        if len(self.stack)>0:
-            self.stack.pop(0)
+        if len(self.stack) > 1:
+            return self.stack.pop(0)
 
     def _push_newest_model(self,model_name:str):
         '''
@@ -187,7 +221,6 @@ class ModelCache(object):
         except ValueError:
             pass
         self.stack.append(model_name)
-        print(f'DEBUG, stack={self.stack}')
         
     def _has_cuda(self):
         return self.device.type == 'cuda'
