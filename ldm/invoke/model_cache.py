@@ -114,7 +114,11 @@ class ModelCache(object):
         '''
         models = self.list_models()
         for name in models:
-            print(f'{name:20s} {models[name]["status"]:>10s}  {models[name]["description"]}')
+            line = f'{name:25s} {models[name]["status"]:>10s}  {models[name]["description"]}'
+            if models[name]['status'] == 'active':
+                print(f'\033[1m{line}\033[0m')
+            else:
+                print(line)
 
     def _check_memory(self):
         avail_memory = psutil.virtual_memory()[1]
@@ -164,6 +168,8 @@ class ModelCache(object):
             print('>> Using more accurate float32 precision')
 
         model.to(self.device)
+        # model.to doesn't change the cond_stage_model.device used to move the tokenizer output, so set it here
+        model.cond_stage_model.device = self.device
         model.eval()
 
         # usage statistics
@@ -190,6 +196,7 @@ class ModelCache(object):
 
     def _model_to_cpu(self,model):
         if self._has_cuda():
+            model.cond_stage_model.device = 'cpu'
             model.first_stage_model.to('cpu')
             model.cond_stage_model.to('cpu') 
             model.model.to('cpu')
@@ -200,6 +207,7 @@ class ModelCache(object):
             model.to(self.device)
             model.first_stage_model.to(self.device)
             model.cond_stage_model.to(self.device)
+            model.cond_stage_model.device = self.device
         return model
 
     def _pop_oldest_model(self):

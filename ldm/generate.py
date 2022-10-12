@@ -678,8 +678,6 @@ class Generate:
                 self.embedding_path, self.precision == 'float32' or self.precision == 'autocast'
             )
 
-        # model.to doesn't change the cond_stage_model.device used to move the tokenizer output, so set it here
-        self.model.cond_stage_model.device = self.device
         self._set_sampler()
 
         for m in self.model.modules():
