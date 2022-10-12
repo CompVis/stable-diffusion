@@ -47,7 +47,10 @@ COMMANDS = (
     '--skip_normalize','-x',
     '--log_tokenization','-t',
     '--hires_fix',
-    '!fix','!fetch','!history','!search','!clear',
+    '!fix','!fetch','!history','!search','!clear','!models','!switch',
+    )
+MODEL_COMMANDS = (
+    '!switch',
     )
 IMG_PATH_COMMANDS = (
     '--outdir[=\s]',
@@ -63,8 +66,9 @@ IMG_FILE_COMMANDS=(
 path_regexp = '('+'|'.join(IMG_PATH_COMMANDS+IMG_FILE_COMMANDS) + ')\s*\S*$'
 
 class Completer(object):
-    def __init__(self, options):
+    def __init__(self, options, models=[]):
         self.options     = sorted(options)
+        self.models      = sorted(models)
         self.seeds       = set()
         self.matches     = list()
         self.default_dir = None
@@ -87,6 +91,9 @@ class Completer(object):
             # looking for a seed
             elif re.search('(-S\s*|--seed[=\s])\d*$',buffer): 
                 self.matches= self._seed_completions(text,state)
+
+            elif re.match('^'+'|'.join(MODEL_COMMANDS),buffer):
+                self.matches= self._model_completions(text,state)
 
             # This is the first time for this text, so build a match list.
             elif text:
@@ -188,6 +195,21 @@ class Completer(object):
         matches.sort()
         return matches
 
+    def _model_completions(self, text, state):
+        m = re.search('(!switch\s+)(\w*)',text)
+        if m:
+            switch  = m.groups()[0]
+            partial = m.groups()[1]
+        else:
+            switch  = ''
+            partial = text
+        matches = list()
+        for s in self.models:
+            if s.startswith(partial):
+                matches.append(switch+s)
+        matches.sort()
+        return matches
+
     def _pre_input_hook(self):
         if self.linebuffer:
             readline.insert_text(self.linebuffer)
@@ -266,9 +288,9 @@ class DummyCompleter(Completer):
     def set_line(self,line):
         print(f'# {line}')
 
-def get_completer(opt:Args)->Completer:
+def get_completer(opt:Args, models=[])->Completer:
     if readline_available:
-        completer = Completer(COMMANDS)
+        completer = Completer(COMMANDS,models)
 
         readline.set_completer(
             completer.complete
