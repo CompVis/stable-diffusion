@@ -67,6 +67,8 @@ model:
 
     cond_stage_config:
       target: ldm.modules.encoders.modules.FrozenCLIPEmbedder
+      params:
+        penultimate: true # use 2nd last layer - https://arxiv.org/pdf/2205.11487.pdf D.1
 
 data:
   target: main.DataModuleFromConfig
