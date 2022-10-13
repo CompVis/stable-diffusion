@@ -42,4 +42,5 @@ for k in data.datasets:
 # 'image': array(...)
 # 'file_path_': 'data/celeba/data256x256/21508.jpg'
 d = data.datasets['validation'][0]
+print(d["info"])
 print(d['image'].shape, d['image'].max(), d['image'].min(), d["class_label"])

@@ -90,6 +90,7 @@ class HPACombineDatasetMetadata():
         return {
             "image": self.preprocess_image(image),
             "class_label": locations_encoding,
+            "info": info,
         }
 
 class HPACombineDatasetSR(Dataset):
