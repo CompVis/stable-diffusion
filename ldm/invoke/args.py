@@ -636,6 +636,13 @@ class Args(object):
             dest='hires_fix',
             help='Create hires image using img2img to prevent duplicated objects'
         )
+        render_group.add_argument(
+            '--save_intermediates',
+            type=int,
+            default=0,
+            dest='save_intermediates',
+            help='Save every nth intermediate image into an "intermediates" directory within the output directory'
+        )
         img2img_group.add_argument(
             '-I',
             '--init_img',

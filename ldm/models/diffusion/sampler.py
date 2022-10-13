@@ -140,7 +140,7 @@ class Sampler(object):
         conditioning=None,
         callback=None,
         normals_sequence=None,
-        img_callback=None,
+        img_callback=None,   # TODO: this is very confusing because it is called "step_callback" elsewhere. Change.
         quantize_x0=False,
         eta=0.0,
         mask=None,
