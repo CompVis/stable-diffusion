@@ -31,6 +31,7 @@ COMMANDS = (
     '--perlin',
     '--grid','-g',
     '--individual','-i',
+    '--save_intermediates',
     '--init_img','-I',
     '--init_mask','-M',
     '--init_color',
