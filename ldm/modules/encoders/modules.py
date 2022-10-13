@@ -158,6 +158,7 @@ class FrozenCLIPEmbedder(AbstractEncoder):
 
         if self.penultimate:
             z = outputs.hidden_states[-2] # simple enough
+            z = self.transformer.text_model.final_layer_norm(z)
         else:
             z = outputs.last_hidden_state
         
