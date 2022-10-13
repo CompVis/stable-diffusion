@@ -213,3 +213,31 @@ Thanks for open-sourcing!
 ```
 
 
+## NOTES
+
+Train the autoencoder:
+```
+python main.py -t -b configs/autoencoder/autoencoder_kl_32x32x4_hpa.yaml --gpus=0,1,2,3
+```
+
+Run the diffusion model:
+```
+python main.py -t -b configs/latent-diffusion/hpa-ldm-kl-8.yaml --gpus=0,1,2,3
+```
+
+Output:
+```
+  | Name              | Type             | Params
+-------------------------------------------------------
+0 | model             | DiffusionWrapper | 294 M 
+1 | model_ema         | LitEma           | 0     
+2 | first_stage_model | AutoencoderKL    | 83.7 M
+3 | cond_stage_model  | ClassEmbedder    | 16.9 K
+-------------------------------------------------------
+ 294 M     Trainable params
+83.7 M    Non-trainable params
+378 M     Total params
+1,514.551 Total estimated model params size (MB)
+```
+
+ 
