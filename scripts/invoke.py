@@ -400,7 +400,7 @@ def do_postprocess (gen, opt, callback):
         file_path = os.path.join(opt.outdir,file_path)
 
     tool=None
-    if opt.gfpgan_strength > 0:
+    if opt.facetool_strength > 0:
         tool = opt.facetool
     elif opt.embiggen:
         tool = 'embiggen'
@@ -416,7 +416,7 @@ def do_postprocess (gen, opt, callback):
         gen.apply_postprocessor(
             image_path      = file_path,
             tool            = tool,
-            gfpgan_strength = opt.gfpgan_strength,
+            facetool_strength = opt.facetool_strength,
             codeformer_fidelity = opt.codeformer_fidelity,
             save_original       = opt.save_original,
             upscale             = opt.upscale,

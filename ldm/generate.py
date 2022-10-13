@@ -251,7 +251,7 @@ class Generate:
             embiggen_tiles =    None,
             # these are specific to GFPGAN/ESRGAN
             facetool         = None,
-            gfpgan_strength  = 0,
+            facetool_strength  = 0,
             codeformer_fidelity = None,
             save_original    = False,
             upscale          = None,
@@ -274,7 +274,7 @@ class Generate:
            hires_fix                        // whether the Hires Fix should be applied during generation
            init_img                        // path to an initial image
            strength                        // strength for noising/unnoising init_img. 0.0 preserves image exactly, 1.0 replaces it completely
-           gfpgan_strength                 // strength for GFPGAN. 0.0 preserves image exactly, 1.0 replaces it completely
+           facetool_strength               // strength for GFPGAN/CodeFormer. 0.0 preserves image exactly, 1.0 replaces it completely
            ddim_eta                        // image randomness (eta=0.0 means the same seed always produces the same image)
            step_callback                   // a function or method that will be called each step
            image_callback                  // a function or method that will be called each time an image is generated
@@ -417,11 +417,11 @@ class Generate:
                                     reference_image_path = init_color,
                                     image_callback       = image_callback)
 
-            if upscale is not None or gfpgan_strength > 0:
+            if upscale is not None or facetool_strength > 0:
                 self.upscale_and_reconstruct(results,
                                              upscale        = upscale,
                                              facetool       = facetool,
-                                             strength       = gfpgan_strength,
+                                             strength       = facetool_strength,
                                              codeformer_fidelity = codeformer_fidelity,
                                              save_original  = save_original,
                                              image_callback = image_callback)
@@ -464,7 +464,7 @@ class Generate:
             self,
             image_path,
             tool                = 'gfpgan',  # one of 'upscale', 'gfpgan', 'codeformer', 'outpaint', or 'embiggen'
-            gfpgan_strength     = 0.0,
+            facetool_strength   = 0.0,
             codeformer_fidelity = 0.75,
             upscale             = None,
             out_direction       = None,
@@ -511,11 +511,11 @@ class Generate:
                 facetool = 'codeformer'
             elif tool == 'upscale':
                 facetool = 'gfpgan'   # but won't be run
-                gfpgan_strength = 0
+                facetool_strength = 0
             return self.upscale_and_reconstruct(
                 [[image,seed]],
                 facetool = facetool,
-                strength = gfpgan_strength,
+                strength = facetool_strength,
                 codeformer_fidelity = codeformer_fidelity,
                 save_original = save_original,
                 upscale = upscale,

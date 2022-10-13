@@ -129,7 +129,7 @@ export const backendToFrontendParameters = (parameters: {
     progress_images,
     variation_amount,
     with_variations,
-    gfpgan_strength,
+    facetool_strength,
     upscale,
     init_img,
     init_mask,
@@ -154,9 +154,9 @@ export const backendToFrontendParameters = (parameters: {
     }
   }
 
-  if (gfpgan_strength > 0) {
+  if (facetool_strength > 0) {
     options.shouldRunGFPGAN = true;
-    options.gfpganStrength = gfpgan_strength;
+    options.gfpganStrength = facetool_strength;
   }
 
   if (upscale) {

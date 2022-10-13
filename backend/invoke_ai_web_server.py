@@ -319,7 +319,7 @@ class InvokeAIWebServer:
                 elif postprocessing_parameters['type'] == 'gfpgan':
                     image = self.gfpgan.process(
                         image=image,
-                        strength=postprocessing_parameters['gfpgan_strength'],
+                        strength=postprocessing_parameters['facetool_strength'],
                         seed=seed,
                     )
                 else:
@@ -625,7 +625,7 @@ class InvokeAIWebServer:
                         seed=seed,
                     )
                     postprocessing = True
-                    all_parameters['gfpgan_strength'] = gfpgan_parameters[
+                    all_parameters['facetool_strength'] = gfpgan_parameters[
                         'strength'
                     ]
 
@@ -736,12 +736,12 @@ class InvokeAIWebServer:
             postprocessing = []
 
             # 'postprocessing' is either null or an
-            if 'gfpgan_strength' in parameters:
+            if 'facetool_strength' in parameters:
 
                 postprocessing.append(
                     {
                         'type': 'gfpgan',
-                        'strength': float(parameters['gfpgan_strength']),
+                        'strength': float(parameters['facetool_strength']),
                     }
                 )
 
@@ -838,7 +838,7 @@ class InvokeAIWebServer:
             elif parameters['type'] == 'gfpgan':
                 postprocessing_metadata['type'] = 'gfpgan'
                 postprocessing_metadata['strength'] = parameters[
-                    'gfpgan_strength'
+                    'facetool_strength'
                 ]
             else:
                 raise TypeError(f"Invalid type: {parameters['type']}")

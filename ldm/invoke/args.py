@@ -242,9 +242,15 @@ class Args(object):
         else:
             switches.append(f'-A {a["sampler_name"]}')
 
-        # gfpgan-specific parameters
-        if a['gfpgan_strength']:
+        # facetool-specific parameters
+        if a['facetool']:
+            switches.append(f'-ft {a["facetool"]}')
+        if a['facetool_strength']:
+            switches.append(f'-G {a["facetool_strength"]}')
+        elif a['gfpgan_strength']:
             switches.append(f'-G {a["gfpgan_strength"]}')
+        if a['codeformer_fidelity']:
+            switches.append(f'-cf {a["codeformer_fidelity"]}')
 
         if a['outcrop']:
             switches.append(f'-c {" ".join([str(u) for u in a["outcrop"]])}')
@@ -699,6 +705,7 @@ class Args(object):
         )
         postprocessing_group.add_argument(
             '-G',
+            '--facetool_strength',
             '--gfpgan_strength',
             type=float,
             help='The strength at which to apply the face restoration to the result.',

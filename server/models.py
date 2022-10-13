@@ -42,7 +42,7 @@ class DreamBase():
 
   # GFPGAN
   enable_gfpgan: bool
-  gfpgan_strength: float = 0
+  facetool_strength: float = 0
 
   # Upscale
   enable_upscale: bool
@@ -98,7 +98,7 @@ class DreamBase():
     # GFPGAN
     self.enable_gfpgan = 'enable_gfpgan' in j and bool(j.get('enable_gfpgan'))
     if self.enable_gfpgan:
-      self.gfpgan_strength = float(j.get('gfpgan_strength'))
+      self.facetool_strength = float(j.get('facetool_strength'))
 
     # Upscale
     self.enable_upscale = 'enable_upscale' in j and bool(j.get('enable_upscale'))
