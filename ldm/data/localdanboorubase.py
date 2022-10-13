@@ -109,11 +109,13 @@ class LocalDanbooruBase(Dataset):
                  shuffle=False,
                  mode='train',
                  val_split=64,
+                 ucg=0.1,
                  ):
         super().__init__()
 
         self.shuffle=shuffle
         self.crop = crop
+        self.ucg = ucg
 
         print('Fetching data.')
 
@@ -178,6 +180,8 @@ class LocalDanbooruBase(Dataset):
             with open(text_file, 'rb') as f:
                 image['caption'] = f.read()
             image = self.captionprocessor(image)
+            if random.random() < self.ucg:
+                image['caption'] = ''
         except Exception as e:
             print(f'Error with {self.examples[self.hashes[i]]["image"]} -- {e} -- skipping {i}')
             return self.skip_sample(i)

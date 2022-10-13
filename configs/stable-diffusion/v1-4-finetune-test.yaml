@@ -81,12 +81,14 @@ data:
       params:
         size: 512
         mode: "train"
+        ucg: 0.1 # unconditional guidance training
     validation:
       target: ldm.data.local.LocalBase
       params:
         size: 512
         mode: "val"
         val_split: 64
+        ucg: 0.1
 
 lightning:
   modelcheckpoint:
