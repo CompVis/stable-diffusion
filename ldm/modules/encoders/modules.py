@@ -17,6 +17,19 @@ class AbstractEncoder(nn.Module):
         raise NotImplementedError
 
 
+class HPAHybridEmbedder(nn.Module):
+    def __init__(self, image_embedding_model):
+        super().__init__()
+        assert not isinstance(image_embedding_model, str)
+        self.image_embedding_model = image_embedding_model
+
+    def forward(self, batch, key=None):
+        image = batch["ref-image"]
+        img_embed = self.image_embedding_model.encode(image.permute(0,3,1, 2))
+        bert = batch["bert"]
+        celline = batch["cell-line"]
+        return {"c_concat": [img_embed], "c_crossattn": [bert, celline]}
+
 
 class ClassEmbedder(nn.Module):
     def __init__(self, embed_dim, n_classes=1000, key='class'):

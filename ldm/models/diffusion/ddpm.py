@@ -516,6 +516,14 @@ class LatentDiffusion(DDPM):
                 self.cond_stage_model = None
                 # self.be_unconditional = True
             else:
+                # replace '__is_first_stage__' in config to the actual model
+                params = dict(config["params"])
+                for k in params.keys():
+                    if params[k] == "__is_first_stage__":
+                        params[k] = self.first_stage_model
+                config = dict(config)
+                config["params"] = params
+
                 model = instantiate_from_config(config)
                 self.cond_stage_model = model.eval()
                 self.cond_stage_model.train = disabled_train
@@ -524,6 +532,13 @@ class LatentDiffusion(DDPM):
         else:
             assert config != '__is_first_stage__'
             assert config != '__is_unconditional__'
+            # replace '__is_first_stage__' in config to the actual model
+            params = dict(config["params"])
+            for k in params.keys():
+                if params[k] == "__is_first_stage__":
+                    params[k] = self.first_stage_model
+            config = dict(config)
+            config["params"] = params
             model = instantiate_from_config(config)
             self.cond_stage_model = model
 
@@ -667,6 +682,8 @@ class LatentDiffusion(DDPM):
                 if cond_key in ['caption', 'coordinates_bbox']:
                     xc = batch[cond_key]
                 elif cond_key == 'class_label':
+                    xc = batch
+                elif cond_key == 'hybrid-conditions':
                     xc = batch
                 else:
                     xc = super().get_input(batch, cond_key).to(self.device)
@@ -879,6 +896,9 @@ class LatentDiffusion(DDPM):
         return self.p_losses(x, c, t, *args, **kwargs)
 
     def _rescale_annotations(self, bboxes, crop_coordinates):  # TODO: move to dataset
+        def clamp(x: float):
+            return max(min(x, 1.), 0.)
+
         def rescale_bbox(bbox):
             x0 = clamp((bbox[0] - crop_coordinates[0]) / crop_coordinates[2])
             y0 = clamp((bbox[1] - crop_coordinates[1]) / crop_coordinates[3])

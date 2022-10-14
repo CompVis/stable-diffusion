@@ -103,8 +103,13 @@ class HPACombineDatasetMetadata():
             "image": self.preprocess_image(image),
             # "class_label": locations_encoding,
             "cell-line": cellline_encoding,
-            "info": info,
-            "ref-image": ref,
+            # "info": info,
+            "hybrid-conditions": {
+                "cell-line": cellline_encoding,
+                "ref-image": ref,
+                "bert": bert,
+            },
+            "ref-image": self.preprocess_image(ref),
             "bert": bert,
         }
 

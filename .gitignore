@@ -1,4 +1,4 @@
-models/
+models/*
 ./data/
 logs
 *.png

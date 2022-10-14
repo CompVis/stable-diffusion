@@ -13,14 +13,14 @@
             "justMyCode": true
         },
         {
-            "name": "Python: hpa-ldm-kl-8.yaml",
+            "name": "Python: hpa-ldm-vq-4-hybrid",
             "type": "python",
             "request": "launch",
             "program": "main.py",
             "args": [
                 "-t",
                 "-b",
-                "configs/latent-diffusion/hpa-ldm-kl-8.yaml"
+                "configs/latent-diffusion/hpa-ldm-vq-4-hybrid.yaml"
             ],
             "console": "integratedTerminal",
             "justMyCode": true
