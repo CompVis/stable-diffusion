@@ -220,6 +220,11 @@ Train the autoencoder:
 python main.py -t -b configs/autoencoder/autoencoder_kl_32x32x4_hpa.yaml --gpus=0,1,2,3
 ```
 
+Prepare the BERT embedding for the protein sequences:
+```
+CUDA_VISIBLE_DEVICES=0 CUDA_LAUNCH_BLOCKING=1 python create_bert_embedding_dataset.py 
+```
+
 Run the diffusion model:
 ```
 python main.py -t -b configs/latent-diffusion/hpa-ldm-kl-8.yaml --gpus=0,1,2,3
