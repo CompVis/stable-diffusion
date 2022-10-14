@@ -2,6 +2,9 @@ import torch
 import pytorch_lightning as pl
 import torch.nn.functional as F
 from contextlib import contextmanager
+from packaging import version
+from torch.optim.lr_scheduler import LambdaLR
+import numpy as np
 
 from taming.modules.vqvae.quantize import VectorQuantizer2 as VectorQuantizer
 

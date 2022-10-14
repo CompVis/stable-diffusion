@@ -25,9 +25,10 @@ class HPACombineDataset(Dataset):
 
             url = f"/data/wei/hpa-webdataset-all-composite/{filename}_info.tar"
             dataset2 = wds.WebDataset(url).decode().to_tuple("__key__", "info.json")
+            
+            url = f"/data/wei/hpa-webdataset-all-composite/{filename}_bert.tar"
+            dataset3 = wds.WebDataset(url).decode().to_tuple("__key__", "bert.pyd")
 
-            url = f"/data/wei/hpa-webdataset-all-composite/{filename}_embed.tar"
-            dataset3 = wds.WebDataset(url).decode().to_tuple("__key__", "deepgoplus.pyd", "desenet.pyd")
             self.dataset_iter = iter(zip(dataset1, dataset2, dataset3))
             
             
@@ -42,14 +43,15 @@ class HPACombineDataset(Dataset):
             imgd = ret[0]
             return {"file_path_": imgd[0], "image": imgd[1]}
         else:
-            imgd, infod, embedd = ret
-            assert imgd[0] == infod[0] and imgd[0] == embedd[0]
-            return {"file_path_": imgd[0], "image": imgd[1], "info": infod[1], "seq_embed": embedd[1], "loc_embed": embedd[2]}
+            imgd, infod, bertd = ret
+            assert imgd[0] == infod[0] and imgd[0] == bertd[0]
+            return {"file_path_": imgd[0], "image": imgd[1], "info": infod[1], "bert": bertd[1]}
 
 location_mapping = {"Actin filaments": 0, "Aggresome": 1, "Cell Junctions": 2, "Centriolar satellite": 3, "Centrosome": 4, "Cytokinetic bridge": 5, "Cytoplasmic bodies": 6, "Cytosol": 7, "Endoplasmic reticulum": 8, "Endosomes": 9, "Focal adhesion sites": 10, "Golgi apparatus": 11, "Intermediate filaments": 12, "Lipid droplets": 13, "Lysosomes": 14, "Microtubule ends": 15, "Microtubules": 16, "Midbody": 17, "Midbody ring": 18, "Mitochondria": 19, "Mitotic chromosome": 20, "Mitotic spindle": 21, "Nuclear bodies": 22, "Nuclear membrane": 23, "Nuclear speckles": 24, "Nucleoli": 25, "Nucleoli fibrillar center": 26, "Nucleoplasm": 27, "Peroxisomes": 28, "Plasma membrane": 29, "Rods & Rings": 30, "Vesicles": 31, "nan": 32}
+cellline_mapping = {"A-431": 0, "A549": 1, "AF22": 2, "ASC TERT1": 3, "BJ": 4, "CACO-2": 5, "EFO-21": 6, "HAP1": 7, "HDLM-2": 8, "HEK 293": 9, "HEL": 10, "HTC": 11, "HUVEC TERT2": 12, "HaCaT": 13, "HeLa": 14, "Hep G2": 15, "JURKAT": 16, "K-562": 17, "LHCN-M2": 18, "MCF7": 19, "NB-4": 20, "NIH 3T3": 21, "OE19": 22, "PC-3": 23, "REH": 24, "RH-30": 25, "RPTEC TERT1": 26, "RT4": 27, "SH-SY5Y": 28, "SK-MEL-30": 29, "SiHa": 30, "SuSa": 31, "THP-1": 32, "U-2 OS": 33, "U-251 MG": 34, "Vero": 35, "hTCEpi": 36}
 
 class HPACombineDatasetMetadata():
-    def __init__(self, filename="webdataset", include_metadata=True, size=None, length=80000, random_crop=False):
+    def __init__(self, filename="webdataset", channels=None, include_metadata=True, size=None, length=80000, random_crop=False):
         self.size = size
         self.random_crop = random_crop
         self.base = HPACombineDataset(filename, include_metadata=include_metadata, length=length)
@@ -62,6 +64,10 @@ class HPACombineDatasetMetadata():
             self.preprocessor = albumentations.Compose([self.rescaler, self.cropper])
         else:
             self.preprocessor = lambda **kwargs: kwargs
+        if channels is None:
+            self.channels = [0, 1, 2]
+        else:
+            self.channels = channels
 
     def preprocess_image(self, image):
         # image = np.load(image_path).squeeze(0)  # 3 x 1024 x 1024
@@ -78,23 +84,32 @@ class HPACombineDatasetMetadata():
 
     def __getitem__(self, i):
         example = self.base[i]
-        image = example["image"]
-        image = image[:, :, :3]
+        all_channels = example["image"]
+        image = all_channels[:, :, self.channels]
         info = example["info"]
+        bert = example["bert"]
+        ref = all_channels[:, :, [0, 3, 2]] # reference channels: MT, ER, DAPI
 
-        loc_labels = list(map(lambda n: location_mapping[n] if n in location_mapping else -1, str(info["locations"]).split(',')))
+        # loc_labels = list(map(lambda n: location_mapping[n] if n in location_mapping else -1, str(info["locations"]).split(',')))
         # create one-hot encoding for the labels
-        locations_encoding = np.zeros((len(location_mapping) + 1, ), dtype=np.float32)
-        locations_encoding[loc_labels] = 1
+        # locations_encoding = np.zeros((len(location_mapping) + 1, ), dtype=np.float32)
+        # locations_encoding[loc_labels] = 1
+        
+        # create one-hot encoding for the cell line
+        cellline_encoding = np.zeros((len(cellline_mapping) + 1, ), dtype=np.float32)
+        cellline_encoding[cellline_mapping[info['atlas_name']]] = 1
 
         return {
             "image": self.preprocess_image(image),
-            "class_label": locations_encoding,
+            # "class_label": locations_encoding,
+            "cell-line": cellline_encoding,
             "info": info,
+            "ref-image": ref,
+            "bert": bert,
         }
 
 class HPACombineDatasetSR(Dataset):
-    def __init__(self, filename, size=None, length=80000,
+    def __init__(self, filename, size=None, length=80000, channels=None,
                  degradation=None, downscale_f=4, min_crop_f=0.5, max_crop_f=1.,
                  random_crop=True):
         """
@@ -113,6 +128,10 @@ class HPACombineDatasetSR(Dataset):
         :param data_root:
         :param random_crop:
         """
+        if channels is None:
+            self.channels = [0, 1, 2]
+        else:
+            self.channels = channels
         self.base = HPACombineDataset(filename, include_metadata=False, length=length)
         assert size
         assert (size / downscale_f).is_integer()
@@ -164,7 +183,7 @@ class HPACombineDatasetSR(Dataset):
     def __getitem__(self, i):
         example = self.base[i]
         image = example["image"]
-        image = image[:, :, :3]
+        image = image[:, :, self.channels]
 
         min_side_len = min(image.shape[:2])
         crop_side_len = min_side_len * np.random.uniform(self.min_crop_f, self.max_crop_f, size=None)
