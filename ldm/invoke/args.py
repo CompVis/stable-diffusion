@@ -247,8 +247,6 @@ class Args(object):
             switches.append(f'-ft {a["facetool"]}')
         if a['facetool_strength']:
             switches.append(f'-G {a["facetool_strength"]}')
-        elif a['gfpgan_strength']:
-            switches.append(f'-G {a["gfpgan_strength"]}')
         if a['codeformer_fidelity']:
             switches.append(f'-cf {a["codeformer_fidelity"]}')
 
