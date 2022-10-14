@@ -4,6 +4,12 @@ title: Changelog
 
 # :octicons-log-16: **Changelog**
 
+## v2.0.1 (13 October 2022)
+
+  - fix noisy images at high step count when using k* samplers
+  - dream.py script now calls invoke.py module directly rather than
+    via a new python process (which could break the environment)
+
 ## v2.0.0 <small>(9 October 2022)</small>
 
   - `dream.py` script renamed `invoke.py`. A `dream.py` script wrapper remains

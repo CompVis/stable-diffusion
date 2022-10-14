@@ -134,6 +134,11 @@ you can try starting `invoke.py` with the `--precision=float32` flag:
 
 ### Latest Changes
 
+- v2.0.1 (13 October 2022)
+  - fix noisy images at high step count when using k* samplers
+  - dream.py script now calls invoke.py module directly rather than
+    via a new python process (which could break the environment)
+
 - v2.0.0 (9 October 2022)
 
   - `dream.py` script renamed `invoke.py`. A `dream.py` script wrapper remains
