@@ -203,7 +203,7 @@ There are several causes of these errors:
     conda env create -f environment-mac.yml
     ```
     
-4. If you have activated the linvokeaidm virtual environment and tried rebuilding it,
+4. If you have activated the invokeai virtual environment and tried rebuilding it,
    maybe the problem could be that I have something installed that you don't and
    you'll just need to manually install it. Make sure you activate the virtual
    environment so it installs there instead of globally.
