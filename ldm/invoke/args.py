@@ -242,9 +242,13 @@ class Args(object):
         else:
             switches.append(f'-A {a["sampler_name"]}')
 
-        # gfpgan-specific parameters
-        if a['gfpgan_strength']:
-            switches.append(f'-G {a["gfpgan_strength"]}')
+        # facetool-specific parameters
+        if a['facetool']:
+            switches.append(f'-ft {a["facetool"]}')
+        if a['facetool_strength']:
+            switches.append(f'-G {a["facetool_strength"]}')
+        if a['codeformer_fidelity']:
+            switches.append(f'-cf {a["codeformer_fidelity"]}')
 
         if a['outcrop']:
             switches.append(f'-c {" ".join([str(u) for u in a["outcrop"]])}')
@@ -636,6 +640,13 @@ class Args(object):
             dest='hires_fix',
             help='Create hires image using img2img to prevent duplicated objects'
         )
+        render_group.add_argument(
+            '--save_intermediates',
+            type=int,
+            default=0,
+            dest='save_intermediates',
+            help='Save every nth intermediate image into an "intermediates" directory within the output directory'
+        )
         img2img_group.add_argument(
             '-I',
             '--init_img',
@@ -692,6 +703,7 @@ class Args(object):
         )
         postprocessing_group.add_argument(
             '-G',
+            '--facetool_strength',
             '--gfpgan_strength',
             type=float,
             help='The strength at which to apply the face restoration to the result.',

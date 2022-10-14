@@ -1,29 +1,14 @@
 import { Flex } from '@chakra-ui/react';
-import { RootState } from '../../app/store';
-import { useAppDispatch, useAppSelector } from '../../app/store';
-import { setSeamless } from './optionsSlice';
-import { ChangeEvent } from 'react';
-import IAISwitch from '../../common/components/IAISwitch';
 
-/**
- * Image output options. Includes width, height, seamless tiling.
- */
+import HiresOptions from './HiresOptions';
+import SeamlessOptions from './SeamlessOptions';
+
 const OutputOptions = () => {
-  const dispatch = useAppDispatch();
-
-  const seamless = useAppSelector((state: RootState) => state.options.seamless);
-
-  const handleChangeSeamless = (e: ChangeEvent<HTMLInputElement>) =>
-    dispatch(setSeamless(e.target.checked));
 
   return (
     <Flex gap={2} direction={'column'}>
-      <IAISwitch
-        label="Seamless tiling"
-        fontSize={'md'}
-        isChecked={seamless}
-        onChange={handleChangeSeamless}
-      />
+      <SeamlessOptions />
+      <HiresOptions />
     </Flex>
   );
 };

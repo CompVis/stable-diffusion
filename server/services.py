@@ -334,11 +334,11 @@ class GeneratorService:
       # TODO: Support no generation (just upscaling/gfpgan)
 
       upscale = None if not jobRequest.enable_upscale else jobRequest.upscale
-      gfpgan_strength = 0 if not jobRequest.enable_gfpgan else jobRequest.gfpgan_strength
+      facetool_strength = 0 if not jobRequest.enable_gfpgan else jobRequest.facetool_strength
 
       if not jobRequest.enable_generate:
         # If not generating, check if we're upscaling or running gfpgan
-        if not upscale and not gfpgan_strength:
+        if not upscale and not facetool_strength:
           # Invalid settings (TODO: Add message to help user)
           raise CanceledException()
 
@@ -347,7 +347,7 @@ class GeneratorService:
         self.__model.upscale_and_reconstruct(
           image_list = [[image,0]],
           upscale = upscale,
-          strength = gfpgan_strength,
+          strength = facetool_strength,
           save_original = False,
           image_callback = lambda image, seed, upscaled=False: self.__on_image_result(jobRequest, image, seed, upscaled))
 
@@ -371,10 +371,11 @@ class GeneratorService:
           steps            = jobRequest.steps,
           variation_amount = jobRequest.variation_amount,
           with_variations  = jobRequest.with_variations,
-          gfpgan_strength  = gfpgan_strength,
+          facetool_strength = facetool_strength,
           upscale          = upscale,
           sampler_name     = jobRequest.sampler_name,
           seamless         = jobRequest.seamless,
+          hires_fix        = jobRequest.hires_fix,
           embiggen         = jobRequest.embiggen,
           embiggen_tiles   = jobRequest.embiggen_tiles,
           step_callback    = lambda sample, step: self.__on_progress(jobRequest, sample, step),

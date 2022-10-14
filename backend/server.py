@@ -349,7 +349,7 @@ def handle_run_gfpgan_event(original_image, gfpgan_parameters):
     eventlet.sleep(0)
 
     image = gfpgan.process(
-        image=image, strength=gfpgan_parameters["gfpgan_strength"], seed=seed
+        image=image, strength=gfpgan_parameters["facetool_strength"], seed=seed
     )
 
     progress["currentStatus"] = "Saving image"
@@ -464,7 +464,7 @@ def parameters_to_post_processed_image_metadata(parameters, original_image_path,
         image["strength"] = parameters["upscale"][1]
     elif type == "gfpgan":
         image["type"] = "gfpgan"
-        image["strength"] = parameters["gfpgan_strength"]
+        image["strength"] = parameters["facetool_strength"]
     else:
         raise TypeError(f"Invalid type: {type}")
 
@@ -493,6 +493,7 @@ def parameters_to_generated_image_metadata(parameters):
         "height",
         "extra",
         "seamless",
+        "hires_fix",
     ]
 
     rfc_dict = {}
@@ -505,10 +506,10 @@ def parameters_to_generated_image_metadata(parameters):
     postprocessing = []
 
     # 'postprocessing' is either null or an
-    if "gfpgan_strength" in parameters:
+    if "facetool_strength" in parameters:
 
         postprocessing.append(
-            {"type": "gfpgan", "strength": float(parameters["gfpgan_strength"])}
+            {"type": "gfpgan", "strength": float(parameters["facetool_strength"])}
         )
 
     if "upscale" in parameters:
@@ -751,7 +752,7 @@ def generate_images(generation_parameters, esrgan_parameters, gfpgan_parameters)
                 image=image, strength=gfpgan_parameters["strength"], seed=seed
             )
             postprocessing = True
-            all_parameters["gfpgan_strength"] = gfpgan_parameters["strength"]
+            all_parameters["facetool_strength"] = gfpgan_parameters["strength"]
 
         progress["currentStatus"] = "Saving image"
         socketio.emit("progressUpdate", progress)

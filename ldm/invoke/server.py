@@ -31,12 +31,13 @@ def build_opt(post_data, seed, gfpgan_model_exists):
     setattr(opt, 'embiggen', None)
     setattr(opt, 'embiggen_tiles', None)
 
-    setattr(opt, 'gfpgan_strength', float(post_data['gfpgan_strength']) if gfpgan_model_exists else 0)
+    setattr(opt, 'facetool_strength', float(post_data['facetool_strength']) if gfpgan_model_exists else 0)
     setattr(opt, 'upscale', [int(post_data['upscale_level']), float(post_data['upscale_strength'])] if post_data['upscale_level'] != '' else None)
     setattr(opt, 'progress_images', 'progress_images' in post_data)
     setattr(opt, 'seed', None if int(post_data['seed']) == -1 else int(post_data['seed']))
     setattr(opt, 'threshold', float(post_data['threshold']))
     setattr(opt, 'perlin', float(post_data['perlin']))
+    setattr(opt, 'hires_fix', 'hires_fix' in post_data)
     setattr(opt, 'variation_amount', float(post_data['variation_amount']) if int(post_data['seed']) != -1 else 0)
     setattr(opt, 'with_variations', [])
     setattr(opt, 'embiggen', None)
@@ -196,7 +197,7 @@ class DreamServer(BaseHTTPRequestHandler):
                 ) + '\n',"utf-8"))
 
             # control state of the "postprocessing..." message
-            upscaling_requested = opt.upscale or opt.gfpgan_strength > 0
+            upscaling_requested = opt.upscale or opt.facetool_strength > 0
             nonlocal images_generated # NB: Is this bad python style? It is typical usage in a perl closure.
             nonlocal images_upscaled  # NB: Is this bad python style? It is typical usage in a perl closure.
             if upscaled:

@@ -35,13 +35,14 @@ class DreamBase():
   perlin: float = 0.0
   sampler_name: string = 'klms'
   seamless: bool = False
+  hires_fix: bool = False
   model: str = None # The model to use (currently unused)
   embeddings = None # The embeddings to use (currently unused)
   progress_images: bool = False
 
   # GFPGAN
   enable_gfpgan: bool
-  gfpgan_strength: float = 0
+  facetool_strength: float = 0
 
   # Upscale
   enable_upscale: bool
@@ -91,12 +92,13 @@ class DreamBase():
       # model: str = None # The model to use (currently unused)
       # embeddings = None # The embeddings to use (currently unused)
       self.seamless = 'seamless' in j
+      self.hires_fix = 'hires_fix' in j
       self.progress_images = 'progress_images' in j
 
     # GFPGAN
     self.enable_gfpgan = 'enable_gfpgan' in j and bool(j.get('enable_gfpgan'))
     if self.enable_gfpgan:
-      self.gfpgan_strength = float(j.get('gfpgan_strength'))
+      self.facetool_strength = float(j.get('facetool_strength'))
 
     # Upscale
     self.enable_upscale = 'enable_upscale' in j and bool(j.get('enable_upscale'))

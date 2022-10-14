@@ -35,6 +35,24 @@ from ldm.invoke.devices import choose_torch_device, choose_precision
 from ldm.invoke.conditioning import get_uc_and_c
 from ldm.invoke.model_cache import ModelCache
 
+def fix_func(orig):
+    if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        def new_func(*args, **kw):
+            device = kw.get("device", "mps")
+            kw["device"]="cpu"
+            return orig(*args, **kw).to(device)
+        return new_func
+    return orig
+
+torch.rand = fix_func(torch.rand)
+torch.rand_like = fix_func(torch.rand_like)
+torch.randn = fix_func(torch.randn)
+torch.randn_like = fix_func(torch.randn_like)
+torch.randint = fix_func(torch.randint)
+torch.randint_like = fix_func(torch.randint_like)
+torch.bernoulli = fix_func(torch.bernoulli)
+torch.multinomial = fix_func(torch.multinomial)
+
 """Simplified text to image API for stable diffusion/latent diffusion
 
 Example Usage:
@@ -137,6 +155,7 @@ class Generate:
         self.precision      = precision
         self.strength       = 0.75
         self.seamless       = False
+        self.hires_fix      = False
         self.embedding_path = embedding_path
         self.model          = None     # empty for now
         self.model_hash     = None
@@ -156,6 +175,7 @@ class Generate:
         # device to Generate(). However the device was then ignored, so
         # it wasn't actually doing anything. This logic could be reinstated.
         device_type = choose_torch_device()
+        print(f'>> Using device_type {device_type}')
         self.device = torch.device(device_type)
         if full_precision:
             if self.precision != 'auto':
@@ -236,7 +256,7 @@ class Generate:
             embiggen_tiles =    None,
             # these are specific to GFPGAN/ESRGAN
             facetool         = None,
-            gfpgan_strength  = 0,
+            facetool_strength  = 0,
             codeformer_fidelity = None,
             save_original    = False,
             upscale          = None,
@@ -256,9 +276,10 @@ class Generate:
            height                          // height of image, in multiples of 64 (512)
            cfg_scale                       // how strongly the prompt influences the image (7.5) (must be >1)
            seamless                        // whether the generated image should tile
+           hires_fix                        // whether the Hires Fix should be applied during generation
            init_img                        // path to an initial image
            strength                        // strength for noising/unnoising init_img. 0.0 preserves image exactly, 1.0 replaces it completely
-           gfpgan_strength                 // strength for GFPGAN. 0.0 preserves image exactly, 1.0 replaces it completely
+           facetool_strength               // strength for GFPGAN/CodeFormer. 0.0 preserves image exactly, 1.0 replaces it completely
            ddim_eta                        // image randomness (eta=0.0 means the same seed always produces the same image)
            step_callback                   // a function or method that will be called each step
            image_callback                  // a function or method that will be called each time an image is generated
@@ -289,6 +310,7 @@ class Generate:
         width = width or self.width
         height = height or self.height
         seamless = seamless or self.seamless
+        hires_fix = hires_fix or self.hires_fix
         cfg_scale = cfg_scale or self.cfg_scale
         ddim_eta = ddim_eta or self.ddim_eta
         iterations = iterations or self.iterations
@@ -405,11 +427,11 @@ class Generate:
                                     reference_image_path = init_color,
                                     image_callback       = image_callback)
 
-            if upscale is not None or gfpgan_strength > 0:
+            if upscale is not None or facetool_strength > 0:
                 self.upscale_and_reconstruct(results,
                                              upscale        = upscale,
                                              facetool       = facetool,
-                                             strength       = gfpgan_strength,
+                                             strength       = facetool_strength,
                                              codeformer_fidelity = codeformer_fidelity,
                                              save_original  = save_original,
                                              image_callback = image_callback)
@@ -452,7 +474,7 @@ class Generate:
             self,
             image_path,
             tool                = 'gfpgan',  # one of 'upscale', 'gfpgan', 'codeformer', 'outpaint', or 'embiggen'
-            gfpgan_strength     = 0.0,
+            facetool_strength   = 0.0,
             codeformer_fidelity = 0.75,
             upscale             = None,
             out_direction       = None,
@@ -499,11 +521,11 @@ class Generate:
                 facetool = 'codeformer'
             elif tool == 'upscale':
                 facetool = 'gfpgan'   # but won't be run
-                gfpgan_strength = 0
+                facetool_strength = 0
             return self.upscale_and_reconstruct(
                 [[image,seed]],
                 facetool = facetool,
-                strength = gfpgan_strength,
+                strength = facetool_strength,
                 codeformer_fidelity = codeformer_fidelity,
                 save_original = save_original,
                 upscale = upscale,

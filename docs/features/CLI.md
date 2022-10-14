@@ -154,7 +154,9 @@ Here are the invoke> command that apply to txt2img:
 | --log_tokenization | -t        | False               | Display a color-coded list of the parsed tokens derived from the prompt |
 | --skip_normalization| -x       | False               | Weighted subprompts will not be normalized. See [Weighted Prompts](./OTHER.md#weighted-prompts) |
 | --upscale <int> <float> | -U <int> <float> | -U 1 0.75| Upscale image by magnification factor (2, 4), and set strength of upscaling (0.0-1.0). If strength not set, will default to 0.75. |
-| --gfpgan_strength <float>  | -G <float> | -G0        | Fix faces using the GFPGAN algorithm; argument indicates how hard the algorithm should try (0.0-1.0) |
+| --facetool_strength <float>  | -G <float> | -G0        | Fix faces (defaults to using the GFPGAN algorithm); argument indicates how hard the algorithm should try (0.0-1.0) |
+| --facetool <name> | -ft <name> | -ft gfpgan | Select face restoration algorithm to use: gfpgan, codeformer |
+| --codeformer_fidelity | -cf <float> | 0.75 | Used along with CodeFormer. Takes values between 0 and 1. 0 produces high quality but low accuracy. 1 produces high accuracy but low quality |
 | --save_original    | -save_orig| False               | When upscaling or fixing faces, this will cause the original image to be saved rather than replaced. |
 | --variation <float>  |-v<float>| 0.0                 | Add a bit of noise (0.0=none, 1.0=high) to the image in order to generate a series of variations. Usually used in combination with -S<seed> and -n<int> to generate a series a riffs on a starting image. See [Variations](./VARIATIONS.md). |
 | --with_variations <pattern> |    | None              | Combine two or more variations. See [Variations](./VARIATIONS.md) for now to use this. |

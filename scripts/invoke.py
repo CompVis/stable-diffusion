@@ -236,6 +236,7 @@ def main_loop(gen, opt, infile):
             grid_images      = dict()  # seed -> Image, only used if `opt.grid`
             prior_variations = opt.with_variations or []
             prefix = file_writer.unique_prefix()
+            step_callback = make_step_callback(gen, opt, prefix) if opt.save_intermediates > 0 else None
 
             def image_writer(image, seed, upscaled=False, first_seed=None, use_prefix=None):
                 # note the seed is the seed of the current image
@@ -297,6 +298,7 @@ def main_loop(gen, opt, infile):
                 opt.last_operation='generate'
                 gen.prompt2image(
                     image_callback=image_writer,
+                    step_callback=step_callback,
                     catch_interrupts=catch_ctrl_c,
                     **vars(opt)
                 )
@@ -494,7 +496,7 @@ def do_postprocess (gen, opt, callback):
         file_path = os.path.join(opt.outdir,file_path)
 
     tool=None
-    if opt.gfpgan_strength > 0:
+    if opt.facetool_strength > 0:
         tool = opt.facetool
     elif opt.embiggen:
         tool = 'embiggen'
@@ -510,7 +512,7 @@ def do_postprocess (gen, opt, callback):
         gen.apply_postprocessor(
             image_path      = file_path,
             tool            = tool,
-            gfpgan_strength = opt.gfpgan_strength,
+            facetool_strength = opt.facetool_strength,
             codeformer_fidelity = opt.codeformer_fidelity,
             save_original       = opt.save_original,
             upscale             = opt.upscale,
@@ -666,6 +668,17 @@ def load_face_restoration(opt):
     return gfpgan,codeformer,esrgan
     
 
+def make_step_callback(gen, opt, prefix):
+    destination = os.path.join(opt.outdir,'intermediates',prefix)
+    os.makedirs(destination,exist_ok=True)
+    print(f'>> Intermediate images will be written into {destination}')
+    def callback(img, step):
+        if step % opt.save_intermediates == 0 or step == opt.steps-1:
+            filename = os.path.join(destination,f'{step:04}.png')
+            image = gen.sample_to_image(img)
+            image.save(filename,'PNG')
+    return callback
+    
 def retrieve_dream_command(opt,file_path,completer):
     '''
     Given a full or partial path to a previously-generated image file,
