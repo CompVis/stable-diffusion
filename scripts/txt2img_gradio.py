@@ -145,6 +145,17 @@ model = load_model_from_config(config, "models/ldm/stable-diffusion-v1/model.ckp
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 model = model.half().to(device)
 
+def reshape_c_uc(c, uc):
+    # I have no idea how to generate an empty tensor that's valid for the model,
+    # so I'm gonna just pass in an empty prompt and hope it works!
+    padding = model.get_learned_conditioning(["" for _ in range(c.shape[0])])
+    while c.shape[1] != uc.shape[1]:
+        if c.shape[1] > uc.shape[1]:
+            uc = torch.cat([uc, padding], dim=1)
+        else:
+            c = torch.cat([c, padding], dim=1)
+    return c, uc
+
 def dream(prompt: str, ddim_steps: int, sampler: str, fixed_code: bool, ddim_eta: float, n_iter: int, n_samples: int, cfg_scale: float, seed: int, height: int, width: int):
     torch.cuda.empty_cache()
 
@@ -202,6 +213,8 @@ def dream(prompt: str, ddim_steps: int, sampler: str, fixed_code: bool, ddim_eta
                             prompts = list(prompts)
                         c = model.get_learned_conditioning(prompts)
                         shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
+                        if uc is not None:
+                            c, uc = reshape_c_uc(c, uc)
                         if sampler == 'k_lms':
                             sigmas = model_wrap.get_sigmas(ddim_steps)
                             model_wrap_cfg = CFGDenoiser(model_wrap)
