@@ -21,6 +21,8 @@ except (ImportError,ModuleNotFoundError):
     readline_available = False
 
 IMG_EXTENSIONS     = ('.png','.jpg','.jpeg','.PNG','.JPG','.JPEG','.gif','.GIF')
+WEIGHT_EXTENSIONS  = ('.ckpt','.bae')
+CONFIG_EXTENSIONS  = ('.yaml','.yml')
 COMMANDS = (
     '--steps','-s',
     '--seed','-S',
@@ -47,10 +49,15 @@ COMMANDS = (
     '--skip_normalize','-x',
     '--log_tokenization','-t',
     '--hires_fix',
-    '!fix','!fetch','!history','!search','!clear','!models','!switch',
+    '!fix','!fetch','!history','!search','!clear',
+    '!models','!switch','!import_model','!edit_model'
     )
 MODEL_COMMANDS = (
     '!switch',
+    '!edit_model',
+    )
+WEIGHT_COMMANDS = (
+    '!import_model',
     )
 IMG_PATH_COMMANDS = (
     '--outdir[=\s]',
@@ -63,7 +70,8 @@ IMG_FILE_COMMANDS=(
     '--init_color[=\s]',
     '--embedding_path[=\s]',
     )
-path_regexp = '('+'|'.join(IMG_PATH_COMMANDS+IMG_FILE_COMMANDS) + ')\s*\S*$'
+path_regexp   = '('+'|'.join(IMG_PATH_COMMANDS+IMG_FILE_COMMANDS) + ')\s*\S*$'
+weight_regexp = '('+'|'.join(WEIGHT_COMMANDS) + ')\s*\S*$'
 
 class Completer(object):
     def __init__(self, options, models=[]):
@@ -74,6 +82,7 @@ class Completer(object):
         self.default_dir = None
         self.linebuffer  = None
         self.auto_history_active = True
+        self.extensions = None
         return
 
     def complete(self, text, state):
@@ -84,7 +93,13 @@ class Completer(object):
         buffer = readline.get_line_buffer()
 
         if state == 0:
-            if re.search(path_regexp,buffer):
+
+            # extensions defined, so go directly into path completion mode
+            if self.extensions is not None:
+                self.matches = self._path_completions(text, state, self.extensions)
+                
+            # looking for an image file
+            elif re.search(path_regexp,buffer):
                 do_shortcut = re.search('^'+'|'.join(IMG_FILE_COMMANDS),buffer)
                 self.matches = self._path_completions(text, state, IMG_EXTENSIONS,shortcut_ok=do_shortcut)
 
@@ -92,8 +107,12 @@ class Completer(object):
             elif re.search('(-S\s*|--seed[=\s])\d*$',buffer): 
                 self.matches= self._seed_completions(text,state)
 
+            # looking for a model
             elif re.match('^'+'|'.join(MODEL_COMMANDS),buffer):
-                self.matches= self._model_completions(text,state)
+                self.matches= self._model_completions(text, state)
+
+            elif re.search(weight_regexp,buffer):
+                self.matches = self._path_completions(text, state, WEIGHT_EXTENSIONS)
 
             # This is the first time for this text, so build a match list.
             elif text:
@@ -110,6 +129,13 @@ class Completer(object):
         except IndexError:
             response = None
         return response
+
+    def complete_extensions(self, extensions:list):
+        '''
+        If called with a list of extensions, will force completer
+        to do file path completions.
+        '''
+        self.extensions=extensions
 
     def add_history(self,line):
         '''

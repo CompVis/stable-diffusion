@@ -121,6 +121,26 @@ class ModelCache(object):
             else:
                 print(line)
 
+    def add_model(self, model_name:str, model_attributes:dict, clobber=False) ->str:
+        '''
+        Update the named model with a dictionary of attributes. Will fail with an
+        assertion error if the name already exists. Pass clobber=True to overwrite.
+        On a successful update, the config will be changed in memory and a YAML
+        string will be returned.
+        '''
+        omega = self.config
+        # check that all the required fields are present
+        for field in ('description','weights','height','width','config'):
+            assert field in model_attributes, f'required field {field} is missing'
+
+        assert (clobber or model_name not in omega), f'attempt to overwrite existing model definition "{model_name}"'
+        config = omega[model_name] if model_name in omega else {}
+        for field in model_attributes:
+            config[field] = model_attributes[field]
+
+        omega[model_name] = config
+        return OmegaConf.to_yaml(omega)
+    
     def _check_memory(self):
         avail_memory = psutil.virtual_memory()[1]
         if AVG_MODEL_SIZE + self.min_avail_mem > avail_memory:
@@ -163,10 +183,10 @@ class ModelCache(object):
         m, u  = model.load_state_dict(sd, strict=False)
 
         if self.precision == 'float16':
-            print('>> Using faster float16 precision')
+            print('   | Using faster float16 precision')
             model.to(torch.float16)
         else:
-            print('>> Using more accurate float32 precision')
+            print('   | Using more accurate float32 precision')
 
         model.to(self.device)
         # model.to doesn't change the cond_stage_model.device used to move the tokenizer output, so set it here
