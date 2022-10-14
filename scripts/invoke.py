@@ -416,7 +416,7 @@ def add_weights_to_config(model_path:str, gen, opt, completer):
 
     done = False
     while not done:
-        model_name = input('Name for this model: ')
+        model_name = input('Short name for this model: ')
         if not re.match('^[\w._-]+$',model_name):
             print('** model name must contain only words, digits and the characters [._-] **')
         else:
