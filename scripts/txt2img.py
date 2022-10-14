@@ -240,7 +240,7 @@ def main():
     )
     parser.add_argument(
         "--aesthetic_lr",
-        type=int,
+        type=float,
         help="learning rate for the aesthetic personalization",
         default=0.0001,
     )
