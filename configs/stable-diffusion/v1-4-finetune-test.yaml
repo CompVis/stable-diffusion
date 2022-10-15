@@ -47,6 +47,7 @@ model:
       params:
         embed_dim: 4
         monitor: val/rec_loss
+        ckpt_path: "../latent-diffusion/logs/original/checkpoints/last.ckpt"
         ddconfig:
           double_z: true
           z_channels: 4
@@ -69,22 +70,25 @@ model:
       target: ldm.modules.encoders.modules.FrozenCLIPEmbedder
       params:
         penultimate: true # use 2nd last layer - https://arxiv.org/pdf/2205.11487.pdf D.1
+        extended_mode: 3 # extend clip context to 225 tokens - as per NAI blogpost
 
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 4
-    num_workers: 4
+    batch_size: 2 
+    num_workers: 2
     wrap: false
     train:
-      target: ldm.data.local.LocalDanbooruBase
+      target: ldm.data.localdanboorubase.LocalDanbooruBase
       params:
+        data_root: '../dataset'
         size: 512
         mode: "train"
         ucg: 0.1 # unconditional guidance training
     validation:
-      target: ldm.data.local.LocalDanbooruBase
+      target: ldm.data.localdanboorubase.LocalDanbooruBase
       params:
+        data_root: '../dataset'
         size: 512
         mode: "val"
         val_split: 64
@@ -109,9 +113,11 @@ lightning:
           plot_diffusion_rows: False
           N: 4
           ddim_steps: 50
-
-trainer:
-    benchmark: True
-    val_check_interval: 5000000
-    num_sanity_val_steps: 0
-    accumulate_grad_batches: 1
+  trainer:
+      precision: 16
+      amp_backend: "native"
+      strategy: "fsdp"
+      benchmark: True
+      limit_val_batches: 0
+      num_sanity_val_steps: 0
+      accumulate_grad_batches: 1

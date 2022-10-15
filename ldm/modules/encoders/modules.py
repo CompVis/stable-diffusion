@@ -136,8 +136,7 @@ class SpatialRescaler(nn.Module):
         return self(x)
 
 class FrozenCLIPEmbedder(AbstractEncoder):
-    """Uses the CLIP transformer encoder for text (from Hugging Face)"""
-    def __init__(self, version="openai/clip-vit-large-patch14", device="cuda", max_length=77, penultimate=True, max_chunks=3, extended_mode=True):
+    def __init__(self, version="openai/clip-vit-large-patch14", device="cuda", max_length=77, penultimate=True, extended_mode=None):
         super().__init__()
         self.tokenizer = CLIPTokenizer.from_pretrained(version)
         self.transformer = CLIPTextModel.from_pretrained(version)
@@ -145,7 +144,6 @@ class FrozenCLIPEmbedder(AbstractEncoder):
         self.max_length = max_length
         self.penultimate = penultimate  # return embeddings from 2nd to last layer, see https://arxiv.org/pdf/2205.11487.pdf
         self.extended_mode = extended_mode
-        self.max_chunks = max_chunks
         self.freeze()
 
     def freeze(self):
@@ -168,7 +166,7 @@ class FrozenCLIPEmbedder(AbstractEncoder):
         if self.extended_mode:
             max_standard_tokens = self.max_length - 2
 
-            batch_encoding = self.tokenizer(text, truncation=True, max_length=(self.max_length * self.max_chunks) - (self.max_chunks * 2), return_length=True, return_overflowing_tokens=False, padding=False,
+            batch_encoding = self.tokenizer(text, truncation=True, max_length=(self.max_length * self.extended_mode) - (self.extended_mode * 2), return_length=True, return_overflowing_tokens=False, padding=False,
                                             add_special_tokens=False)
             
             # get the max length aligned to chunk size.

@@ -4,7 +4,7 @@ opencv-python
 pudb==2019.2
 imageio==2.9.0
 imageio-ffmpeg==0.4.2
-pytorch-lightning==1.6.0
+pytorch-lightning==1.7.7
 omegaconf==2.1.1
 test-tube>=0.7.5
 streamlit>=0.73.1
@@ -18,3 +18,5 @@ git+https://github.com/illeatmyhat/taming-transformers.git@master#egg=taming-tra
 git+https://github.com/openai/CLIP.git@main#egg=clip
 git+https://github.com/hlky/k-diffusion-sd#egg=k_diffusion
 webdataset
+wandb
+fairscale
