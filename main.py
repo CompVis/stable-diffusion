@@ -1,3 +1,4 @@
+import uuid
 import argparse, os, sys, datetime, glob, importlib, csv
 import numpy as np
 import time
@@ -547,7 +548,7 @@ if __name__ == "__main__":
                     "name": nowname,
                     "save_dir": logdir,
                     "offline": opt.debug,
-                    "id": nowname,
+                    "id": str(uuid.uuid1()),
                 }
             },
             "testtube": {
