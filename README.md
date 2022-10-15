@@ -125,7 +125,9 @@ python scripts/txt2img.py --prompt "a gothic cathedral in a stunning landscape b
 
 ## Using it with other fine-tuned SD models
 
-The aesthetic gradients technique can be used with any fine-tuned SD model. For example, you can use it with the [Pokemon finetune](https://replicate.com/lambdal/text-to-pokemon):
+The aesthetic gradients technique can be used with any fine-tuned SD model. 
+
+* For example, you can use it with the [Pokemon finetune](https://replicate.com/lambdal/text-to-pokemon):
 
 ```bash
 python scripts/txt2img.py --prompt "robotic cat with wings" --plms --seed 7 --ckpt ../stable-diffusion/ema-only-epoch\=000142.ckpt  --aesthetic_steps 15 --aesthetic_embedding aesthetic_embeddings/laion_7plus.pt
@@ -157,7 +159,18 @@ python scripts/txt2img.py --prompt "Dragonite" --plms --seed 7 --ckpt ../stable-
 ![sample](assets/grid-0043.png)
 
 
+* Using NovelAI weights, some experiments were performed here in this post (See Update October 15th): [https://www.zhihu.com/question/558019952/answer/2708668441](https://www.zhihu.com/question/558019952/answer/2708668441)
 
+
+## Using it from Web UI
+
+There is a PR here: [https://github.com/AUTOMATIC1111/stable-diffusion-webui/pull/2585](https://github.com/AUTOMATIC1111/stable-diffusion-webui/pull/2585)
+
+
+## Further resources
+
+* Introduction to the aesthetic gradients method (blog post): [https://metaphysic.ai/custom-styles-in-stable-diffusion-without-retraining-or-high-computing-resources/](https://metaphysic.ai/custom-styles-in-stable-diffusion-without-retraining-or-high-computing-resources/)
+* Experiments using the NovelAI leaked weights: [https://www.zhihu.com/question/558019952/answer/2708668441](https://www.zhihu.com/question/558019952/answer/2708668441)
 
 
 ## Citation
