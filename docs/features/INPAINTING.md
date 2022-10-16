@@ -36,7 +36,7 @@ We are hoping to get rid of the need for this workaround in an upcoming release.
 
 1. Open image in GIMP.
 2. Layer->Transparency->Add Alpha Channel
-3. Use lasoo tool to select region to mask
+3. Use lasso tool to select region to mask
 4. Choose Select -> Float to create a floating selection
 5. Open the Layers toolbar (^L) and select "Floating Selection"
 6. Set opacity to a value between 0% and 99%
@@ -57,7 +57,7 @@ We are hoping to get rid of the need for this workaround in an upcoming release.
 
 3. Because we'll be applying a mask over the area we want to preserve, you should now select the inverse by using the ++shift+ctrl+i++ shortcut, or right clicking and using the "Select Inverse" option.
 
-4. You'll now create a mask by selecting the image layer, and Masking the selection. Make sure that you don't delete any of the undrlying image, or your inpainting results will be dramatically impacted.
+4. You'll now create a mask by selecting the image layer, and Masking the selection. Make sure that you don't delete any of the underlying image, or your inpainting results will be dramatically impacted.
 
 ![step4](../assets/step4.png)
 

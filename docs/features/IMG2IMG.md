@@ -50,8 +50,6 @@ information underneath the transparent needs to be preserved, not erased.
 More details can be found here:
 [Creating Transparent Images For Inpainting](./INPAINTING.md#creating-transparent-regions-for-inpainting)
 
-<<<<<<< HEAD
-=======
 **IMPORTANT ISSUE** `img2img` does not work properly on initial images smaller than 512x512. Please scale your
 image to at least 512x512 before using it. Larger images are not a problem, but may run out of VRAM on your
 GPU card. To fix this, use the --fit option, which downscales the initial image to fit within the box specified
@@ -60,7 +58,6 @@ by width x height:
 tree on a hill with a river, national geographic -I./test-pictures/big-sketch.png -H512 -W512 --fit
 ~~~
 
->>>>>>> main
 ## How does it actually work, though?
 
 The main difference between `img2img` and `prompt2img` is the starting point. While `prompt2img` always starts with pure 
@@ -70,11 +67,7 @@ gaussian noise and progressively refines it over the requested number of steps, 
 **Let's start** by thinking about vanilla `prompt2img`, just generating an image from a prompt. If the step count is 10, then the "latent space" (Stable Diffusion's internal representation of the image) for the prompt "fire" with seed `1592514025` develops something like this:
 
 ```commandline
-<<<<<<< HEAD
-dream> "fire" -s10 -W384 -H384 -S1592514025
-=======
 invoke> "fire" -s10 -W384 -H384 -S1592514025
->>>>>>> main
 ```
 
 ![latent steps](../assets/img2img/000019.steps.png)
@@ -102,11 +95,7 @@ Notice how much more fuzzy the starting image is for strength `0.7` compared to 
 |  | strength = 0.7 | strength = 0.4 |
 | -- | -- | -- |
 | initial image that SD sees | ![](../assets/img2img/000032.step-0.png) | ![](../assets/img2img/000030.step-0.png) |
-<<<<<<< HEAD
-| steps argument to `dream>` | `-S10` | `-S10` |
-=======
 | steps argument to `invoke>` | `-S10` | `-S10` |
->>>>>>> main
 | steps actually taken | 7 | 4 |
 | latent space at each step | ![](../assets/img2img/000032.steps.gravity.png) | ![](../assets/img2img/000030.steps.gravity.png) |
 | output | ![](../assets/img2img/000032.1592514025.png) | ![](../assets/img2img/000030.1592514025.png) |
@@ -117,17 +106,10 @@ Both of the outputs look kind of like what I was thinking of. With the strength 
 If you want to try this out yourself, all of these are using a seed of `1592514025` with a width/height of `384`, step count `10`, the default sampler (`k_lms`), and the single-word prompt `fire`:
 
 ```commandline
-<<<<<<< HEAD
-dream> "fire" -s10 -W384 -H384 -S1592514025 -I /tmp/fire-drawing.png --strength 0.7
-```
-
-The code for rendering intermediates is on my (damian0815's) branch [document-img2img](https://github.com/damian0815/InvokeAI/tree/document-img2img) - run `dream.py` and check your `outputs/img-samples/intermediates` folder while generating an image. 
-=======
 invoke> "fire" -s10 -W384 -H384 -S1592514025 -I /tmp/fire-drawing.png --strength 0.7
 ```
 
 The code for rendering intermediates is on my (damian0815's) branch [document-img2img](https://github.com/damian0815/InvokeAI/tree/document-img2img) - run `invoke.py` and check your `outputs/img-samples/intermediates` folder while generating an image. 
->>>>>>> main
 
 ### Compensating for the reduced step count
 
@@ -136,11 +118,7 @@ After putting this guide together I was curious to see how the difference would 
 Here's strength `0.4` (note step count `50`, which is `20 ÷ 0.4` to make sure SD does `20` steps from my image):
 
 ```commandline
-<<<<<<< HEAD
-dream> "fire" -s50 -W384 -H384 -S1592514025 -I /tmp/fire-drawing.png -f 0.4
-=======
 invoke> "fire" -s50 -W384 -H384 -S1592514025 -I /tmp/fire-drawing.png -f 0.4
->>>>>>> main
 ```
 
 ![](../assets/img2img/000035.1592514025.png)
@@ -148,11 +126,7 @@ invoke> "fire" -s50 -W384 -H384 -S1592514025 -I /tmp/fire-drawing.png -f 0.4
 and strength `0.7` (note step count `30`, which is roughly `20 ÷ 0.7` to make sure SD does `20` steps from my image):
 
 ```commandline
-<<<<<<< HEAD
-dream> "fire" -s30 -W384 -H384 -S1592514025 -I /tmp/fire-drawing.png -f 0.7
-=======
 invoke> "fire" -s30 -W384 -H384 -S1592514025 -I /tmp/fire-drawing.png -f 0.7
->>>>>>> main
 ```
 
 ![](../assets/img2img/000046.1592514025.png)
