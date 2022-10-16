@@ -18,7 +18,7 @@ class Inpaint(Img2Img):
     @torch.no_grad()
     def get_make_image(self,prompt,sampler,steps,cfg_scale,ddim_eta,
                        conditioning,init_image,mask_image,strength,
-                       step_callback=None,**kwargs):
+                       step_callback=None,inpaint_replace=False,**kwargs):
         """
         Returns a function returning an image derived from the prompt and
         the initial image + mask.  Return value depends on the seed at
@@ -57,6 +57,14 @@ class Inpaint(Img2Img):
                 torch.tensor([t_enc]).to(self.model.device),
                 noise=x_T
             )
+
+            # to replace masked area with latent noise, weighted by inpaint_replace strength
+            if inpaint_replace > 0.0:
+                print(f'>> inpaint will replace what was under the mask with a strength of {inpaint_replace}')
+                l_noise = self.get_noise(kwargs['width'],kwargs['height'])
+                inverted_mask = 1.0-mask_image  # there will be 1s where the mask is
+                masked_region = (1.0-inpaint_replace) * inverted_mask * z_enc + inpaint_replace * inverted_mask * l_noise
+                z_enc   = z_enc * mask_image + masked_region
 
             # decode it
             samples = sampler.decode(

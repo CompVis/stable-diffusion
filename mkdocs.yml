@@ -1,12 +1,12 @@
 # General
-site_name: Dream Script Docs
-site_url: https://lstein.github.io/stable-diffusion/
+site_name: Stable Diffusion Toolkit Docs
+site_url: https://invoke-ai.github.io/InvokeAI
 site_author: mauwii
-dev_addr: "127.0.0.1:8080"
+dev_addr: '127.0.0.1:8080'
 
 # Repository
-repo_name: lstein/stable-diffusion
-repo_url: https://github.com/lstein/stable-diffusion
+repo_name: 'invoke-ai/InvokeAI'
+repo_url: 'https://github.com/invoke-ai/InvokeAI'
 edit_uri: edit/main/docs/
 
 # Copyright
@@ -26,6 +26,7 @@ theme:
         name: Switch to dark mode
     - media: '(prefers-color-scheme: dark)'
       scheme: slate
+      primary: blue
       toggle:
         icon: material/lightbulb-outline
         name: Switch to light mode
@@ -55,8 +56,8 @@ markdown_extensions:
   - pymdownx.keys
   - pymdownx.magiclink:
       repo_url_shorthand: true
-      user: 'lstein'
-      repo: 'stable-diffusion'
+      user: 'invoke-ai'
+      repo: 'InvokeAI'
   - pymdownx.mark
   - pymdownx.smartsymbols
   - pymdownx.superfences:

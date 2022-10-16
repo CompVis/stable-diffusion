@@ -1,6 +1,5 @@
 ---
 title: Home
-template: main.html
 ---
 
 <!--
@@ -13,7 +12,7 @@ template: main.html
 -->
 <div align="center" markdown>
 
-# :material-script-text-outline: Stable Diffusion Dream Script
+# ^^**InvokeAI: A Stable Diffusion Toolkit**^^ :tools: <br> <small>Formally known as lstein/stable-diffusion</small>
 
 ![project logo](assets/logo.png)
 
@@ -29,8 +28,8 @@ template: main.html
 [CI checks on dev link]: https://github.com/invoke-ai/InvokeAI/actions?query=branch%3Adevelopment
 [CI checks on main badge]: https://flat.badgen.net/github/checks/invoke-ai/InvokeAI/main?label=CI%20status%20on%20main&cache=900&icon=github
 [CI checks on main link]: https://github.com/invoke-ai/InvokeAI/actions/workflows/test-invoke-conda.yml
-[discord badge]: https://flat.badgen.net/discord/members/htRgbc7e?icon=discord
-[discord link]: https://discord.com/invite/htRgbc7e
+[discord badge]: https://flat.badgen.net/discord/members/ZmtBAhwWhy?icon=discord
+[discord link]: https://discord.gg/ZmtBAhwWhy
 [github forks badge]: https://flat.badgen.net/github/forks/invoke-ai/InvokeAI?icon=github
 [github forks link]: https://useful-forks.github.io/?repo=lstein%2Fstable-diffusion
 [github open issues badge]: https://flat.badgen.net/github/open-issues/invoke-ai/InvokeAI?icon=github
@@ -46,16 +45,20 @@ template: main.html
 
 </div>
 
-This is a fork of [CompVis/stable-diffusion](https://github.com/CompVis/stable-diffusion), the open
-source text-to-image generator. It provides a streamlined process with various new features and
-options to aid the image generation process. It runs on Windows, Mac and Linux machines, and runs on
-GPU cards with as little as 4 GB or RAM.
+<a href="https://github.com/invoke-ai/InvokeAI">InvokeAI</a> is an
+implementation of Stable Diffusion, the open source text-to-image and
+image-to-image generator. It provides a streamlined process with
+various new features and options to aid the image generation
+process. It runs on Windows, Mac and Linux machines, and runs on GPU
+cards with as little as 4 GB or RAM.
+
+**Quick links**: [<a href="https://discord.gg/NwVCmKwY">Discord Server</a>] [<a href="https://github.com/invoke-ai/InvokeAI/">Code and Downloads</a>] [<a href="https://github.com/invoke-ai/InvokeAI/issues">Bug Reports</a>] [<a href="https://github.com/invoke-ai/InvokeAI/discussions">Discussion, Ideas & Q&A</a>]
+
+<div align="center"><img src="assets/invoke-web-server-1.png" width=640></div>
 
 !!! note
 
-    This fork is rapidly evolving. Please use the
-    [Issues](https://github.com/invoke-ai/InvokeAI/issues) tab to report bugs and make feature
-    requests. Be sure to use the provided templates. They will help aid diagnose issues faster.
+    This fork is rapidly evolving. Please use the [Issues tab](https://github.com/invoke-ai/InvokeAI/issues) to report bugs and make feature requests. Be sure to use the provided templates. They will help aid diagnose issues faster.
 
 ## :octicons-package-dependencies-24: Installation
 
@@ -81,7 +84,7 @@ You wil need one of the following:
 
 ### :fontawesome-regular-hard-drive: Disk
 
-- At least 6 GB of free disk space for the machine learning model, Python, and all its dependencies.
+- At least 12 GB of free disk space for the machine learning model, Python, and all its dependencies.
 
 !!! note
 
@@ -93,13 +96,34 @@ You wil need one of the following:
     To run in full-precision mode, start `invoke.py` with the `--full_precision` flag:
 
     ```bash
-    (ldm) ~/stable-diffusion$ python scripts/invoke.py --full_precision
+    (invokeai) ~/InvokeAI$ python scripts/invoke.py --full_precision
     ```
 ## :octicons-log-16: Latest Changes
 
-### vNEXT <small>(TODO 2022)</small>
-
-  - Deprecated `--full_precision` / `-F`. Simply omit it and `invoke.py` will auto
+### v2.0.0 <small>(9 October 2022)</small>
+- `dream.py` script renamed `invoke.py`. A `dream.py` script wrapper remains
+    for backward compatibility.
+- Completely new WebGUI - launch with `python3 scripts/invoke.py --web`
+- Support for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/INPAINTING.md">inpainting</a> and <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/OUTPAINTING.md">outpainting</a>
+- img2img runs on all k* samplers
+- Support for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/PROMPTS.md#negative-and-unconditioned-prompts">negative prompts</a>
+- Support for CodeFormer face reconstruction
+- Support for Textual Inversion on Macintoshes
+- Support in both WebGUI and CLI for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/POSTPROCESS.md">post-processing of previously-generated images</a>
+    using facial reconstruction, ESRGAN upscaling, outcropping (similar to DALL-E infinite canvas),
+    and "embiggen" upscaling. See the `!fix` command.
+- New `--hires` option on `invoke>` line allows <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/CLI.m#this-is-an-example-of-txt2img">larger images to be created without duplicating elements</a>, at the cost of some performance.
+- New `--perlin` and `--threshold` options allow you to add and control variation
+    during image generation (see <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/OTHER.md#thresholding-and-perlin-noise-initialization-options">Thresholding and Perlin Noise Initialization</a>
+- Extensive metadata now written into PNG files, allowing reliable regeneration of images
+    and tweaking of previous settings.
+- Command-line completion in `invoke.py` now works on Windows, Linux and Mac platforms.
+- Improved <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/CLI.m">command-line completion behavior</a>.
+    New commands added:
+       * List command-line history with `!history`
+       * Search command-line history with `!search`
+       * Clear history with `!clear`
+- Deprecated `--full_precision` / `-F`. Simply omit it and `invoke.py` will auto
     configure. To switch away from auto use the new flag like `--precision=float32`.
 
 ### v1.14 <small>(11 September 2022)</small>

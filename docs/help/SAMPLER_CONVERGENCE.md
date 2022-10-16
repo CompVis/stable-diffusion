@@ -1,8 +1,8 @@
 ---
-title: SAMPLER CONVERGENCE
+title: Sampler Convergence
 ---
 
-## *Sampler Convergence*
+# :material-palette-advanced: *Sampler Convergence*
 
 As features keep increasing, making the right choices for your needs can become increasingly difficult. What sampler to use? And for how many steps? Do you change the CFG value? Do you use prompt weighting? Do you allow variations?
 
@@ -14,12 +14,14 @@ In this document, we will talk about sampler convergence.
 
 Looking for a short version? Here's a TL;DR in 3 tables.
 
-| Remember  |
-|:---|
-| Results converge as steps (`-s`) are increased (except for `K_DPM_2_A` and `K_EULER_A`). Often at ≥ `-s100`, but may require ≥ `-s700`).  |
-| Producing a batch of candidate images at low (`-s8` to `-s30`) step counts can save you hours of computation.  |
-| `K_HEUN` and `K_DPM_2`  converge in less steps (but are slower).  |
-| `K_DPM_2_A` and `K_EULER_A` incorporate a lot of creativity/variability. |
+!!! note "Remember"
+
+    - Results converge as steps (`-s`) are increased (except for `K_DPM_2_A` and `K_EULER_A`). Often at ≥ `-s100`, but may require ≥ `-s700`).
+    - Producing a batch of candidate images at low (`-s8` to `-s30`) step counts can save you hours of computation.
+    - `K_HEUN` and `K_DPM_2`  converge in less steps (but are slower).
+    - `K_DPM_2_A` and `K_EULER_A` incorporate a lot of creativity/variability.
+
+<div align="center" markdown>
 
 | Sampler   | (3 sample avg) it/s (M1 Max 64GB, 512x512)  |
 |---|---|
@@ -32,10 +34,13 @@ Looking for a short version? Here's a TL;DR in 3 tables.
 |  `K_DPM_2_A` | 0.95 (slower)  |
 |  `K_EULER_A` | 1.86  |
 
-| Suggestions  |
-|:---|
-| For most use cases, `K_LMS`, `K_HEUN` and `K_DPM_2` are the best choices (the latter 2 run 0.5x as quick, but tend to converge 2x as quick as `K_LMS`). At very low steps (≤ `-s8`), `K_HEUN` and `K_DPM_2` are not recommended. Use `K_LMS` instead.|
-| For variability, use `K_EULER_A` (runs 2x as quick as `K_DPM_2_A`).  |
+</div>
+
+!!! tip "suggestions"
+
+    For most use cases, `K_LMS`, `K_HEUN` and `K_DPM_2` are the best choices (the latter 2 run 0.5x as quick, but tend to converge 2x as quick as `K_LMS`). At very low steps (≤ `-s8`), `K_HEUN` and `K_DPM_2` are not recommended. Use `K_LMS` instead.
+    
+    For variability, use `K_EULER_A` (runs 2x as quick as `K_DPM_2_A`).
 
 ---
 
@@ -60,15 +65,15 @@ This realization is very useful because it means you don't need to create a batc
 You can produce the same 100 images at `-s10` to `-s30` using a K-sampler (since they converge faster), get a rough idea of the final result, choose your 2 or 3 favorite ones, and then run `-s100` on those images to polish some details.
 The latter technique is 3-8x as quick.
 
-Example:
+!!! example
 
-At 60s per 100 steps.
+    At 60s per 100 steps.
 
-(Option A) 60s * 100 images = 6000s (100 images at `-s100`, manually picking 3 favorites)
+    A) 60s * 100 images = 6000s (100 images at `-s100`, manually picking 3 favorites)
 
-(Option B) 6s * 100 images + 60s * 3 images = 780s (100 images at `-s10`, manually picking 3 favorites, and running those 3 at `-s100` to polish details)
+    B) 6s *100 images + 60s* 3 images = 780s (100 images at `-s10`, manually picking 3 favorites, and running those 3 at `-s100` to polish details)
 
-The result is 1 hour and 40 minutes (Option A) vs 13 minutes (Option B).
+    The result is __1 hour and 40 minutes__ for Variant A, vs __13 minutes__ for Variant B.
 
 ### *Topic convergance*
 
@@ -110,9 +115,12 @@ Note also the point of convergence may not be the most desirable state (e.g. I p
 
 Once we understand the concept of sampler convergence, we must look into the performance of each sampler in terms of steps (iterations) per second, as not all samplers run at the same speed.
 
-On my M1 Max with 64GB of RAM, for a 512x512 image:
-| Sampler   | (3 sample average) it/s |
-|---|---|
+<div align="center" markdown>
+
+On my M1 Max with 64GB of RAM, for a 512x512 image
+
+| Sampler | (3 sample average) it/s |
+| :--- | :--- |
 |  `DDIM` | 1.89  |
 |  `PLMS` | 1.86  |
 |  `K_EULER` | 1.86  |
@@ -122,11 +130,13 @@ On my M1 Max with 64GB of RAM, for a 512x512 image:
 |  `K_DPM_2_A` | 0.95 (slower)  |
 |  `K_EULER_A` | 1.86  |
 
+</div>
+
 Combining our results with the steps per second of each sampler, three choices come out on top: `K_LMS`, `K_HEUN` and `K_DPM_2` (where the latter two run 0.5x as quick but tend to converge 2x as quick as `K_LMS`). For creativity and a lot of variation between iterations, `K_EULER_A` can be a good choice (which runs 2x as quick as `K_DPM_2_A`).
 
 Additionally, image generation at very low steps (≤ `-s8`) is not recommended for `K_HEUN` and `K_DPM_2`. Use `K_LMS` instead.
 
-<img width="397" alt="192044949-67d5d441-a0d5-4d5a-be30-5dda4fc28a00-min" src="https://user-images.githubusercontent.com/50542132/192046823-2714cb29-bbf3-4eb1-9213-e27a0963905c.png">
+![K-compare](https://user-images.githubusercontent.com/50542132/192046823-2714cb29-bbf3-4eb1-9213-e27a0963905c.png){ width=600}
 
 ### *Three key points*
 

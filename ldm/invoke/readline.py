@@ -52,6 +52,7 @@ COMMANDS = (
     '--skip_normalize','-x',
     '--log_tokenization','-t',
     '--hires_fix',
+    '--inpaint_replace','-r',
     '!fix','!fetch','!history','!search','!clear',
     '!models','!switch','!import_model','!edit_model'
     )

@@ -667,7 +667,6 @@ def load_face_restoration(opt):
         print('>> You may need to install the ESRGAN and/or GFPGAN modules')
     return gfpgan,codeformer,esrgan
     
-
 def make_step_callback(gen, opt, prefix):
     destination = os.path.join(opt.outdir,'intermediates',prefix)
     os.makedirs(destination,exist_ok=True)

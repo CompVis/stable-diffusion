@@ -1,4 +1,4 @@
-name: ldm
+name: invokeai
 channels:
   - pytorch
   - defaults

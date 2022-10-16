@@ -25,14 +25,16 @@ implementations.
 
 Consider this image:
 
+<div align="center" markdown>
 ![curly_woman](../assets/outpainting/curly.png)
+</div>
 
 Pretty nice, but it's annoying that the top of her head is cut
 off. She's also a bit off center. Let's fix that!
 
-~~~~
+```bash
 invoke> !fix images/curly.png --outcrop top 64 right 64
-~~~~
+```
 
 This is saying to apply the `outcrop` extension by extending the top
 of the image by 64 pixels, and the right of the image by the same
@@ -42,7 +44,9 @@ specify any number of pixels to extend. You can also abbreviate
 
 The result looks like this:
 
+<div align="center" markdown>
 ![curly_woman_outcrop](../assets/outpainting/curly-outcrop.png)
+</div>
 
 The new image is actually slightly larger than the original (576x576,
 because 64 pixels were added to the top and right sides.)
@@ -66,33 +70,36 @@ The `outpaint` extension does the same thing, but with subtle
 differences. Starting with the same image, here is how we would add an
 additional 64 pixels to the top of the image:
 
-~~~
+```bash
 invoke> !fix images/curly.png --out_direction top 64
-~~~
+```
 
-(you can abbreviate ``--out_direction` as `-D`.
+(you can abbreviate `--out_direction` as `-D`.
 
 The result is shown here:
 
+<div align="center" markdown>
 ![curly_woman_outpaint](../assets/outpainting/curly-outpaint.png)
+</div>
 
 Although the effect is similar, there are significant differences from
 outcropping:
 
-1. You can only specify one direction to extend at a time.
-2. The image is **not** resized. Instead, the image is shifted by the specified
+- You can only specify one direction to extend at a time.
+- The image is **not** resized. Instead, the image is shifted by the specified
 number of pixels. If you look carefully, you'll see that less of the lady's
 torso is visible in the image.
-3. Because the image dimensions remain the same, there's no rounding
+- Because the image dimensions remain the same, there's no rounding
 to multiples of 64.
-4. Attempting to outpaint larger areas will frequently give rise to ugly
+- Attempting to outpaint larger areas will frequently give rise to ugly
    ghosting effects.
-5. For best results, try increasing the step number.
-6. If you don't specify a pixel value in -D, it will default to half
+- For best results, try increasing the step number.
+- If you don't specify a pixel value in `-D`, it will default to half
    of the whole image, which is likely not what you want.
 
-Neither `outpaint` nor `outcrop` are perfect, but we continue to tune
-and improve them. If one doesn't work, try the other. You may also
-wish to experiment with other `img2img` arguments, such as `-C`, `-f`
-and `-s`.
+!!! tip
 
+    Neither `outpaint` nor `outcrop` are perfect, but we continue to tune
+    and improve them. If one doesn't work, try the other. You may also
+    wish to experiment with other `img2img` arguments, such as `-C`, `-f`
+    and `-s`.
