@@ -43,7 +43,7 @@ it's similar to that, except it can work up to an arbitrarily large size
 has extra logic to re-run any number of the tile sub-sections of the image
 if for example a small part of a huge run got messed up.
 
-## Usage
+### Usage
 
 `-embiggen <scaling_factor> <esrgan_strength> <overlap_ratio OR overlap_pixels>`
 
@@ -100,26 +100,30 @@ Tiles are numbered starting with one, and left-to-right,
 top-to-bottom.  So, if you are generating a 3x3 tiled image, the
 middle row would be `4 5 6`.
 
-## Example Usage
+### Examples
 
-Running Embiggen with 512x512 tiles on an existing image, scaling up by a factor of 2.5x;
-and doing the same again (default ESRGAN strength is 0.75, default overlap between tiles is 0.25):
+!!! example ""
 
-```bash
-invoke > a photo of a forest at sunset -s 100 -W 512 -H 512 -I outputs/forest.png -f 0.4 -embiggen 2.5
-invoke > a photo of a forest at sunset -s 100 -W 512 -H 512 -I outputs/forest.png -f 0.4 -embiggen 2.5 0.75 0.25
-```
+    Running Embiggen with 512x512 tiles on an existing image, scaling up by a factor of 2.5x;
+    and doing the same again (default ESRGAN strength is 0.75, default overlap between tiles is 0.25):
 
-If your starting image was also 512x512 this should have taken 9 tiles.
+    ```bash
+    invoke > a photo of a forest at sunset -s 100 -W 512 -H 512 -I outputs/forest.png -f 0.4 -embiggen 2.5
+    invoke > a photo of a forest at sunset -s 100 -W 512 -H 512 -I outputs/forest.png -f 0.4 -embiggen 2.5 0.75 0.25
+    ```
 
-If there weren't enough clouds in the sky of that forest you just made
-(and that image is about 1280 pixels (512*2.5) wide A.K.A. three
-512x512 tiles with 0.25 overlaps wide) we can replace that top row of
-tiles:
+    If your starting image was also 512x512 this should have taken 9 tiles.
 
-```bash
-invoke> a photo of puffy clouds over a forest at sunset -s 100 -W 512 -H 512 -I outputs/000002.seed.png -f 0.5 -embiggen_tiles 1 2 3
-```
+!!! example ""
+
+    If there weren't enough clouds in the sky of that forest you just made
+    (and that image is about 1280 pixels (512*2.5) wide A.K.A. three
+    512x512 tiles with 0.25 overlaps wide) we can replace that top row of
+    tiles:
+
+    ```bash
+    invoke> a photo of puffy clouds over a forest at sunset -s 100 -W 512 -H 512 -I outputs/000002.seed.png -f 0.5 -embiggen_tiles 1 2 3
+    ```
 
 ## Fixing Previously-Generated Images
 
@@ -128,27 +132,27 @@ look up the original prompt and provide an initial image. Just use the
 syntax `!fix path/to/file.png <embiggen>`. For example, you can rewrite the
 previous command to look like this:
 
-~~~~
+```bash
 invoke> !fix ./outputs/000002.seed.png -embiggen_tiles 1 2 3
-~~~~
+```
 
 A new file named `000002.seed.fixed.png` will be created in the output directory. Note that
 the `!fix` command does not replace the original file, unlike the behavior at generate time.
 You do not need to provide the prompt, and `!fix` automatically selects a good strength for
 embiggen-ing.
 
+!!! note
 
-**Note**
-Because the same prompt is used on all the tiled images, and the model
-doesn't have the context of anything outside the tile being run - it
-can end up creating repeated pattern (also called 'motifs') across all
-the tiles based on that prompt. The best way to combat this is
-lowering the `--strength` (`-f`) to stay more true to the init image,
-and increasing the number of steps so there is more compute-time to
-create the detail.  Anecdotally `--strength` 0.35-0.45 works pretty
-well on most things. It may also work great in some examples even with
-the `--strength` set high for patterns, landscapes, or subjects that
-are more abstract. Because this is (relatively) fast, you can also
-preserve the best parts from each.
+    Because the same prompt is used on all the tiled images, and the model
+    doesn't have the context of anything outside the tile being run - it
+    can end up creating repeated pattern (also called 'motifs') across all
+    the tiles based on that prompt. The best way to combat this is
+    lowering the `--strength` (`-f`) to stay more true to the init image,
+    and increasing the number of steps so there is more compute-time to
+    create the detail.  Anecdotally `--strength` 0.35-0.45 works pretty
+    well on most things. It may also work great in some examples even with
+    the `--strength` set high for patterns, landscapes, or subjects that
+    are more abstract. Because this is (relatively) fast, you can also
+    preserve the best parts from each.
 
 Author: [Travco](https://github.com/travco)

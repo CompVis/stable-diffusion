@@ -2,14 +2,7 @@
 
 # InvokeAI: A Stable Diffusion Toolkit
 
-_Note: This fork is rapidly evolving. Please use the
-[Issues](https://github.com/invoke-ai/InvokeAI/issues) tab to
-report bugs and make feature requests. Be sure to use the provided
-templates. They will help aid diagnose issues faster._
-
-_This repository was formally known as lstein/stable-diffusion_
-
-# **Table of Contents**
+_Formally known as lstein/stable-diffusion_
 
 ![project logo](docs/assets/logo.png)
 
@@ -46,8 +39,13 @@ This is a fork of
 the open source text-to-image generator. It provides a streamlined
 process with various new features and options to aid the image
 generation process. It runs on Windows, Mac and Linux machines, with
-GPU cards with as little as 4 GB or RAM. It provides both a polished
-Web interface, and an easy-to-use command-line interface.
+GPU cards with as little as 4 GB of RAM. It provides both a polished
+Web interface (see below), and an easy-to-use command-line interface.
+
+**Quick links**: [<a href="https://discord.gg/NwVCmKwY">Discord Server</a>] [<a href="https://invoke-ai.github.io/InvokeAI/">Documentation and Tutorials</a>] [<a href="https://github.com/invoke-ai/InvokeAI/">Code and Downloads</a>] [<a href="https://github.com/invoke-ai/InvokeAI/issues">Bug Reports</a>] [<a href="https://github.com/invoke-ai/InvokeAI/discussions">Discussion, Ideas & Q&A</a>]
+
+<div align="center"><img src="docs/assets/invoke-web-server-1.png" width=640></div>
+
 
 _Note: This fork is rapidly evolving. Please use the
 [Issues](https://github.com/invoke-ai/InvokeAI/issues) tab to report bugs and make feature
@@ -91,7 +89,7 @@ You wil need one of the following:
 
 #### Disk
 
-- At least 6 GB of free disk space for the machine learning model, Python, and all its dependencies.
+- At least 12 GB of free disk space for the machine learning model, Python, and all its dependencies.
 
 **Note**
 
@@ -136,38 +134,37 @@ you can try starting `invoke.py` with the `--precision=float32` flag:
 
 ### Latest Changes
 
-- vNEXT (TODO 2022)
+- v2.0.1 (13 October 2022)
+  - fix noisy images at high step count when using k* samplers
+  - dream.py script now calls invoke.py module directly rather than
+    via a new python process (which could break the environment)
 
+- v2.0.0 (9 October 2022)
+
+  - `dream.py` script renamed `invoke.py`. A `dream.py` script wrapper remains
+    for backward compatibility.
+  - Completely new WebGUI - launch with `python3 scripts/invoke.py --web`
+  - Support for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/INPAINTING.md">inpainting</a> and <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/OUTPAINTING.md">outpainting</a>
+  - img2img runs on all k* samplers
+  - Support for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/PROMPTS.md#negative-and-unconditioned-prompts">negative prompts</a>
+  - Support for CodeFormer face reconstruction
+  - Support for Textual Inversion on Macintoshes
+  - Support in both WebGUI and CLI for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/POSTPROCESS.md">post-processing of previously-generated images</a>
+    using facial reconstruction, ESRGAN upscaling, outcropping (similar to DALL-E infinite canvas),
+    and "embiggen" upscaling. See the `!fix` command.
+  - New `--hires` option on `invoke>` line allows <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/CLI.md#this-is-an-example-of-txt2img">larger images to be created without duplicating elements</a>, at the cost of some performance.
+  - New `--perlin` and `--threshold` options allow you to add and control variation
+    during image generation (see <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/OTHER.md#thresholding-and-perlin-noise-initialization-options">Thresholding and Perlin Noise Initialization</a>
+  - Extensive metadata now written into PNG files, allowing reliable regeneration of images
+    and tweaking of previous settings.
+  - Command-line completion in `invoke.py` now works on Windows, Linux and Mac platforms.
+  - Improved <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/CLI.md">command-line completion behavior</a>.
+    New commands added:
+       * List command-line history with `!history`
+       * Search command-line history with `!search`
+       * Clear history with `!clear`
   - Deprecated `--full_precision` / `-F`. Simply omit it and `invoke.py` will auto
     configure. To switch away from auto use the new flag like `--precision=float32`.
-
-- v1.14 (11 September 2022)
-
-  - Memory optimizations for small-RAM cards. 512x512 now possible on 4 GB GPUs.
-  - Full support for Apple hardware with M1 or M2 chips.
-  - Add "seamless mode" for circular tiling of image. Generates beautiful effects.
-    ([prixt](https://github.com/prixt)).
-  - Inpainting support.
-  - Improved web server GUI.
-  - Lots of code and documentation cleanups.
-
-- v1.13 (3 September 2022
-
-  - Support image variations (see [VARIATIONS](docs/features/VARIATIONS.md)
-    ([Kevin Gibbons](https://github.com/bakkot) and many contributors and reviewers)
-  - Supports a Google Colab notebook for a standalone server running on Google hardware
-    [Arturo Mendivil](https://github.com/artmen1516)
-  - WebUI supports GFPGAN/ESRGAN facial reconstruction and upscaling
-    [Kevin Gibbons](https://github.com/bakkot)
-  - WebUI supports incremental display of in-progress images during generation
-    [Kevin Gibbons](https://github.com/bakkot)
-  - A new configuration file scheme that allows new models (including upcoming
-    stable-diffusion-v1.5) to be added without altering the code.
-    ([David Wager](https://github.com/maddavid12))
-  - Can specify --grid on invoke.py command line as the default.
-  - Miscellaneous internal bug and stability fixes.
-  - Works on M1 Apple hardware.
-  - Multiple bug fixes.
 
 For older changelogs, please visit the **[CHANGELOG](docs/features/CHANGELOG.md)**.
 
