@@ -96,6 +96,12 @@ jobs:
           activate-environment: ${{ env.CONDA_ENV_NAME }}
           environment-file: ${{ matrix.environment-file }}
 
+      - name: list conda packages
+        run: |
+          conda list \
+            -n invokeai | \
+            awk ' {print "  - " $1 "==" $2;} '
+
       - name: Use Cached Huggingface and Torch models
         id: cache-hugginface-torch
         uses: actions/cache@v3
