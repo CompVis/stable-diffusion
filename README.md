@@ -6,6 +6,9 @@ This is the codebase for the article [Personalizing Text-to-Image Generation via
 
 In particular, this reposiory allows the user to use the aesthetic gradients technique described in the previous paper to personalize stable diffusion.
 
+## tl;dr
+
+> With this, you don't have to learn a lot of spells/modifiers to improve the quality of the generated image.
 
 ## Prerequisites
 
@@ -24,14 +27,20 @@ You can use the same arguments as with the original stable diffusion repository.
 - `--aesthetic_embedding`: path to the stored pytorch tensor (.pt format) containing the aesthetic embedding. It must be of shape 1x768 (CLIP-L/14 size). See below for computing your own aesthetic embeddings.
 
 In this repository we include all the aesthetic embeddings used in the paper. All of them are in the directory `aesthetic_embeddings`:
-* sac_8plus.pt
-* laion_7plus.pt
-* aivazovsky.pt
-* cloudcore.pt
-* gloomcore.pt
-* glowwave.pt
-
+* `sac_8plus.pt`
+* `laion_7plus.pt`
+* `aivazovsky.pt`
+* `cloudcore.pt`
+* `gloomcore.pt`
+* `glowwave.pt`
+  
 See the paper to see how they were obtained.
+
+In addition, new aesthetic embeddings have been incorporated:
+* `fantasy.pt`: created from [https://huggingface.co/datasets/ChristophSchuhmann/improved_aesthetics_6.5plus](https://huggingface.co/datasets/ChristophSchuhmann/improved_aesthetics_6.5plus) by filtering only the images with word "fantasy" in the caption. The top 2000 images by score are selected for the embedding.
+* `flower_plant.pt`: created from [https://huggingface.co/datasets/ChristophSchuhmann/improved_aesthetics_6.5plus](https://huggingface.co/datasets/ChristophSchuhmann/improved_aesthetics_6.5plus) by filtering only the images with word "plant", "flower", "floral", "vegetation" or "garden" in the caption. The top 2000 images by score are selected for the embedding.
+
+
 
 ### Examples
 
@@ -59,6 +68,26 @@ python scripts/txt2img.py --prompt "Roman city on top of a ridge, sci-fi illustr
 
 ![sample](assets/grid-0135.png)
 
+
+Another example, this we will be using another embedding that further exacerabates the floral patterns. This is the original SD output:
+
+```bash
+python scripts/txt2img.py --prompt "Cyberpunk ikea, close up shot from the top, anime art, greg rutkowski, studio ghibli, dramatic lighting" --seed 332 --plms --ckpt ../stable-diffusion/sd-v1-4.ckpt --H 768 --aesthetic_steps 0  --aesthetic_embedding aesthetic_embeddings/flower_plant.pt
+```
+
+![sample](assets/grid-0210.png)
+
+
+And this is with 20 steps with the `flower_plant.pt` embedding:
+
+```bash
+python scripts/txt2img.py --prompt "Cyberpunk ikea, close up shot from the top, anime art, greg rutkowski, studio ghibli, dramatic lighting" --seed 332 --plms --ckpt ../stable-diffusion/sd-v1-4.ckpt --H 768 --aesthetic_steps 20  --aesthetic_embedding aesthetic_embeddings/flower_plant.pt
+```
+
+![sample](assets/grid-0207.png)
+
+
+
 Let's see another example:
 
 ```bash
@@ -84,9 +113,8 @@ python scripts/txt2img.py --prompt "A portal towards other dimension" --plms  --
 
 Note that since we have used the SAC dataset for the personalization, the optimized results are more biased towards fantasy aesthetics.
 
-Now we turn to another example. 
 
-To see more examples, have a look at https://arxiv.org/abs/2209.12330
+To see more examples, look at the [Further resources](#further-resources) section below, or have a look at https://arxiv.org/abs/2209.12330
 
 ## Using your own embeddings
 
@@ -142,35 +170,23 @@ python scripts/txt2img.py --prompt "robotic cat with wings" --plms --seed 7 --ck
 ```
 ![sample](assets/grid-0035.png)
 
-Another example:
-
-```bash
-
-python scripts/txt2img.py --prompt "Dragonite" --plms --seed 7 --ckpt ../stable-diffusion/ema-only-epoch\=000142.ckpt  --aesthetic_steps 10 --aesthetic_embedding aesthetic_embeddings/sac_8plus.pt
-```
-
-![sample](assets/grid-0047.png)
-
-```bash
-
-python scripts/txt2img.py --prompt "Dragonite" --plms --seed 7 --ckpt ../stable-diffusion/ema-only-epoch\=000142.ckpt  --aesthetic_steps 0 --aesthetic_embedding aesthetic_embeddings/sac_8plus.pt
-```
-
-![sample](assets/grid-0043.png)
-
 
 * Using NovelAI weights, some experiments were performed here in this post (See Update October 15th): [https://www.zhihu.com/question/558019952/answer/2708668441](https://www.zhihu.com/question/558019952/answer/2708668441)
 
 
 ## Using it from Web UI
 
-There is a PR here: [https://github.com/AUTOMATIC1111/stable-diffusion-webui/pull/2585](https://github.com/AUTOMATIC1111/stable-diffusion-webui/pull/2585)
+There is a PR here: [https://github.com/AUTOMATIC1111/stable-diffusion-webui/pull/2585](https://github.com/AUTOMATIC1111/stable-diffusion-webui/pull/2585). It will be merged soon, but it is already functional if you install it from the PR branch.
 
 
 ## Further resources
 
 * Introduction to the aesthetic gradients method (blog post): [https://metaphysic.ai/custom-styles-in-stable-diffusion-without-retraining-or-high-computing-resources/](https://metaphysic.ai/custom-styles-in-stable-diffusion-without-retraining-or-high-computing-resources/)
-* Experiments using the NovelAI leaked weights: [https://www.zhihu.com/question/558019952/answer/2708668441](https://www.zhihu.com/question/558019952/answer/2708668441)
+* Experiments using the NovelAI leaked weights: 
+  * [https://www.bilibili.com/read/cv19102552?from=articleDetail](https://www.bilibili.com/read/cv19102552?from=articleDetail)
+  * [https://www.zhihu.com/question/558019952/answer/2708668441](https://www.zhihu.com/question/558019952/answer/2708668441)
+* Experiments using custom aesthetic embeddings: [https://github.com/AUTOMATIC1111/stable-diffusion-webui/pull/2585#issuecomment-1279785571](https://github.com/AUTOMATIC1111/stable-diffusion-webui/pull/2585#issuecomment-1279785571)
+  
 
 
 ## Citation
