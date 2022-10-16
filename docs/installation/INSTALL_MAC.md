@@ -178,7 +178,7 @@ conda install \
   pytorch \
   torchvision \
   -c pytorch-nightly \
-  -n ldm
+  -n invokeai
 ```
 
 If it takes forever to run `conda env create -f environment-mac.yml`, try this:
@@ -206,7 +206,7 @@ conda update \
 
 There are several causes of these errors:
 
-1. Did you remember to `conda activate ldm`? If your terminal prompt begins with
+1. Did you remember to `conda activate invokeai`? If your terminal prompt begins with
    "(invokeai)" then you activated it. If it begins with "(base)" or something else
    you haven't.
 
@@ -221,17 +221,17 @@ There are several causes of these errors:
 
     ```bash
     conda deactivate
-    conda env remove -n ldm
+    conda env remove -n invokeai
     conda env create -f environment-mac.yml
     ```
 
-4. If you have activated the ldm virtual environment and tried rebuilding it,
+4. If you have activated the invokeai virtual environment and tried rebuilding it,
    maybe the problem could be that I have something installed that you don't and
    you'll just need to manually install it. Make sure you activate the virtual
    environment so it installs there instead of globally.
 
     ```bash
-    conda activate ldm
+    conda activate invokeai
     pip install <package name>
     ```
 
@@ -290,11 +290,11 @@ output of `python3 -V` and `python -V`.
 
 ```bash
 (invokeai) % which python
-/Users/name/miniforge3/envs/ldm/bin/python
+/Users/name/miniforge3/envs/invokeai/bin/python
 ```
 
 The above is what you'll see if you have miniforge and correctly activated the
-ldm environment, while usingd the standalone setup instructions above.
+invokeai environment, while usingd the standalone setup instructions above.
 
 If you otherwise installed via pyenv, you will get this result:
 
@@ -474,7 +474,7 @@ this issue too. I should probably test it.
 ### "view size is not compatible with input tensor's size and stride"
 
 ```bash
-File "/opt/anaconda3/envs/ldm/lib/python3.10/site-packages/torch/nn/functional.py", line 2511, in layer_norm
+File "/opt/anaconda3/envs/invokeai/lib/python3.10/site-packages/torch/nn/functional.py", line 2511, in layer_norm
 return torch.layer_norm(input, normalized_shape, weight, bias, eps, torch.backends.cudnn.enabled)
 RuntimeError: view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead.
 ```
@@ -510,7 +510,7 @@ Generating:   0%|                                                              |
                                                                                                     loc("mps_add"("(mpsFileLoc): /AppleInternal/Library/BuildRoots/20d6c351-ee94-11ec-bcaf-7247572f23b4/Library/Caches/com.apple.xbs/Sources/MetalPerformanceShadersGraph/mpsgraph/MetalPerformanceShadersGraph/Core/Files/MPSGraphUtilities.mm":219:0)): error: input types 'tensor<2x1280xf32>' and 'tensor<*xf16>' are not broadcast compatible
 LLVM ERROR: Failed to infer result type(s).
 Abort trap: 6
-/Users/[...]/opt/anaconda3/envs/ldm/lib/python3.9/multiprocessing/resource_tracker.py:216: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+/Users/[...]/opt/anaconda3/envs/invokeai/lib/python3.9/multiprocessing/resource_tracker.py:216: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
   warnings.warn('resource_tracker: There appear to be %d '
 ```
 
