@@ -48,16 +48,6 @@ jobs:
           key: ${{ env.cache-name }}
           restore-keys: ${{ env.cache-name }}
 
-      - name: Use Cached Stable Diffusion v1.4 Model
-        id: cache-sd-v1-4
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-sd-v1-4
-        with:
-          path: models/ldm/stable-diffusion-v1/model.ckpt
-          key: ${{ env.cache-name }}
-          restore-keys: ${{ env.cache-name }}
-
       - name: Download Stable Diffusion v1.4 Model
         if: ${{ steps.cache-sd-v1-4.outputs.cache-hit != 'true' }}
         run: |
