@@ -4,6 +4,10 @@ on:
     branches:
       - 'main'
       - 'development'
+  pull_request:
+    branches:
+      - 'main'
+      - 'development'
 
 jobs:
   os_matrix:
@@ -33,13 +37,20 @@ jobs:
           auto-update-conda: false
           miniconda-version: latest
 
-      - name: set environment
-        run: |
-          [[ "$GITHUB_REF" == 'refs/heads/main' ]] \
-            && echo "TEST_PROMPTS=tests/preflight_prompts.txt" >> $GITHUB_ENV \
-            || echo "TEST_PROMPTS=tests/dev_prompts.txt" >> $GITHUB_ENV
-          echo "CONDA_ROOT=$CONDA" >> $GITHUB_ENV
-          echo "CONDA_ENV_NAME=invokeai" >> $GITHUB_ENV
+      - name: set test prompt to main branch validation
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: echo "TEST_PROMPTS=tests/preflight_prompts.txt" >> $GITHUB_ENV
+
+      - name: set test prompt to development branch validation
+        if: ${{ github.ref == 'refs/heads/development' }}
+        run: echo "TEST_PROMPTS=tests/dev_prompts.txt" >> $GITHUB_ENV
+
+      - name: set test prompt to Pull Request validation
+        if: ${{ github.ref != "refs/heads/main" && github.ref != 'refs/heads/development' }}
+        run: echo "TEST_PROMPTS=tests/pr_prompt.txt" >> $GITHUB_ENV
+
+      - name: set conda environment name
+        run: echo "CONDA_ENV_NAME=invokeai" >> $GITHUB_ENV
 
       - name: Use Cached Stable Diffusion v1.4 Model
         id: cache-sd-v1-4
@@ -65,7 +76,7 @@ jobs:
           cache-name: cache-conda-env-${{ env.CONDA_ENV_NAME }}
           conda-env-file: ${{ matrix.environment-file }}
         with:
-          path: ${{ env.CONDA_ROOT }}/envs/${{ env.CONDA_ENV_NAME }}
+          path: ${{ env.CONDA }}/envs/${{ env.CONDA_ENV_NAME }}
           key: ${{ env.cache-name }}
           restore-keys: ${{ env.cache-name }}-${{ runner.os }}-${{ hashFiles(env.conda-env-file) }}
 
