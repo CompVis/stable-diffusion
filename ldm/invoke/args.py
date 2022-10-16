@@ -244,13 +244,12 @@ class Args(object):
         else:
             switches.append(f'-A {a["sampler_name"]}')
 
-        # facetool-specific parameters
-        if a['facetool']:
-            switches.append(f'-ft {a["facetool"]}')
+        # facetool-specific parameters, only print if running facetool
         if a['facetool_strength']:
             switches.append(f'-G {a["facetool_strength"]}')
-        if a['codeformer_fidelity']:
-            switches.append(f'-cf {a["codeformer_fidelity"]}')
+            switches.append(f'-ft {a["facetool"]}')
+            if a["facetool"] == "codeformer":
+                switches.append(f'-cf {a["codeformer_fidelity"]}')
 
         if a['outcrop']:
             switches.append(f'-c {" ".join([str(u) for u in a["outcrop"]])}')
