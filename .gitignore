@@ -180,7 +180,7 @@ src
 **/__pycache__/
 outputs
 
-# Logs and associated folders 
+# Logs and associated folders
 # created from generated embeddings.
 logs
 testtube

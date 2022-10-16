@@ -4,29 +4,43 @@ on:
     branches:
       - 'main'
       - 'development'
+
 jobs:
   os_matrix:
     strategy:
       matrix:
-        os: [ ubuntu-latest, macos-12 ]
+        os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            environment-file: environment.yml
+            default-shell: bash -l {0}
+          - os: macos-latest
+            environment-file: environment-mac.yml
+            default-shell: bash -l {0}
     name: Test invoke.py on ${{ matrix.os }} with conda
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: ${{ matrix.default-shell }}
     steps:
-      - run: |
-          echo The PR was merged
-      - name: Set platform variables
-        id: vars
-        run: |
-          # Note, can't "activate" via github action; specifying the env's python has the same effect
-          if [ "$RUNNER_OS" = "macOS" ]; then
-              echo "::set-output name=ENV_FILE::environment-mac.yml"
-              echo "::set-output name=PYTHON_BIN::/usr/local/miniconda/envs/ldm/bin/python"
-          elif [ "$RUNNER_OS" = "Linux" ]; then
-              echo "::set-output name=ENV_FILE::environment.yml"
-              echo "::set-output name=PYTHON_BIN::/usr/share/miniconda/envs/ldm/bin/python"
-          fi
       - name: Checkout sources
         uses: actions/checkout@v3
+
+      - name: setup miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-activate-base: false
+          auto-update-conda: false
+          miniconda-version: latest
+
+      - name: set environment
+        run: |
+          [[ "$GITHUB_REF" == 'refs/heads/main' ]] \
+            && echo "TEST_PROMPTS=tests/preflight_prompts.txt" >> $GITHUB_ENV \
+            || echo "TEST_PROMPTS=tests/dev_prompts.txt" >> $GITHUB_ENV
+          echo "CONDA_ROOT=$CONDA" >> $GITHUB_ENV
+          echo "CONDA_ENV_NAME=invokeai" >> $GITHUB_ENV
+
       - name: Use Cached Stable Diffusion v1.4 Model
         id: cache-sd-v1-4
         uses: actions/cache@v3
@@ -35,31 +49,42 @@ jobs:
         with:
           path: models/ldm/stable-diffusion-v1/model.ckpt
           key: ${{ env.cache-name }}
-          restore-keys: |
-            ${{ env.cache-name }}
+          restore-keys: ${{ env.cache-name }}
+
       - name: Download Stable Diffusion v1.4 Model
         if: ${{ steps.cache-sd-v1-4.outputs.cache-hit != 'true' }}
         run: |
-          if [ ! -e models/ldm/stable-diffusion-v1 ]; then
-              mkdir -p models/ldm/stable-diffusion-v1
-          fi
-          if [ ! -e models/ldm/stable-diffusion-v1/model.ckpt ]; then
-            curl -o models/ldm/stable-diffusion-v1/model.ckpt ${{ secrets.SD_V1_4_URL }}
-          fi
-      - name: Use Cached Dependencies
-        id: cache-conda-env-ldm
+          [[ -d models/ldm/stable-diffusion-v1 ]] \
+            || mkdir -p models/ldm/stable-diffusion-v1
+          [[ -r models/ldm/stable-diffusion-v1/model.ckpt ]] \
+            || curl -o models/ldm/stable-diffusion-v1/model.ckpt ${{ secrets.SD_V1_4_URL }}
+
+      - name: Use cached Conda Environment
         uses: actions/cache@v3
         env:
-          cache-name: cache-conda-env-ldm
+          cache-name: cache-conda-env-${{ env.CONDA_ENV_NAME }}
+          conda-env-file: ${{ matrix.environment-file }}
         with:
-          path: ~/.conda/envs/ldm
+          path: ${{ env.CONDA_ROOT }}/envs/${{ env.CONDA_ENV_NAME }}
           key: ${{ env.cache-name }}
-          restore-keys: |
-            ${{ env.cache-name }}-${{ runner.os }}-${{ hashFiles(steps.vars.outputs.ENV_FILE) }}
-      - name: Install Dependencies
-        if: ${{ steps.cache-conda-env-ldm.outputs.cache-hit != 'true' }}
-        run: |
-          conda env create -f ${{ steps.vars.outputs.ENV_FILE }}
+          restore-keys: ${{ env.cache-name }}-${{ runner.os }}-${{ hashFiles(env.conda-env-file) }}
+
+      - name: Use cached Conda Packages
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-conda-env-${{ env.CONDA_ENV_NAME }}
+          conda-env-file: ${{ matrix.environment-file }}
+        with:
+          path: ${{ env.CONDA_PKGS_DIR }}
+          key: ${{ env.cache-name }}
+          restore-keys: ${{ env.cache-name }}-${{ runner.os }}-${{ hashFiles(env.conda-env-file) }}
+
+      - name: Activate Conda Env
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: ${{ env.CONDA_ENV_NAME }}
+          environment-file: ${{ matrix.environment-file }}
+
       - name: Use Cached Huggingface and Torch models
         id: cache-hugginface-torch
         uses: actions/cache@v3
@@ -70,28 +95,18 @@ jobs:
           key: ${{ env.cache-name }}
           restore-keys: |
             ${{ env.cache-name }}-${{ hashFiles('scripts/preload_models.py') }}
-      - name: Download Huggingface and Torch models
-        if: ${{ steps.cache-hugginface-torch.outputs.cache-hit != 'true' }}
-        run: |
-          ${{ steps.vars.outputs.PYTHON_BIN }} scripts/preload_models.py
-#       - name: Run tmate
-#         uses: mxschmitt/action-tmate@v3
-#         timeout-minutes: 30
+
+      - name: run preload_models.py
+        run: python scripts/preload_models.py
+
       - name: Run the tests
         run: |
-          # Note, can't "activate" via github action; specifying the env's python has the same effect
-          if [ $(uname) = "Darwin" ]; then
-              export PYTORCH_ENABLE_MPS_FALLBACK=1
-          fi
-          # Utterly hacky, but I don't know how else to do this
-          if [[ ${{ github.ref }} == 'refs/heads/master' ]]; then
-            time ${{ steps.vars.outputs.PYTHON_BIN }} scripts/invoke.py --from_file tests/preflight_prompts.txt
-          elif [[ ${{ github.ref }} == 'refs/heads/development' ]]; then
-            time ${{ steps.vars.outputs.PYTHON_BIN }} scripts/invoke.py --from_file tests/dev_prompts.txt
-          fi
+          time python scripts/invoke.py \
+            --from_file ${{ env.TEST_PROMPTS }}
           mkdir -p outputs/img-samples
+
       - name: Archive results
         uses: actions/upload-artifact@v3
         with:
-          name: results
+          name: results_${{ matrix.os }}
           path: outputs/img-samples
