@@ -1,7 +1,7 @@
 # ignore default image save location and model symbolic link
 outputs/
 models/ldm/stable-diffusion-v1/model.ckpt
-ldm/dream/restoration/codeformer/weights
+ldm/invoke/restoration/codeformer/weights
 
 # ignore the Anaconda/Miniconda installer used while building Docker image
 anaconda.sh
@@ -180,7 +180,7 @@ src
 **/__pycache__/
 outputs
 
-# Logs and associated folders 
+# Logs and associated folders
 # created from generated embeddings.
 logs
 testtube
