@@ -1,4 +1,4 @@
-# Stable Diffusion with Aesthetic Gradients 
+# Stable Diffusion with Aesthetic Gradients 🎨
 
 This is the codebase for the article [Personalizing Text-to-Image Generation via Aesthetic Gradients](https://arxiv.org/abs/2209.12330):
 
