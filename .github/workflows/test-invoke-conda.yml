@@ -97,10 +97,7 @@ jobs:
           environment-file: ${{ matrix.environment-file }}
 
       - name: list conda packages
-        run: |
-          conda list \
-            -n invokeai | \
-            awk ' {print "  - " $1 "==" $2;} '
+        run: conda env export --name ${{ env.CONDA_ENV_NAME }}
 
       - name: Use Cached Huggingface and Torch models
         id: cache-hugginface-torch
