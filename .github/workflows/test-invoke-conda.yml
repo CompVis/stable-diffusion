@@ -46,7 +46,7 @@ jobs:
         run: echo "TEST_PROMPTS=tests/dev_prompts.txt" >> $GITHUB_ENV
 
       - name: set test prompt to Pull Request validation
-        if: ${{ github.ref != "refs/heads/main" && github.ref != 'refs/heads/development' }}
+        if: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/development' }}
         run: echo "TEST_PROMPTS=tests/pr_prompt.txt" >> $GITHUB_ENV
 
       - name: set conda environment name
