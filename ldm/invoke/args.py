@@ -379,6 +379,14 @@ class Args(object):
             help='Indicates which diffusion model to load. (currently "stable-diffusion-1.4" (default) or "laion400m")',
         )
         model_group.add_argument(
+            '--png_compression','-z',
+            type=int,
+            default=6,
+            choices=range(0,9),
+            dest='png_compression',
+            help='level of PNG compression, from 0 (none) to 9 (maximum). Default is 6.'
+        )
+        model_group.add_argument(
             '--sampler',
             '-A',
             '-m',
@@ -648,6 +656,14 @@ class Args(object):
             default=0,
             dest='save_intermediates',
             help='Save every nth intermediate image into an "intermediates" directory within the output directory'
+        )
+        render_group.add_argument(
+            '--png_compression','-z',
+            type=int,
+            default=6,
+            choices=range(0,10),
+            dest='png_compression',
+            help='level of PNG compression, from 0 (none) to 9 (maximum). Default is 6.'
         )
         img2img_group.add_argument(
             '-I',

@@ -270,6 +270,7 @@ def main_loop(gen, opt, infile):
                             model_hash = gen.model_hash,
                         ),
                         name      = filename,
+                        compress_level = opt.png_compression,
                     )
 
                     # update rfc metadata
