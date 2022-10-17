@@ -4,6 +4,7 @@ on:
     branches:
       - 'main'
       - 'development'
+      - 'fix-gh-actions-fork'
   pull_request:
     branches:
       - 'main'
