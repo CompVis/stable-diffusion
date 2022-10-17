@@ -68,11 +68,11 @@ requests. Be sure to use the provided templates. They will help aid diagnose iss
 This fork is supported across multiple platforms. You can find individual installation instructions
 below.
 
-- #### [Linux](docs/installation/INSTALL_LINUX.md)
+- #### [Linux](https://invoke-ai.github.io/InvokeAI/installation/INSTALL_LINUX/)
 
-- #### [Windows](docs/installation/INSTALL_WINDOWS.md)
+- #### [Windows](https://invoke-ai.github.io/InvokeAI/installation/INSTALL_WINDOWS/)
 
-- #### [Macintosh](docs/installation/INSTALL_MAC.md)
+- #### [Macintosh](https://invoke-ai.github.io/InvokeAI/installation/INSTALL_MAC/)
 
 ### Hardware Requirements
 
@@ -103,34 +103,33 @@ errors like 'expected type Float but found Half' or 'not implemented for Half'
 you can try starting `invoke.py` with the `--precision=float32` flag:
 
 ```bash
-(ldm) ~/stable-diffusion$ python scripts/invoke.py --precision=float32
+(invokeai) ~/stable-diffusion$ python scripts/invoke.py --precision=float32
 ```
 
 ### Features
 
 #### Major Features
 
-- [Web Server](docs/features/WEB.md)
-- [Interactive Command Line Interface](docs/features/CLI.md)
-- [Image To Image](docs/features/IMG2IMG.md)
-- [Inpainting Support](docs/features/INPAINTING.md)
-- [Outpainting Support](docs/features/OUTPAINTING.md)
-- [Upscaling, face-restoration and outpainting](docs/features/POSTPROCESS.md)
-- [Seamless Tiling](docs/features/OTHER.md#seamless-tiling)
-- [Google Colab](docs/features/OTHER.md#google-colab)
-- [Reading Prompts From File](docs/features/PROMPTS.md#reading-prompts-from-a-file)
-- [Shortcut: Reusing Seeds](docs/features/OTHER.md#shortcuts-reusing-seeds)
-- [Prompt Blending](docs/features/PROMPTS.md#prompt-blending)
-- [Thresholding and Perlin Noise Initialization Options](/docs/features/OTHER.md#thresholding-and-perlin-noise-initialization-options)
-- [Negative/Unconditioned Prompts](docs/features/PROMPTS.md#negative-and-unconditioned-prompts)
-- [Variations](docs/features/VARIATIONS.md)
-- [Personalizing Text-to-Image Generation](docs/features/TEXTUAL_INVERSION.md)
-- [Simplified API for text to image generation](docs/features/OTHER.md#simplified-api)
+- [Web Server](https://invoke-ai.github.io/InvokeAI/features/WEB/)
+- [Interactive Command Line Interface](https://invoke-ai.github.io/InvokeAI/features/CLI/)
+- [Image To Image](https://invoke-ai.github.io/InvokeAI/features/IMG2IMG/)
+- [Inpainting Support](https://invoke-ai.github.io/InvokeAI/features/INPAINTING/)
+- [Outpainting Support](https://invoke-ai.github.io/InvokeAI/features/OUTPAINTING/)
+- [Upscaling, face-restoration and outpainting](https://invoke-ai.github.io/InvokeAI/features/POSTPROCESS/)
+- [Reading Prompts From File](https://invoke-ai.github.io/InvokeAI/features/PROMPTS/#reading-prompts-from-a-file)
+- [Prompt Blending](https://invoke-ai.github.io/InvokeAI/features/PROMPTS/#prompt-blending)
+- [Thresholding and Perlin Noise Initialization Options](https://invoke-ai.github.io/InvokeAI/features/OTHER/#thresholding-and-perlin-noise-initialization-options)
+- [Negative/Unconditioned Prompts](https://invoke-ai.github.io/InvokeAI/features/PROMPTS/#negative-and-unconditioned-prompts)
+- [Variations](https://invoke-ai.github.io/InvokeAI/features/VARIATIONS/)
+- [Personalizing Text-to-Image Generation](https://invoke-ai.github.io/InvokeAI/features/TEXTUAL_INVERSION/)
+- [Simplified API for text to image generation](https://invoke-ai.github.io/InvokeAI/features/OTHER/#simplified-api)
 
 #### Other Features
 
-- [Creating Transparent Regions for Inpainting](docs/features/INPAINTING.md#creating-transparent-regions-for-inpainting)
-- [Preload Models](docs/features/OTHER.md#preload-models)
+- [Google Colab](https://invoke-ai.github.io/InvokeAI/features/OTHER/#google-colab)
+- [Seamless Tiling](https://invoke-ai.github.io/InvokeAI/features/OTHER/#seamless-tiling)
+- [Shortcut: Reusing Seeds](https://invoke-ai.github.io/InvokeAI/features/OTHER/#shortcuts-reusing-seeds)
+- [Preload Models](https://invoke-ai.github.io/InvokeAI/features/OTHER/#preload-models)
 
 ### Latest Changes
 
@@ -144,33 +143,33 @@ you can try starting `invoke.py` with the `--precision=float32` flag:
   - `dream.py` script renamed `invoke.py`. A `dream.py` script wrapper remains
     for backward compatibility.
   - Completely new WebGUI - launch with `python3 scripts/invoke.py --web`
-  - Support for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/INPAINTING.md">inpainting</a> and <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/OUTPAINTING.md">outpainting</a>
+  - Support for <a href="https://invoke-ai.github.io/InvokeAI/features/INPAINTING/">inpainting</a> and <a href="https://invoke-ai.github.io/InvokeAI/features/OUTPAINTING/">outpainting</a>
   - img2img runs on all k* samplers
-  - Support for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/PROMPTS.md#negative-and-unconditioned-prompts">negative prompts</a>
+  - Support for <a href="https://invoke-ai.github.io/InvokeAI/features/PROMPTS/#negative-and-unconditioned-prompts">negative prompts</a>
   - Support for CodeFormer face reconstruction
   - Support for Textual Inversion on Macintoshes
-  - Support in both WebGUI and CLI for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/POSTPROCESS.md">post-processing of previously-generated images</a>
+  - Support in both WebGUI and CLI for <a href="https://invoke-ai.github.io/InvokeAI/features/POSTPROCESS/">post-processing of previously-generated images</a>
     using facial reconstruction, ESRGAN upscaling, outcropping (similar to DALL-E infinite canvas),
     and "embiggen" upscaling. See the `!fix` command.
-  - New `--hires` option on `invoke>` line allows <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/CLI.md#this-is-an-example-of-txt2img">larger images to be created without duplicating elements</a>, at the cost of some performance.
+  - New `--hires` option on `invoke>` line allows <a href="https://invoke-ai.github.io/InvokeAI/features/CLI/#txt2img">larger images to be created without duplicating elements</a>, at the cost of some performance.
   - New `--perlin` and `--threshold` options allow you to add and control variation
     during image generation (see <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/OTHER.md#thresholding-and-perlin-noise-initialization-options">Thresholding and Perlin Noise Initialization</a>
   - Extensive metadata now written into PNG files, allowing reliable regeneration of images
     and tweaking of previous settings.
   - Command-line completion in `invoke.py` now works on Windows, Linux and Mac platforms.
-  - Improved <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/CLI.md">command-line completion behavior</a>.
+  - Improved <a href="https://invoke-ai.github.io/InvokeAI/features/CLI/">command-line completion behavior</a>.
     New commands added:
-       * List command-line history with `!history`
-       * Search command-line history with `!search`
-       * Clear history with `!clear`
+    - List command-line history with `!history`
+    - Search command-line history with `!search`
+    - Clear history with `!clear`
   - Deprecated `--full_precision` / `-F`. Simply omit it and `invoke.py` will auto
     configure. To switch away from auto use the new flag like `--precision=float32`.
 
-For older changelogs, please visit the **[CHANGELOG](docs/features/CHANGELOG.md)**.
+For older changelogs, please visit the **[CHANGELOG](https://invoke-ai.github.io/InvokeAI/CHANGELOG/)**.
 
 ### Troubleshooting
 
-Please check out our **[Q&A](docs/help/TROUBLESHOOT.md)** to get solutions for common installation
+Please check out our **[Q&A](https://invoke-ai.github.io/InvokeAI/help/TROUBLESHOOT/#faq)** to get solutions for common installation
 problems and other issues.
 
 # Contributing
@@ -188,7 +187,7 @@ changes.
 ### Contributors
 
 This fork is a combined effort of various people from across the world.
-[Check out the list of all these amazing people](docs/other/CONTRIBUTORS.md). We thank them for
+[Check out the list of all these amazing people](https://invoke-ai.github.io/InvokeAI/other/CONTRIBUTORS/). We thank them for
 their time, hard work and effort.
 
 ### Support
@@ -202,4 +201,4 @@ Original portions of the software are Copyright (c) 2020
 ### Further Reading
 
 Please see the original README for more information on this software and underlying algorithm,
-located in the file [README-CompViz.md](docs/other/README-CompViz.md).
+located in the file [README-CompViz.md](https://invoke-ai.github.io/InvokeAI/other/README-CompViz/).
