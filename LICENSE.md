@@ -2,14 +2,6 @@ MIT License
 
 Copyright (c) 2022 InvokeAI Team
 
-This software is derived from a fork of the source code available from
-https://github.com/pesser/stable-diffusion and
-https://github.com/CompViz/stable-diffusion. They carry the following
-copyrights:
-
-Copyright (c) 2022 Machine Vision and Learning Group, LMU Munich
-Copyright (c) 2022 Robin Rombach and Patrick Esser and contributors
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
