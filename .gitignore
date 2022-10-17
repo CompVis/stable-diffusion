@@ -1,7 +1,7 @@
 # ignore default image save location and model symbolic link
 outputs/
 models/ldm/stable-diffusion-v1/model.ckpt
-ldm/invoke/restoration/codeformer/weights
+**/restoration/codeformer/weights
 
 # ignore the Anaconda/Miniconda installer used while building Docker image
 anaconda.sh

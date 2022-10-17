@@ -12,7 +12,7 @@ title: Home
 -->
 <div align="center" markdown>
 
-# ^^**InvokeAI: A Stable Diffusion Toolkit**^^ :tools: <br> <small>Formally known as lstein/stable-diffusion</small>
+# ^^**InvokeAI: A Stable Diffusion Toolkit**^^ :tools: <br> <small>Formerly known as lstein/stable-diffusion</small>
 
 ![project logo](assets/logo.png)
 
@@ -112,13 +112,13 @@ You wil need one of the following:
 - Support in both WebGUI and CLI for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/POSTPROCESS.md">post-processing of previously-generated images</a>
     using facial reconstruction, ESRGAN upscaling, outcropping (similar to DALL-E infinite canvas),
     and "embiggen" upscaling. See the `!fix` command.
-- New `--hires` option on `invoke>` line allows <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/CLI.m#this-is-an-example-of-txt2img">larger images to be created without duplicating elements</a>, at the cost of some performance.
+- New `--hires` option on `invoke>` line allows <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/CLI.md#this-is-an-example-of-txt2img">larger images to be created without duplicating elements</a>, at the cost of some performance.
 - New `--perlin` and `--threshold` options allow you to add and control variation
     during image generation (see <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/OTHER.md#thresholding-and-perlin-noise-initialization-options">Thresholding and Perlin Noise Initialization</a>
 - Extensive metadata now written into PNG files, allowing reliable regeneration of images
     and tweaking of previous settings.
 - Command-line completion in `invoke.py` now works on Windows, Linux and Mac platforms.
-- Improved <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/CLI.m">command-line completion behavior</a>.
+- Improved <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/CLI.md">command-line completion behavior</a>.
     New commands added:
        * List command-line history with `!history`
        * Search command-line history with `!search`
