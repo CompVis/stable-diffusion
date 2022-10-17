@@ -78,8 +78,7 @@ jobs:
           conda-env-file: ${{ matrix.environment-file }}
         with:
           path: ${{ env.CONDA }}/envs/${{ env.CONDA_ENV_NAME }}
-          key: ${{ env.cache-name }}
-          restore-keys: ${{ env.cache-name }}-${{ runner.os }}-${{ hashFiles('${{ matrix.environment-file }}') }}
+          key: env-${{ env.cache-name }}-${{ runner.os }}-${{ hashFiles(env.conda-env-file) }}
 
       - name: Use cached Conda Packages
         uses: actions/cache@v3
@@ -88,8 +87,7 @@ jobs:
           conda-env-file: ${{ matrix.environment-file }}
         with:
           path: ${{ env.CONDA_PKGS_DIR }}
-          key: ${{ env.cache-name }}
-          restore-keys: ${{ env.cache-name }}-${{ runner.os }}-${{ hashFiles('${{ matrix.environment-file }}') }}
+          key: pkgs-${{ env.cache-name }}-${{ runner.os }}-${{ hashFiles(env.conda-env-file) }}
 
       - name: Activate Conda Env
         uses: conda-incubator/setup-miniconda@v2
@@ -126,4 +124,3 @@ jobs:
         with:
           name: results_${{ matrix.os }}
           path: outputs/img-samples
-
