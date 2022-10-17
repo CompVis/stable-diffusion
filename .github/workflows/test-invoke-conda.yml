@@ -96,7 +96,7 @@ jobs:
           activate-environment: ${{ env.CONDA_ENV_NAME }}
           environment-file: ${{ matrix.environment-file }}
 
-      - name: list conda packages
+      - name: export conda env
         run: conda env export --name ${{ env.CONDA_ENV_NAME }}
 
       - name: Use Cached Huggingface and Torch models
