@@ -165,7 +165,7 @@ you can try starting `invoke.py` with the `--precision=float32` flag:
   - Deprecated `--full_precision` / `-F`. Simply omit it and `invoke.py` will auto
     configure. To switch away from auto use the new flag like `--precision=float32`.
 
-For older changelogs, please visit the **[CHANGELOG](https://invoke-ai.github.io/InvokeAI/CHANGELOG/)**.
+For older changelogs, please visit the **[CHANGELOG](https://invoke-ai.github.io/InvokeAI/CHANGELOG#v114-11-september-2022)**.
 
 ### Troubleshooting
 

@@ -6,64 +6,64 @@ title: Changelog
 
 ## v2.0.1 (13 October 2022)
 
-  - fix noisy images at high step count when using k* samplers
-  - dream.py script now calls invoke.py module directly rather than
+- fix noisy images at high step count when using k* samplers
+- dream.py script now calls invoke.py module directly rather than
     via a new python process (which could break the environment)
 
 ## v2.0.0 <small>(9 October 2022)</small>
 
-  - `dream.py` script renamed `invoke.py`. A `dream.py` script wrapper remains
+- `dream.py` script renamed `invoke.py`. A `dream.py` script wrapper remains
     for backward compatibility.
-  - Completely new WebGUI - launch with `python3 scripts/invoke.py --web`
-  - Support for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/INPAINTING.md">inpainting</a> and <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/OUTPAINTING.md">outpainting</a>
-  - img2img runs on all k* samplers
-  - Support for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/PROMPTS.md#negative-and-unconditioned-prompts">negative prompts</a>
-  - Support for CodeFormer face reconstruction
-  - Support for Textual Inversion on Macintoshes
-  - Support in both WebGUI and CLI for <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/POSTPROCESS.md">post-processing of previously-generated images</a>
+- Completely new WebGUI - launch with `python3 scripts/invoke.py --web`
+- Support for [inpainting](features/INPAINTING.md) and [outpainting](features/OUTPAINTING.md)
+- img2img runs on all k* samplers
+- Support for [negative prompts](features/PROMPTS.md#negative-and-unconditioned-prompts)
+- Support for CodeFormer face reconstruction
+- Support for Textual Inversion on Macintoshes
+- Support in both WebGUI and CLI for [post-processing of previously-generated images](features/POSTPROCESS.md)
     using facial reconstruction, ESRGAN upscaling, outcropping (similar to DALL-E infinite canvas),
     and "embiggen" upscaling. See the `!fix` command.
-  - New `--hires` option on `invoke>` line allows <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/CLI.m#this-is-an-example-of-txt2img">larger images to be created without duplicating elements</a>, at the cost of some performance.
-  - New `--perlin` and `--threshold` options allow you to add and control variation
-    during image generation (see <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/OTHER.md#thresholding-and-perlin-noise-initialization-options">Thresholding and Perlin Noise Initialization</a>
-  - Extensive metadata now written into PNG files, allowing reliable regeneration of images
+- New `--hires` option on `invoke>` line allows [larger images to be created without duplicating elements](features/CLI.md#this-is-an-example-of-txt2img), at the cost of some performance.
+- New `--perlin` and `--threshold` options allow you to add and control variation
+    during image generation (see [Thresholding and Perlin Noise Initialization](features/OTHER.md#thresholding-and-perlin-noise-initialization-options))
+- Extensive metadata now written into PNG files, allowing reliable regeneration of images
     and tweaking of previous settings.
-  - Command-line completion in `invoke.py` now works on Windows, Linux and Mac platforms.
-  - Improved <a href="https://github.com/invoke-ai/InvokeAI/blob/main/docs/features/CLI.m">command-line completion behavior</a>.
+- Command-line completion in `invoke.py` now works on Windows, Linux and Mac platforms.
+- Improved [command-line completion behavior](features/CLI.md)
     New commands added:
-       * List command-line history with `!history`
-       * Search command-line history with `!search`
-       * Clear history with `!clear`
-  - Deprecated `--full_precision` / `-F`. Simply omit it and `invoke.py` will auto
+  - List command-line history with `!history`
+  - Search command-line history with `!search`
+  - Clear history with `!clear`
+- Deprecated `--full_precision` / `-F`. Simply omit it and `invoke.py` will auto
     configure. To switch away from auto use the new flag like `--precision=float32`.
 
 ## v1.14 <small>(11 September 2022)</small>
 
-  - Memory optimizations for small-RAM cards. 512x512 now possible on 4 GB GPUs.
-  - Full support for Apple hardware with M1 or M2 chips.
-  - Add "seamless mode" for circular tiling of image. Generates beautiful effects.
+- Memory optimizations for small-RAM cards. 512x512 now possible on 4 GB GPUs.
+- Full support for Apple hardware with M1 or M2 chips.
+- Add "seamless mode" for circular tiling of image. Generates beautiful effects.
     ([prixt](https://github.com/prixt)).
-  - Inpainting support.
-  - Improved web server GUI.
-  - Lots of code and documentation cleanups.
+- Inpainting support.
+- Improved web server GUI.
+- Lots of code and documentation cleanups.
 
 ## v1.13 <small>(3 September 2022)</small>
 
-  - Support image variations (see [VARIATIONS](features/VARIATIONS.md)
+- Support image variations (see [VARIATIONS](features/VARIATIONS.md)
     ([Kevin Gibbons](https://github.com/bakkot) and many contributors and reviewers)
-  - Supports a Google Colab notebook for a standalone server running on Google hardware
+- Supports a Google Colab notebook for a standalone server running on Google hardware
     [Arturo Mendivil](https://github.com/artmen1516)
-  - WebUI supports GFPGAN/ESRGAN facial reconstruction and upscaling
+- WebUI supports GFPGAN/ESRGAN facial reconstruction and upscaling
     [Kevin Gibbons](https://github.com/bakkot)
-  - WebUI supports incremental display of in-progress images during generation
+- WebUI supports incremental display of in-progress images during generation
     [Kevin Gibbons](https://github.com/bakkot)
-  - A new configuration file scheme that allows new models (including upcoming
+- A new configuration file scheme that allows new models (including upcoming
     stable-diffusion-v1.5) to be added without altering the code.
     ([David Wager](https://github.com/maddavid12))
-  - Can specify --grid on invoke.py command line as the default.
-  - Miscellaneous internal bug and stability fixes.
-  - Works on M1 Apple hardware.
-  - Multiple bug fixes.
+- Can specify --grid on invoke.py command line as the default.
+- Miscellaneous internal bug and stability fixes.
+- Works on M1 Apple hardware.
+- Multiple bug fixes.
 
 ---
 
@@ -88,7 +88,7 @@ title: Changelog
   Seed memory only extends back to the previous command, but will work on all images generated with the -n# switch.
 - Variant generation support temporarily disabled pending more general solution.
 - Created a feature branch named **yunsaki-morphing-invoke** which adds experimental support for
-  iteratively modifying the prompt and its parameters. Please see[ Pull Request #86](https://github.com/lstein/stable-diffusion/pull/86)
+  iteratively modifying the prompt and its parameters. Please see[Pull Request #86](https://github.com/lstein/stable-diffusion/pull/86)
   for a synopsis of how this works. Note that when this feature is eventually added to the main branch, it will may be modified
   significantly.
 

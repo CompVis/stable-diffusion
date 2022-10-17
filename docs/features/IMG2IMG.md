@@ -17,15 +17,15 @@ tree on a hill with a river, nature photograph, national geographic -I./test-pic
 
 This will take the original image shown here:
 
-<div align="center" markdown>
+<figure markdown>
 <img src="https://user-images.githubusercontent.com/50542132/193946000-c42a96d8-5a74-4f8a-b4c3-5213e6cadcce.png" width=350>
-</div>
+</figure>
 
 and generate a new image based on it as shown here:
 
-<div align="center" markdown>
+<figure markdown>
 <img src="https://user-images.githubusercontent.com/111189/194135515-53d4c060-e994-4016-8121-7c685e281ac9.png" width=350>
-</div>
+</figure>
 
 The `--init_img` (`-I`) option gives the path to the seed picture. `--strength` (`-f`) controls how much
 the original will be modified, ranging from `0.0` (keep the original intact), to `1.0` (ignore the
@@ -41,11 +41,10 @@ interesting variants.
 Note that the prompt makes a big difference. For example, this slight variation on the prompt produces
 a very different image:
 
-`photograph of a tree on a hill with a river`
-
-<div align="center" markdown>
+<figure markdown>
 <img src="https://user-images.githubusercontent.com/111189/194135220-16b62181-b60c-4248-8989-4834a8fd7fbd.png" width=350>
-</div>
+<caption markdown>photograph of a tree on a hill with a river</caption>
+</figure>
 
 !!! tip
 
@@ -82,9 +81,9 @@ gaussian noise and progressively refines it over the requested number of steps, 
 invoke> "fire" -s10 -W384 -H384 -S1592514025
 ```
 
-<div align="center" markdown>
+<figure markdown>
 ![latent steps](../assets/img2img/000019.steps.png)
-</div>
+</figure>
 
 Put simply: starting from a frame of fuzz/static, SD finds details in each frame that it thinks look like "fire" and brings them a little bit more into focus, gradually scrubbing out the fuzz until a clear image remains.
 
@@ -94,21 +93,21 @@ Put simply: starting from a frame of fuzz/static, SD finds details in each frame
 
 I want SD to draw a fire based on this hand-drawn image:
 
-<div align="center" markdown>
+<figure markdown>
 ![drawing of a fireplace](../assets/img2img/fire-drawing.png)
-</div>
+</figure>
 
 Let's only do 10 steps, to make it easier to see what's happening. If strength is `0.7`, this is what the internal steps the algorithm has to take will look like:
 
-<div align="center" markdown>
+<figure markdown>
 ![gravity32](../assets/img2img/000032.steps.gravity.png)
-</div>
+</figure>
 
 With strength `0.4`, the steps look more like this:
 
-<div align="center" markdown>
+<figure markdown>
 ![gravity30](../assets/img2img/000030.steps.gravity.png)
-</div>
+</figure>
 
 Notice how much more fuzzy the starting image is for strength `0.7` compared to `0.4`, and notice also how much longer the sequence is with `0.7`:
 
@@ -140,9 +139,9 @@ Here's strength `0.4` (note step count `50`, which is `20 ÷ 0.4` to make sure S
 invoke> "fire" -s50 -W384 -H384 -S1592514025 -I /tmp/fire-drawing.png -f 0.4
 ```
 
-<div align="center" markdown>
+<figure markdown>
 ![000035.1592514025](../assets/img2img/000035.1592514025.png)
-</div>
+</figure>
 
 and here is strength `0.7` (note step count `30`, which is roughly `20 ÷ 0.7` to make sure SD does `20` steps from my image):
 
@@ -150,29 +149,38 @@ and here is strength `0.7` (note step count `30`, which is roughly `20 ÷ 0.7` t
 invoke> "fire" -s30 -W384 -H384 -S1592514025 -I /tmp/fire-drawing.png -f 0.7
 ```
 
-<div align="center" markdown>
+<figure markdown>
 ![000046.1592514025](../assets/img2img/000046.1592514025.png)
-</div>
+</figure>
 
 In both cases the image is nice and clean and "finished", but because at strength `0.7` Stable Diffusion has been give so much more freedom to improve on my badly-drawn flames, they've come out looking much better. You can really see the difference when looking at the latent steps. There's more noise on the first image with strength `0.7`:
 
+<figure markdown>
 ![gravity46](../assets/img2img/000046.steps.gravity.png)
+</figure>
 
 than there is for strength `0.4`:
 
+<figure markdown>
 ![gravity35](../assets/img2img/000035.steps.gravity.png)
+</figure>
 
 and that extra noise gives the algorithm more choices when it is evaluating how to denoise any particular pixel in the image.
 
 Unfortunately, it seems that `img2img` is very sensitive to the step count. Here's strength `0.7` with a step count of `29` (SD did 19 steps from my image):
 
-<div align="center" markdown>
+<figure markdown>
 ![gravity45](../assets/img2img/000045.1592514025.png)
-</div>
+</figure>
 
 By comparing the latents we can sort of see that something got interpreted differently enough on the third or fourth step to lead to a rather different interpretation of the flames.
 
+<figure markdown>
 ![gravity46](../assets/img2img/000046.steps.gravity.png)
+</figure>
+
+<figure markdown>
 ![gravity45](../assets/img2img/000045.steps.gravity.png)
+</figure>
 
 This is the result of a difference in the de-noising "schedule" - basically the noise has to be cleaned by a certain degree each step or the model won't "converge" on the image properly (see [stable diffusion blog](https://huggingface.co/blog/stable_diffusion) for more about that). A different step count means a different schedule, which means things get interpreted slightly differently at every step.
