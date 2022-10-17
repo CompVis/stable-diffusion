@@ -4,6 +4,7 @@ channels:
   - defaults
 dependencies:
   - python>=3.10, <3.11
+  - pip>=22.2
 
   # pytorch left unpinned
   - pytorch
