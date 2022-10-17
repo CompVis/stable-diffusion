@@ -1,9 +1,9 @@
 name: invokeai
 channels:
   - pytorch
-  - defaults
+  - conda-forge
 dependencies:
-  - python>=3.10, <3.11
+  - python>=3.9, <3.10
   - pip>=22.2
 
   # pytorch left unpinned

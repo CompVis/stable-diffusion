@@ -97,9 +97,6 @@ jobs:
           activate-environment: ${{ env.CONDA_ENV_NAME }}
           environment-file: ${{ matrix.environment-file }}
 
-      - name: export conda env
-        run: conda env export --name ${{ env.CONDA_ENV_NAME }}
-
       - name: Use Cached Huggingface and Torch models
         id: cache-hugginface-torch
         uses: actions/cache@v3
@@ -118,10 +115,15 @@ jobs:
         run: |
           time python scripts/invoke.py \
             --from_file ${{ env.TEST_PROMPTS }}
+
+      - name: export conda env
+        run: |
           mkdir -p outputs/img-samples
+          conda env export --name ${{ env.CONDA_ENV_NAME }} > outputs/img-samples/environment-${{ runner.os }}.yml
 
       - name: Archive results
         uses: actions/upload-artifact@v3
         with:
           name: results_${{ matrix.os }}
           path: outputs/img-samples
+
