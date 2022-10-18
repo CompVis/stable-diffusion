@@ -33,13 +33,13 @@ class PngWriter:
 
     # saves image named _image_ to outdir/name, writing metadata from prompt
     # returns full path of output
-    def save_image_and_prompt_to_png(self, image, dream_prompt, name, metadata=None):
+    def save_image_and_prompt_to_png(self, image, dream_prompt, name, metadata=None, compress_level=6):
         path = os.path.join(self.outdir, name)
         info = PngImagePlugin.PngInfo()
         info.add_text('Dream', dream_prompt)
         if metadata:
           info.add_text('sd-metadata', json.dumps(metadata))
-        image.save(path, 'PNG', pnginfo=info)
+        image.save(path, 'PNG', pnginfo=info, compress_level=compress_level)
         return path
 
     def retrieve_metadata(self,img_basename):

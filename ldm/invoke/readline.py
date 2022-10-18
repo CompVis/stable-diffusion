@@ -53,6 +53,7 @@ COMMANDS = (
     '--log_tokenization','-t',
     '--hires_fix',
     '--inpaint_replace','-r',
+    '--png_compression','-z',
     '!fix','!fetch','!history','!search','!clear',
     '!models','!switch','!import_model','!edit_model'
     )
