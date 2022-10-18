@@ -86,14 +86,16 @@ You wil need one of the following:
 
 - At least 12 GB of free disk space for the machine learning model, Python, and all its dependencies.
 
-!!! note
+!!! info
 
     If you are have a Nvidia 10xx series card (e.g. the 1080ti), please run the invoke script in
     full-precision mode as shown below.
 
     Similarly, specify full-precision mode on Apple M1 hardware.
 
-    To run in full-precision mode, start `invoke.py` with the `--full_precision` flag:
+    Precision is auto configured based on the device. If however you encounter errors like 
+    `expected type Float but found Half` or `not implemented for Half` you can try starting 
+    `invoke.py` with the `--precision=float32` flag:
 
     ```bash
     (invokeai) ~/InvokeAI$ python scripts/invoke.py --full_precision
