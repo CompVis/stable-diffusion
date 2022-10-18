@@ -1,6 +1,6 @@
 -r requirements.txt
 
-protobuf==3.19.4
+protobuf==3.19.6
 torch
 torchvision
 -e .

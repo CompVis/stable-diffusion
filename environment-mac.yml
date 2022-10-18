@@ -45,11 +45,11 @@ dependencies:
       - flask_cors==3.0.10
       - dependency_injector==4.40.0
       - eventlet==0.33.1
-      - protobuf==3.19.5
+      - protobuf==3.19.6
       - realesrgan==0.2.5.0
       - send2trash==1.8.0
       - test-tube==0.7.5
-      - transformers==4.21.2
+      - transformers==4.21.3
       - torch-fidelity==0.3.0
       - -e git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
       - -e git+https://github.com/openai/CLIP.git@main#egg=clip
