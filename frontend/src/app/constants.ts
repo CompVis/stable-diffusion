@@ -50,6 +50,7 @@ export const PARAMETERS: { [key: string]: string } = {
   maskPath: 'Initial Image Mask',
   shouldFitToWidthHeight: 'Fit Initial Image',
   seamless: 'Seamless Tiling',
+  hiresFix: 'High Resolution Optimizations',
 };
 
 export const NUMPY_RAND_MIN = 0;

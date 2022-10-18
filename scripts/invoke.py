@@ -9,6 +9,7 @@ import copy
 import warnings
 import time
 import traceback
+import yaml
 sys.path.append('.')    # corrects a weird problem on Macs
 from ldm.invoke.readline import get_completer
 from ldm.invoke.args import Args, metadata_dumps, metadata_from_png, dream_cmd_from_png
@@ -16,8 +17,6 @@ from ldm.invoke.pngwriter import PngWriter, retrieve_metadata, write_metadata
 from ldm.invoke.image_util import make_grid
 from ldm.invoke.log import write_log
 from omegaconf import OmegaConf
-from backend.invoke_ai_web_server import InvokeAIWebServer
-
 
 def main():
     """Initialize command-line parsers and the diffusion model"""
@@ -33,7 +32,7 @@ def main():
         print('--weights argument has been deprecated. Please edit ./configs/models.yaml, and select the weights using --model instead.')
         sys.exit(-1)
 
-    print('* Initializing, be patient...\n')
+    print('* Initializing, be patient...')
     from ldm.generate import Generate
 
     # these two lines prevent a horrible warning message from appearing
@@ -42,45 +41,7 @@ def main():
     transformers.logging.set_verbosity_error()
 
     # Loading Face Restoration and ESRGAN Modules
-    try:
-        gfpgan, codeformer, esrgan = None, None, None
-        if opt.restore or opt.esrgan:
-            from ldm.invoke.restoration import Restoration
-            restoration = Restoration()
-            if opt.restore:
-                gfpgan, codeformer = restoration.load_face_restore_models(opt.gfpgan_dir, opt.gfpgan_model_path)
-            else:
-                print('>> Face restoration disabled')
-            if opt.esrgan:
-                esrgan = restoration.load_esrgan(opt.esrgan_bg_tile)
-            else:
-                print('>> Upscaling disabled')
-        else:
-            print('>> Face restoration and upscaling disabled')
-    except (ModuleNotFoundError, ImportError):
-        print(traceback.format_exc(), file=sys.stderr)
-        print('>> You may need to install the ESRGAN and/or GFPGAN modules')
-
-    # creating a simple text2image object with a handful of
-    # defaults passed on the command line.
-    # additional parameters will be added (or overriden) during
-    # the user input loop
-    try:
-        gen = Generate(
-            conf           = opt.conf,
-            model          = opt.model,
-            sampler_name   = opt.sampler_name,
-            embedding_path = opt.embedding_path,
-            full_precision = opt.full_precision,
-            precision      = opt.precision,
-            gfpgan=gfpgan,
-            codeformer=codeformer,
-            esrgan=esrgan,
-            free_gpu_mem=opt.free_gpu_mem,
-            )
-    except (FileNotFoundError, IOError, KeyError) as e:
-        print(f'{e}. Aborting.')
-        sys.exit(-1)
+    gfpgan,codeformer,esrgan = load_face_restoration(opt)
 
     # make sure the output directory exists
     if not os.path.exists(opt.outdir):
@@ -100,6 +61,24 @@ def main():
             print(f'{e}. Aborting.')
             sys.exit(-1)
 
+    # creating a Generate object:
+    try:
+        gen = Generate(
+            conf           = opt.conf,
+            model          = opt.model,
+            sampler_name   = opt.sampler_name,
+            embedding_path = opt.embedding_path,
+            full_precision = opt.full_precision,
+            precision      = opt.precision,
+            gfpgan=gfpgan,
+            codeformer=codeformer,
+            esrgan=esrgan,
+            free_gpu_mem=opt.free_gpu_mem,
+            )
+    except (FileNotFoundError, IOError, KeyError) as e:
+        print(f'{e}. Aborting.')
+        sys.exit(-1)
+
     if opt.seamless:
         print(">> changed to seamless tiling mode")
 
@@ -116,7 +95,10 @@ def main():
             "\n* Initialization done! Awaiting your command (-h for help, 'q' to quit)"
         )
 
-    main_loop(gen, opt, infile)
+    try:
+        main_loop(gen, opt, infile)
+    except KeyboardInterrupt:
+        print("\ngoodbye!")
 
 # TODO: main_loop() has gotten busy. Needs to be refactored.
 def main_loop(gen, opt, infile):
@@ -124,12 +106,13 @@ def main_loop(gen, opt, infile):
     done = False
     path_filter = re.compile(r'[<>:"/\\|?*]')
     last_results = list()
-    model_config = OmegaConf.load(opt.conf)[opt.model]
+    model_config = OmegaConf.load(opt.conf)
 
     # The readline completer reads history from the .dream_history file located in the
     # output directory specified at the time of script launch. We do not currently support
     # changing the history file midstream when the output directory is changed.
-    completer   = get_completer(opt)
+    completer   = get_completer(opt, models=list(model_config.keys()))
+    completer.set_default_dir(opt.outdir)
     output_cntr = completer.get_current_history_length()+1
 
     # os.pathconf is not available on Windows
@@ -141,11 +124,9 @@ def main_loop(gen, opt, infile):
         name_max = 255
 
     while not done:
-        operation = 'generate'   # default operation, alternative is 'postprocess'
 
-        if completer:
-            completer.set_default_dir(opt.outdir)
-            
+        operation = 'generate'
+
         try:
             command = get_next_command(infile)
         except EOFError:
@@ -164,41 +145,10 @@ def main_loop(gen, opt, infile):
             break
 
         if command.startswith('!'):
-            subcommand = command[1:]
+            command, operation = do_command(command, gen, opt, completer)
 
-            if subcommand.startswith('dream'):   # in case a stored prompt still contains the !dream command
-                command = command.replace('!dream ','',1)
-
-            elif subcommand.startswith('fix'):
-                command = command.replace('!fix ','',1)
-                operation = 'postprocess'
-
-            elif subcommand.startswith('fetch'):
-                file_path = command.replace('!fetch ','',1)
-                retrieve_dream_command(opt,file_path,completer)
-                continue
-
-            elif subcommand.startswith('history'):
-                completer.show_history()
-                continue
-
-            elif subcommand.startswith('search'):
-                search_str = command.replace('!search ','',1)
-                completer.show_history(search_str)
-                continue
-
-            elif subcommand.startswith('clear'):
-                completer.clear_history()
-                continue
-
-            elif re.match('^(\d+)',subcommand):
-                command_no = re.match('^(\d+)',subcommand).groups()[0]
-                command    = completer.get_line(int(command_no))
-                completer.set_line(command)
-                continue
-                
-            else:  # not a recognized subcommand, so give the --help text
-                command = '-h'
+        if operation is None:
+            continue
 
         if opt.parse_cmd(command) is None:
             continue
@@ -218,9 +168,9 @@ def main_loop(gen, opt, infile):
 
         # width and height are set by model if not specified
         if not opt.width:
-            opt.width = model_config.width
+            opt.width = gen.width
         if not opt.height:
-            opt.height = model_config.height
+            opt.height = gen.height
 
         # retrieve previous value of init image if requested
         if opt.init_img is not None and re.match('^-\\d+$', opt.init_img):
@@ -323,6 +273,7 @@ def main_loop(gen, opt, infile):
                             model_hash = gen.model_hash,
                         ),
                         name      = filename,
+                        compress_level = opt.png_compression,
                     )
 
                     # update rfc metadata
@@ -394,13 +345,162 @@ def main_loop(gen, opt, infile):
 
     print('goodbye!')
 
+def do_command(command:str, gen, opt:Args, completer) -> tuple:
+    operation = 'generate'   # default operation, alternative is 'postprocess'
+
+    if command.startswith('!dream'):   # in case a stored prompt still contains the !dream command
+        command = command.replace('!dream ','',1)
+
+    elif command.startswith('!fix'):
+        command = command.replace('!fix ','',1)
+        operation = 'postprocess'
+
+    elif command.startswith('!switch'):
+        model_name = command.replace('!switch ','',1)
+        gen.set_model(model_name)
+        completer.add_history(command)
+        operation = None
+        
+    elif command.startswith('!models'):
+        gen.model_cache.print_models()
+        operation = None
+
+    elif command.startswith('!import'):
+        path = shlex.split(command)
+        if len(path) < 2:
+            print('** please provide a path to a .ckpt or .vae model file')
+        elif not os.path.exists(path[1]):
+            print(f'** {path[1]}: file not found')
+        else:
+            add_weights_to_config(path[1], gen, opt, completer)
+        completer.add_history(command)
+        operation = None
+
+    elif command.startswith('!edit'):
+        path = shlex.split(command)
+        if len(path) < 2:
+            print('** please provide the name of a model')
+        else:
+            edit_config(path[1], gen, opt, completer)
+        completer.add_history(command)
+        operation = None
+
+    elif command.startswith('!fetch'):
+        file_path = command.replace('!fetch ','',1)
+        retrieve_dream_command(opt,file_path,completer)
+        operation = None
+
+    elif command.startswith('!history'):
+        completer.show_history()
+        operation = None
+
+    elif command.startswith('!search'):
+        search_str = command.replace('!search ','',1)
+        completer.show_history(search_str)
+        operation = None
+
+    elif command.startswith('!clear'):
+        completer.clear_history()
+        operation = None
+
+    elif re.match('^!(\d+)',command):
+        command_no = re.match('^!(\d+)',command).groups()[0]
+        command    = completer.get_line(int(command_no))
+        completer.set_line(command)
+        operation = None
+
+    else:  # not a recognized command, so give the --help text
+        command = '-h'
+    return command, operation
+
+def add_weights_to_config(model_path:str, gen, opt, completer):
+    print(f'>> Model import in process. Please enter the values needed to configure this model:')
+    print()
+
+    new_config = {}
+    new_config['weights'] = model_path
+
+    done = False
+    while not done:
+        model_name = input('Short name for this model: ')
+        if not re.match('^[\w._-]+$',model_name):
+            print('** model name must contain only words, digits and the characters [._-] **')
+        else:
+            done = True
+    new_config['description'] = input('Description of this model: ')
+
+    completer.complete_extensions(('.yaml','.yml'))
+    completer.linebuffer = 'configs/stable-diffusion/v1-inference.yaml'
+    
+    done = False
+    while not done:
+        new_config['config'] = input('Configuration file for this model: ')
+        done = os.path.exists(new_config['config'])
+
+    completer.complete_extensions(None)
+
+    for field in ('width','height'):
+        done = False
+        while not done:
+            try:
+                completer.linebuffer = '512'
+                value = int(input(f'Default image {field}: '))
+                assert value >= 64 and value <= 2048
+                new_config[field] = value
+                done = True
+            except:
+                print('** Please enter a valid integer between 64 and 2048')
+
+    if write_config_file(opt.conf, gen, model_name, new_config):
+        gen.set_model(model_name)
+
+def edit_config(model_name:str, gen, opt, completer):
+    config = gen.model_cache.config
+    
+    if model_name not in config:
+        print(f'** Unknown model {model_name}')
+        return
+    
+    print(f'\n>> Editing model {model_name} from configuration file {opt.conf}')
+
+    conf = config[model_name]
+    new_config = {}
+    completer.complete_extensions(('.yaml','.yml','.ckpt','.vae'))
+    for field in ('description', 'weights', 'config', 'width','height'):
+        completer.linebuffer = str(conf[field]) if field in conf else ''
+        new_value = input(f'{field}: ')
+        new_config[field] = int(new_value) if field in ('width','height') else new_value
+    completer.complete_extensions(None)
+
+    if write_config_file(opt.conf, gen, model_name, new_config, clobber=True):
+        gen.set_model(model_name)
+    
+def write_config_file(conf_path, gen, model_name, new_config, clobber=False):
+    op = 'modify' if clobber else 'import'
+    print('\n>> New configuration:')
+    print(yaml.dump({model_name:new_config}))
+    if input(f'OK to {op} [n]? ') not in ('y','Y'):
+        return False
+
+    try:
+        yaml_str = gen.model_cache.add_model(model_name, new_config, clobber)
+    except AssertionError as e:
+        print(f'** configuration failed: {str(e)}')
+        return False
+    
+    tmpfile = os.path.join(os.path.dirname(conf_path),'new_config.tmp')
+    with open(tmpfile, 'w') as outfile:
+        outfile.write(yaml_str)
+    os.rename(tmpfile,conf_path)
+    return True
+
 def do_postprocess (gen, opt, callback):
     file_path = opt.prompt     # treat the prompt as the file pathname
     if os.path.dirname(file_path) == '': #basename given
         file_path = os.path.join(opt.outdir,file_path)
 
     tool=None
-    if opt.gfpgan_strength > 0:
+    if opt.facetool_strength > 0:
         tool = opt.facetool
     elif opt.embiggen:
         tool = 'embiggen'
@@ -416,7 +516,7 @@ def do_postprocess (gen, opt, callback):
         gen.apply_postprocessor(
             image_path      = file_path,
             tool            = tool,
-            gfpgan_strength = opt.gfpgan_strength,
+            facetool_strength = opt.facetool_strength,
             codeformer_fidelity = opt.codeformer_fidelity,
             save_original       = opt.save_original,
             upscale             = opt.upscale,
@@ -511,6 +611,7 @@ def get_next_command(infile=None) -> str:  # command string
 
 def invoke_ai_web_server_loop(gen, gfpgan, codeformer, esrgan):
     print('\n* --web was specified, starting web server...')
+    from backend.invoke_ai_web_server import InvokeAIWebServer
     # Change working directory to the stable-diffusion directory
     os.chdir(
         os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -549,6 +650,27 @@ def split_variations(variations_string) -> list:
     else:
         return parts
 
+def load_face_restoration(opt):
+    try:
+        gfpgan, codeformer, esrgan = None, None, None
+        if opt.restore or opt.esrgan:
+            from ldm.invoke.restoration import Restoration
+            restoration = Restoration()
+            if opt.restore:
+                gfpgan, codeformer = restoration.load_face_restore_models(opt.gfpgan_dir, opt.gfpgan_model_path)
+            else:
+                print('>> Face restoration disabled')
+            if opt.esrgan:
+                esrgan = restoration.load_esrgan(opt.esrgan_bg_tile)
+            else:
+                print('>> Upscaling disabled')
+        else:
+            print('>> Face restoration and upscaling disabled')
+    except (ModuleNotFoundError, ImportError):
+        print(traceback.format_exc(), file=sys.stderr)
+        print('>> You may need to install the ESRGAN and/or GFPGAN modules')
+    return gfpgan,codeformer,esrgan
+    
 def make_step_callback(gen, opt, prefix):
     destination = os.path.join(opt.outdir,'intermediates',prefix)
     os.makedirs(destination,exist_ok=True)

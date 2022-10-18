@@ -21,6 +21,8 @@ except (ImportError,ModuleNotFoundError):
     readline_available = False
 
 IMG_EXTENSIONS     = ('.png','.jpg','.jpeg','.PNG','.JPG','.JPEG','.gif','.GIF')
+WEIGHT_EXTENSIONS  = ('.ckpt','.bae')
+CONFIG_EXTENSIONS  = ('.yaml','.yml')
 COMMANDS = (
     '--steps','-s',
     '--seed','-S',
@@ -42,13 +44,25 @@ COMMANDS = (
     '--embedding_path',
     '--device',
     '--grid','-g',
-    '--gfpgan_strength','-G',
+    '--facetool','-ft',
+    '--facetool_strength','-G',
+    '--codeformer_fidelity','-cf',
     '--upscale','-U',
     '-save_orig','--save_original',
     '--skip_normalize','-x',
     '--log_tokenization','-t',
     '--hires_fix',
+    '--inpaint_replace','-r',
+    '--png_compression','-z',
     '!fix','!fetch','!history','!search','!clear',
+    '!models','!switch','!import_model','!edit_model'
+    )
+MODEL_COMMANDS = (
+    '!switch',
+    '!edit_model',
+    )
+WEIGHT_COMMANDS = (
+    '!import_model',
     )
 IMG_PATH_COMMANDS = (
     '--outdir[=\s]',
@@ -61,16 +75,19 @@ IMG_FILE_COMMANDS=(
     '--init_color[=\s]',
     '--embedding_path[=\s]',
     )
-path_regexp = '('+'|'.join(IMG_PATH_COMMANDS+IMG_FILE_COMMANDS) + ')\s*\S*$'
+path_regexp   = '('+'|'.join(IMG_PATH_COMMANDS+IMG_FILE_COMMANDS) + ')\s*\S*$'
+weight_regexp = '('+'|'.join(WEIGHT_COMMANDS) + ')\s*\S*$'
 
 class Completer(object):
-    def __init__(self, options):
+    def __init__(self, options, models=[]):
         self.options     = sorted(options)
+        self.models      = sorted(models)
         self.seeds       = set()
         self.matches     = list()
         self.default_dir = None
         self.linebuffer  = None
         self.auto_history_active = True
+        self.extensions = None
         return
 
     def complete(self, text, state):
@@ -81,13 +98,26 @@ class Completer(object):
         buffer = readline.get_line_buffer()
 
         if state == 0:
-            if re.search(path_regexp,buffer):
+
+            # extensions defined, so go directly into path completion mode
+            if self.extensions is not None:
+                self.matches = self._path_completions(text, state, self.extensions)
+                
+            # looking for an image file
+            elif re.search(path_regexp,buffer):
                 do_shortcut = re.search('^'+'|'.join(IMG_FILE_COMMANDS),buffer)
                 self.matches = self._path_completions(text, state, IMG_EXTENSIONS,shortcut_ok=do_shortcut)
 
             # looking for a seed
             elif re.search('(-S\s*|--seed[=\s])\d*$',buffer): 
                 self.matches= self._seed_completions(text,state)
+
+            # looking for a model
+            elif re.match('^'+'|'.join(MODEL_COMMANDS),buffer):
+                self.matches= self._model_completions(text, state)
+
+            elif re.search(weight_regexp,buffer):
+                self.matches = self._path_completions(text, state, WEIGHT_EXTENSIONS)
 
             # This is the first time for this text, so build a match list.
             elif text:
@@ -104,6 +134,13 @@ class Completer(object):
         except IndexError:
             response = None
         return response
+
+    def complete_extensions(self, extensions:list):
+        '''
+        If called with a list of extensions, will force completer
+        to do file path completions.
+        '''
+        self.extensions=extensions
 
     def add_history(self,line):
         '''
@@ -189,6 +226,21 @@ class Completer(object):
         matches.sort()
         return matches
 
+    def _model_completions(self, text, state):
+        m = re.search('(!switch\s+)(\w*)',text)
+        if m:
+            switch  = m.groups()[0]
+            partial = m.groups()[1]
+        else:
+            switch  = ''
+            partial = text
+        matches = list()
+        for s in self.models:
+            if s.startswith(partial):
+                matches.append(switch+s)
+        matches.sort()
+        return matches
+
     def _pre_input_hook(self):
         if self.linebuffer:
             readline.insert_text(self.linebuffer)
@@ -267,9 +319,9 @@ class DummyCompleter(Completer):
     def set_line(self,line):
         print(f'# {line}')
 
-def get_completer(opt:Args)->Completer:
+def get_completer(opt:Args, models=[])->Completer:
     if readline_available:
-        completer = Completer(COMMANDS)
+        completer = Completer(COMMANDS,models)
 
         readline.set_completer(
             completer.complete

@@ -33,6 +33,25 @@ from ldm.invoke.args import metadata_from_png
 from ldm.invoke.image_util import InitImageResizer
 from ldm.invoke.devices import choose_torch_device, choose_precision
 from ldm.invoke.conditioning import get_uc_and_c
+from ldm.invoke.model_cache import ModelCache
+
+def fix_func(orig):
+    if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        def new_func(*args, **kw):
+            device = kw.get("device", "mps")
+            kw["device"]="cpu"
+            return orig(*args, **kw).to(device)
+        return new_func
+    return orig
+
+torch.rand = fix_func(torch.rand)
+torch.rand_like = fix_func(torch.rand_like)
+torch.randn = fix_func(torch.randn)
+torch.randn_like = fix_func(torch.randn_like)
+torch.randint = fix_func(torch.randint)
+torch.randint_like = fix_func(torch.randint_like)
+torch.bernoulli = fix_func(torch.bernoulli)
+torch.multinomial = fix_func(torch.multinomial)
 
 def fix_func(orig):
     if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
@@ -141,12 +160,11 @@ class Generate:
             esrgan=None,
             free_gpu_mem=False,
     ):
-        models              = OmegaConf.load(conf)
-        mconfig             = models[model]
-        self.weights        = mconfig.weights if weights is None else weights
-        self.config         = mconfig.config  if config  is None else config
-        self.height         = mconfig.height
-        self.width          = mconfig.width
+        mconfig             = OmegaConf.load(conf)
+        self.model_name     = model
+        self.height         = None
+        self.width          = None
+        self.model_cache    = None
         self.iterations     = 1
         self.steps          = 50
         self.cfg_scale      = 7.5
@@ -155,8 +173,10 @@ class Generate:
         self.precision      = precision
         self.strength       = 0.75
         self.seamless       = False
+        self.hires_fix      = False
         self.embedding_path = embedding_path
         self.model          = None     # empty for now
+        self.model_hash     = None
         self.sampler        = None
         self.device         = None
         self.session_peakmem = None
@@ -167,11 +187,13 @@ class Generate:
         self.codeformer = codeformer
         self.esrgan = esrgan
         self.free_gpu_mem = free_gpu_mem
+        self.size_matters = True  # used to warn once about large image sizes and VRAM
 
         # Note that in previous versions, there was an option to pass the
         # device to Generate(). However the device was then ignored, so
         # it wasn't actually doing anything. This logic could be reinstated.
         device_type = choose_torch_device()
+        print(f'>> Using device_type {device_type}')
         self.device = torch.device(device_type)
         if full_precision:
             if self.precision != 'auto':
@@ -181,6 +203,9 @@ class Generate:
             self.precision = 'float32'
         if self.precision == 'auto':
             self.precision = choose_precision(self.device)
+
+        # model caching system for fast switching
+        self.model_cache = ModelCache(mconfig,self.device,self.precision)
 
         # for VRAM usage statistics
         self.session_peakmem = torch.cuda.max_memory_allocated() if self._has_cuda else None
@@ -249,10 +274,12 @@ class Generate:
             embiggen_tiles =    None,
             # these are specific to GFPGAN/ESRGAN
             facetool         = None,
-            gfpgan_strength  = 0,
+            facetool_strength  = 0,
             codeformer_fidelity = None,
             save_original    = False,
             upscale          = None,
+            # this is specific to inpainting and causes more extreme inpainting
+            inpaint_replace  = 0.0,
             # Set this True to handle KeyboardInterrupt internally
             catch_interrupts = False,
             hires_fix        = False,
@@ -269,9 +296,10 @@ class Generate:
            height                          // height of image, in multiples of 64 (512)
            cfg_scale                       // how strongly the prompt influences the image (7.5) (must be >1)
            seamless                        // whether the generated image should tile
+           hires_fix                        // whether the Hires Fix should be applied during generation
            init_img                        // path to an initial image
            strength                        // strength for noising/unnoising init_img. 0.0 preserves image exactly, 1.0 replaces it completely
-           gfpgan_strength                 // strength for GFPGAN. 0.0 preserves image exactly, 1.0 replaces it completely
+           facetool_strength               // strength for GFPGAN/CodeFormer. 0.0 preserves image exactly, 1.0 replaces it completely
            ddim_eta                        // image randomness (eta=0.0 means the same seed always produces the same image)
            step_callback                   // a function or method that will be called each step
            image_callback                  // a function or method that will be called each time an image is generated
@@ -302,6 +330,7 @@ class Generate:
         width = width or self.width
         height = height or self.height
         seamless = seamless or self.seamless
+        hires_fix = hires_fix or self.hires_fix
         cfg_scale = cfg_scale or self.cfg_scale
         ddim_eta = ddim_eta or self.ddim_eta
         iterations = iterations or self.iterations
@@ -312,7 +341,12 @@ class Generate:
         with_variations = [] if with_variations is None else with_variations
 
         # will instantiate the model or return it from cache
-        model = self.load_model()
+        model = self.set_model(self.model_name)
+
+        # self.width and self.height are set by set_model()
+        # to the width and height of the image training set
+        width = width or self.width
+        height = height or self.height
         
         for m in model.modules():
             if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
@@ -344,6 +378,7 @@ class Generate:
                 f'variation weights must be in [0.0, 1.0]: got {[weight for _, weight in with_variations]}'
 
         width, height, _ = self._resolution_check(width, height, log=True)
+        assert inpaint_replace >=0.0 and inpaint_replace <= 1.0,'inpaint_replace must be between 0.0 and 1.0'
 
         if sampler_name and (sampler_name != self.sampler_name):
             self.sampler_name = sampler_name
@@ -371,6 +406,8 @@ class Generate:
                 height,
                 fit=fit,
             )
+
+            # TODO: Hacky selection of operation to perform. Needs to be refactored.
             if (init_image is not None) and (mask_image is not None):
                 generator = self._make_inpaint()
             elif (embiggen != None or embiggen_tiles != None):
@@ -385,6 +422,7 @@ class Generate:
             generator.set_variation(
                 self.seed, variation_amount, with_variations
             )
+
             results = generator.generate(
                 prompt,
                 iterations=iterations,
@@ -406,6 +444,7 @@ class Generate:
                 perlin=perlin,
                 embiggen=embiggen,
                 embiggen_tiles=embiggen_tiles,
+                inpaint_replace=inpaint_replace,
             )
 
             if init_color:
@@ -413,11 +452,11 @@ class Generate:
                                     reference_image_path = init_color,
                                     image_callback       = image_callback)
 
-            if upscale is not None or gfpgan_strength > 0:
+            if upscale is not None or facetool_strength > 0:
                 self.upscale_and_reconstruct(results,
                                              upscale        = upscale,
                                              facetool       = facetool,
-                                             strength       = gfpgan_strength,
+                                             strength       = facetool_strength,
                                              codeformer_fidelity = codeformer_fidelity,
                                              save_original  = save_original,
                                              image_callback = image_callback)
@@ -460,7 +499,7 @@ class Generate:
             self,
             image_path,
             tool                = 'gfpgan',  # one of 'upscale', 'gfpgan', 'codeformer', 'outpaint', or 'embiggen'
-            gfpgan_strength     = 0.0,
+            facetool_strength   = 0.0,
             codeformer_fidelity = 0.75,
             upscale             = None,
             out_direction       = None,
@@ -507,11 +546,11 @@ class Generate:
                 facetool = 'codeformer'
             elif tool == 'upscale':
                 facetool = 'gfpgan'   # but won't be run
-                gfpgan_strength = 0
+                facetool_strength = 0
             return self.upscale_and_reconstruct(
                 [[image,seed]],
                 facetool = facetool,
-                strength = gfpgan_strength,
+                strength = facetool_strength,
                 codeformer_fidelity = codeformer_fidelity,
                 save_original = save_original,
                 upscale = upscale,
@@ -602,8 +641,9 @@ class Generate:
             # this returns a torch tensor
             init_mask = self._create_init_mask(image, width, height, fit=fit)
             
-        if (image.width * image.height) > (self.width * self.height):
+        if (image.width * image.height) > (self.width * self.height) and self.size_matters:
             print(">> This input is larger than your defaults. If you run out of memory, please use a smaller image.")
+            self.size_matters = False
 
         init_image   = self._create_init_image(image,width,height,fit=fit)                   # this returns a torch tensor
 
@@ -653,29 +693,40 @@ class Generate:
         return self.generators['inpaint']
 
     def load_model(self):
-        """Load and initialize the model from configuration variables passed at object creation time"""
-        if self.model is None:
-            seed_everything(random.randrange(0, np.iinfo(np.uint32).max))
-            try:
-                model = self._load_model_from_config(self.config, self.weights)
-                if self.embedding_path is not None:
-                    model.embedding_manager.load(
-                        self.embedding_path, self.precision == 'float32' or self.precision == 'autocast'
-                    )
-                self.model = model.to(self.device)
-                # model.to doesn't change the cond_stage_model.device used to move the tokenizer output, so set it here
-                self.model.cond_stage_model.device = self.device
-            except AttributeError as e:
-                print(f'>> Error loading model. {str(e)}', file=sys.stderr)
-                print(traceback.format_exc(), file=sys.stderr)
-                raise SystemExit from e
+        '''
+        preload model identified in self.model_name
+        '''
+        self.set_model(self.model_name)
 
-            self._set_sampler()
+    def set_model(self,model_name):
+        """ 
+        Given the name of a model defined in models.yaml, will load and initialize it
+        and return the model object. Previously-used models will be cached.
+        """
+        if self.model_name == model_name and self.model is not None:
+            return self.model
 
-            for m in self.model.modules():
-                if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
-                    m._orig_padding_mode = m.padding_mode
+        model_data = self.model_cache.get_model(model_name)
+        if model_data is None or len(model_data) == 0:
+            print(f'** Model switch failed **')
+            return self.model
 
+        self.model = model_data['model']
+        self.width = model_data['width']
+        self.height= model_data['height']
+        self.model_hash = model_data['hash']
+
+        # uncache generators so they pick up new models
+        self.generators = {}
+        
+        seed_everything(random.randrange(0, np.iinfo(np.uint32).max))
+        if self.embedding_path is not None:
+            model.embedding_manager.load(
+                self.embedding_path, self.precision == 'float32' or self.precision == 'autocast'
+            )
+
+        self._set_sampler()
+        self.model_name = model_name
         return self.model
 
     def correct_colors(self,
@@ -778,53 +829,6 @@ class Generate:
             self.sampler = PLMSSampler(self.model, device=self.device)
 
         print(msg)
-
-    # Be warned: config is the path to the model config file, not the invoke conf file!
-    # Also note that we can get config and weights from self, so why do we need to
-    # pass them as args?
-    def _load_model_from_config(self, config, weights):
-        print(f'>> Loading model from {weights}')
-
-        # for usage statistics
-        device_type = choose_torch_device()
-        if device_type == 'cuda':
-            torch.cuda.reset_peak_memory_stats()
-        tic = time.time()
-
-        # this does the work
-        c     = OmegaConf.load(config)
-        with open(weights,'rb') as f:
-            weight_bytes = f.read()
-        self.model_hash  = self._cached_sha256(weights,weight_bytes)
-        pl_sd = torch.load(io.BytesIO(weight_bytes), map_location='cpu')
-        del weight_bytes
-        sd    = pl_sd['state_dict']
-        model = instantiate_from_config(c.model)
-        m, u  = model.load_state_dict(sd, strict=False)
-
-        if self.precision == 'float16':
-            print('>> Using faster float16 precision')
-            model.to(torch.float16)
-        else:
-            print('>> Using more accurate float32 precision')
-
-        model.to(self.device)
-        model.eval()
-
-        # usage statistics
-        toc = time.time()
-        print(
-            f'>> Model loaded in', '%4.2fs' % (toc - tic)
-        )
-        if self._has_cuda():
-            print(
-                '>> Max VRAM used to load the model:',
-                '%4.2fG' % (torch.cuda.max_memory_allocated() / 1e9),
-                '\n>> Current VRAM usage:'
-                '%4.2fG' % (torch.cuda.memory_allocated() / 1e9),
-            )
-
-        return model
 
     def _load_img(self, img, width, height)->Image:
         if isinstance(img, Image.Image):
@@ -968,26 +972,6 @@ class Generate:
 
     def _has_cuda(self):
         return self.device.type == 'cuda'
-
-    def _cached_sha256(self,path,data):
-        dirname    = os.path.dirname(path)
-        basename   = os.path.basename(path)
-        base, _    = os.path.splitext(basename)
-        hashpath   = os.path.join(dirname,base+'.sha256')
-        if os.path.exists(hashpath) and os.path.getmtime(path) <= os.path.getmtime(hashpath):
-            with open(hashpath) as f:
-                hash = f.read()
-            return hash
-        print(f'>> Calculating sha256 hash of weights file')
-        tic = time.time()
-        sha = hashlib.sha256()
-        sha.update(data)
-        hash = sha.hexdigest()
-        toc = time.time()
-        print(f'>> sha256 = {hash}','(%4.2fs)' % (toc - tic))
-        with open(hashpath,'w') as f:
-            f.write(hash)
-        return hash
 
     def write_intermediate_images(self,modulus,path):
         counter = -1

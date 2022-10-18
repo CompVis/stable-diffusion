@@ -55,6 +55,7 @@ export declare type CommonGeneratedImageMetadata = {
   width: number;
   height: number;
   seamless: boolean;
+  hires_fix: boolean;
   extra: null | Record<string, never>; // Pending development of RFC #266
 };
 

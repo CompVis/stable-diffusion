@@ -76,7 +76,7 @@ const makeSocketIOEmitters = (
       const { gfpganStrength } = getState().options;
 
       const gfpganParameters = {
-        gfpgan_strength: gfpganStrength,
+        facetool_strength: gfpganStrength,
       };
       socketio.emit('runPostprocessing', imageToProcess, {
         type: 'gfpgan',

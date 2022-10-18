@@ -106,7 +106,7 @@ class DDPM(pl.LightningModule):
         ], 'currently only supporting "eps" and "x0"'
         self.parameterization = parameterization
         print(
-            f'{self.__class__.__name__}: Running in {self.parameterization}-prediction mode'
+            f'   | {self.__class__.__name__}: Running in {self.parameterization}-prediction mode'
         )
         self.cond_stage_model = None
         self.clip_denoised = clip_denoised
@@ -1353,7 +1353,7 @@ class LatentDiffusion(DDPM):
                 num_downs = self.first_stage_model.encoder.num_resolutions - 1
                 rescale_latent = 2 ** (num_downs)
 
-                # get top left postions of patches as conforming for the bbbox tokenizer, therefore we
+                # get top left positions of patches as conforming for the bbbox tokenizer, therefore we
                 # need to rescale the tl patch coordinates to be in between (0,1)
                 tl_patch_coordinates = [
                     (

@@ -36,6 +36,8 @@ def parameters_to_command(params):
         switches.append(f'-A {params["sampler_name"]}')
     if "seamless" in params and params["seamless"] == True:
         switches.append(f"--seamless")
+    if "hires_fix" in params and params["hires_fix"] == True:
+        switches.append(f"--hires")
     if "init_img" in params and len(params["init_img"]) > 0:
         switches.append(f'-I {params["init_img"]}')
     if "init_mask" in params and len(params["init_mask"]) > 0:
@@ -46,8 +48,14 @@ def parameters_to_command(params):
         switches.append(f'-f {params["strength"]}')
         if "fit" in params and params["fit"] == True:
             switches.append(f"--fit")
-    if "gfpgan_strength" in params and params["gfpgan_strength"]:
+    if "facetool" in params:
+        switches.append(f'-ft {params["facetool"]}')
+    if "facetool_strength" in params and params["facetool_strength"]:
+        switches.append(f'-G {params["facetool_strength"]}')
+    elif "gfpgan_strength" in params and params["gfpgan_strength"]:
         switches.append(f'-G {params["gfpgan_strength"]}')
+    if "codeformer_fidelity" in params:
+        switches.append(f'-cf {params["codeformer_fidelity"]}')
     if "upscale" in params and params["upscale"]:
         switches.append(f'-U {params["upscale"][0]} {params["upscale"][1]}')
     if "variation_amount" in params and params["variation_amount"] > 0:

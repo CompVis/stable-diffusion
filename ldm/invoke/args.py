@@ -239,12 +239,17 @@ class Args(object):
                 switches.append(f'--init_color {a["init_color"]}')
             if a['strength'] and a['strength']>0:
                 switches.append(f'-f {a["strength"]}')
+            if a['inpaint_replace']:
+                switches.append(f'--inpaint_replace')
         else:
             switches.append(f'-A {a["sampler_name"]}')
 
-        # gfpgan-specific parameters
-        if a['gfpgan_strength']:
-            switches.append(f'-G {a["gfpgan_strength"]}')
+        # facetool-specific parameters, only print if running facetool
+        if a['facetool_strength']:
+            switches.append(f'-G {a["facetool_strength"]}')
+            switches.append(f'-ft {a["facetool"]}')
+            if a["facetool"] == "codeformer":
+                switches.append(f'-cf {a["codeformer_fidelity"]}')
 
         if a['outcrop']:
             switches.append(f'-c {" ".join([str(u) for u in a["outcrop"]])}')
@@ -262,11 +267,12 @@ class Args(object):
         # outpainting parameters
         if a['out_direction']:
             switches.append(f'-D {" ".join([str(u) for u in a["out_direction"]])}')
+
         # LS: slight semantic drift which needs addressing in the future:
         # 1. Variations come out of the stored metadata as a packed string with the keyword "variations"
         # 2. However, they come out of the CLI (and probably web) with the keyword "with_variations" and
         #    in broken-out form. Variation (1) should be changed to comply with (2)
-        if a['with_variations']:
+        if a['with_variations'] and len(a['with_variations'])>0:
             formatted_variations = ','.join(f'{seed}:{weight}' for seed, weight in (a["with_variations"]))
             switches.append(f'-V {formatted_variations}')
         if 'variations' in a and len(a['variations'])>0:
@@ -371,6 +377,14 @@ class Args(object):
             '--model',
             default='stable-diffusion-1.4',
             help='Indicates which diffusion model to load. (currently "stable-diffusion-1.4" (default) or "laion400m")',
+        )
+        model_group.add_argument(
+            '--png_compression','-z',
+            type=int,
+            default=6,
+            choices=range(0,9),
+            dest='png_compression',
+            help='level of PNG compression, from 0 (none) to 9 (maximum). Default is 6.'
         )
         model_group.add_argument(
             '--sampler',
@@ -643,6 +657,14 @@ class Args(object):
             dest='save_intermediates',
             help='Save every nth intermediate image into an "intermediates" directory within the output directory'
         )
+        render_group.add_argument(
+            '--png_compression','-z',
+            type=int,
+            default=6,
+            choices=range(0,10),
+            dest='png_compression',
+            help='level of PNG compression, from 0 (none) to 9 (maximum). Default is 6.'
+        )
         img2img_group.add_argument(
             '-I',
             '--init_img',
@@ -690,6 +712,13 @@ class Args(object):
             metavar=('direction','pixels'),
             help='Outcrop the image with one or more direction/pixel pairs: -c top 64 bottom 128 left 64 right 64',
         )
+        img2img_group.add_argument(
+            '-r',
+            '--inpaint_replace',
+            type=float,
+            default=0.0,
+            help='when inpainting, adjust how aggressively to replace the part of the picture under the mask, from 0.0 (a gentle merge) to 1.0 (replace entirely)',
+        )
         postprocessing_group.add_argument(
             '-ft',
             '--facetool',
@@ -699,6 +728,7 @@ class Args(object):
         )
         postprocessing_group.add_argument(
             '-G',
+            '--facetool_strength',
             '--gfpgan_strength',
             type=float,
             help='The strength at which to apply the face restoration to the result.',
@@ -795,7 +825,8 @@ def metadata_dumps(opt,
 
     # remove any image keys not mentioned in RFC #266
     rfc266_img_fields = ['type','postprocessing','sampler','prompt','seed','variations','steps',
-                         'cfg_scale','threshold','perlin','step_number','width','height','extra','strength']
+                         'cfg_scale','threshold','perlin','step_number','width','height','extra','strength',
+                         'init_img','init_mask']
 
     rfc_dict ={}
 
@@ -816,11 +847,15 @@ def metadata_dumps(opt,
     # 'variations' should always exist and be an array, empty or consisting of {'seed': seed, 'weight': weight} pairs
     rfc_dict['variations'] = [{'seed':x[0],'weight':x[1]} for x in opt.with_variations] if opt.with_variations else []
 
+    # if variations are present then we need to replace 'seed' with 'orig_seed'
+    if hasattr(opt,'first_seed'):
+        rfc_dict['seed'] = opt.first_seed
+
     if opt.init_img:
-        rfc_dict['type']           = 'img2img'
-        rfc_dict['strength_steps'] = rfc_dict.pop('strength')
-        rfc_dict['orig_hash']      = calculate_init_img_hash(opt.init_img)
-        rfc_dict['sampler']        = 'ddim'  # TODO: FIX ME WHEN IMG2IMG SUPPORTS ALL SAMPLERS
+        rfc_dict['type']            = 'img2img'
+        rfc_dict['strength_steps']  = rfc_dict.pop('strength')
+        rfc_dict['orig_hash']       = calculate_init_img_hash(opt.init_img)
+        rfc_dict['inpaint_replace'] = opt.inpaint_replace
     else:
         rfc_dict['type']  = 'txt2img'
         rfc_dict.pop('strength')

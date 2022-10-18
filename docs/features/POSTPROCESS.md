@@ -70,7 +70,7 @@ If you do not explicitly specify an upscaling_strength, it will default to 0.75.
 
 ### Face Restoration
 
-`-G : <gfpgan_strength>`
+`-G : <facetool_strength>`
 
 This prompt argument controls the strength of the face restoration that is being
 applied. Similar to upscaling, values between `0.5 to 0.8` are recommended.

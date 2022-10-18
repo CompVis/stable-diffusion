@@ -58,16 +58,13 @@ information underneath the transparent needs to be preserved, not erased.
 
 !!! warning
 
-    `img2img` does not work properly on initial images smaller than 512x512. Please scale your
-    image to at least 512x512 before using it. Larger images are not a problem, but may run out of VRAM on your
-    GPU card.
-
-    To fix this, use the `--fit` option, which downscales the initial image to fit within the box specified
-    by width x height:
-
-    ```bash
-    invoke> "tree on a hill with a river, national geographic" -I./test-pictures/big-sketch.png -H512 -W512 --fit
-    ```
+**IMPORTANT ISSUE** `img2img` does not work properly on initial images smaller than 512x512. Please scale your
+image to at least 512x512 before using it. Larger images are not a problem, but may run out of VRAM on your
+GPU card. To fix this, use the --fit option, which downscales the initial image to fit within the box specified
+by width x height:
+~~~
+tree on a hill with a river, national geographic -I./test-pictures/big-sketch.png -H512 -W512 --fit
+~~~
 
 ## How does it actually work, though?
 
@@ -77,7 +74,7 @@ gaussian noise and progressively refines it over the requested number of steps, 
 
 **Let's start** by thinking about vanilla `prompt2img`, just generating an image from a prompt. If the step count is 10, then the "latent space" (Stable Diffusion's internal representation of the image) for the prompt "fire" with seed `1592514025` develops something like this:
 
-```bash
+```commandline
 invoke> "fire" -s10 -W384 -H384 -S1592514025
 ```
 
@@ -112,9 +109,9 @@ With strength `0.4`, the steps look more like this:
 Notice how much more fuzzy the starting image is for strength `0.7` compared to `0.4`, and notice also how much longer the sequence is with `0.7`:
 
 |  | strength = 0.7 | strength = 0.4 |
-| -- | :--: | :--: |
-| initial image that SD sees | ![step-0-32](../assets/img2img/000032.step-0.png) | ![step-0-30](../assets/img2img/000030.step-0.png) |
-| steps argument to `dream>` | `-S10` | `-S10` |
+| -- | -- | -- |
+| initial image that SD sees | ![](../assets/img2img/000032.step-0.png) | ![](../assets/img2img/000030.step-0.png) |
+| steps argument to `invoke>` | `-S10` | `-S10` |
 | steps actually taken | 7 | 4 |
 | latent space at each step | ![gravity32](../assets/img2img/000032.steps.gravity.png) | ![gravity30](../assets/img2img/000030.steps.gravity.png) |
 | output | ![000032.1592514025](../assets/img2img/000032.1592514025.png) | ![000030.1592514025](../assets/img2img/000030.1592514025.png) |
@@ -123,11 +120,13 @@ Both of the outputs look kind of like what I was thinking of. With the strength 
 
 If you want to try this out yourself, all of these are using a seed of `1592514025` with a width/height of `384`, step count `10`, the default sampler (`k_lms`), and the single-word prompt `"fire"`:
 
-```bash
+If you want to try this out yourself, all of these are using a seed of `1592514025` with a width/height of `384`, step count `10`, the default sampler (`k_lms`), and the single-word prompt `fire`:
+
+```commandline
 invoke> "fire" -s10 -W384 -H384 -S1592514025 -I /tmp/fire-drawing.png --strength 0.7
 ```
 
-The code for rendering intermediates is on my (damian0815's) branch [document-img2img](https://github.com/damian0815/InvokeAI/tree/document-img2img) - run `invoke.py` and check your `outputs/img-samples/intermediates` folder while generating an image.
+The code for rendering intermediates is on my (damian0815's) branch [document-img2img](https://github.com/damian0815/InvokeAI/tree/document-img2img) - run `invoke.py` and check your `outputs/img-samples/intermediates` folder while generating an image. 
 
 ### Compensating for the reduced step count
 
@@ -135,7 +134,7 @@ After putting this guide together I was curious to see how the difference would 
 
 Here's strength `0.4` (note step count `50`, which is `20 ÷ 0.4` to make sure SD does `20` steps from my image):
 
-```bash
+```commandline
 invoke> "fire" -s50 -W384 -H384 -S1592514025 -I /tmp/fire-drawing.png -f 0.4
 ```
 
@@ -145,7 +144,7 @@ invoke> "fire" -s50 -W384 -H384 -S1592514025 -I /tmp/fire-drawing.png -f 0.4
 
 and here is strength `0.7` (note step count `30`, which is roughly `20 ÷ 0.7` to make sure SD does `20` steps from my image):
 
-```bash
+```commandline
 invoke> "fire" -s30 -W384 -H384 -S1592514025 -I /tmp/fire-drawing.png -f 0.7
 ```
 
