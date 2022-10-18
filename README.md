@@ -103,7 +103,7 @@ errors like 'expected type Float but found Half' or 'not implemented for Half'
 you can try starting `invoke.py` with the `--precision=float32` flag:
 
 ```bash
-(invokeai) ~/stable-diffusion$ python scripts/invoke.py --precision=float32
+(invokeai) ~/InvokeAI$ python scripts/invoke.py --precision=float32
 ```
 
 ### Features
