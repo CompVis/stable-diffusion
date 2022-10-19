@@ -721,7 +721,7 @@ class Generate:
         
         seed_everything(random.randrange(0, np.iinfo(np.uint32).max))
         if self.embedding_path is not None:
-            model.embedding_manager.load(
+            self.model.embedding_manager.load(
                 self.embedding_path, self.precision == 'float32' or self.precision == 'autocast'
             )
 
