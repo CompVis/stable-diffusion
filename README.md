@@ -1,3 +1,10 @@
+# Automatic memory management
+
+This version can be run stand alone, but it's more meant as proof of concept so other forks can implement similar changes.
+
+Allows to use resolutions that require up to 64x more VRAM than possible on the default CompVis build
+
+
 # Stable Diffusion
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
 
