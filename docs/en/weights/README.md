@@ -1,14 +1,3 @@
----
-language:
-- en
-tags:
-- stable-diffusion
-- text-to-image
-license: creativeml-openrail-m
-inference: false
-
----
-
 # Waifu Diffusion v1.3
 
 Waifu Diffusion is a latent text-to-image diffusion model that has been conditioned on high-quality anime images through fine-tuning.
