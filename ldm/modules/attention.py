@@ -4,10 +4,20 @@ import math
 import torch
 import torch.nn.functional as F
 from torch import nn, einsum
+
+from diffusers.utils.import_utils import is_xformers_available
+
 from einops import rearrange, repeat
 
 from ldm.modules.diffusionmodules.util import checkpoint
 
+if is_xformers_available():
+    import xformers
+    import xformers.ops
+    _USE_MEMORY_EFFICIENT_ATTENTION = int(os.environ.get("USE_MEMORY_EFFICIENT_ATTENTION", 0)) == 1
+else:
+    xformers = None
+    _USE_MEMORY_EFFICIENT_ATTENTION = False
 
 def exists(val):
     return val is not None
