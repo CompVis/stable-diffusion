@@ -1,0 +1,6 @@
+
+*.pyc
+*.ckpt
+outputs/
+src/
+.idea/
