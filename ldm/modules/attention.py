@@ -1,20 +1,110 @@
 import gc
+import importlib
 from inspect import isfunction
 import math
 import torch
 import torch.nn.functional as F
 from torch import nn, einsum
+import importlib_metadata
+import os
 from einops import rearrange, repeat
 
 from ldm.modules.diffusionmodules.util import checkpoint
+
+_xformers_available = importlib.util.find_spec("xformers") is not None
+try:
+    _xformers_version = importlib_metadata.version("xformers")
+except importlib_metadata.PackageNotFoundError:
+    _xformers_available = False
+
+if _xformers_available:
+    import xformers
+    import xformers.ops
+
+    _USE_MEMORY_EFFICIENT_ATTENTION = int(os.environ.get("USE_MEMORY_EFFICIENT_ATTENTION", 0)) == 1
+else:
+    xformers = None
+    _USE_MEMORY_EFFICIENT_ATTENTION = False
 
 
 def exists(val):
     return val is not None
 
 
+class MemoryEfficientCrossAttention(nn.Module):
+    def __init__(self, query_dim, context_dim=None, heads=8, dim_head=64, dropout=0.0):
+        super().__init__()
+        inner_dim = dim_head * heads
+        context_dim = default(context_dim, query_dim)
+
+        self.heads = heads
+        self.dim_head = dim_head
+
+        self.to_q = nn.Linear(query_dim, inner_dim, bias=False)
+        self.to_k = nn.Linear(context_dim, inner_dim, bias=False)
+        self.to_v = nn.Linear(context_dim, inner_dim, bias=False)
+
+        self.to_out = nn.Sequential(nn.Linear(inner_dim, query_dim), nn.Dropout(dropout))
+        self.attention_op: Optional[Any] = None
+
+    def _maybe_init(self, x):
+        """
+        Initialize the attention operator, if required We expect the head dimension to be exposed here, meaning that x
+        : B, Head, Length
+        """
+        if self.attention_op is not None:
+            return
+
+        _, M, K = x.shape
+        try:
+            self.attention_op = xformers.ops.AttentionOpDispatch(
+                dtype=x.dtype,
+                device=x.device,
+                k=K,
+                attn_bias_type=type(None),
+                has_dropout=False,
+                kv_len=M,
+                q_len=M,
+            ).op
+
+        except NotImplementedError as err:
+            raise NotImplementedError(f"Please install xformers with the flash attention / cutlass components.\n{err}")
+
+    def forward(self, x, context=None, mask=None):
+        q = self.to_q(x)
+        context = default(context, x)
+        k = self.to_k(context)
+        v = self.to_v(context)
+
+        b, _, _ = q.shape
+        q, k, v = map(
+            lambda t: t.unsqueeze(3)
+            .reshape(b, t.shape[1], self.heads, self.dim_head)
+            .permute(0, 2, 1, 3)
+            .reshape(b * self.heads, t.shape[1], self.dim_head)
+            .contiguous(),
+            (q, k, v),
+        )
+
+        # init the attention op, if required, using the proper dimensions
+        self._maybe_init(q)
+
+        # actually compute the attention, what we cannot get enough of
+        out = xformers.ops.memory_efficient_attention(q, k, v, attn_bias=None, op=self.attention_op)
+
+        # TODO: Use this directly in the attention operation, as a bias
+        if exists(mask):
+            raise NotImplementedError
+        out = (
+            out.unsqueeze(0)
+            .reshape(b, self.heads, out.shape[1], self.dim_head)
+            .permute(0, 2, 1, 3)
+            .reshape(b, out.shape[1], self.heads * self.dim_head)
+        )
+
+
 def uniq(arr):
-    return{el: True for el in arr}.keys()
+    return {el: True for el in arr}.keys()
 
 
 def default(val, d):
@@ -83,13 +173,13 @@ class LinearAttention(nn.Module):
         super().__init__()
         self.heads = heads
         hidden_dim = dim_head * heads
-        self.to_qkv = nn.Conv2d(dim, hidden_dim * 3, 1, bias = False)
+        self.to_qkv = nn.Conv2d(dim, hidden_dim * 3, 1, bias=False)
         self.to_out = nn.Conv2d(hidden_dim, dim, 1)
 
     def forward(self, x):
         b, c, h, w = x.shape
         qkv = self.to_qkv(x)
-        q, k, v = rearrange(qkv, 'b (qkv heads c) h w -> qkv b heads c (h w)', heads = self.heads, qkv=3)
+        q, k, v = rearrange(qkv, 'b (qkv heads c) h w -> qkv b heads c (h w)', heads=self.heads, qkv=3)
         k = k.softmax(dim=-1)
         context = torch.einsum('bhdn,bhen->bhde', k, v)
         out = torch.einsum('bhde,bhdn->bhen', context, q)
@@ -132,12 +222,12 @@ class SpatialSelfAttention(nn.Module):
         v = self.v(h_)
 
         # compute attention
-        b,c,h,w = q.shape
+        b, c, h, w = q.shape
         q = rearrange(q, 'b c h w -> b (h w) c')
         k = rearrange(k, 'b c h w -> b c (h w)')
         w_ = torch.einsum('bij,bjk->bik', q, k)
 
-        w_ = w_ * (int(c)**(-0.5))
+        w_ = w_ * (int(c) ** (-0.5))
         w_ = torch.nn.functional.softmax(w_, dim=2)
 
         # attend to values
@@ -147,7 +237,7 @@ class SpatialSelfAttention(nn.Module):
         h_ = rearrange(h_, 'b c (h w) -> b c h w', h=h)
         h_ = self.proj_out(h_)
 
-        return x+h_
+        return x + h_
 
 
 class CrossAttention(nn.Module):
@@ -263,10 +353,13 @@ class CrossAttention(nn.Module):
 class BasicTransformerBlock(nn.Module):
     def __init__(self, dim, n_heads, d_head, dropout=0., context_dim=None, gated_ff=True, checkpoint=True):
         super().__init__()
-        self.attn1 = CrossAttention(query_dim=dim, heads=n_heads, dim_head=d_head, dropout=dropout)  # is a self-attention
+        AttentionBuilder = MemoryEfficientCrossAttention if _USE_MEMORY_EFFICIENT_ATTENTION else CrossAttention
+        self.attn1 = AttentionBuilder(query_dim=dim, heads=n_heads, dim_head=d_head,
+                                      dropout=dropout)  # is a self-attention
         self.ff = FeedForward(dim, dropout=dropout, glu=gated_ff)
-        self.attn2 = CrossAttention(query_dim=dim, context_dim=context_dim,
-                                    heads=n_heads, dim_head=d_head, dropout=dropout)  # is self-attn if context is none
+        self.attn2 = AttentionBuilder(query_dim=dim, context_dim=context_dim,
+                                      heads=n_heads, dim_head=d_head,
+                                      dropout=dropout)  # is self-attn if context is none
         self.norm1 = nn.LayerNorm(dim)
         self.norm2 = nn.LayerNorm(dim)
         self.norm3 = nn.LayerNorm(dim)
@@ -305,7 +398,7 @@ class SpatialTransformer(nn.Module):
 
         self.transformer_blocks = nn.ModuleList(
             [BasicTransformerBlock(inner_dim, n_heads, d_head, dropout=dropout, context_dim=context_dim)
-                for d in range(depth)]
+             for d in range(depth)]
         )
 
         self.proj_out = zero_module(nn.Conv2d(inner_dim,
