@@ -136,7 +136,7 @@ def filter_type(array: list, dtype: Type[T]) -> List[T]:
 class PromptParser:
     def __init__(self, model):
         self.model = model
-        self.regex = re.compile(r'\[.*?]|\{.*?}|.+?(?=[\[{])|.*')
+        self.regex = re.compile(r'\<.*?>|\{.*?}|.+?(?=[\<{])|.*')
         self.tokens = [SwapToken, ScaleToken, TextToken]
 
     # test regex for commands, not used yet
