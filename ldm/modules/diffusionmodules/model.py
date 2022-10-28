@@ -11,6 +11,10 @@ from ldm.util import instantiate_from_config
 from ldm.modules.attention import LinearAttention
 
 
+def nonlinearity(x):
+    return silu(x)
+
+
 def get_timestep_embedding(timesteps, embedding_dim):
     """
     This matches the implementation in Denoising Diffusion Probabilistic Models:
