@@ -145,6 +145,12 @@ class ImageStore:
         with open(filename, 'r') as f:
             return f.read()
 
+
+# ====================================== #
+# Bucketing code stolen from hasuwoof:   #
+# https://github.com/hasuwoof/huskystack #
+# ====================================== #
+
 class AspectBucket:
     def __init__(self, store: ImageStore,
                  num_buckets: int,
