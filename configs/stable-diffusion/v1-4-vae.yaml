@@ -1,0 +1,62 @@
+model:
+  base_learning_rate: 1.5e-7
+  target: ldm.models.autoencoder.AutoencoderKL
+  params:
+    monitor: "val/rec_loss"
+    embed_dim: 4
+    lossconfig:
+      target: ldm.modules.losses.LPIPSWithDiscriminator
+      params:
+        disc_start: 50001
+        kl_weight: 0.000001
+        disc_weight: 0.5
+
+    ddconfig:
+      double_z: True
+      z_channels: 4
+      resolution: 256
+      in_channels: 3
+      out_ch: 3
+      ch: 128
+      ch_mult: [ 1,2,4,4 ]  # num_down = len(ch_mult)-1
+      num_res_blocks: 2
+      attn_resolutions: [ ]
+      dropout: 0.0
+
+data:
+  target: main.DataModuleFromConfig
+  params:
+    num_workers: 16
+    batch_size: 16
+    wrap: True
+    train:
+      target: ldm.data.localdanbooruvae.LocalDanbooruBaseVAE
+      params:
+        data_root: "../dataset"
+        size: 256
+        mode: "train"
+        downscale_f: 8
+    validation:
+      target: ldm.data.localdanbooruvae.LocalDanbooruBaseVAE
+      params:
+        data_root: "../dataset"
+        size: 256
+        mode: "val"
+        val_split: 64
+        downscale_f: 8
+
+lightning:
+  callbacks:
+    image_logger:
+      target: main.ImageLogger
+      params:
+        batch_frequency: 200
+        max_images: 4
+        increase_log_steps: True
+
+  trainer:
+    find_unused_parameters: True
+    benchmark: True
+    limit_val_batches: 0
+    num_sanity_val_steps: 0
+    accumulate_grad_batches: 1
