@@ -2,6 +2,7 @@ model:
   base_learning_rate: 5.0e-5   # set to target_lr by starting main.py with '--scale_lr False'
   target: ldm.models.diffusion.ddpm.LatentDiffusion
   params:
+    # ckpt_path: /home/wei.ouyang/last.ckpt
     linear_start: 0.0015
     linear_end: 0.0155
     num_timesteps_cond: 1
@@ -46,7 +47,7 @@ model:
       params:
         embed_dim: 3
         n_embed: 8192
-        ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-10-14T08-16-57_autoencoder_vq_f4_hpa_rp/checkpoints/epoch=000020.ckpt
+        ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-10-14T08-16-57_autoencoder_vq_f4_hpa_rp/checkpoints/last.ckpt
         ddconfig:
           double_z: false
           z_channels: 3
@@ -74,16 +75,26 @@ data:
   target: main.DataModuleFromConfig
   params:
     batch_size: 8
-    num_workers: 0
+    num_workers: 4
     wrap: False
     train:
       target: ldm.data.hpa.HPACombineDatasetMetadata
       params:
         size: 256
+        length: 80000
     validation:
       target: ldm.data.hpa.HPACombineDatasetMetadata
       params:
         size: 256
+        length: 1000
+    # train:
+    #   target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
+    #   params:
+    #     cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256.pickle
+    # validation:
+    #   target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
+    #   params:
+    #     cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256.pickle
 
 lightning:
   callbacks:
@@ -97,3 +108,4 @@ lightning:
 
   trainer:
     benchmark: True
+    accelerator: dp # need to change to dp because the default ddp will free the training

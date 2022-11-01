@@ -1,5 +1,5 @@
 models/*
-./data/
+data
 logs
 *.png
 taming

@@ -11,7 +11,7 @@ model:
     cond_stage_key: masked_image
     image_size: 64
     channels: 3
-    concat_mode: true
+    concat_mode: true # This will set conditioning_key to concat if not defined
     monitor: val/loss
     scheduler_config:
       target: ldm.lr_scheduler.LambdaWarmUpCosineScheduler

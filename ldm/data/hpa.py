@@ -7,7 +7,13 @@ from functools import partial
 import numpy as np
 import torchvision.transforms.functional as TF
 from PIL import Image
+from tqdm import tqdm
 from ldm.modules.image_degradation import degradation_fn_bsr, degradation_fn_bsr_light
+import os
+try:
+   import cPickle as pickle
+except:
+   import pickle
 
 class HPACombineDataset(Dataset):
     def __init__(self, filename, include_metadata=False, length=80000):
@@ -21,31 +27,37 @@ class HPACombineDataset(Dataset):
         else:
             assert filename == "webdataset"
             url = f"/data/wei/hpa-webdataset-all-composite/{filename}_img.tar"
-            dataset1 = wds.WebDataset(url).decode().to_tuple("__key__", "img.pyd")
+            dataset1 = wds.WebDataset(url, nodesplitter=wds.split_by_node).decode().to_tuple("__key__", "img.pyd")
 
             url = f"/data/wei/hpa-webdataset-all-composite/{filename}_info.tar"
-            dataset2 = wds.WebDataset(url).decode().to_tuple("__key__", "info.json")
+            dataset2 = wds.WebDataset(url, nodesplitter=wds.split_by_node).decode().to_tuple("__key__", "info.json")
             
             url = f"/data/wei/hpa-webdataset-all-composite/{filename}_bert.tar"
-            dataset3 = wds.WebDataset(url).decode().to_tuple("__key__", "bert.pyd")
+            dataset3 = wds.WebDataset(url, nodesplitter=wds.split_by_node).decode().to_tuple("__key__", "bert.pyd")
 
             self.dataset_iter = iter(zip(dataset1, dataset2, dataset3))
-            
+        
+        self._generator = self.sample_generator()
             
         self.length = length
 
     def __len__(self):
         return self.length
 
+    def sample_generator(self):
+        for ret in self.dataset_iter:
+            if not self.include_metadata:
+                imgd = ret[0]
+                yield {"file_path_": imgd[0], "image": imgd[1]}
+            else:
+                imgd, infod, bertd = ret
+                assert imgd[0] == infod[0] and imgd[0] == bertd[0]
+                yield {"file_path_": imgd[0], "image": imgd[1], "info": infod[1], "bert": bertd[1]}
+
+
     def __getitem__(self, i):
-        ret = next(self.dataset_iter)
-        if not self.include_metadata:
-            imgd = ret[0]
-            return {"file_path_": imgd[0], "image": imgd[1]}
-        else:
-            imgd, infod, bertd = ret
-            assert imgd[0] == infod[0] and imgd[0] == bertd[0]
-            return {"file_path_": imgd[0], "image": imgd[1], "info": infod[1], "bert": bertd[1]}
+        return next(self._generator)
+
 
 location_mapping = {"Actin filaments": 0, "Aggresome": 1, "Cell Junctions": 2, "Centriolar satellite": 3, "Centrosome": 4, "Cytokinetic bridge": 5, "Cytoplasmic bodies": 6, "Cytosol": 7, "Endoplasmic reticulum": 8, "Endosomes": 9, "Focal adhesion sites": 10, "Golgi apparatus": 11, "Intermediate filaments": 12, "Lipid droplets": 13, "Lysosomes": 14, "Microtubule ends": 15, "Microtubules": 16, "Midbody": 17, "Midbody ring": 18, "Mitochondria": 19, "Mitotic chromosome": 20, "Mitotic spindle": 21, "Nuclear bodies": 22, "Nuclear membrane": 23, "Nuclear speckles": 24, "Nucleoli": 25, "Nucleoli fibrillar center": 26, "Nucleoplasm": 27, "Peroxisomes": 28, "Plasma membrane": 29, "Rods & Rings": 30, "Vesicles": 31, "nan": 32}
 cellline_mapping = {"A-431": 0, "A549": 1, "AF22": 2, "ASC TERT1": 3, "BJ": 4, "CACO-2": 5, "EFO-21": 6, "HAP1": 7, "HDLM-2": 8, "HEK 293": 9, "HEL": 10, "HTC": 11, "HUVEC TERT2": 12, "HaCaT": 13, "HeLa": 14, "Hep G2": 15, "JURKAT": 16, "K-562": 17, "LHCN-M2": 18, "MCF7": 19, "NB-4": 20, "NIH 3T3": 21, "OE19": 22, "PC-3": 23, "REH": 24, "RH-30": 25, "RPTEC TERT1": 26, "RT4": 27, "SH-SY5Y": 28, "SK-MEL-30": 29, "SiHa": 30, "SuSa": 31, "THP-1": 32, "U-2 OS": 33, "U-251 MG": 34, "Vero": 35, "hTCEpi": 36}
@@ -82,8 +94,7 @@ class HPACombineDatasetMetadata():
     def __len__(self):
         return len(self.base)
 
-    def __getitem__(self, i):
-        example = self.base[i]
+    def prepare_sample(self, example):
         all_channels = example["image"]
         image = all_channels[:, :, self.channels]
         info = example["info"]
@@ -103,15 +114,57 @@ class HPACombineDatasetMetadata():
             "image": self.preprocess_image(image),
             # "class_label": locations_encoding,
             "cell-line": cellline_encoding,
-            # "info": info,
-            "hybrid-conditions": {
-                "cell-line": cellline_encoding,
-                "ref-image": ref,
-                "bert": bert,
-            },
             "ref-image": self.preprocess_image(ref),
             "bert": bert,
         }
+
+    def __getitem__(self, i):
+        example = self.base[i]
+        return self.prepare_sample(example)
+
+class HPACombineDatasetMetadataInMemory():
+
+    samples_dict = {}
+    
+    @staticmethod
+    def generate_cache(cache_file, *args, **kwargs):
+        print("Reading data into memory, this may take a while...")
+        dataset = HPACombineDatasetMetadata(*args, **kwargs)
+        gen = dataset.base.sample_generator()
+        samples = []
+        for idx in tqdm(range(247678), total=247678):
+            sample = next(gen)
+            samples.append(dataset.prepare_sample(sample))
+        with open(cache_file, 'wb') as fp:
+            pickle.dump(samples, fp)
+
+    def __init__(self, cache_file, start=0, length=-1):
+        if cache_file in HPACombineDatasetMetadataInMemory.samples_dict:
+            self.samples = HPACombineDatasetMetadataInMemory.samples_dict[cache_file]
+        else:
+            if os.path.exists(cache_file):
+                print(f"Loading data from cache file {cache_file}, this may take a while...")
+                with open(cache_file, 'rb') as fp:
+                    self.samples = pickle.load(fp)
+                print("Data loaded")
+            else:
+                raise Exception(f"Cache file not found {cache_file}")
+            HPACombineDatasetMetadataInMemory.samples_dict[cache_file] = self.samples
+
+        assert start >= 0 and start < len(self.samples)
+        self.start = start
+        if length < 0:
+            length = len(self.samples)
+        self.length = length
+        assert self.length + start <= len(self.samples)
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, i):
+        sample = self.samples[self.start + i]
+        return sample
+
 
 class HPACombineDatasetSR(Dataset):
     def __init__(self, filename, size=None, length=80000, channels=None,
@@ -215,3 +268,7 @@ class HPACombineDatasetSR(Dataset):
         example["LR_image"] = (LR_image/127.5 - 1.0).astype(np.float32)
 
         return example
+    
+
+if __name__ == "__main__":
+    HPACombineDatasetMetadataInMemory.generate_cache("/data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256.pickle", size=256)

@@ -245,4 +245,32 @@ Output:
 1,514.551 Total estimated model params size (MB)
 ```
 
- 
+
+```
+python main.py -t -b configs/latent-diffusion/hpa-ldm-vq-4-hybrid.yaml --gpus=0,1,2,3
+```
+
+
+```
+   | Name              | Type              | Params
+--------------------------------------------------------
+0 | model             | DiffusionWrapper  | 294 M 
+1 | model_ema         | LitEma            | 0     
+2 | first_stage_model | VQModelInterface  | 55.3 M
+3 | cond_stage_model  | HPAHybridEmbedder | 55.3 M
+--------------------------------------------------------
+294 M     Trainable params
+55.3 M    Non-trainable params
+350 M     Total params
+1,401.166 Total estimated model params size (MB)
+```
+
+
+```
+...
+Epoch time: 64.01 seconds
+Average Peak memory 0.00MiB
+Epoch 999, global step 999: val/loss_simple_ema was not in top 3
+Epoch 999:   6%| | 1/16 [01:20<10:05, 40.38s/it, loss=0.0588, v_num=0, train/loss_simple_step=
+Saving latest checkpoint...
+```

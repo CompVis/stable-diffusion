@@ -13,14 +13,28 @@
             "justMyCode": true
         },
         {
-            "name": "Python: hpa-ldm-vq-4-hybrid",
+            "name": "Train: hpa-ldm-vq-4-hybrid",
             "type": "python",
             "request": "launch",
             "program": "main.py",
             "args": [
                 "-t",
                 "-b",
-                "configs/latent-diffusion/hpa-ldm-vq-4-hybrid.yaml"
+                "configs/latent-diffusion/hpa-ldm-vq-4-hybrid.yaml",
+                "--gpus=0"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Test: hpa-ldm-vq-4-hybrid",
+            "type": "python",
+            "request": "launch",
+            "program": "main.py",
+            "args": [
+                "-b",
+                "configs/latent-diffusion/hpa-ldm-vq-4-hybrid.yaml",
+                "--gpus=0,"
             ],
             "console": "integratedTerminal",
             "justMyCode": true

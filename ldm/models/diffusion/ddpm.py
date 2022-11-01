@@ -697,7 +697,7 @@ class LatentDiffusion(DDPM):
                     c = self.get_learned_conditioning(xc.to(self.device))
             else:
                 c = xc
-            if bs is not None:
+            if bs is not None and not isinstance(c, (list, dict)):
                 c = c[:bs]
 
             if self.use_positional_encodings:
