@@ -77,24 +77,30 @@ data:
     batch_size: 8
     num_workers: 4
     wrap: False
-    train:
-      target: ldm.data.hpa.HPACombineDatasetMetadata
-      params:
-        size: 256
-        length: 80000
-    validation:
-      target: ldm.data.hpa.HPACombineDatasetMetadata
-      params:
-        size: 256
-        length: 1000
     # train:
-    #   target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
+    #   target: ldm.data.hpa.HPACombineDatasetMetadata
     #   params:
-    #     cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256.pickle
+    #     size: 256
+    #     length: 247678
     # validation:
-    #   target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
+    #   target: ldm.data.hpa.HPACombineDatasetMetadata
     #   params:
-    #     cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256.pickle
+    #     size: 256
+    #     length: 1000
+    train:
+      target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
+      params:
+        seed: 123
+        train_split: 0.95
+        group: 'train'
+        cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256.pickle
+    validation:
+      target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
+      params:
+        seed: 123
+        train_split: 0.95
+        group: 'validation'
+        cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256.pickle
 
 lightning:
   callbacks:

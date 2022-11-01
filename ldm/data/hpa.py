@@ -10,6 +10,7 @@ from PIL import Image
 from tqdm import tqdm
 from ldm.modules.image_degradation import degradation_fn_bsr, degradation_fn_bsr_light
 import os
+import random
 try:
    import cPickle as pickle
 except:
@@ -122,6 +123,9 @@ class HPACombineDatasetMetadata():
         example = self.base[i]
         return self.prepare_sample(example)
 
+
+TOTAL_LENGTH = 247678
+
 class HPACombineDatasetMetadataInMemory():
 
     samples_dict = {}
@@ -132,13 +136,13 @@ class HPACombineDatasetMetadataInMemory():
         dataset = HPACombineDatasetMetadata(*args, **kwargs)
         gen = dataset.base.sample_generator()
         samples = []
-        for idx in tqdm(range(247678), total=247678):
+        for idx in tqdm(range(TOTAL_LENGTH), total=TOTAL_LENGTH):
             sample = next(gen)
             samples.append(dataset.prepare_sample(sample))
         with open(cache_file, 'wb') as fp:
             pickle.dump(samples, fp)
 
-    def __init__(self, cache_file, start=0, length=-1):
+    def __init__(self, cache_file, seed=123, train_split=0.95, group='train'):
         if cache_file in HPACombineDatasetMetadataInMemory.samples_dict:
             self.samples = HPACombineDatasetMetadataInMemory.samples_dict[cache_file]
         else:
@@ -151,18 +155,24 @@ class HPACombineDatasetMetadataInMemory():
                 raise Exception(f"Cache file not found {cache_file}")
             HPACombineDatasetMetadataInMemory.samples_dict[cache_file] = self.samples
 
-        assert start >= 0 and start < len(self.samples)
-        self.start = start
-        if length < 0:
-            length = len(self.samples)
-        self.length = length
-        assert self.length + start <= len(self.samples)
+        self.length = len(self.samples)
+        assert group in ['train', 'validation']
+        assert train_split < 1 and train_split > 0
+        random.seed(seed)
+        indexes = list(range(self.length))
+        random.shuffle(indexes)
+        size = int(train_split * self.length)
+        if group == 'train':
+            self.indexes = indexes[:size]
+        else:
+            self.indexes = indexes[size:]
+        print(f"Dataset group: {group}, length: {len(self.indexes)}")
 
     def __len__(self):
-        return self.length
+        return len(self.indexes)
 
     def __getitem__(self, i):
-        sample = self.samples[self.start + i]
+        sample = self.samples[self.indexes[i]]
         return sample
 
 
