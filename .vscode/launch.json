@@ -20,8 +20,21 @@
             "args": [
                 "-t",
                 "-b",
-                "configs/latent-diffusion/hpa-ldm-vq-4-hybrid.yaml",
+                "configs/latent-diffusion/hpa-ldm-vq-4-hybrid-debug.yaml",
                 "--gpus=0"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Train-cpu: hpa-ldm-vq-4-hybrid",
+            "type": "python",
+            "request": "launch",
+            "program": "main.py",
+            "args": [
+                "-t",
+                "-b",
+                "configs/latent-diffusion/hpa-ldm-vq-4-hybrid-debug.yaml"
             ],
             "console": "integratedTerminal",
             "justMyCode": true
@@ -35,6 +48,29 @@
                 "-b",
                 "configs/latent-diffusion/hpa-ldm-vq-4-hybrid.yaml",
                 "--gpus=0,"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Test-cpu-debug: hpa-ldm-vq-4-hybrid",
+            "type": "python",
+            "request": "launch",
+            "program": "main.py",
+            "args": [
+                "-b",
+                "configs/latent-diffusion/hpa-ldm-vq-4-hybrid-debug.yaml",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Seq2Img: hpa-ldm-vq-4-hybrid",
+            "type": "python",
+            "request": "launch",
+            "program": "scripts/seq2img.py",
+            "args": [
+                "--config=configs/latent-diffusion/hpa-ldm-vq-4-hybrid-debug.yaml"
             ],
             "console": "integratedTerminal",
             "justMyCode": true

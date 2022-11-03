@@ -131,12 +131,13 @@ class HPACombineDatasetMetadataInMemory():
     samples_dict = {}
     
     @staticmethod
-    def generate_cache(cache_file, *args, **kwargs):
+    def generate_cache(cache_file, *args, total_length=None, **kwargs):
         print("Reading data into memory, this may take a while...")
         dataset = HPACombineDatasetMetadata(*args, **kwargs)
         gen = dataset.base.sample_generator()
         samples = []
-        for idx in tqdm(range(TOTAL_LENGTH), total=TOTAL_LENGTH):
+        total_length = total_length or TOTAL_LENGTH
+        for idx in tqdm(range(total_length), total=total_length):
             sample = next(gen)
             samples.append(dataset.prepare_sample(sample))
         with open(cache_file, 'wb') as fp:
@@ -281,4 +282,5 @@ class HPACombineDatasetSR(Dataset):
     
 
 if __name__ == "__main__":
+    # HPACombineDatasetMetadataInMemory.generate_cache("/data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle", size=256, total_length=1000)
     HPACombineDatasetMetadataInMemory.generate_cache("/data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256.pickle", size=256)
