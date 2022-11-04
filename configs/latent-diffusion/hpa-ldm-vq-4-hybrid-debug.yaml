@@ -74,7 +74,7 @@ model:
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 8
+    batch_size: 16
     num_workers: 4
     wrap: False
     # train:
@@ -116,5 +116,5 @@ lightning:
 
   trainer:
     benchmark: True
-    accelerator: ddp # need to change to dp because the default ddp will free the training
-    limit_val_batches: 100
+    accelerator: dp # need to change to dp because the default ddp will free the training
+    # limit_val_batches: 100

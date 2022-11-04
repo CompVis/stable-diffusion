@@ -73,8 +73,8 @@ model:
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 8
-    num_workers: 4
+    batch_size: 64
+    num_workers: 16
     wrap: False
     # train:
     #   target: ldm.data.hpa.HPACombineDatasetMetadata
@@ -115,5 +115,6 @@ lightning:
 
   trainer:
     benchmark: True
-    accelerator: ddp # need to change to dp because the default ddp will free the training
-    limit_val_batches: 100
+    accelerator: dp # need to change to dp because the default ddp will free the training
+    # auto_scale_batch_size: binsearch
+    # limit_val_batches: 100

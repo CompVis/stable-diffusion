@@ -697,8 +697,13 @@ class LatentDiffusion(DDPM):
                     c = self.get_learned_conditioning(xc.to(self.device))
             else:
                 c = xc
-            if bs is not None and not isinstance(c, (list, dict)):
-                c = c[:bs]
+            if bs is not None:
+                if isinstance(c, list):
+                    c = [v[:bs] for v in c]
+                elif isinstance(c, dict): # dict of list
+                    c = {k: [v[:bs] for v in vv] for k,vv in c.items()}
+                else:
+                    c = c[:bs]
 
             if self.use_positional_encodings:
                 pos_x, pos_y = self.compute_latent_shifts(batch)
