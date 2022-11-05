@@ -11,7 +11,8 @@ streamlit>=0.73.1
 einops==0.3.0
 torch-fidelity==0.3.0
 transformers==4.19.2
-torchmetrics==0.6.0
+diffusers==0.7.1
+torchmetrics==0.7.0
 kornia==0.6
 gradio
 git+https://github.com/illeatmyhat/taming-transformers.git@master#egg=taming-transformers
@@ -20,3 +21,4 @@ git+https://github.com/hlky/k-diffusion-sd#egg=k_diffusion
 webdataset
 wandb
 fairscale
+pynvml==11.4.1
