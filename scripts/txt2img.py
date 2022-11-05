@@ -24,9 +24,8 @@ from transformers import AutoFeatureExtractor
 
 # load safety model
 safety_model_id = "CompVis/stable-diffusion-safety-checker"
-safety_feature_extractor = AutoFeatureExtractor.from_pretrained(safety_model_id)
-safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
-
+safety_feature_extractor = None # don't load safety model unless option set
+safety_checker = None # don't load safety model unless option set
 
 def chunk(it, size):
     it = iter(it)
@@ -143,6 +142,12 @@ def main():
         help="if enabled, uses the same starting code across samples ",
     )
     parser.add_argument(
+        "--nsfw_filter",
+        action='store_true',
+        default=False,
+        help="if enabled, uses the same starting code across samples ",
+    )
+    parser.add_argument(
         "--ddim_eta",
         type=float,
         default=0.0,
@@ -234,8 +239,16 @@ def main():
         opt.ckpt = "models/ldm/text2img-large/model.ckpt"
         opt.outdir = "outputs/txt2img-samples-laion400m"
 
-    seed_everything(opt.seed)
+    if opt.nsfw_filter:
+        # load saftey models into VRAM
+        global safety_checker, safety_feature_extractor
+        safety_feature_extractor = AutoFeatureExtractor.from_pretrained(safety_model_id)
+        safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
 
+
+
+    seed_everything(opt.seed)
+    
     config = OmegaConf.load(f"{opt.config}")
     model = load_model_from_config(config, f"{opt.ckpt}")
 
@@ -306,8 +319,12 @@ def main():
                         x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
                         x_samples_ddim = x_samples_ddim.cpu().permute(0, 2, 3, 1).numpy()
 
-                        x_checked_image, has_nsfw_concept = check_safety(x_samples_ddim)
-
+                        if opt.nsfw_filter:
+                            x_checked_image, has_nsfw_concept = check_safety(x_samples_ddim)
+                        else:
+                            x_checked_image = x_samples_ddim
+                            has_nsfw_concept = [False] * len(x_samples_ddim)
+                        
                         x_checked_image_torch = torch.from_numpy(x_checked_image).permute(0, 3, 1, 2)
 
                         if not opt.skip_save:
