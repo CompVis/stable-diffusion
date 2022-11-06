@@ -10,6 +10,7 @@ dependencies:
   - torchvision=0.12.0
   - numpy=1.19.2
   - pip:
+    - slack-sdk
     - albumentations==0.4.3
     - diffusers
     - opencv-python==4.1.2.30
