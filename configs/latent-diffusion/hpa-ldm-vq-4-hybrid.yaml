@@ -108,9 +108,14 @@ lightning:
       params:
         batch_frequency: 1000
         max_images: 8
-        increase_log_steps: False
+        increase_log_steps: false
         log_images_kwargs:
           ddim_steps: 50
+          quantize_denoised: true
+          inpaint: false
+          plot_denoise_rows: true
+          plot_progressive_rows: false
+          plot_diffusion_rows: true
 
 
   trainer:

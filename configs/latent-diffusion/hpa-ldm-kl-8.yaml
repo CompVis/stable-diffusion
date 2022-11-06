@@ -12,9 +12,9 @@ model:
     cond_stage_key: "class_label"
     image_size: 32
     channels: 4
-    cond_stage_trainable: False
-    concat_mode: False
-    scale_by_std: True
+    cond_stage_trainable: false
+    concat_mode: false
+    scale_by_std: true
     monitor: 'val/loss_simple_ema'
 
     scheduler_config: # 10000 warmup steps
@@ -90,7 +90,7 @@ lightning:
       params:
         batch_frequency: 5000
         max_images: 8
-        increase_log_steps: False
+        increase_log_steps: false
 
 
   trainer:

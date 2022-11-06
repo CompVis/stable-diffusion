@@ -13,6 +13,20 @@
             "justMyCode": true
         },
         {
+            "name": "Train: hpa-ldm-vq-4-unconditional",
+            "type": "python",
+            "request": "launch",
+            "program": "main.py",
+            "args": [
+                "-t",
+                "-b",
+                "configs/latent-diffusion/hpa-ldm-vq-4-unconditional-debug.yaml",
+                "--gpus=1,2,3,4,5"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "Train: hpa-ldm-vq-4-hybrid",
             "type": "python",
             "request": "launch",
@@ -21,7 +35,7 @@
                 "-t",
                 "-b",
                 "configs/latent-diffusion/hpa-ldm-vq-4-hybrid-debug.yaml",
-                "--gpus=0"
+                "--gpus=0,1,2"
             ],
             "console": "integratedTerminal",
             "justMyCode": true
@@ -46,7 +60,7 @@
             "program": "main.py",
             "args": [
                 "-b",
-                "configs/latent-diffusion/hpa-ldm-vq-4-hybrid.yaml",
+                "configs/latent-diffusion/hpa-ldm-vq-4-hybrid-debug.yaml",
                 "--gpus=0,"
             ],
             "console": "integratedTerminal",

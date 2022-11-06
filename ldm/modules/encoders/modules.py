@@ -25,7 +25,12 @@ class HPAHybridEmbedder(nn.Module):
 
     def forward(self, batch, key=None):
         image = batch["ref-image"]
-        img_embed = self.image_embedding_model.encode(image.permute(0,3,1, 2))
+        assert image.shape[3] == 3
+        image = rearrange(image, 'b h w c -> b c h w').contiguous()
+        with torch.no_grad():
+            img_embed = self.image_embedding_model.encode(image)
+        if torch.any(torch.isnan(img_embed)):
+            raise Exception("NAN values encountered in the image embedding")
         bert = batch["bert"]
         celline = batch["cell-line"]
         return {"c_concat": [img_embed], "c_crossattn": [bert, celline]}

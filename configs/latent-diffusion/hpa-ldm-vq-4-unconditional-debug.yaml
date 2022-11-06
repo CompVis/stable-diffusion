@@ -2,7 +2,7 @@ model:
   base_learning_rate: 5.0e-5   # set to target_lr by starting main.py with '--scale_lr False'
   target: ldm.models.diffusion.ddpm.LatentDiffusion
   params:
-    ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-11-04T02-00-45_hpa-ldm-vq-4-hybrid/checkpoints/epoch=000004.ckpt
+    # ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-11-04T02-00-45_hpa-ldm-vq-4-hybrid/checkpoints/epoch=000004.ckpt
     linear_start: 0.0015
     linear_end: 0.0155
     num_timesteps_cond: 1
@@ -32,7 +32,7 @@ model:
       target: ldm.modules.diffusionmodules.openaimodel.UNetModel
       params:
         image_size: 64
-        in_channels: 6
+        in_channels: 3
         out_channels: 3
         model_channels: 192
         attention_resolutions: [ 1, 2, 4, 8 ]   # 32, 16, 8, 4
@@ -65,10 +65,7 @@ model:
         lossconfig:
           target: torch.nn.Identity
 
-    cond_stage_config:
-      target: ldm.modules.encoders.modules.HPAHybridEmbedder
-      params:
-        image_embedding_model: __is_first_stage__
+    cond_stage_config: __is_unconditional__
 
 
 data:
@@ -107,7 +104,7 @@ lightning:
     image_logger:
       target: main.ImageLogger
       params:
-        batch_frequency: 1
+        batch_frequency: 100
         max_images: 8
         increase_log_steps: false
         log_images_kwargs:

@@ -92,7 +92,7 @@ lightning:
       params:
         batch_frequency: 5000
         max_images: 8
-        increase_log_steps: False
+        increase_log_steps: false
 
   trainer:
     benchmark: True

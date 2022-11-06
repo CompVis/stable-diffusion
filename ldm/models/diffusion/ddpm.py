@@ -1331,7 +1331,7 @@ class LatentDiffusion(DDPM):
             x_samples = self.decode_first_stage(samples)
             log["samples"] = x_samples
             if plot_denoise_rows:
-                denoise_grid = self._get_denoise_row_from_list(z_denoise_row)
+                denoise_grid = self._get_denoise_row_from_list(z_denoise_row['pred_x0'])
                 log["denoise_row"] = denoise_grid
 
             if quantize_denoised and not isinstance(self.first_stage_model, AutoencoderKL) and not isinstance(
