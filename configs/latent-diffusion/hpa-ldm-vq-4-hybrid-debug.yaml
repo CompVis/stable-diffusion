@@ -66,7 +66,7 @@ model:
           target: torch.nn.Identity
 
     cond_stage_config:
-      target: ldm.modules.encoders.modules.HPAHybridEmbedder
+      target: ldm.data.hpa.HPAHybridEmbedder
       params:
         image_embedding_model: __is_first_stage__
 

@@ -17,25 +17,6 @@ class AbstractEncoder(nn.Module):
         raise NotImplementedError
 
 
-class HPAHybridEmbedder(nn.Module):
-    def __init__(self, image_embedding_model):
-        super().__init__()
-        assert not isinstance(image_embedding_model, str)
-        self.image_embedding_model = image_embedding_model
-
-    def forward(self, batch, key=None):
-        image = batch["ref-image"]
-        assert image.shape[3] == 3
-        image = rearrange(image, 'b h w c -> b c h w').contiguous()
-        with torch.no_grad():
-            img_embed = self.image_embedding_model.encode(image)
-        if torch.any(torch.isnan(img_embed)):
-            raise Exception("NAN values encountered in the image embedding")
-        bert = batch["bert"]
-        celline = batch["cell-line"]
-        return {"c_concat": [img_embed], "c_crossattn": [bert, celline]}
-
-
 class ClassEmbedder(nn.Module):
     def __init__(self, embed_dim, n_classes=1000, key='class'):
         super().__init__()

@@ -11,6 +11,11 @@ from tqdm import tqdm
 from ldm.modules.image_degradation import degradation_fn_bsr, degradation_fn_bsr_light
 import os
 import random
+import torch
+import torch.nn as nn
+from functools import partial
+from einops import rearrange
+
 try:
    import cPickle as pickle
 except:
@@ -280,6 +285,25 @@ class HPACombineDatasetSR(Dataset):
 
         return example
     
+
+class HPAHybridEmbedder(nn.Module):
+    def __init__(self, image_embedding_model):
+        super().__init__()
+        assert not isinstance(image_embedding_model, str)
+        self.image_embedding_model = image_embedding_model
+
+    def forward(self, batch, key=None):
+        image = batch["ref-image"]
+        assert image.shape[3] == 3
+        image = rearrange(image, 'b h w c -> b c h w').contiguous()
+        with torch.no_grad():
+            img_embed = self.image_embedding_model.encode(image)
+        if torch.any(torch.isnan(img_embed)):
+            raise Exception("NAN values encountered in the image embedding")
+        bert = batch["bert"]
+        celline = batch["cell-line"]
+        return {"c_concat": [img_embed], "c_crossattn": [bert, celline]}
+
 
 if __name__ == "__main__":
     # HPACombineDatasetMetadataInMemory.generate_cache("/data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle", size=256, total_length=1000)
