@@ -2,7 +2,7 @@ model:
   base_learning_rate: 5.0e-5   # set to target_lr by starting main.py with '--scale_lr False'
   target: ldm.models.diffusion.ddpm.LatentDiffusion
   params:
-    ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-11-04T02-00-45_hpa-ldm-vq-4-hybrid/checkpoints/epoch=000004.ckpt
+    ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-11-06T02-58-38_hpa-ldm-vq-4-hybrid-debug/checkpoints/last.ckpt
     linear_start: 0.0015
     linear_end: 0.0155
     num_timesteps_cond: 1
@@ -47,7 +47,8 @@ model:
       params:
         embed_dim: 3
         n_embed: 8192
-        ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-10-14T08-16-57_autoencoder_vq_f4_hpa_rp/checkpoints/last.ckpt
+        # autoencoder for the protein channel
+        ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-11-06T04-05-25_autoencoder_vq_f4_hpa_p/checkpoints/last.ckpt
         ddconfig:
           double_z: false
           z_channels: 3
@@ -68,7 +69,28 @@ model:
     cond_stage_config:
       target: ldm.data.hpa.HPAHybridEmbedder
       params:
-        image_embedding_model: __is_first_stage__
+        image_embedding_model:
+          target: ldm.models.autoencoder.VQModelInterface
+          params:
+            embed_dim: 3
+            n_embed: 8192
+            ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-10-14T09-02-57_autoencoder_vq_f4_hpa_r/checkpoints/last.ckpt
+            ddconfig:
+              double_z: false
+              z_channels: 3
+              resolution: 256
+              in_channels: 3
+              out_ch: 3
+              ch: 128
+              ch_mult:
+              - 1
+              - 2
+              - 4
+              num_res_blocks: 2
+              attn_resolutions: []
+              dropout: 0.0
+            lossconfig:
+              target: torch.nn.Identity
 
 
 data:
@@ -77,30 +99,32 @@ data:
     batch_size: 16
     num_workers: 4
     wrap: False
-    # train:
-    #   target: ldm.data.hpa.HPACombineDatasetMetadata
-    #   params:
-    #     size: 256
-    #     length: 247678
-    # validation:
-    #   target: ldm.data.hpa.HPACombineDatasetMetadata
-    #   params:
-    #     size: 256
-    #     length: 1000
     train:
-      target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
+      target: ldm.data.hpa.HPACombineDatasetMetadata
       params:
-        seed: 123
-        train_split: 0.95
-        group: 'train'
-        cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle
+        size: 256
+        length: 247678
+        channels: [1, 1, 1] # expose the green channel only
     validation:
-      target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
+      target: ldm.data.hpa.HPACombineDatasetMetadata
       params:
-        seed: 123
-        train_split: 0.95
-        group: 'validation'
-        cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle
+        size: 256
+        length: 1000
+        channels: [1, 1, 1] # expose the green channel only
+    # train:
+    #   target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
+    #   params:
+    #     seed: 123
+    #     train_split: 0.95
+    #     group: 'train'
+    #     cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle
+    # validation:
+    #   target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
+    #   params:
+    #     seed: 123
+    #     train_split: 0.95
+    #     group: 'validation'
+    #     cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle
 
 lightning:
   callbacks:
@@ -111,13 +135,13 @@ lightning:
         max_images: 8
         increase_log_steps: false
         log_images_kwargs:
-          ddim_steps: 100
-          quantize_denoised: true
+          ddim_steps: 1
+          quantize_denoised: false
           inpaint: false
-          plot_denoise_rows: true
+          plot_denoise_rows: false
           plot_progressive_rows: false
-          plot_diffusion_rows: true
-
+          plot_diffusion_rows: false
+          n_row: 8
 
   trainer:
     benchmark: True

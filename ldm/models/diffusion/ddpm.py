@@ -1287,12 +1287,14 @@ class LatentDiffusion(DDPM):
                                            bs=N)
         N = min(x.shape[0], N)
         n_row = min(x.shape[0], n_row)
-        log["inputs"] = x
-        log["reconstruction"] = xrec
+        log["inputs"] = make_grid(x, nrow=1)
+        log["reconstruction"] = make_grid(xrec, nrow=1)
+        caption_image = None
         if self.model.conditioning_key is not None:
             if hasattr(self.cond_stage_model, "decode"):
                 xc = self.cond_stage_model.decode(c)
-                log["conditioning"] = xc
+                caption_image = 1 - make_grid(log_txt_as_img((x.shape[2], x.shape[3]), batch["caption"][:N], size=12), nrow=1)
+                log["conditioning"] = torch.clip(xc + caption_image, -1.0, 1.0)
             elif self.cond_stage_key in ["caption"]:
                 xc = log_txt_as_img((x.shape[2], x.shape[3]), batch["caption"])
                 log["conditioning"] = xc
@@ -1329,7 +1331,10 @@ class LatentDiffusion(DDPM):
                                                          ddim_steps=ddim_steps,eta=ddim_eta)
                 # samples, z_denoise_row = self.sample(cond=c, batch_size=N, return_intermediates=True)
             x_samples = self.decode_first_stage(samples)
-            log["samples"] = x_samples
+            log["samples"] = make_grid(x_samples, nrow=1)
+            if caption_image is not None and xc.shape == log["samples"].shape:
+                # combined: microtubule, protein, nuclei
+                log["samples_combined"] = torch.clip(torch.stack([xc[0, :, :], torch.mean(log["samples"], dim=0), xc[2, :, :]], dim=0) + caption_image, -1.0, 1.0)
             if plot_denoise_rows:
                 denoise_grid = self._get_denoise_row_from_list(z_denoise_row['pred_x0'])
                 log["denoise_row"] = denoise_grid
@@ -1344,7 +1349,7 @@ class LatentDiffusion(DDPM):
                     # samples, z_denoise_row = self.sample(cond=c, batch_size=N, return_intermediates=True,
                     #                                      quantize_denoised=True)
                 x_samples = self.decode_first_stage(samples.to(self.device))
-                log["samples_x0_quantized"] = x_samples
+                log["samples_x0_quantized"] = make_grid(x_samples, nrow=1)
 
             if inpaint:
                 # make a simple center square
@@ -1358,15 +1363,15 @@ class LatentDiffusion(DDPM):
                     samples, _ = self.sample_log(cond=c,batch_size=N,ddim=use_ddim, eta=ddim_eta,
                                                 ddim_steps=ddim_steps, x0=z[:N], mask=mask)
                 x_samples = self.decode_first_stage(samples.to(self.device))
-                log["samples_inpainting"] = x_samples
-                log["mask"] = mask
+                log["samples_inpainting"] = make_grid(x_samples, nrow=1)
+                log["mask"] = make_grid(mask, nrow=1)
 
                 # outpaint
                 with self.ema_scope("Plotting Outpaint"):
                     samples, _ = self.sample_log(cond=c, batch_size=N, ddim=use_ddim,eta=ddim_eta,
                                                 ddim_steps=ddim_steps, x0=z[:N], mask=mask)
                 x_samples = self.decode_first_stage(samples.to(self.device))
-                log["samples_outpainting"] = x_samples
+                log["samples_outpainting"] = make_grid(x_samples, nrow=1)
 
         if plot_progressive_rows:
             with self.ema_scope("Plotting Progressives"):

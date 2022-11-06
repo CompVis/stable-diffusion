@@ -15,6 +15,8 @@ import torch
 import torch.nn as nn
 from functools import partial
 from einops import rearrange
+from ldm.util import instantiate_from_config
+from torchvision.utils import make_grid
 
 try:
    import cPickle as pickle
@@ -122,6 +124,7 @@ class HPACombineDatasetMetadata():
             "cell-line": cellline_encoding,
             "ref-image": self.preprocess_image(ref),
             "bert": bert,
+            "caption": f"{info['gene_names']}/{info['atlas_name']}/{info['locations']}"
         }
 
     def __getitem__(self, i):
@@ -148,7 +151,7 @@ class HPACombineDatasetMetadataInMemory():
         with open(cache_file, 'wb') as fp:
             pickle.dump(samples, fp)
 
-    def __init__(self, cache_file, seed=123, train_split=0.95, group='train'):
+    def __init__(self, cache_file, seed=123, train_split=0.95, group='train', channels=None):
         if cache_file in HPACombineDatasetMetadataInMemory.samples_dict:
             self.samples = HPACombineDatasetMetadataInMemory.samples_dict[cache_file]
         else:
@@ -160,6 +163,7 @@ class HPACombineDatasetMetadataInMemory():
             else:
                 raise Exception(f"Cache file not found {cache_file}")
             HPACombineDatasetMetadataInMemory.samples_dict[cache_file] = self.samples
+        self.channels = channels
 
         self.length = len(self.samples)
         assert group in ['train', 'validation']
@@ -172,13 +176,15 @@ class HPACombineDatasetMetadataInMemory():
             self.indexes = indexes[:size]
         else:
             self.indexes = indexes[size:]
-        print(f"Dataset group: {group}, length: {len(self.indexes)}")
+        print(f"Dataset group: {group}, length: {len(self.indexes)}, image channels: {self.channels or [0, 1, 2]}")
 
     def __len__(self):
         return len(self.indexes)
 
     def __getitem__(self, i):
         sample = self.samples[self.indexes[i]]
+        if self.channels:
+            sample['image'] = sample['image'][:, :, self.channels]
         return sample
 
 
@@ -296,8 +302,8 @@ class HPAClassEmbedder(nn.Module):
 class HPAHybridEmbedder(nn.Module):
     def __init__(self, image_embedding_model):
         super().__init__()
-        assert not isinstance(image_embedding_model, str)
-        self.image_embedding_model = image_embedding_model
+        assert not isinstance(image_embedding_model, dict)
+        self.image_embedding_model = instantiate_from_config(image_embedding_model)
 
     def forward(self, batch, key=None):
         image = batch["ref-image"]
@@ -310,6 +316,18 @@ class HPAHybridEmbedder(nn.Module):
         bert = batch["bert"]
         celline = batch["cell-line"]
         return {"c_concat": [img_embed], "c_crossattn": [bert, celline]}
+    
+    def decode(self, c):
+        condition_row = c['c_concat']
+        assert len(condition_row) == 1
+        with torch.no_grad():
+            condition_rec_row = [self.image_embedding_model.decode(cond) for cond in condition_row]
+        n_imgs_per_row = len(condition_rec_row)
+        condition_rec_row = torch.stack(condition_rec_row)  # n_log_step, n_row, C, H, W
+        condition_grid = rearrange(condition_rec_row, 'n b c h w -> b n c h w')
+        condition_grid = rearrange(condition_grid, 'b n c h w -> (b n) c h w')
+        condition_grid = make_grid(condition_grid, nrow=n_imgs_per_row)
+        return condition_grid
 
 
 if __name__ == "__main__":
