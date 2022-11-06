@@ -1,0 +1,124 @@
+model:
+  base_learning_rate: 5.0e-5   # set to target_lr by starting main.py with '--scale_lr False'
+  target: ldm.models.diffusion.ddpm.LatentDiffusion
+  params:
+    # ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-11-04T02-00-45_hpa-ldm-vq-4-hybrid/checkpoints/epoch=000004.ckpt
+    linear_start: 0.0015
+    linear_end: 0.0155
+    num_timesteps_cond: 1
+    log_every_t: 200
+    timesteps: 1000
+    loss_type: l1
+    first_stage_key: "image"
+    cond_stage_key: "hybrid-conditions" # the key in the dataset for feeding into the condition model
+    image_size: 64
+    channels: 3
+    cond_stage_trainable: false
+    concat_mode: false # this will set conditioning_key to "crossattn" if not exists
+    # conditioning_key: hybrid # force it to conditioning_key to be "hybrid"
+    scale_by_std: true
+    monitor: 'val/loss_simple_ema'
+
+    scheduler_config: # 10000 warmup steps
+      target: ldm.lr_scheduler.LambdaLinearScheduler
+      params:
+        warm_up_steps: [10000]
+        cycle_lengths: [10000000000000]
+        f_start: [1.e-6]
+        f_max: [1.]
+        f_min: [ 1.]
+
+    unet_config:
+      target: ldm.modules.diffusionmodules.openaimodel.UNetModel
+      params:
+        image_size: 64
+        in_channels: 3
+        out_channels: 3
+        model_channels: 192
+        attention_resolutions: [ 1, 2, 4, 8 ]   # 32, 16, 8, 4
+        num_res_blocks: 2
+        channel_mult: [ 1,2,2,4,4 ]  # 32, 16, 8, 4, 2
+        num_heads: 8
+        use_scale_shift_norm: True
+        resblock_updown: True
+
+    first_stage_config:
+      target: ldm.models.autoencoder.VQModelInterface
+      params:
+        embed_dim: 3
+        n_embed: 8192
+        ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-10-14T08-16-57_autoencoder_vq_f4_hpa_rp/checkpoints/last.ckpt
+        ddconfig:
+          double_z: false
+          z_channels: 3
+          resolution: 256
+          in_channels: 3
+          out_ch: 3
+          ch: 128
+          ch_mult:
+          - 1
+          - 2
+          - 4
+          num_res_blocks: 2
+          attn_resolutions: []
+          dropout: 0.0
+        lossconfig:
+          target: torch.nn.Identity
+
+    cond_stage_config:
+      target: ldm.data.hpa.HPAClassEmbedder
+      params: {}
+
+
+data:
+  target: main.DataModuleFromConfig
+  params:
+    batch_size: 16
+    num_workers: 4
+    wrap: False
+    # train:
+    #   target: ldm.data.hpa.HPACombineDatasetMetadata
+    #   params:
+    #     size: 256
+    #     length: 247678
+    # validation:
+    #   target: ldm.data.hpa.HPACombineDatasetMetadata
+    #   params:
+    #     size: 256
+    #     length: 1000
+    train:
+      target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
+      params:
+        seed: 123
+        train_split: 0.95
+        group: 'train'
+        cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle
+    validation:
+      target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
+      params:
+        seed: 123
+        train_split: 0.95
+        group: 'validation'
+        cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle
+
+lightning:
+  callbacks:
+    image_logger:
+      target: main.ImageLogger
+      params:
+        batch_frequency: 100
+        max_images: 8
+        increase_log_steps: false
+        log_images_kwargs:
+          ddim_steps: 100
+          quantize_denoised: true
+          inpaint: false
+          plot_denoise_rows: true
+          plot_progressive_rows: false
+          plot_diffusion_rows: true
+
+
+  trainer:
+    benchmark: True
+    accelerator: dp # need to change to dp because the default ddp will free the training
+    # limit_val_batches: 100

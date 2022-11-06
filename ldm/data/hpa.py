@@ -286,6 +286,13 @@ class HPACombineDatasetSR(Dataset):
         return example
     
 
+class HPAClassEmbedder(nn.Module):
+    def forward(self, batch, key=None):
+        bert = batch["bert"]
+        celline = batch["cell-line"]
+        return {"c_crossattn": [bert, celline]}
+
+
 class HPAHybridEmbedder(nn.Module):
     def __init__(self, image_embedding_model):
         super().__init__()
