@@ -1,0 +1,68 @@
+model:
+  base_learning_rate: 4.5e-06
+  target: ldm.models.autoencoder.VQModel
+  params:
+    embed_dim: 3
+    n_embed: 8192
+    monitor: val/rec_loss
+    ckpt_path: models/first_stage_models/vq-f4/model.ckpt
+
+    ddconfig:
+      double_z: false
+      z_channels: 3
+      resolution: 256
+      in_channels: 3
+      out_ch: 3
+      ch: 128
+      ch_mult:
+      - 1
+      - 2
+      - 4
+      num_res_blocks: 2
+      attn_resolutions: []
+      dropout: 0.0
+    lossconfig:
+      target: ldm.modules.losses.vqperceptual.VQLPIPSWithDiscriminator
+      params:
+        disc_conditional: false
+        disc_in_channels: 3
+        disc_start: 0
+        disc_weight: 0.75
+        codebook_weight: 1.0
+        n_classes: 8192
+
+data:
+  target: main.DataModuleFromConfig
+  params:
+    batch_size: 8
+    # num_workers: 0 # disable multiprocessing
+    wrap: True
+    train:
+      target: ldm.data.hpa.HPACombineDatasetSR
+      params:
+        filename: shard-{000000..000335}  # sample count: 716*336
+        channels: [1, 1, 1] # replace the green channel with ER
+        length: 80000
+        size: 256
+        degradation: pil_nearest
+    validation:
+      target: ldm.data.hpa.HPACombineDatasetSR  # sample count: 716*10
+      params:
+        filename: shard-{000335..000345}
+        channels: [1, 1, 1] # replace the green channel with ER
+        length: 7160
+        size: 256
+        degradation: pil_nearest
+
+lightning:
+  callbacks:
+    image_logger:
+      target: main.ImageLogger
+      params:
+        batch_frequency: 1000
+        max_images: 8
+        increase_log_steps: True
+
+  trainer:
+    benchmark: True
+    accumulate_grad_batches: 2
