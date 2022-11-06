@@ -21,8 +21,9 @@ from ldm.models.diffusion.plms import PLMSSampler
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
 
-DEFAULT_MUTATION_RATE = 0.15
+DEFAULT_MUTATION_RATE = 0.08
 DEFAULT_PROMPT_MUTATION_RATE = 0.05
+current_images = []
 
 # load safety model
 safety_model_id = "CompVis/stable-diffusion-safety-checker"
@@ -139,11 +140,12 @@ def run_generation(precision_scope, opt, model, batch_size, data, sampler, start
                         x_checked_image_torch = torch.from_numpy(x_checked_image).permute(0, 3, 1, 2)
 
                         if not opt.skip_save:
-                            for x_sample in x_checked_image_torch:
+                            for idx, x_sample in enumerate(x_checked_image_torch):
                                 x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                                 img = Image.fromarray(x_sample.astype(np.uint8))
                                 img = put_watermark(img, wm_encoder)
                                 img.save(os.path.join(sample_path, f"{base_count:05}.png"))
+                                current_images[idx] = img
                                 base_count += 1
 
                         if not opt.skip_grid:
@@ -167,6 +169,7 @@ def run_generation(precision_scope, opt, model, batch_size, data, sampler, start
 
 
 def main():
+    global current_images
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -213,6 +216,12 @@ def main():
         action='store_true',
         default=False,
         help="if enabled, uses nsfw filter to remove nsfw images",
+    )
+    parser.add_argument(
+        "--gui",
+        action='store_true',
+        default=False,
+        help="if enabled, uses gui",
     )
     parser.add_argument(
         "--ddim_eta",
@@ -333,7 +342,7 @@ def main():
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
-
+    current_images = [""] * opt.n_samples
     if opt.plms:
         sampler = PLMSSampler(model)
     else:
@@ -360,6 +369,7 @@ def main():
             data = f.read().splitlines()
             data = list(chunk(data, batch_size))
 
+
     sample_path = os.path.join(outpath, "samples")
     os.makedirs(sample_path, exist_ok=True)
     base_count = len(os.listdir(sample_path))
@@ -367,7 +377,8 @@ def main():
     start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
     last_start_code = start_code
     c = model.get_learned_conditioning([opt.prompt])
-    prompt_delta = torch.randn_like(c, device=device).unsqueeze(0).repeat(opt.n_samples, 1, 1, 1) * opt.prompt_mutation_rate
+    # prompt_delta = torch.randn_like(c, device=device).unsqueeze(0).repeat(opt.n_samples, 1, 1, 1) * opt.prompt_mutation_rate
+    prompt_delta = None
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
     while True:
         try:
@@ -388,39 +399,45 @@ def main():
                 prompt_delta
             )
             def get_input(start_code):
-                try:
-                    response = input(f"choose [0-{opt.n_samples-1}]: ").lower()
-                    if response=="q":
-                        return "quit"
-                    elif response=="h":
-                        print_help()
+                if opt.gui:
+                   # gui
+                   from evolve_gui import App
+                   response = App(current_images)
+                else:
+                    # input
+                    try:
+                        response = input(f"choose [0-{opt.n_samples-1}]: ").lower()
+                        if response=="q":
+                            return "quit"
+                        elif response=="h":
+                            print_help()
+                            return get_input(start_code)
+                        elif response=="b":
+                            start_code=last_start_code
+                            os.system(f"cp {outpath}/grid-{grid_count-1:04}.png {outpath}/current.png")
+                            return get_input(start_code)
+                        elif response.startswith("m="):
+                            opt.mutation_rate = float(response[2:])
+                            print(f"\tmutation rate set to {opt.mutation_rate}")
+                            return get_input(start_code)
+                        elif response.startswith("s="):
+                            opt.n_samples = int(response[2:])
+                            print(f"\tn_samples set to {opt.n_samples}")
+                            return get_input(start_code)
+                        else:
+                                try:
+                                    response = int(response)
+                                except ValueError:
+                                    print("invalid input")
+                                    return get_input(start_code)
+                                if response < 0 or response >= start_code.shape[0]:
+                                    raise ValueError
+                                return response, start_code
+                    except Exception as e:
+                        print("\tunrecognized command")
+                        print("\t", type(e).__name__, e)
                         return get_input(start_code)
-                    elif response=="b":
-                        start_code=last_start_code
-                        os.system(f"cp {outpath}/grid-{grid_count-1:04}.png {outpath}/current.png")
-                        return get_input(start_code)
-                    elif response.startswith("m="):
-                        opt.mutation_rate = float(response[2:])
-                        print(f"\tmutation rate set to {opt.mutation_rate}")
-                        return get_input(start_code)
-                    elif response.startswith("s="):
-                        opt.n_samples = int(response[2:])
-                        print(f"\tn_samples set to {opt.n_samples}")
-                        return get_input(start_code)
-                    else:
-                            try:
-                                response = int(response)
-                            except ValueError:
-                                print("invalid input")
-                                return get_input(start_code)
-                            if response < 0 or response >= start_code.shape[0]:
-                                raise ValueError
-                            return response, start_code
-                except Exception as e:
-                    print("\tunrecognized command")
-                    print("\t", type(e).__name__, e)
-                    return get_input(start_code)
-            
+                
             print()
             response, start_code = get_input(start_code)
             if response == "quit":
@@ -430,8 +447,9 @@ def main():
             last_start_code = start_code
             start_code = start_code[response].unsqueeze(0).repeat(opt.n_samples, 1, 1, 1)
             start_code += torch.randn_like(start_code)*opt.mutation_rate
-            prompt_delta = prompt_delta[response].unsqueeze(0).repeat(opt.n_samples, 1, 1, 1)
-            prompt_delta += torch.randn_like(prompt_delta, device=device) * opt.prompt_mutation_rate
+            if prompt_delta is not None:
+                prompt_delta = prompt_delta[response].unsqueeze(0).repeat(opt.n_samples, 1, 1, 1)
+                prompt_delta += torch.randn_like(prompt_delta, device=device) * opt.prompt_mutation_rate
 
         except KeyboardInterrupt:
             print("Stopping")
