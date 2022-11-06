@@ -2,6 +2,7 @@ model:
   base_learning_rate: 5.0e-5   # set to target_lr by starting main.py with '--scale_lr False'
   target: ldm.models.diffusion.ddpm.LatentDiffusion
   params:
+    # ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-11-06T02-58-38_hpa-ldm-vq-4-hybrid-debug/checkpoints/last.ckpt
     linear_start: 0.0015
     linear_end: 0.0155
     num_timesteps_cond: 1
@@ -12,10 +13,10 @@ model:
     cond_stage_key: "hybrid-conditions" # the key in the dataset for feeding into the condition model
     image_size: 64
     channels: 3
-    cond_stage_trainable: False
-    concat_mode: False # this will set conditioning_key to "crossattn" if not exists
+    cond_stage_trainable: false
+    concat_mode: false # this will set conditioning_key to "crossattn" if not exists
     conditioning_key: hybrid # force it to conditioning_key to be "hybrid"
-    scale_by_std: True
+    scale_by_std: true
     monitor: 'val/loss_simple_ema'
 
     scheduler_config: # 10000 warmup steps
@@ -46,7 +47,8 @@ model:
       params:
         embed_dim: 3
         n_embed: 8192
-        ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-10-14T08-16-57_autoencoder_vq_f4_hpa_rp/checkpoints/last.ckpt
+        # autoencoder for the protein channel
+        ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-11-06T04-05-25_autoencoder_vq_f4_hpa_p/checkpoints/last.ckpt
         ddconfig:
           double_z: false
           z_channels: 3
@@ -67,14 +69,36 @@ model:
     cond_stage_config:
       target: ldm.data.hpa.HPAHybridEmbedder
       params:
-        image_embedding_model: __is_first_stage__
+        image_embedding_model:
+          target: ldm.models.autoencoder.VQModelInterface
+          params:
+            embed_dim: 3
+            n_embed: 8192
+            # autoencoder for the reference channel
+            ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-10-14T09-02-57_autoencoder_vq_f4_hpa_r/checkpoints/last.ckpt
+            ddconfig:
+              double_z: false
+              z_channels: 3
+              resolution: 256
+              in_channels: 3
+              out_ch: 3
+              ch: 128
+              ch_mult:
+              - 1
+              - 2
+              - 4
+              num_res_blocks: 2
+              attn_resolutions: []
+              dropout: 0.0
+            lossconfig:
+              target: torch.nn.Identity
 
 
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 64
-    num_workers: 16
+    batch_size: 48
+    num_workers: 8
     wrap: False
     # train:
     #   target: ldm.data.hpa.HPACombineDatasetMetadata
@@ -93,6 +117,7 @@ data:
         train_split: 0.95
         group: 'train'
         cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256.pickle
+        channels: [1, 1, 1] # expose the green channel only
     validation:
       target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
       params:
@@ -100,26 +125,25 @@ data:
         train_split: 0.95
         group: 'validation'
         cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256.pickle
+        channels: [1, 1, 1] # expose the green channel only
 
 lightning:
   callbacks:
     image_logger:
       target: main.ImageLogger
       params:
-        batch_frequency: 1000
+        batch_frequency: 5000
         max_images: 8
         increase_log_steps: false
         log_images_kwargs:
-          ddim_steps: 50
+          ddim_steps: 100
           quantize_denoised: true
           inpaint: false
           plot_denoise_rows: true
           plot_progressive_rows: false
           plot_diffusion_rows: true
-
+          n_row: 8
 
   trainer:
     benchmark: True
     accelerator: dp # need to change to dp because the default ddp will free the training
-    # auto_scale_batch_size: binsearch
-    # limit_val_batches: 100
