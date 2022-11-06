@@ -104,13 +104,13 @@ data:
     #   params:
     #     size: 256
     #     length: 247678
-    #     channels: [1, 1, 1] # expose the green channel only
+    #     channels: [0, 1, 2]
     # validation:
     #   target: ldm.data.hpa.HPACombineDatasetMetadata
     #   params:
     #     size: 256
     #     length: 1000
-    #     channels: [1, 1, 1] # expose the green channel only
+    #     channels: [0, 1, 2]
     train:
       target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
       params:
@@ -118,7 +118,7 @@ data:
         train_split: 0.95
         group: 'train'
         cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle
-        channels: [0, 1, 2] # expose the green channel only
+        channels: [0, 1, 2]
     validation:
       target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
       params:
@@ -126,7 +126,7 @@ data:
         train_split: 0.95
         group: 'validation'
         cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle
-        channels: [0, 1, 2] # expose the green channel only
+        channels: [0, 1, 2]
 
 lightning:
   callbacks:
