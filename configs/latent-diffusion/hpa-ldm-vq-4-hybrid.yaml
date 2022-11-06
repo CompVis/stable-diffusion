@@ -97,19 +97,21 @@ model:
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 48
-    num_workers: 8
+    batch_size: 64
+    num_workers: 16
     wrap: False
     # train:
     #   target: ldm.data.hpa.HPACombineDatasetMetadata
     #   params:
     #     size: 256
     #     length: 247678
+    #     channels: [1, 1, 1] # expose the green channel only
     # validation:
     #   target: ldm.data.hpa.HPACombineDatasetMetadata
     #   params:
     #     size: 256
     #     length: 1000
+    #     channels: [1, 1, 1] # expose the green channel only
     train:
       target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
       params:
@@ -132,9 +134,10 @@ lightning:
     image_logger:
       target: main.ImageLogger
       params:
-        batch_frequency: 5000
+        batch_frequency: 1000
         max_images: 8
         increase_log_steps: false
+        # log_to_slack: ["samples_combined"]
         log_images_kwargs:
           ddim_steps: 100
           quantize_denoised: true

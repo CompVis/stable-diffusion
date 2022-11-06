@@ -2,7 +2,7 @@ model:
   base_learning_rate: 5.0e-5   # set to target_lr by starting main.py with '--scale_lr False'
   target: ldm.models.diffusion.ddpm.LatentDiffusion
   params:
-    ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-11-06T02-58-38_hpa-ldm-vq-4-hybrid-debug/checkpoints/last.ckpt
+    # ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-11-06T02-58-38_hpa-ldm-vq-4-hybrid-debug/checkpoints/last.ckpt
     linear_start: 0.0015
     linear_end: 0.0155
     num_timesteps_cond: 1
@@ -99,48 +99,50 @@ data:
     batch_size: 16
     num_workers: 4
     wrap: False
+    # train:
+    #   target: ldm.data.hpa.HPACombineDatasetMetadata
+    #   params:
+    #     size: 256
+    #     length: 247678
+    #     channels: [1, 1, 1] # expose the green channel only
+    # validation:
+    #   target: ldm.data.hpa.HPACombineDatasetMetadata
+    #   params:
+    #     size: 256
+    #     length: 1000
+    #     channels: [1, 1, 1] # expose the green channel only
     train:
-      target: ldm.data.hpa.HPACombineDatasetMetadata
+      target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
       params:
-        size: 256
-        length: 247678
+        seed: 123
+        train_split: 0.95
+        group: 'train'
+        cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle
         channels: [1, 1, 1] # expose the green channel only
     validation:
-      target: ldm.data.hpa.HPACombineDatasetMetadata
+      target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
       params:
-        size: 256
-        length: 1000
+        seed: 123
+        train_split: 0.95
+        group: 'validation'
+        cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle
         channels: [1, 1, 1] # expose the green channel only
-    # train:
-    #   target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
-    #   params:
-    #     seed: 123
-    #     train_split: 0.95
-    #     group: 'train'
-    #     cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle
-    # validation:
-    #   target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
-    #   params:
-    #     seed: 123
-    #     train_split: 0.95
-    #     group: 'validation'
-    #     cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle
 
 lightning:
   callbacks:
     image_logger:
       target: main.ImageLogger
       params:
-        batch_frequency: 1
+        batch_frequency: 100
         max_images: 8
         increase_log_steps: false
         log_images_kwargs:
-          ddim_steps: 1
-          quantize_denoised: false
+          ddim_steps: 100
+          quantize_denoised: true
           inpaint: false
-          plot_denoise_rows: false
+          plot_denoise_rows: true
           plot_progressive_rows: false
-          plot_diffusion_rows: false
+          plot_diffusion_rows: true
           n_row: 8
 
   trainer:

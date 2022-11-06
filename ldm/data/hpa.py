@@ -71,7 +71,7 @@ location_mapping = {"Actin filaments": 0, "Aggresome": 1, "Cell Junctions": 2, "
 cellline_mapping = {"A-431": 0, "A549": 1, "AF22": 2, "ASC TERT1": 3, "BJ": 4, "CACO-2": 5, "EFO-21": 6, "HAP1": 7, "HDLM-2": 8, "HEK 293": 9, "HEL": 10, "HTC": 11, "HUVEC TERT2": 12, "HaCaT": 13, "HeLa": 14, "Hep G2": 15, "JURKAT": 16, "K-562": 17, "LHCN-M2": 18, "MCF7": 19, "NB-4": 20, "NIH 3T3": 21, "OE19": 22, "PC-3": 23, "REH": 24, "RH-30": 25, "RPTEC TERT1": 26, "RT4": 27, "SH-SY5Y": 28, "SK-MEL-30": 29, "SiHa": 30, "SuSa": 31, "THP-1": 32, "U-2 OS": 33, "U-251 MG": 34, "Vero": 35, "hTCEpi": 36}
 
 class HPACombineDatasetMetadata():
-    def __init__(self, filename="webdataset", channels=None, include_metadata=True, size=None, length=80000, random_crop=False):
+    def __init__(self, filename="webdataset", channels=None, include_metadata=True, return_info=False, size=None, length=80000, random_crop=False):
         self.size = size
         self.random_crop = random_crop
         self.base = HPACombineDataset(filename, include_metadata=include_metadata, length=length)
@@ -88,6 +88,7 @@ class HPACombineDatasetMetadata():
             self.channels = [0, 1, 2]
         else:
             self.channels = channels
+        self.return_info = return_info
 
     def preprocess_image(self, image):
         # image = np.load(image_path).squeeze(0)  # 3 x 1024 x 1024
@@ -118,7 +119,7 @@ class HPACombineDatasetMetadata():
         cellline_encoding = np.zeros((len(cellline_mapping) + 1, ), dtype=np.float32)
         cellline_encoding[cellline_mapping[info['atlas_name']]] = 1
 
-        return {
+        ret = {
             "image": self.preprocess_image(image),
             # "class_label": locations_encoding,
             "cell-line": cellline_encoding,
@@ -126,6 +127,11 @@ class HPACombineDatasetMetadata():
             "bert": bert,
             "caption": f"{info['gene_names']}/{info['atlas_name']}/{info['locations']}"
         }
+        
+        if self.return_info:
+            ret['info'] = info
+
+        return ret
 
     def __getitem__(self, i):
         example = self.base[i]
@@ -134,6 +140,17 @@ class HPACombineDatasetMetadata():
 
 TOTAL_LENGTH = 247678
 
+def dump_info(info_pickle_path):
+        # dump info
+    url = f"/data/wei/hpa-webdataset-all-composite/webdataset_info.tar"
+    dataset_info = wds.WebDataset(url, nodesplitter=wds.split_by_node).decode().to_tuple("__key__", "info.json")
+    info_list = []
+    for _, info in tqdm(dataset_info, total=TOTAL_LENGTH):
+        info_list.append(info)
+    assert len(info_list) == TOTAL_LENGTH
+    with open(info_pickle_path, 'wb') as fp:
+        pickle.dump(info_list, fp)
+
 class HPACombineDatasetMetadataInMemory():
 
     samples_dict = {}
@@ -141,7 +158,7 @@ class HPACombineDatasetMetadataInMemory():
     @staticmethod
     def generate_cache(cache_file, *args, total_length=None, **kwargs):
         print("Reading data into memory, this may take a while...")
-        dataset = HPACombineDatasetMetadata(*args, **kwargs)
+        dataset = HPACombineDatasetMetadata(*args, return_info=True, **kwargs)
         gen = dataset.base.sample_generator()
         samples = []
         total_length = total_length or TOTAL_LENGTH
@@ -159,11 +176,21 @@ class HPACombineDatasetMetadataInMemory():
                 print(f"Loading data from cache file {cache_file}, this may take a while...")
                 with open(cache_file, 'rb') as fp:
                     self.samples = pickle.load(fp)
-                print("Data loaded")
+
+                # Patch the generated pickle file to include info
+                # with open("/data/wei/hpa-webdataset-all-composite/HPACombineDatasetInfo.pickle", 'rb') as fp:
+                #     info_list = pickle.load(fp)
+                # assert len(info_list) == len(self.samples)
+                # for i in tqdm(range(len(self.samples)), total=len(self.samples)):
+                #     self.samples[i]["info"] = info_list[i]
+                # with open(cache_file, 'wb') as fp:
+                #     pickle.dump(self.samples, fp)
+                # print("Data loaded")
             else:
                 raise Exception(f"Cache file not found {cache_file}")
             HPACombineDatasetMetadataInMemory.samples_dict[cache_file] = self.samples
         self.channels = channels
+        assert "info" in self.samples[0]
 
         self.length = len(self.samples)
         assert group in ['train', 'validation']
@@ -185,6 +212,9 @@ class HPACombineDatasetMetadataInMemory():
         sample = self.samples[self.indexes[i]]
         if self.channels:
             sample['image'] = sample['image'][:, :, self.channels]
+        info = sample["info"]
+        sample['caption'] = f"{info['gene_names']}/{info['atlas_name']}/{info['locations']}"
+        del sample["info"] # Remove info to avoid issue in the dataloader
         return sample
 
 
@@ -333,3 +363,4 @@ class HPAHybridEmbedder(nn.Module):
 if __name__ == "__main__":
     # HPACombineDatasetMetadataInMemory.generate_cache("/data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle", size=256, total_length=1000)
     HPACombineDatasetMetadataInMemory.generate_cache("/data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256.pickle", size=256)
+    # dump_info("/data/wei/hpa-webdataset-all-composite/HPACombineDatasetInfo.pickle")

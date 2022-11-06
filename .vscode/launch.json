@@ -35,7 +35,7 @@
                 "-t",
                 "-b",
                 "configs/latent-diffusion/hpa-ldm-vq-4-hybrid-debug.yaml",
-                "--gpus=0,1,2"
+                "--gpus=0,1,2,3"
             ],
             "console": "integratedTerminal",
             "justMyCode": true

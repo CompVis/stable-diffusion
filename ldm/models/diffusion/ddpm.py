@@ -1293,7 +1293,7 @@ class LatentDiffusion(DDPM):
         if self.model.conditioning_key is not None:
             if hasattr(self.cond_stage_model, "decode"):
                 xc = self.cond_stage_model.decode(c)
-                caption_image = 1 - make_grid(log_txt_as_img((x.shape[2], x.shape[3]), batch["caption"][:N], size=12), nrow=1)
+                caption_image = (1 - make_grid(log_txt_as_img((x.shape[2], x.shape[3]), batch["caption"][:N], size=12), nrow=1)).to(xc.get_device())
                 log["conditioning"] = torch.clip(xc + caption_image, -1.0, 1.0)
             elif self.cond_stage_key in ["caption"]:
                 xc = log_txt_as_img((x.shape[2], x.shape[3]), batch["caption"])
@@ -1328,16 +1328,19 @@ class LatentDiffusion(DDPM):
             # get denoise row
             with self.ema_scope("Plotting"):
                 samples, z_denoise_row = self.sample_log(cond=c,batch_size=N,ddim=use_ddim,
-                                                         ddim_steps=ddim_steps,eta=ddim_eta)
+                                                         ddim_steps=ddim_steps,eta=ddim_eta, log_every_t=20)
                 # samples, z_denoise_row = self.sample(cond=c, batch_size=N, return_intermediates=True)
             x_samples = self.decode_first_stage(samples)
             log["samples"] = make_grid(x_samples, nrow=1)
             if caption_image is not None and xc.shape == log["samples"].shape:
                 # combined: microtubule, protein, nuclei
-                log["samples_combined"] = torch.clip(torch.stack([xc[0, :, :], torch.mean(log["samples"], dim=0), xc[2, :, :]], dim=0) + caption_image, -1.0, 1.0)
+                log["samples_combined"] = torch.clip(torch.stack([xc[0, :, :], torch.mean(log["samples"], dim=0), xc[2, :, :]], dim=0) + caption_image.to(x_samples.get_device()), -1.0, 1.0)
             if plot_denoise_rows:
                 denoise_grid = self._get_denoise_row_from_list(z_denoise_row['pred_x0'])
                 log["denoise_row"] = denoise_grid
+                if "conditioning" in log:
+                    log["denoise_row"] = torch.cat([log["conditioning"], log["denoise_row"]], dim=2)
+                    del log["conditioning"]
 
             if quantize_denoised and not isinstance(self.first_stage_model, AutoencoderKL) and not isinstance(
                     self.first_stage_model, IdentityFirstStage):
