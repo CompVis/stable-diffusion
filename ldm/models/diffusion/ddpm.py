@@ -1275,7 +1275,7 @@ class LatentDiffusion(DDPM):
     @torch.no_grad()
     def log_images(self, batch, N=8, n_row=4, sample=True, ddim_steps=200, ddim_eta=1., return_keys=None,
                    quantize_denoised=True, inpaint=True, plot_denoise_rows=False, plot_progressive_rows=True,
-                   plot_diffusion_rows=True, **kwargs):
+                   plot_diffusion_rows=True, plot_samples_combined=False, **kwargs):
 
         use_ddim = ddim_steps is not None
 
@@ -1332,15 +1332,17 @@ class LatentDiffusion(DDPM):
                 # samples, z_denoise_row = self.sample(cond=c, batch_size=N, return_intermediates=True)
             x_samples = self.decode_first_stage(samples)
             log["samples"] = make_grid(x_samples, nrow=1)
-            if caption_image is not None and xc.shape == log["samples"].shape:
-                # combined: microtubule, protein, nuclei
-                log["samples_combined"] = torch.clip(torch.stack([xc[0, :, :], torch.mean(log["samples"], dim=0), xc[2, :, :]], dim=0) + caption_image.to(x_samples.get_device()), -1.0, 1.0)
+            
             if plot_denoise_rows:
                 denoise_grid = self._get_denoise_row_from_list(z_denoise_row['pred_x0'])
                 log["denoise_row"] = denoise_grid
                 if "conditioning" in log:
                     log["denoise_row"] = torch.cat([log["conditioning"], log["denoise_row"]], dim=2)
                     del log["conditioning"]
+
+            if plot_samples_combined and caption_image is not None and xc.shape == log["samples"].shape:
+                # combined: microtubule, protein, nuclei
+                log["samples_combined"] = torch.clip(torch.stack([xc[0, :, :], torch.mean(log["samples"], dim=0), xc[2, :, :]], dim=0) + caption_image.to(x_samples.get_device()), -1.0, 1.0)
 
             if quantize_denoised and not isinstance(self.first_stage_model, AutoencoderKL) and not isinstance(
                     self.first_stage_model, IdentityFirstStage):

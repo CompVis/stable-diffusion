@@ -47,8 +47,8 @@ model:
       params:
         embed_dim: 3
         n_embed: 8192
-        # autoencoder for the protein channel
-        ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-11-06T04-05-25_autoencoder_vq_f4_hpa_p/checkpoints/last.ckpt
+        # autoencoder for the reference + protein channel
+        ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-10-14T08-16-57_autoencoder_vq_f4_hpa_rp/checkpoints/last.ckpt
         ddconfig:
           double_z: false
           z_channels: 3
@@ -119,7 +119,7 @@ data:
         train_split: 0.95
         group: 'train'
         cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256.pickle
-        channels: [1, 1, 1] # expose the green channel only
+        channels: [0, 1, 2] # expose the green channel only
     validation:
       target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
       params:
@@ -127,7 +127,7 @@ data:
         train_split: 0.95
         group: 'validation'
         cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256.pickle
-        channels: [1, 1, 1] # expose the green channel only
+        channels: [0, 1, 2] # expose the green channel only
 
 lightning:
   callbacks:
@@ -137,7 +137,7 @@ lightning:
         batch_frequency: 1000
         max_images: 8
         increase_log_steps: false
-        # log_to_slack: ["samples_combined"]
+        log_to_slack: ["denoise_row"]
         log_images_kwargs:
           ddim_steps: 100
           quantize_denoised: true
@@ -145,6 +145,7 @@ lightning:
           plot_denoise_rows: true
           plot_progressive_rows: false
           plot_diffusion_rows: true
+          plot_samples_combined: false
           n_row: 8
 
   trainer:
