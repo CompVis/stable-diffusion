@@ -714,7 +714,6 @@ def main():
                                 beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", skip_prk_steps=True
                             )
 
-                        scheduler.set_timesteps(num_inference_steps=35)
                         pipeline = StableDiffusionPipeline(
                             text_encoder=text_encoder,
                             vae=vae,
