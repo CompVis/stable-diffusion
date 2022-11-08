@@ -5,8 +5,7 @@ import os
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-f", "--file", required = True, help = "Path to image file")
-ap.add_argument("-c", "--clusters", required = True, type = int,
-	help = "# of clusters")
+ap.add_argument("-c", "--clusters", required = True, type = int, help = "# of clusters")
 args = vars(ap.parse_args())
 
 def quant(img,k):
@@ -21,5 +20,5 @@ def quant(img,k):
     return result
 
 if os.path.isfile(args["file"]):
-    print(args["file"])
+    print(f'Palettizing output to {args["clusters"]} colors...')
     cv2.imwrite(args["file"], quant(cv2.imread(args["file"]),args["clusters"]))
