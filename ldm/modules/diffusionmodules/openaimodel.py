@@ -475,7 +475,7 @@ class UNetModel(nn.Module):
             assert use_spatial_transformer, 'Fool!! You forgot to use the spatial transformer for your cross-attention conditioning...'
             from omegaconf.listconfig import ListConfig
             if type(context_dim) == ListConfig:
-                context_dim = list(context_dim)
+                context_dim = tuple(context_dim)
 
         if num_heads_upsample == -1:
             num_heads_upsample = num_heads

@@ -722,7 +722,8 @@ if __name__ == "__main__":
             trainer.fit(model, data)
         except Exception:
             melk()
-            send_message_to_slack({"message": "Oops, the diffusion model training process has stopped unexpectedly"})
+            if "log_to_slack" in lightning_config.callbacks.image_logger.params and lightning_config.callbacks.image_logger.params.log_to_slack:
+                send_message_to_slack("Oops, the diffusion model training process has stopped unexpectedly")
             raise
     if not opt.no_test and not trainer.interrupted:
         trainer.test(model, data)

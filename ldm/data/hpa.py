@@ -361,6 +361,6 @@ class HPAHybridEmbedder(nn.Module):
 
 
 if __name__ == "__main__":
-    # HPACombineDatasetMetadataInMemory.generate_cache("/data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle", size=256, total_length=1000)
+    HPACombineDatasetMetadataInMemory.generate_cache("/data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle", size=256, total_length=1000)
     HPACombineDatasetMetadataInMemory.generate_cache("/data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256.pickle", size=256)
     # dump_info("/data/wei/hpa-webdataset-all-composite/HPACombineDatasetInfo.pickle")

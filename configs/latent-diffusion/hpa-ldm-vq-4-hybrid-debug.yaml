@@ -19,14 +19,14 @@ model:
     scale_by_std: true
     monitor: 'val/loss_simple_ema'
 
-    scheduler_config: # 10000 warmup steps
-      target: ldm.lr_scheduler.LambdaLinearScheduler
-      params:
-        warm_up_steps: [10000]
-        cycle_lengths: [10000000000000]
-        f_start: [1.e-6]
-        f_max: [1.]
-        f_min: [ 1.]
+    # scheduler_config: # 10000 warmup steps
+    #   target: ldm.lr_scheduler.LambdaLinearScheduler
+    #   params:
+    #     warm_up_steps: [10000]
+    #     cycle_lengths: [10000000000000]
+    #     f_start: [1.e-6]
+    #     f_max: [ 1.e-4 ]
+    #     f_min: [ 1.e-4 ]
 
     unet_config:
       target: ldm.modules.diffusionmodules.openaimodel.UNetModel
@@ -39,8 +39,11 @@ model:
         num_res_blocks: 2
         channel_mult: [ 1,2,2,4,4 ]  # 32, 16, 8, 4, 2
         num_heads: 8
-        use_scale_shift_norm: True
-        resblock_updown: True
+        use_spatial_transformer: True
+        transformer_depth: 1
+        context_dim: 806 # [768, 38]
+        use_checkpoint: True
+        legacy: False
 
     first_stage_config:
       target: ldm.models.autoencoder.VQModelInterface
@@ -133,7 +136,7 @@ lightning:
     image_logger:
       target: main.ImageLogger
       params:
-        batch_frequency: 100
+        batch_frequency: 64
         max_images: 8
         increase_log_steps: false
         log_images_kwargs:

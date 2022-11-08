@@ -19,14 +19,14 @@ model:
     scale_by_std: true
     monitor: 'val/loss_simple_ema'
 
-    scheduler_config: # 10000 warmup steps
-      target: ldm.lr_scheduler.LambdaLinearScheduler
-      params:
-        warm_up_steps: [10000]
-        cycle_lengths: [10000000000000]
-        f_start: [1.e-6]
-        f_max: [1.]
-        f_min: [ 1.]
+    # scheduler_config: # 10000 warmup steps
+    #   target: ldm.lr_scheduler.LambdaLinearScheduler
+    #   params:
+    #     warm_up_steps: [10000]
+    #     cycle_lengths: [10000000000000]
+    #     f_start: [1.e-6]
+    #     f_max: [1.]
+    #     f_min: [ 1.]
 
     unet_config:
       target: ldm.modules.diffusionmodules.openaimodel.UNetModel
