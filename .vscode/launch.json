@@ -21,7 +21,8 @@
                 "-t",
                 "-b",
                 "configs/latent-diffusion/hpa-ldm-vq-4-unconditional-debug.yaml",
-                "--gpus=1,2,3,4,5"
+                "--gpus=1,2,3,4,5",
+                "--scale_lr=False"
             ],
             "console": "integratedTerminal",
             "justMyCode": true
@@ -35,7 +36,23 @@
                 "-t",
                 "-b",
                 "configs/latent-diffusion/hpa-ldm-vq-4-hybrid-debug.yaml",
-                "--gpus=0,1,2,3"
+                "--gpus=0,1,2,3",
+                "--scale_lr=False"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Train: hpa-ldm-vq-4-hybrid-protein",
+            "type": "python",
+            "request": "launch",
+            "program": "main.py",
+            "args": [
+                "-t",
+                "-b",
+                "configs/latent-diffusion/hpa-ldm-vq-4-hybrid-protein-debug.yaml",
+                "--gpus=0,1,2,3",
+                "--scale_lr=False"
             ],
             "console": "integratedTerminal",
             "justMyCode": true
@@ -48,7 +65,8 @@
             "args": [
                 "-t",
                 "-b",
-                "configs/latent-diffusion/hpa-ldm-vq-4-hybrid-debug.yaml"
+                "configs/latent-diffusion/hpa-ldm-vq-4-hybrid-debug.yaml",
+                "--scale_lr=False"
             ],
             "console": "integratedTerminal",
             "justMyCode": true
@@ -73,7 +91,7 @@
             "program": "main.py",
             "args": [
                 "-b",
-                "configs/latent-diffusion/hpa-ldm-vq-4-hybrid-debug.yaml",
+                "configs/latent-diffusion/hpa-ldm-vq-4-hybrid-debug.yaml"
             ],
             "console": "integratedTerminal",
             "justMyCode": true

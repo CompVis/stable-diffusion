@@ -1275,7 +1275,7 @@ class LatentDiffusion(DDPM):
     @torch.no_grad()
     def log_images(self, batch, N=8, n_row=4, sample=True, ddim_steps=200, ddim_eta=1., return_keys=None,
                    quantize_denoised=True, inpaint=True, plot_denoise_rows=False, plot_progressive_rows=True,
-                   plot_diffusion_rows=True, plot_samples_combined=False, **kwargs):
+                   plot_diffusion_rows=True, mix_sample=False, plot_inputs=False, plot_reconstructions=False, **kwargs):
 
         use_ddim = ddim_steps is not None
 
@@ -1287,14 +1287,22 @@ class LatentDiffusion(DDPM):
                                            bs=N)
         N = min(x.shape[0], N)
         n_row = min(x.shape[0], n_row)
-        log["inputs"] = make_grid(x, nrow=1)
-        log["reconstruction"] = make_grid(xrec, nrow=1)
-        caption_image = None
+        inputs_grid = make_grid(x, nrow=1)
+
+        if plot_inputs:
+            log["inputs"] = inputs_grid
+
+        if plot_reconstructions:
+            log["reconstruction"] = make_grid(xrec, nrow=1)
+
         if self.model.conditioning_key is not None:
             if hasattr(self.cond_stage_model, "decode"):
                 xc = self.cond_stage_model.decode(c)
-                caption_image = (1 - make_grid(log_txt_as_img((x.shape[2], x.shape[3]), batch["caption"][:N], size=12), nrow=1)).to(xc.get_device())
-                log["conditioning"] = torch.clip(xc + caption_image, -1.0, 1.0)
+                if "condition_caption" in batch:
+                    caption_image = (1 - make_grid(log_txt_as_img((x.shape[2], x.shape[3]), batch["condition_caption"][:N], size=12), nrow=1)).to(xc.get_device())
+                    log["conditioning"] = torch.clip(xc + caption_image, -1.0, 1.0)
+                else:
+                    log["conditioning"] = xc
             elif self.cond_stage_key in ["caption"]:
                 xc = log_txt_as_img((x.shape[2], x.shape[3]), batch["caption"])
                 log["conditioning"] = xc
@@ -1325,24 +1333,26 @@ class LatentDiffusion(DDPM):
             log["diffusion_row"] = diffusion_grid
 
         if sample:
+            columns = []
+
             # get denoise row
             with self.ema_scope("Plotting"):
                 samples, z_denoise_row = self.sample_log(cond=c,batch_size=N,ddim=use_ddim,
                                                          ddim_steps=ddim_steps,eta=ddim_eta, log_every_t=20)
                 # samples, z_denoise_row = self.sample(cond=c, batch_size=N, return_intermediates=True)
             x_samples = self.decode_first_stage(samples)
-            log["samples"] = make_grid(x_samples, nrow=1)
+            samples_grid = make_grid(x_samples, nrow=1)
+
+            if mix_sample:
+                assert xc.shape == samples_grid.shape
+                # mix channels: microtubule, protein (predicted), nuclei
+                columns = [torch.clip(torch.stack([xc[0, :, :], torch.mean(samples_grid, dim=0), xc[2, :, :]], dim=0), -1.0, 1.0), ] + columns
+
+            columns = [samples_grid, ] + columns
             
             if plot_denoise_rows:
                 denoise_grid = self._get_denoise_row_from_list(z_denoise_row['pred_x0'])
-                log["denoise_row"] = denoise_grid
-                if "conditioning" in log:
-                    log["denoise_row"] = torch.cat([log["conditioning"], log["denoise_row"]], dim=2)
-                    del log["conditioning"]
-
-            if plot_samples_combined and caption_image is not None and xc.shape == log["samples"].shape:
-                # combined: microtubule, protein, nuclei
-                log["samples_combined"] = torch.clip(torch.stack([xc[0, :, :], torch.mean(log["samples"], dim=0), xc[2, :, :]], dim=0) + caption_image.to(x_samples.get_device()), -1.0, 1.0)
+                columns = [denoise_grid, ] + columns
 
             if quantize_denoised and not isinstance(self.first_stage_model, AutoencoderKL) and not isinstance(
                     self.first_stage_model, IdentityFirstStage):
@@ -1354,7 +1364,23 @@ class LatentDiffusion(DDPM):
                     # samples, z_denoise_row = self.sample(cond=c, batch_size=N, return_intermediates=True,
                     #                                      quantize_denoised=True)
                 x_samples = self.decode_first_stage(samples.to(self.device))
-                log["samples_x0_quantized"] = make_grid(x_samples, nrow=1)
+                samples_x0_quantized = make_grid(x_samples, nrow=1)
+                columns = [samples_x0_quantized, ] + columns
+
+            if "conditioning" in log:
+                columns = [log["conditioning"], ] + columns
+                del log["conditioning"]
+            
+            if "location_caption" in batch:
+                # Create the reference input image with location labels
+                caption_image = (1 - make_grid(log_txt_as_img((x.shape[2], x.shape[3]), batch["location_caption"][:N], size=12), nrow=1)).to(inputs_grid.get_device())
+                ref_inputs = torch.clip(inputs_grid + caption_image, -1.0, 1.0)
+            else:
+                ref_inputs = inputs_grid
+
+            columns = [ref_inputs, ] + columns
+            
+            log["combined"] = torch.cat(columns, dim=2)
 
             if inpaint:
                 # make a simple center square

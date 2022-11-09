@@ -125,7 +125,8 @@ class HPACombineDatasetMetadata():
             "cell-line": cellline_encoding,
             "ref-image": self.preprocess_image(ref),
             "bert": bert,
-            "caption": f"{info['gene_names']}/{info['atlas_name']}/{info['locations']}"
+            "condition_caption": f"{info['gene_names']}/{info['atlas_name']}",
+            "location_caption": f"{info['locations']}",
         }
         
         if self.return_info:
@@ -213,7 +214,8 @@ class HPACombineDatasetMetadataInMemory():
         if self.channels:
             sample['image'] = sample['image'][:, :, self.channels]
         info = sample["info"]
-        sample['caption'] = f"{info['gene_names']}/{info['atlas_name']}/{info['locations']}"
+        sample["condition_caption"] = f"{info['gene_names']}/{info['atlas_name']}"
+        sample["location_caption"] = f"{info['locations']}"
         del sample["info"] # Remove info to avoid issue in the dataloader
         return sample
 

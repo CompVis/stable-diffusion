@@ -25,8 +25,8 @@ model:
     #     warm_up_steps: [10000]
     #     cycle_lengths: [10000000000000]
     #     f_start: [1.e-6]
-    #     f_max: [ 1.e-4 ]
-    #     f_min: [ 1.e-4 ]
+    #     f_max: [ 1.e-6 ]
+    #     f_min: [ 1.e-6 ]
 
     unet_config:
       target: ldm.modules.diffusionmodules.openaimodel.UNetModel
@@ -39,11 +39,8 @@ model:
         num_res_blocks: 2
         channel_mult: [ 1,2,2,4,4 ]  # 32, 16, 8, 4, 2
         num_heads: 8
-        use_spatial_transformer: True
-        transformer_depth: 1
-        context_dim: 806 # [768, 38]
-        use_checkpoint: True
-        legacy: False
+        use_scale_shift_norm: True
+        resblock_updown: True
 
     first_stage_config:
       target: ldm.models.autoencoder.VQModelInterface
@@ -136,17 +133,19 @@ lightning:
     image_logger:
       target: main.ImageLogger
       params:
-        batch_frequency: 64
+        batch_frequency: 1
         max_images: 8
         increase_log_steps: false
         log_images_kwargs:
           ddim_steps: 100
           quantize_denoised: true
           inpaint: false
-          plot_denoise_rows: true
+          plot_denoise_rows: false
           plot_progressive_rows: false
           plot_diffusion_rows: true
-          plot_samples_combined: false
+          plot_inputs: false
+          plot_reconstructions: false
+          mix_sample: true
           n_row: 8
 
   trainer:
