@@ -81,7 +81,7 @@ parser.add_argument('--image_log_inference_steps', type=int, default=50, help='N
 parser.add_argument('--image_log_scheduler', type=str, default="PNDMScheduler", help='Number of inference steps to use to log images.')
 parser.add_argument('--clip_penultimate', type=bool, default=False, help='Use penultimate CLIP layer for text embedding')
 parser.add_argument('--output_bucket_info', type=bool, default=False, help='Outputs bucket information and exits')
-parser.add_argument('--use_xformers', action='store_true',help='Use memory efficient attention')
+parser.add_argument('--use_xformers', type=bool, default=False, help='Use memory efficient attention')
 args = parser.parse_args()
 
 def setup():
