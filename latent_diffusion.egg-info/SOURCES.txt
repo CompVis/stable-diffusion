@@ -1,0 +1,8 @@
+LICENSE
+README.md
+setup.py
+latent_diffusion.egg-info/PKG-INFO
+latent_diffusion.egg-info/SOURCES.txt
+latent_diffusion.egg-info/dependency_links.txt
+latent_diffusion.egg-info/requires.txt
+latent_diffusion.egg-info/top_level.txt
