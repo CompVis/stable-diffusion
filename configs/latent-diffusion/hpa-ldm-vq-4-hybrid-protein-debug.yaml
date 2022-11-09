@@ -138,7 +138,7 @@ lightning:
         batch_frequency: 10
         max_images: 8
         increase_log_steps: false
-        log_to_slack: ["combined"]
+        log_to_slack: []
         log_images_kwargs:
           ddim_steps: 100
           quantize_denoised: true
