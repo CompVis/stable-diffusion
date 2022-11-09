@@ -37,8 +37,7 @@ from diffusers import AutoencoderKL, UNet2DConditionModel, DDPMScheduler, PNDMSc
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from diffusers.optimization import get_scheduler
 from transformers import CLIPFeatureExtractor, CLIPTextModel, CLIPTokenizer
-from PIL import Image
-from PIL import ImageOps
+from PIL import Image, ImageOps
 
 from typing import Dict, List, Generator, Tuple
 from scipy.interpolate import interp1d
