@@ -509,7 +509,7 @@ def main():
         os.makedirs(args.output_path, exist_ok=True)
         run = wandb.init(project=args.project_id, name=args.run_name, config=vars(args), dir=args.output_path+'/wandb')
 
-        # Inform the user of host, and various versions -- useful for debugging isseus.
+        # Inform the user of host, and various versions -- useful for debugging issues.
         print("RUN_NAME:", args.run_name)
         print("HOST:", socket.gethostname())
         print("CUDA:", torch.version.cuda)
