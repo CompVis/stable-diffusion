@@ -401,7 +401,7 @@ class AspectDataset(torch.utils.data.Dataset):
                 (item[1], item[2]),
                 bleed=0.0,
                 centering=(0.5, 0.5),
-                method=Image.Resampling(Image.LANCZOS)
+                method=Image.Resampling.LANCZOS
             )
 
         return_dict['pixel_values'] = self.transforms(image_file)
@@ -548,7 +548,7 @@ def main():
 
     if args.resume:
         args.model = args.resume
-
+    
     tokenizer = CLIPTokenizer.from_pretrained(args.model, subfolder='tokenizer', use_auth_token=args.hf_token)
     text_encoder = CLIPTextModel.from_pretrained(args.model, subfolder='text_encoder', use_auth_token=args.hf_token)
     vae = AutoencoderKL.from_pretrained(args.model, subfolder='vae', use_auth_token=args.hf_token)
