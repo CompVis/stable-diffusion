@@ -12,13 +12,10 @@ import time
 from pytorch_lightning import seed_everything
 from torch import autocast
 from contextlib import contextmanager, nullcontext
-import accelerate
 from ldm.util import instantiate_from_config
 from optimUtils import split_weighted_subprompts, logger
 from transformers import logging
-
-from prompt_parser import PromptParser
-
+# from samplers import CompVisDenoiser
 logging.set_verbosity_error()
 
 def patch_conv(**patch):
@@ -43,7 +40,7 @@ def load_model_from_config(ckpt, verbose=False):
 
 
 config = "scripts/v1-inference.yaml"
-ckpt = "model.ckpt"
+DEFAULT_CKPT = "model.ckpt"
 
 parser = argparse.ArgumentParser()
 
@@ -51,24 +48,26 @@ parser.add_argument(
     "--prompt", type=str, nargs="?", default="a painting of a virus monster playing guitar", help="the prompt to render"
 )
 parser.add_argument("--outdir", type=str, nargs="?", help="dir to write results to", default="temp")
-
+parser.add_argument(
+    "--skip_grid",
+    action="store_true",
+    help="do not save a grid, only individual samples. Helpful when evaluating lots of samples",
+)
+parser.add_argument(
+    "--skip_save",
+    action="store_true",
+    help="do not save individual samples. For speed measurements.",
+)
 parser.add_argument(
     "--ddim_steps",
     type=int,
     default=50,
     help="number of ddim sampling steps",
 )
-
 parser.add_argument(
     "--fixed_code",
     action="store_true",
     help="if enabled, uses the same starting code across samples ",
-)
-parser.add_argument(
-    "--tiling",
-    type=str,
-    default="false",
-    help="Tiles the generated image",
 )
 parser.add_argument(
     "--ddim_eta",
@@ -81,6 +80,12 @@ parser.add_argument(
     type=int,
     default=1,
     help="sample this often",
+)
+parser.add_argument(
+    "--tiling",
+    type=str,
+    default="false",
+    help="Tiles the generated image",
 )
 parser.add_argument(
     "--H",
@@ -131,6 +136,11 @@ parser.add_argument(
     help="specify GPU (cuda/cuda:0/cuda:1/...)",
 )
 parser.add_argument(
+    "--from-file",
+    type=str,
+    help="if specified, load prompts from this file",
+)
+parser.add_argument(
     "--seed",
     type=int,
     default=None,
@@ -155,30 +165,41 @@ parser.add_argument(
     default="autocast"
 )
 parser.add_argument(
+    "--format",
+    type=str,
+    help="output image format",
+    choices=["jpg", "png"],
+    default="png",
+)
+parser.add_argument(
     "--sampler",
     type=str,
     help="sampler",
-    choices=["ddim", "plms"],
-    default="ddim",
+    choices=["ddim", "plms","heun", "euler", "euler_a", "dpm2", "dpm2_a", "lms"],
+    default="euler_a",
+)
+parser.add_argument(
+    "--ckpt",
+    type=str,
+    help="path to checkpoint of model",
+    default=DEFAULT_CKPT,
 )
 opt = parser.parse_args()
 
 tic = time.time()
-
 os.makedirs(opt.outdir, exist_ok=True)
 outpath = opt.outdir
+grid_count = len(os.listdir(outpath)) - 1
 
-accelerator = accelerate.Accelerator()
-device = accelerator.device
+if opt.seed == None:
+    opt.seed = randint(0, 1000000)
 seed_everything(opt.seed)
-seeds = torch.randint(-2 ** 63, 2 ** 63 - 1, [accelerator.num_processes])
-torch.manual_seed(seeds[accelerator.process_index].item())
 
 if opt.tiling == "true":
     patch_conv(padding_mode='circular')
     print("patched for tiling")
 
-sd = load_model_from_config(f"{ckpt}")
+sd = load_model_from_config(f"{opt.ckpt}")
 li, lo = [], []
 for key, value in sd.items():
     sp = key.split(".")
@@ -225,9 +246,21 @@ if opt.fixed_code:
 
 
 batch_size = opt.n_samples
-assert opt.prompt is not None
-prompt = opt.prompt
-data = [batch_size * [prompt]]
+n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
+if not opt.from_file:
+    assert opt.prompt is not None
+    prompt = opt.prompt
+    print(f"Using prompt: {prompt}")
+    data = [batch_size * [prompt]]
+
+else:
+    print(f"reading prompts from {opt.from_file}")
+    with open(opt.from_file, "r") as f:
+        text = f.read()
+        print(f"Using prompt: {text.strip()}")
+        data = text.splitlines()
+        data = batch_size * list(data)
+        data = list(chunk(sorted(data), batch_size))
 
 
 if opt.precision == "autocast" and opt.device != "cpu":
@@ -236,9 +269,9 @@ else:
     precision_scope = nullcontext
 
 seeds = ""
-prompt_parser = PromptParser(modelCS)
 with torch.no_grad():
 
+    all_samples = list()
     for n in trange(opt.n_iter, desc="Sampling"):
         for prompts in tqdm(data, desc="data"):
 
@@ -250,9 +283,18 @@ with torch.no_grad():
                 if isinstance(prompts, tuple):
                     prompts = list(prompts)
 
-                prompt_guidance = prompt_parser.get_prompt_guidance(prompts[0], opt.ddim_steps, batch_size)
-
-                c = prompt_guidance[0]
+                subprompts, weights = split_weighted_subprompts(prompts[0])
+                if len(subprompts) > 1:
+                    c = torch.zeros_like(uc)
+                    totalWeight = sum(weights)
+                    # normalize each "sub prompt" and add it
+                    for i in range(len(subprompts)):
+                        weight = weights[i]
+                        # if not skip_normalize:
+                        weight = weight / totalWeight
+                        c = torch.add(c, modelCS.get_learned_conditioning(subprompts[i]), alpha=weight)
+                else:
+                    c = modelCS.get_learned_conditioning(prompts)
 
                 shape = [opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f]
 
@@ -273,11 +315,12 @@ with torch.no_grad():
                     eta=opt.ddim_eta,
                     x_T=start_code,
                     sampler = opt.sampler,
-                    prompt_guidance=prompt_guidance
                 )
 
                 modelFS.to(opt.device)
 
+                print(samples_ddim.shape)
+                print("saving images")
                 for i in range(batch_size):
 
                     x_samples_ddim = modelFS.decode_first_stage(samples_ddim[i].unsqueeze(0))
@@ -295,5 +338,6 @@ with torch.no_grad():
                     while torch.cuda.memory_allocated() / 1e6 >= mem:
                         time.sleep(1)
                 del samples_ddim
+                print("memory_final = ", torch.cuda.memory_allocated() / 1e6)
 
 toc = time.time()
