@@ -57,10 +57,10 @@ parser.add_argument('--bucket_side_max', type=int, default=768, help='The maximu
 parser.add_argument('--lr', type=float, default=5e-6, help='Learning rate')
 parser.add_argument('--epochs', type=int, default=10, help='Number of epochs to train for')
 parser.add_argument('--batch_size', type=int, default=1, help='Batch size')
-parser.add_argument('--use_ema', type=bool, default=False, help='Use EMA for finetuning')
+parser.add_argument('--use_ema', type=str, default='False', help='Use EMA for finetuning')
 parser.add_argument('--ucg', type=float, default=0.1, help='Percentage chance of dropping out the text condition per batch. Ranges from 0.0 to 1.0 where 1.0 means 100% text condition dropout.') # 10% dropout probability
-parser.add_argument('--gradient_checkpointing', dest='gradient_checkpointing', type=bool, default=False, help='Enable gradient checkpointing')
-parser.add_argument('--use_8bit_adam', dest='use_8bit_adam', type=bool, default=False, help='Use 8-bit Adam optimizer')
+parser.add_argument('--gradient_checkpointing', dest='gradient_checkpointing', type=str, default='False', help='Enable gradient checkpointing')
+parser.add_argument('--use_8bit_adam', dest='use_8bit_adam', type=str, default='False', help='Use 8-bit Adam optimizer')
 parser.add_argument('--adam_beta1', type=float, default=0.9, help='Adam beta1')
 parser.add_argument('--adam_beta2', type=float, default=0.999, help='Adam beta2')
 parser.add_argument('--adam_weight_decay', type=float, default=1e-2, help='Adam weight decay')
@@ -71,19 +71,26 @@ parser.add_argument('--seed', type=int, default=42, help='Seed for random number
 parser.add_argument('--output_path', type=str, default='./output', help='Root path for all outputs.')
 parser.add_argument('--save_steps', type=int, default=500, help='Number of steps to save checkpoints at.')
 parser.add_argument('--resolution', type=int, default=512, help='Image resolution to train against. Lower res images will be scaled up to this resolution and higher res images will be scaled down.')
-parser.add_argument('--shuffle', dest='shuffle', type=bool, default=True, help='Shuffle dataset')
+parser.add_argument('--shuffle', dest='shuffle', type=str, default='True', help='Shuffle dataset')
 parser.add_argument('--hf_token', type=str, default=None, required=False, help='A HuggingFace token is needed to download private models for training.')
 parser.add_argument('--project_id', type=str, default='diffusers', help='Project ID for reporting to WandB')
-parser.add_argument('--fp16', dest='fp16', type=bool, default=False, help='Train in mixed precision')
+parser.add_argument('--fp16', dest='fp16', type=str, default='False', help='Train in mixed precision')
 parser.add_argument('--image_log_steps', type=int, default=100, help='Number of steps to log images at.')
 parser.add_argument('--image_log_amount', type=int, default=4, help='Number of images to log every image_log_steps')
 parser.add_argument('--image_log_inference_steps', type=int, default=50, help='Number of inference steps to use to log images.')
 parser.add_argument('--image_log_scheduler', type=str, default="PNDMScheduler", help='Number of inference steps to use to log images.')
-parser.add_argument('--clip_penultimate', type=bool, default=False, help='Use penultimate CLIP layer for text embedding')
-parser.add_argument('--output_bucket_info', type=bool, default=False, help='Outputs bucket information and exits')
-parser.add_argument('--resize', type=bool, default=False, help="Resizes dataset's images to the appropriate bucket dimensions.")
-parser.add_argument('--use_xformers', type=bool, default=False, help='Use memory efficient attention')
+parser.add_argument('--clip_penultimate', type=str, default='False', help='Use penultimate CLIP layer for text embedding')
+parser.add_argument('--output_bucket_info', type=str, default='False', help='Outputs bucket information and exits')
+parser.add_argument('--resize', type=str, default='False', help="Resizes dataset's images to the appropriate bucket dimensions.")
+parser.add_argument('--use_xformers', type=str, default='False', help='Use memory efficient attention')
 args = parser.parse_args()
+
+for arg in vars(args):
+    if type(getattr(args, arg)) == str:
+        if getattr(args, arg).lower() == 'true':
+            setattr(args, arg, True)
+        elif getattr(args, arg).lower() == 'false':
+            setattr(args, arg, False)
 
 def setup():
     torch.distributed.init_process_group("nccl", init_method="env://")
