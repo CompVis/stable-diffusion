@@ -1,55 +1,28 @@
-
-
 # Waifu Diffusion
 
-Waifu Diffusion is the name for this project of finetuning Stable Diffusion on images and captions downloaded through Danbooru
+[Waifu Diffusion](https://huggingface.co/hakurei/waifu-diffusion) is the name for this project of finetuning [Stable Diffusion](https://huggingface.co/runwayml/stable-diffusion-v1-5) on anime-styled images.
 
-(**Note:** This project has **no affiliation with Danbooru.**)
+<img src=https://user-images.githubusercontent.com/26317155/194690196-8da73f2a-039d-4349-8b08-e24e8fd20959.png width=40% height=40%>
 
-<img src=https://cdn.discordapp.com/attachments/872361510133981234/1016022078635388979/unknown.png?3867929 width=40% height=40%>
+<sub>1girl, aqua eyes, baseball cap, blonde hair, closed mouth, earrings, green background, hat, hoop earrings, jewelry, looking at viewer, shirt, short hair, simple background, solo, upper body, yellow shirt</sub>
 
-<sub>Prompt: touhou 1girl komeiji_koishi portrait</sub>
+## Setup
 
-## Documentation
+```shell
+pip install -r requirements.txt
+```
 
-[Index](./docs/en/README.md)
+## Project Structure
 
-[Weights](./docs/en/weights/README.md)
+```
+├── dataset: Dataset preparation and utilities
+│   ├── aesthetic: Aesthetic ranking
+│   └── download: Downloading utilities
+└── trainer: The actual training code
+```
 
-[Training Guide](./docs/en/training/README.md)
-
-All thanks goes to CompVis and Stability AI for releasing this codebase!
-
-Model Link: https://huggingface.co/hakurei/waifu-diffusion
-
-### Any questions? Come hop on by to our Discord server!
+## License
+Training Code: [AGPL-3.0](LICENSE)
+Model Weights: [CreativeML Open RAIL-M](https://huggingface.co/spaces/CompVis/stable-diffusion-license)
 
 [![Discord Server](https://discordapp.com/api/guilds/930499730843250783/widget.png?style=banner2)](https://discord.gg/Sx6Spmsgx7)
-
-# Stable Diffusion
-*Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
-
-## Comments 
-
-- Our codebase for the diffusion models builds heavily on [OpenAI's ADM codebase](https://github.com/openai/guided-diffusion)
-and [https://github.com/lucidrains/denoising-diffusion-pytorch](https://github.com/lucidrains/denoising-diffusion-pytorch). 
-Thanks for open-sourcing!
-
-- The implementation of the transformer encoder is from [x-transformers](https://github.com/lucidrains/x-transformers) by [lucidrains](https://github.com/lucidrains?tab=repositories). 
-
-
-## BibTeX
-
-```
-@misc{rombach2021highresolution,
-      title={High-Resolution Image Synthesis with Latent Diffusion Models}, 
-      author={Robin Rombach and Andreas Blattmann and Dominik Lorenz and Patrick Esser and Björn Ommer},
-      year={2021},
-      eprint={2112.10752},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV}
-}
-
-```
-
-

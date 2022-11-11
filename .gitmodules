@@ -1,0 +1,3 @@
+[submodule "dataset/aesthetic"]
+	path = dataset/aesthetic
+	url = https://github.com/waifu-diffusion/aesthetic
