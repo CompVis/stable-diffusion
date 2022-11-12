@@ -441,3 +441,40 @@ class IdentityFirstStage(torch.nn.Module):
 
     def forward(self, x, *args, **kwargs):
         return x
+
+
+if __name__ == "__main__":
+    import numpy as np
+    from omegaconf import OmegaConf
+    from scripts.img2img import load_img, load_model_from_config
+    from ldm.models.diffusion.ddim import DDIMSampler
+    from PIL import Image
+    from einops import rearrange
+    from ldm.modules.metrics import *
+    in_img = r"assets/25.jpg"
+    out_img = r"assets/25-decoded.jpg"
+    config = OmegaConf.load(r"models\first_stage_models\kl-f4\config.yaml")
+    model = load_model_from_config(config=config,
+                                  ckpt=r"models\first_stage_models\kl-f4\model.ckpt") #.to("cpu")
+    # sampler = DDIMSampler(model)
+    init_image = load_img(in_img).to("cuda")
+    # init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))
+
+    # sampler.make_schedule(ddim_num_steps=50, ddim_eta=0.0, verbose=False)
+
+    # (rick.jpeg).size == (900, 900), 21GB memory
+    t_enc = int(0.75 * 50)
+    with torch.no_grad():
+        with torch.autocast("cuda"):
+            encoded = model.encode(init_image)
+            if isinstance(encoded, DiagonalGaussianDistribution):
+                encoded = encoded.mode()
+            decoded = model.decode(encoded)
+            decoded = torch.clamp((decoded + 1.0) / 2.0, min=0.0, max=1.0).squeeze(0)
+            x_sample = 255. * rearrange(decoded.cpu().detach().numpy(), 'c h w -> h w c')
+            Image.fromarray(x_sample.astype(np.uint8)).save(out_img)
+
+    with torch.no_grad():
+        torch.cuda.empty_cache()
+    print("PSNR:", calc_psnr(in_img, out_img))
+    print("SSIM:", calc_ssim(in_img, out_img))
