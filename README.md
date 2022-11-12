@@ -1,3 +1,15 @@
+Additions by Astropulse:
+
+Optimizations and adjustments for running inside Aseprite.
+
+palette.py for K-Means color quantization.
+
+
+
+
+
+Original README.md
+
 # Stable Diffusion
 *Stable Diffusion was made possible thanks to a collaboration with [Stability AI](https://stability.ai/) and [Runway](https://runwayml.com/) and builds upon our previous work:*
 
