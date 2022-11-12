@@ -159,8 +159,7 @@ class Validation():
     def __init__(self, is_skipped: bool, is_extended: bool) -> None:
         if is_skipped:
             self.validate = self.__no_op
-            print("Validation: Skipped")
-            return 
+            return print("Validation: Skipped")
 
         if is_extended:
             self.validate = self.__extended_validate
