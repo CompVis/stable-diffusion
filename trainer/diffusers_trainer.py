@@ -282,8 +282,6 @@ class ImageStore:
     def __valid_file(self, f) -> bool:
         return self.validator.validate(f)
 
-
-
     # iterator returns images as PIL images and their index in the store
     def entries_iterator(self) -> Generator[Tuple[Img, int], None, None]:
         for f in range(len(self)):
