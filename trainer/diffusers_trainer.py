@@ -733,7 +733,7 @@ def main():
 
     store.validator.completed()
 
-    if args.resize and args.migration:
+    if args.resize and args.data_migration:
         print(f"Completed resize and migration to '{args.dataset}_cropped' please relaunch the trainer without the --resize argument and train on the migrated dataset.")
         exit(0)
 
