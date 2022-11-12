@@ -169,10 +169,6 @@ class Validation():
         self.validate = self.__validate
         print("Validation: Standard")
 
-    def completed(self) -> None:
-        self.validate = self.__no_op
-        return print('Validation complete. Skipping further validation.')
-
     def __validate(self, fp: str) -> bool:
         try:
             Image.open(fp)
@@ -724,14 +720,11 @@ def main():
         num_workers=0,
         collate_fn=dataset.collate_fn
     )
-
-    # Validate dataset and perform possible migration
-    for _, batch in enumerate(train_dataloader):
-        continue
-
-    store.validator.completed()
-
+    
+    # Migrate dataset
     if args.resize and args.data_migration:
+        for _, batch in enumerate(train_dataloader):
+            continue
         print(f"Completed resize and migration to '{args.dataset}_cropped' please relaunch the trainer without the --resize argument and train on the migrated dataset.")
         exit(0)
 
