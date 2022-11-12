@@ -266,17 +266,14 @@ class ImageStore:
         self.validator = Validation(
             args.skip_validation,
             args.extended_validation
-        )
+        ).validate
 
-        self.resizer = Resize(args.resize, args.data_migration)
+        self.resizer = Resize(args.resize, args.data_migration).resize
 
-        self.image_files = [x for x in self.image_files if self.__valid_file(x)]
+        self.image_files = [x for x in self.image_files if self.validator(x)]
 
     def __len__(self) -> int:
         return len(self.image_files)
-
-    def __valid_file(self, f) -> bool:
-        return self.validator.validate(f)
 
     # iterator returns images as PIL images and their index in the store
     def entries_iterator(self) -> Generator[Tuple[Img, int], None, None]:
@@ -285,7 +282,7 @@ class ImageStore:
 
     # get image by index
     def get_image(self, ref: Tuple[int, int, int]) -> Img:
-        return self.resizer.resize(
+        return self.resizer(
             self.image_files[ref[0]],
             ref[1],
             ref[2]
