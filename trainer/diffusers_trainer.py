@@ -89,7 +89,7 @@ parser.add_argument('--output_bucket_info', action='store_true', help='Outputs b
 parser.add_argument('--resize', action='store_true', help="Resizes dataset's images to the appropriate bucket dimensions.")
 parser.add_argument('--use_xformers', action='store_true', help='Use memory efficient attention')
 parser.add_argument('--extended_validation', action='store_true', help='Perform extended validation of images to catch truncated or corrupt images.')
-parser.add_argument('--no_migration', action='store_true', help='Perform migration of resized images into a directory relative to the dataset path. Saves into `<dataset_directory_name>_cropped`.')
+parser.add_argument('--no_migration', action='store_true', help='Do not perform migration of dataset while the `--resize` flag is active. Migration creates an adjacent folder to the dataset with <dataset_dirname>_cropped.')
 parser.add_argument('--skip_validation', action='store_true', help='Skip validation of images, useful for speeding up loading of very large datasets that have already been validated.')
 
 args = parser.parse_args()
