@@ -1,10 +1,9 @@
 aesthetic/**
-*_cropped/
-*_cropped/**
+**/*_cropped
 **/nsfw-ids.txt
 **/*.image
 **/*.caption
 **/dataset*.tar
-*/**/*.json
+**/*.json
 **/*.png
 **/*.jpg
