@@ -86,9 +86,9 @@ parser.add_argument('--clip_penultimate', type=bool_t, default='False', help='Us
 parser.add_argument('--output_bucket_info', type=bool_t, default='False', help='Outputs bucket information and exits')
 parser.add_argument('--resize', type=bool_t, default='False', help="Resizes dataset's images to the appropriate bucket dimensions.")
 parser.add_argument('--use_xformers', type=bool_t, default='False', help='Use memory efficient attention')
-parser.add_argument('--extended_validation', action='store_true', help='Perform extended validation of images to catch truncated or corrupt images.')
-parser.add_argument('--no_migration', action='store_true', help='Do not perform migration of dataset while the `--resize` flag is active. Migration creates an adjacent folder to the dataset with <dataset_dirname>_cropped.')
-parser.add_argument('--skip_validation', action='store_true', help='Skip validation of images, useful for speeding up loading of very large datasets that have already been validated.')
+parser.add_argument('--extended_validation', type=bool_t, default='False', help='Perform extended validation of images to catch truncated or corrupt images.')
+parser.add_argument('--no_migration', type=bool_t, default='False', help='Do not perform migration of dataset while the `--resize` flag is active. Migration creates an adjacent folder to the dataset with <dataset_dirname>_cropped.')
+parser.add_argument('--skip_validation', type=bool_t, default='False', help='Skip validation of images, useful for speeding up loading of very large datasets that have already been validated.')
 
 args = parser.parse_args()
 
