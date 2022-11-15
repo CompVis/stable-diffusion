@@ -20,6 +20,9 @@ from pytorch_lightning.utilities import rank_zero_info
 from ldm.data.base import Txt2ImgIterableBaseDataset
 from ldm.util import instantiate_from_config
 
+# import tensorflow as tf
+# tf.profiler.experimental.server.start(3294)
+
 
 def get_parser(**parser_kwargs):
     def str2bool(v):
@@ -557,14 +560,14 @@ if __name__ == "__main__":
                 }
             },
         }
-        default_logger_cfg = default_logger_cfgs["testtube"]
-        if "logger" in lightning_config:
-            logger_cfg = lightning_config.logger
-        else:
-            logger_cfg = OmegaConf.create()
-        logger_cfg = OmegaConf.merge(default_logger_cfg, logger_cfg)
-        trainer_kwargs["logger"] = instantiate_from_config(logger_cfg)
-
+        # default_logger_cfg = default_logger_cfgs["testtube"]
+        # if "logger" in lightning_config:
+        #     logger_cfg = lightning_config.logger
+        # else:
+        #     logger_cfg = OmegaConf.create()
+        # logger_cfg = OmegaConf.merge(default_logger_cfg, logger_cfg)
+        # trainer_kwargs["logger"] = instantiate_from_config(logger_cfg)
+        trainer_kwargs["logger"] = pl.loggers.TensorBoardLogger(logdir)
         # modelcheckpoint - use TrainResult/EvalResult(checkpoint_on=metric) to
         # specify which metric is used to determine best models
         default_modelckpt_cfg = {
@@ -715,6 +718,8 @@ if __name__ == "__main__":
         signal.signal(signal.SIGUSR1, melk)
         signal.signal(signal.SIGUSR2, divein)
 
+        import torch_xla.debug.profiler as xp
+        server = xp.start_server(3294)
         # run
         if opt.train:
             try:
@@ -741,4 +746,3 @@ if __name__ == "__main__":
             os.rename(logdir, dst)
         if trainer.global_rank == 0:
             print(trainer.profiler.summary())
-    print('SS: everything is done!')

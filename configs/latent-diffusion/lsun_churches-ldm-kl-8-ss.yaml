@@ -89,4 +89,3 @@ lightning:
 
   trainer:
     benchmark: False
-    tpu_cores: 4

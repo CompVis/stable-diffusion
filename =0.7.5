@@ -1,19 +1,15 @@
-Collecting test-tube
-  Downloading test_tube-0.7.5.tar.gz (21 kB)
-Collecting pandas>=0.20.3
-  Downloading pandas-1.5.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.2 MB)
+Requirement already satisfied: test-tube in /home/ssusie/.local/lib/python3.8/site-packages (0.7.5)
+Requirement already satisfied: pandas>=0.20.3 in /home/ssusie/.local/lib/python3.8/site-packages (from test-tube) (1.5.0)
 Requirement already satisfied: numpy>=1.13.3 in /usr/local/lib/python3.8/dist-packages (from test-tube) (1.23.1)
-Collecting imageio>=2.3.0
-  Downloading imageio-2.22.2-py3-none-any.whl (3.4 MB)
+Requirement already satisfied: imageio>=2.3.0 in /home/ssusie/.local/lib/python3.8/site-packages (from test-tube) (2.22.2)
 Requirement already satisfied: tensorboard>=1.15.0 in /home/ssusie/.local/lib/python3.8/site-packages (from test-tube) (2.10.1)
 Requirement already satisfied: torch>=1.1.0 in /usr/local/lib/python3.8/dist-packages (from test-tube) (1.12.0)
 Requirement already satisfied: future in /home/ssusie/.local/lib/python3.8/site-packages (from test-tube) (0.18.2)
-Collecting python-dateutil>=2.8.1
-  Downloading python_dateutil-2.8.2-py2.py3-none-any.whl (247 kB)
+Requirement already satisfied: python-dateutil>=2.8.1 in /home/ssusie/.local/lib/python3.8/site-packages (from pandas>=0.20.3->test-tube) (2.8.2)
 Requirement already satisfied: pytz>=2020.1 in /usr/local/lib/python3.8/dist-packages (from pandas>=0.20.3->test-tube) (2022.2)
 Requirement already satisfied: pillow>=8.3.2 in /usr/local/lib/python3.8/dist-packages (from imageio>=2.3.0->test-tube) (9.2.0)
 Requirement already satisfied: absl-py>=0.4 in /usr/local/lib/python3.8/dist-packages (from tensorboard>=1.15.0->test-tube) (1.2.0)
-Requirement already satisfied: grpcio>=1.24.3 in /home/ssusie/.local/lib/python3.8/site-packages (from tensorboard>=1.15.0->test-tube) (1.50.0)
+Requirement already satisfied: grpcio>=1.24.3 in /home/ssusie/.local/lib/python3.8/site-packages (from tensorboard>=1.15.0->test-tube) (1.49.1)
 Requirement already satisfied: google-auth<3,>=1.6.3 in /usr/local/lib/python3.8/dist-packages (from tensorboard>=1.15.0->test-tube) (2.10.0)
 Requirement already satisfied: google-auth-oauthlib<0.5,>=0.4.1 in /home/ssusie/.local/lib/python3.8/site-packages (from tensorboard>=1.15.0->test-tube) (0.4.6)
 Requirement already satisfied: markdown>=2.6.8 in /home/ssusie/.local/lib/python3.8/site-packages (from tensorboard>=1.15.0->test-tube) (3.4.1)
@@ -39,11 +35,3 @@ Requirement already satisfied: MarkupSafe>=2.1.1 in /home/ssusie/.local/lib/pyth
 Requirement already satisfied: pyasn1>=0.1.3 in /usr/lib/python3/dist-packages (from rsa<5,>=3.1.4; python_version >= "3.6"->google-auth<3,>=1.6.3->tensorboard>=1.15.0->test-tube) (0.4.2)
 Requirement already satisfied: oauthlib>=3.0.0 in /usr/lib/python3/dist-packages (from requests-oauthlib>=0.7.0->google-auth-oauthlib<0.5,>=0.4.1->tensorboard>=1.15.0->test-tube) (3.1.0)
 Requirement already satisfied: zipp>=0.5 in /usr/lib/python3/dist-packages (from importlib-metadata>=4.4; python_version < "3.10"->markdown>=2.6.8->tensorboard>=1.15.0->test-tube) (1.0.0)
-Building wheels for collected packages: test-tube
-  Building wheel for test-tube (setup.py): started
-  Building wheel for test-tube (setup.py): finished with status 'done'
-  Created wheel for test-tube: filename=test_tube-0.7.5-py3-none-any.whl size=25355 sha256=f95a5d29faf9819e3db41e5bce7bab0cbd09ba1239636c82bc2e5062fbbd6b6e
-  Stored in directory: /home/ssusie/.cache/pip/wheels/95/b0/3a/00ea66dbb0d9ce470ce1bdcb854a6fa030c279c316cb27ca9e
-Successfully built test-tube
-Installing collected packages: python-dateutil, pandas, imageio, test-tube
-Successfully installed imageio-2.22.2 pandas-1.5.1 python-dateutil-2.8.2 test-tube-0.7.5
