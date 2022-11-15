@@ -690,6 +690,7 @@ def main():
         beta_end=0.012,
         beta_schedule='scaled_linear',
         num_train_timesteps=1000,
+        clip_sample=False
     )
 
     # load dataset
