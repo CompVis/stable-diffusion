@@ -18,8 +18,9 @@ class DDIMSampler(object):
 
     def register_buffer(self, name, attr):
         if type(attr) == torch.Tensor:
-            if attr.device != torch.device("cuda"):
+            if attr.device != torch.device("cuda") and torch.cuda.is_available():
                 attr = attr.to(torch.device("cuda"))
+
         setattr(self, name, attr)
 
     def make_schedule(self, ddim_num_steps, ddim_discretize="uniform", ddim_eta=0., verbose=True):
