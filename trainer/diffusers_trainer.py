@@ -624,10 +624,12 @@ def main():
     if rank == 0:
         os.makedirs(args.output_path, exist_ok=True)
         
-        mode = 'enabled'
+        mode = 'disabled'
         if args.enablewandb:
-            mode = 'disabled'
-        
+            mode = 'online'
+        if args.hf_token is not None:
+            os.environ['HF_API_TOKEN'] = args.hf_token
+            args.hf_token = None
         run = wandb.init(project=args.project_id, name=args.run_name, config=vars(args), dir=args.output_path+'/wandb', mode=mode)
 
         # Inform the user of host, and various versions -- useful for debugging issues.
