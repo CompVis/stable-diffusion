@@ -9,19 +9,25 @@ data:
     num_workers: 5
     wrap: false
     train:
-      target: ldm.data.hpa.HPACombineDatasetMetadata
+      target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
       params:
-        # filename: shard-{000000..000244}
-        # size: 256
-        include_metadata: true
-        # degradation: pil_nearest
+        seed: 123
+        train_split: 0.95
+        group: 'train'
+        cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle
+        channels: [1, 1, 1]
+        return_info: true
+        filter_func: has_location
     validation:
-      target: ldm.data.hpa.HPACombineDatasetMetadata
+      target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
       params:
-        # filename: shard-{000245..000345}
-        # size: 256
-        include_metadata: true
-        # degradation: pil_nearest
+        seed: 123
+        train_split: 0.95
+        group: 'validation'
+        cache_file: /data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle
+        channels: [1, 1, 1]
+        return_info: true
+        filter_func: has_location
 """
 
 config = yaml.safe_load(data_config_yaml)
@@ -41,6 +47,9 @@ for k in data.datasets:
 # each image is:
 # 'image': array(...)
 # 'file_path_': 'data/celeba/data256x256/21508.jpg'
-d = data.datasets['validation'][0]
-print(d["info"])
-print(d['image'].shape, d['image'].max(), d['image'].min(), d["class_label"])
+for d in data.datasets['validation']:
+  print(d['info']['Ab state'], d['info']['locations'])
+  # if d['location_caption'] == 'nan':
+  #   print('.')
+# d = data.datasets['validation'][0]
+# print(d)

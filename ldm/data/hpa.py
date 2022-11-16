@@ -169,7 +169,7 @@ class HPACombineDatasetMetadataInMemory():
         with open(cache_file, 'wb') as fp:
             pickle.dump(samples, fp)
 
-    def __init__(self, cache_file, seed=123, train_split=0.95, group='train', channels=None):
+    def __init__(self, cache_file, seed=123, train_split=0.95, group='train', channels=None, include_location=False, return_info=False, filter_func=None):
         if cache_file in HPACombineDatasetMetadataInMemory.samples_dict:
             self.samples = HPACombineDatasetMetadataInMemory.samples_dict[cache_file]
         else:
@@ -190,9 +190,17 @@ class HPACombineDatasetMetadataInMemory():
             else:
                 raise Exception(f"Cache file not found {cache_file}")
             HPACombineDatasetMetadataInMemory.samples_dict[cache_file] = self.samples
+        
+        if filter_func:
+            if filter_func == 'has_location':
+                filter_func = lambda x: int( x['info']['status']) == 35 and x['info']['Ab state'] == 'IF_FINISHED' and str(x['info']['locations']) != "nan"
+
+            self.samples = list(filter(filter_func, self.samples))
         self.channels = channels
         assert "info" in self.samples[0]
 
+        self.include_location = include_location
+        self.return_info = return_info
         self.length = len(self.samples)
         assert group in ['train', 'validation']
         assert train_split < 1 and train_split > 0
@@ -216,7 +224,14 @@ class HPACombineDatasetMetadataInMemory():
         info = sample["info"]
         sample["condition_caption"] = f"{info['gene_names']}/{info['atlas_name']}"
         sample["location_caption"] = f"{info['locations']}"
-        del sample["info"] # Remove info to avoid issue in the dataloader
+        if self.include_location:
+            loc_labels = list(map(lambda n: location_mapping[n] if n in location_mapping else -1, str(info["locations"]).split(',')))
+            # create one-hot encoding for the labels
+            locations_encoding = np.zeros((len(location_mapping) + 1, ), dtype=np.float32)
+            locations_encoding[loc_labels] = 1
+            sample["location_classes"] = locations_encoding
+        if not self.return_info:
+            del sample["info"] # Remove info to avoid issue in the dataloader
         return sample
 
 
@@ -325,17 +340,24 @@ class HPACombineDatasetSR(Dataset):
     
 
 class HPAClassEmbedder(nn.Module):
+    def __init__(self, include_location=False):
+        self.include_location = include_location
+
     def forward(self, batch, key=None):
         bert = batch["bert"]
         celline = batch["cell-line"]
-        return {"c_crossattn": [bert, celline]}
+        embed = [bert, celline]
+        if self.include_location:
+            embed.append(batch["location_classes"])
+        return {"c_crossattn": embed}
 
 
 class HPAHybridEmbedder(nn.Module):
-    def __init__(self, image_embedding_model):
+    def __init__(self, image_embedding_model, include_location=False):
         super().__init__()
         assert not isinstance(image_embedding_model, dict)
         self.image_embedding_model = instantiate_from_config(image_embedding_model)
+        self.include_location = include_location
 
     def forward(self, batch, key=None):
         image = batch["ref-image"]
@@ -347,7 +369,10 @@ class HPAHybridEmbedder(nn.Module):
             raise Exception("NAN values encountered in the image embedding")
         bert = batch["bert"]
         celline = batch["cell-line"]
-        return {"c_concat": [img_embed], "c_crossattn": [bert, celline]}
+        cross_embed = [bert, celline]
+        if self.include_location:
+            cross_embed.append(batch["location_classes"])
+        return {"c_concat": [img_embed], "c_crossattn": cross_embed}
     
     def decode(self, c):
         condition_row = c['c_concat']
