@@ -23,24 +23,26 @@ try:
 except:
    import pickle
 
+HPA_DATA_ROOT = os.environ.get("HPA_DATA_ROOT", "/data/wei/hpa-webdataset-all-composite")
+
 class HPACombineDataset(Dataset):
     def __init__(self, filename, include_metadata=False, length=80000):
         super().__init__()
         self.include_metadata = include_metadata
         assert not filename.endswith(".tar")
         if not include_metadata:
-            url = f"/data/wei/hpa-webdataset-all-composite/{filename}_img.tar"
+            url = f"{HPA_DATA_ROOT}/{filename}_img.tar"
             dataset = wds.WebDataset(url, nodesplitter=wds.split_by_node).decode().to_tuple("__key__", "img.pyd")
             self.dataset_iter = iter(zip(dataset))
         else:
             assert filename == "webdataset"
-            url = f"/data/wei/hpa-webdataset-all-composite/{filename}_img.tar"
+            url = f"{HPA_DATA_ROOT}/{filename}_img.tar"
             dataset1 = wds.WebDataset(url, nodesplitter=wds.split_by_node).decode().to_tuple("__key__", "img.pyd")
 
-            url = f"/data/wei/hpa-webdataset-all-composite/{filename}_info.tar"
+            url = f"{HPA_DATA_ROOT}/{filename}_info.tar"
             dataset2 = wds.WebDataset(url, nodesplitter=wds.split_by_node).decode().to_tuple("__key__", "info.json")
             
-            url = f"/data/wei/hpa-webdataset-all-composite/{filename}_bert.tar"
+            url = f"{HPA_DATA_ROOT}/{filename}_bert.tar"
             dataset3 = wds.WebDataset(url, nodesplitter=wds.split_by_node).decode().to_tuple("__key__", "bert.pyd")
 
             self.dataset_iter = iter(zip(dataset1, dataset2, dataset3))
@@ -143,7 +145,7 @@ TOTAL_LENGTH = 247678
 
 def dump_info(info_pickle_path):
         # dump info
-    url = f"/data/wei/hpa-webdataset-all-composite/webdataset_info.tar"
+    url = f"{HPA_DATA_ROOT}/webdataset_info.tar"
     dataset_info = wds.WebDataset(url, nodesplitter=wds.split_by_node).decode().to_tuple("__key__", "info.json")
     info_list = []
     for _, info in tqdm(dataset_info, total=TOTAL_LENGTH):
@@ -179,7 +181,7 @@ class HPACombineDatasetMetadataInMemory():
                     self.samples = pickle.load(fp)
 
                 # Patch the generated pickle file to include info
-                # with open("/data/wei/hpa-webdataset-all-composite/HPACombineDatasetInfo.pickle", 'rb') as fp:
+                # with open(f"{HPA_DATA_ROOT}/HPACombineDatasetInfo.pickle", 'rb') as fp:
                 #     info_list = pickle.load(fp)
                 # assert len(info_list) == len(self.samples)
                 # for i in tqdm(range(len(self.samples)), total=len(self.samples)):
@@ -388,6 +390,6 @@ class HPAHybridEmbedder(nn.Module):
 
 
 if __name__ == "__main__":
-    HPACombineDatasetMetadataInMemory.generate_cache("/data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256-1000.pickle", size=256, total_length=1000)
-    HPACombineDatasetMetadataInMemory.generate_cache("/data/wei/hpa-webdataset-all-composite/HPACombineDatasetMetadataInMemory-256.pickle", size=256)
-    # dump_info("/data/wei/hpa-webdataset-all-composite/HPACombineDatasetInfo.pickle")
+    HPACombineDatasetMetadataInMemory.generate_cache(f"{HPA_DATA_ROOT}/HPACombineDatasetMetadataInMemory-256-1000.pickle", size=256, total_length=1000)
+    HPACombineDatasetMetadataInMemory.generate_cache(f"{HPA_DATA_ROOT}/HPACombineDatasetMetadataInMemory-256.pickle", size=256)
+    # dump_info(f"{HPA_DATA_ROOT}/HPACombineDatasetInfo.pickle")
