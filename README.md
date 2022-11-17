@@ -37,6 +37,13 @@ pip install transformers==4.19.2 diffusers invisible-watermark
 pip install -e .
 ``` 
 
+Follow this steps to get correctly the file named sd-v1-4.ckpt
+1. Go to this link https://huggingface.co/
+2. Signup and login
+3. Then go to this page https://huggingface.co/CompVis/stable-diffusion-v-1-4-original
+4. Click that you agree the terms (if you agree the terms, else you can't download it)
+5. Click to the link of sd-v1-4.ckpt (or click directly [here](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/resolve/main/sd-v1-4.ckpt))
+
 
 ## Stable Diffusion v1
 
