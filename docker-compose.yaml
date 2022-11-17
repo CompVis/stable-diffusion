@@ -1,0 +1,18 @@
+version: "3"
+services:
+  stable-diffusor:
+    # TODO: exchange this image with an image of CompVis
+    image: guestros/stable-diffusion:latest
+    build: .
+    platform: linux/amd64
+    volumes:
+      - ./weights/:/app/weights/
+      - ./outputs/:/app/outputs/
+    environment:
+      - PROMPT="a drawing of a giraffe riding a bicycle in space"
+    # to make sure all gpus are passed
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
