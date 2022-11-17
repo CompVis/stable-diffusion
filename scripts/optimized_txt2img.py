@@ -31,7 +31,10 @@ def chunk(it, size):
 
 
 def load_model_from_config(ckpt, verbose=False):
-    print(f"Loading model from {ckpt}")
+    if ckpt == "model.ckpt":
+        print(f"Loading model")
+    else:
+        print(f"Loading custom model from {ckpt}")
     pl_sd = torch.load(ckpt, map_location="cpu")
     if "global_step" in pl_sd:
         print(f"Global Step: {pl_sd['global_step']}")
