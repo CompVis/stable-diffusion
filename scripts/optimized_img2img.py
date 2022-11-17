@@ -53,7 +53,7 @@ def load_img(path, h0, w0):
     return 2.*image - 1.
     
 config = "scripts/v1-inference.yaml"
-ckpt = "model.ckpt"
+DEFAULT_CKPT = "model.ckpt"
 
 parser = argparse.ArgumentParser()
 
@@ -179,6 +179,12 @@ parser.add_argument(
     choices=["ddim"],
     default="ddim",
 )
+parser.add_argument(
+    "--ckpt",
+    type=str,
+    help="path to checkpoint of model",
+    default=DEFAULT_CKPT,
+)
 opt = parser.parse_args()
 
 tic = time.time()
@@ -194,7 +200,7 @@ if opt.tiling == "true":
     patch_conv(padding_mode='circular')
     print("patched for tiling")
 
-sd = load_model_from_config(f"{ckpt}")
+sd = load_model_from_config(f"{opt.ckpt}")
 li, lo = [], []
 for key, value in sd.items():
     sp = key.split(".")
