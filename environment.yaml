@@ -28,7 +28,7 @@ dependencies:
     - kornia==0.6
     - accelerate==0.12.0
     - gdown
-    - -e git+git://github.com/CompVis/taming-transformers#egg=taming-transformers
-    - -e git+git://github.com/openai/CLIP#egg=clip
-    - -e git+git://github.com/hlky/k-diffusion-sd#egg=k_diffusion
+    - -e git+https://github.com/CompVis/taming-transformers#egg=taming-transformers
+    - -e git+https://github.com/openai/CLIP#egg=clip
+    - -e git+https://github.com/hlky/k-diffusion-sd#egg=k_diffusion
     - -e .
