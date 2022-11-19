@@ -61,8 +61,6 @@ def load_model_from_config(config, ckpt, verbose=False):
         print("unexpected keys:")
         print(u)
 
-    model.cuda()
-    model.eval()
     return model
 
 
@@ -247,6 +245,7 @@ def main():
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
+    model.eval()
 
     if opt.dpm_solver:
         sampler = DPMSolverSampler(model)
