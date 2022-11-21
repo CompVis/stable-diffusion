@@ -140,6 +140,7 @@ lightning:
         batch_frequency: 1000
         log_validation: true
         val_batch_frequency: 1000
+        monitor_val_metric: "val/loss_simple_ema"
         max_images: 8
         increase_log_steps: false
         log_to_slack: []

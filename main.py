@@ -289,7 +289,7 @@ class SetupCallback(Callback):
 class ImageLogger(Callback):
     def __init__(self, batch_frequency, max_images, clamp=True, increase_log_steps=True,
                  rescale=True, disabled=False, log_on_batch_idx=False, log_first_step=False,
-                 log_to_slack=None, log_images_kwargs=None, log_validation=False, val_batch_frequency=1):
+                 log_to_slack=None, log_images_kwargs=None, log_validation=False, val_batch_frequency=1, monitor_val_metric=None):
         super().__init__()
         self.rescale = rescale
         self.batch_freq = batch_frequency
@@ -308,6 +308,8 @@ class ImageLogger(Callback):
         self.log_images_kwargs = log_images_kwargs if log_images_kwargs else {}
         self.log_first_step = log_first_step
         self.log_to_slack = log_to_slack
+        self._last_val_loss = None
+        self.monitor_val_metric = monitor_val_metric
 
     @rank_zero_only
     def _testtube(self, pl_module, images, batch_idx, split):
@@ -399,7 +401,14 @@ class ImageLogger(Callback):
                 self.log_gradients(trainer, pl_module, batch_idx=batch_idx)
 
     def on_validation_epoch_end(self, trainer, pl_module):
-        pass
+        if self.log_to_slack and self.monitor_val_metric and self.monitor_val_metric in trainer.logged_metrics:
+            val = trainer.logged_metrics[self.monitor_val_metric]
+            if self._last_val_loss:
+                if self._last_val_loss < val:
+                    send_message_to_slack(f"🎉 Validation metric updated: {self.monitor_val_metric} reached {val}")
+            self._last_val_loss = val
+
+        
         
 
 class CUDACallback(Callback):
