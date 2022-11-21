@@ -18,6 +18,7 @@ data:
         channels: [1, 1, 1]
         return_info: true
         filter_func: has_location
+        include_location: true
     validation:
       target: ldm.data.hpa.HPACombineDatasetMetadataInMemory
       params:
@@ -28,6 +29,7 @@ data:
         channels: [1, 1, 1]
         return_info: true
         filter_func: has_location
+        include_location: true
 """
 
 config = yaml.safe_load(data_config_yaml)
@@ -48,7 +50,7 @@ for k in data.datasets:
 # 'image': array(...)
 # 'file_path_': 'data/celeba/data256x256/21508.jpg'
 for d in data.datasets['validation']:
-  print(d['info']['Ab state'], d['info']['locations'])
+  print(d['info']['Ab state'], d['info']['locations'], d['location_classes'])
   # if d['location_caption'] == 'nan':
   #   print('.')
 # d = data.datasets['validation'][0]

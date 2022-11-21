@@ -2,7 +2,7 @@ model:
   base_learning_rate: 5.0e-5   # set to target_lr by starting main.py with '--scale_lr False'
   target: ldm.models.diffusion.ddpm.LatentDiffusion
   params:
-    ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-11-09T20-13-25_hpa-ldm-vq-4-hybrid-protein/checkpoints/last.ckpt
+    ckpt_path: /home/wei.ouyang/workspace/stable-diffusion/logs/2022-11-16T19-35-18_hpa-ldm-vq-4-hybrid-protein/checkpoints/last.ckpt
     linear_start: 0.0015
     linear_end: 0.0155
     num_timesteps_cond: 1
@@ -138,12 +138,14 @@ lightning:
       target: main.ImageLogger
       params:
         batch_frequency: 4000
+        log_validation: true
+        val_batch_frequency: 4000
         max_images: 8
         increase_log_steps: false
         log_to_slack: ["combined"]
         log_images_kwargs:
           ddim_steps: 100
-          quantize_denoised: true
+          quantize_denoised: false
           inpaint: false
           plot_denoise_rows: true
           plot_progressive_rows: false
@@ -154,5 +156,6 @@ lightning:
           n_row: 8
 
   trainer:
+    val_check_interval: 4000
     benchmark: True
     accelerator: dp # need to change to dp because the default ddp will free the training

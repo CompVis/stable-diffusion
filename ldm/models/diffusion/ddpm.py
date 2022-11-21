@@ -1352,6 +1352,10 @@ class LatentDiffusion(DDPM):
             
             if plot_denoise_rows:
                 denoise_grid = self._get_denoise_row_from_list(z_denoise_row['pred_x0'])
+                # Fix size issue when there is only 1 image
+                if denoise_grid.shape[1] > samples_grid.shape[1]:
+                    diff = (denoise_grid.shape[1] - samples_grid.shape[1]) // 2
+                    denoise_grid = denoise_grid[:, diff:diff+samples_grid.shape[1], :]
                 columns = [denoise_grid, ] + columns
 
             if quantize_denoised and not isinstance(self.first_stage_model, AutoencoderKL) and not isinstance(
