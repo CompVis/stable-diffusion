@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "stable-diffusion"
+version = "0.0.1"
+readme = "README.md"
+dependencies = [
+  "numpy",
+  "torch",
+  "tqdm",
+]
+
+[tool.hatch.build]
+dev-mode-dirs = ["."]
