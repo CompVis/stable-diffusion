@@ -1,13 +1,5 @@
-from setuptools import setup, find_packages
-
-setup(
-    name='latent-diffusion',
-    version='0.0.1',
-    description='',
-    packages=find_packages(),
-    install_requires=[
-        'torch',
-        'numpy',
-        'tqdm',
-    ],
-)
+conda env create -f environment.yaml
+conda activate ldm
+conda install pytorch torchvision -c pytorch
+pip install transformers==4.19.2 diffusers invisible-watermark
+pip install -e .
