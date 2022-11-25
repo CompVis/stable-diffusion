@@ -1,0 +1,35 @@
+build:
+  gpu: true
+  cuda: "11.3"
+  python_version: "3.8"
+  system_packages:
+    - "libgl1-mesa-glx"
+    - "libglib2.0-0"
+  python_packages:
+    - "ipython==8.4.0"
+    - "pandas==1.4.4"
+    - "scikit-image==0.19.3"
+    - "clean_fid==0.1.28"
+    - "torch==1.11.0 --extra-index-url=https://download.pytorch.org/whl/cu113"
+    - "torchvision==0.12.0 --extra-index-url=https://download.pytorch.org/whl/cu113"
+    - "ftfy==6.1.1"
+    - "scipy==1.9.0"
+    - "transformers==4.21.1"
+    - "omegaconf==2.1.1"
+    - "einops==0.3.0"
+    - "pytorch-lightning==1.4.2"
+    - "torchmetrics==0.6.0"
+    - "kornia==0.6"
+    - "accelerate==0.12.0"
+    - "jsonmerge==1.8.0"
+    - "resize-right==0.0.2"
+    - "torchdiffeq==0.2.3"
+    - "opencv-python==4.6.0.66"
+  
+  run:
+    - mkdir -p /root/.cache/torch/hub/checkpoints/ && wget --output-document "/root/.cache/torch/hub/checkpoints/checkpoint_liberty_with_aug.pth" "https://github.com/DagnyT/hardnet/raw/master/pretrained/train_liberty_with_aug/checkpoint_liberty_with_aug.pth"
+    - apt-get update && apt-get install -y software-properties-common
+    - add-apt-repository ppa:ubuntu-toolchain-r/test
+    - apt update -y && apt-get install ffmpeg -y
+
+predict: "predict.py:Predictor"
