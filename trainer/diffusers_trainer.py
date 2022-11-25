@@ -719,7 +719,7 @@ def main():
 
     # load dataset
     store = ImageStore(args.dataset)
-    dataset = AspectDataset(store, tokenizer)
+    dataset = AspectDataset(store, tokenizer, ucg=args.ucg)
     bucket = AspectBucket(store, args.num_buckets, args.batch_size, args.bucket_side_min, args.bucket_side_max, 64, args.resolution * args.resolution, 2.0)
     sampler = AspectBucketSampler(bucket=bucket, num_replicas=world_size, rank=rank)
 
