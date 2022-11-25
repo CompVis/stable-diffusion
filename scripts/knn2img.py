@@ -214,7 +214,7 @@ if __name__ == "__main__":
         "--ddim_eta",
         type=float,
         default=0.0,
-        help="ddim eta (eta=0.0 corresponds to deterministic sampling",
+        help="ddim eta (eta=0.0 corresponds to deterministic sampling)",
     )
     parser.add_argument(
         "--n_iter",
