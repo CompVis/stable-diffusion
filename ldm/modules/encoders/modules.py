@@ -3,8 +3,8 @@ import torch.nn as nn
 from functools import partial
 import clip
 from einops import rearrange, repeat
-from transformers import CLIPTokenizer, CLIPTextModel
 import kornia
+from transformers import CLIPTokenizer, CLIPTextModel
 
 from ldm.modules.x_transformer import Encoder, TransformerWrapper  # TODO: can we directly rely on lucidrains code and simply add this as a reuirement? --> test
 
@@ -227,8 +227,9 @@ class FrozenClipImageEmbedder(nn.Module):
         # x is assumed to be in range [-1,1]
         return self.model.encode_image(self.preprocess(x))
 
-
+  
 if __name__ == "__main__":
     from ldm.util import count_params
     model = FrozenCLIPEmbedder()
     count_params(model, verbose=True)
+    
