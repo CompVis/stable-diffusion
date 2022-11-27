@@ -227,49 +227,9 @@ class FrozenClipImageEmbedder(nn.Module):
         # x is assumed to be in range [-1,1]
         return self.model.encode_image(self.preprocess(x))
 
-class FrozenAltCLIPTextEmbedder(nn.Module):
-    """
-    Uses the AltCLIP transformer encoder for text.
-    """
-    def __init__(self, version='AltCLIP', device="cuda", max_length=77, n_repeat=1, normalize=True):
-        super().__init__()
-        self.model= AltCLIP.from_pretrained('BAAI/AltCLIP')
-        self.tokenizer = AltCLIPProcessor.from_pretrained('BAAI/AltCLIP').tokenizer
-        self.device = device
-        self.max_length = max_length
-        self.n_repeat = n_repeat
-        self.normalize = normalize
-
-    def freeze(self):
-        self.model = self.model.eval()
-        for param in self.parameters():
-            param.requires_grad = False
-
-    def forward(self, text):
-        tokens = self.tokenizer(text,
-                            truncation=True,
-                            max_length=self.max_length,
-                            return_length=False,
-                            return_overflowing_tokens=False,
-                            padding="max_length",
-                            return_tensors="pt")
-        z = self.model.encode_text(tokens)
-        # if self.normalize:
-        #     z = z / torch.linalg.norm(z, dim=1, keepdim=True)
-        return z
-
-    def encode(self, text):
-        text["input_ids"] = torch.tensor(text["input_ids"]).to(self.device)
-        text["attention_mask"] = torch.tensor(
-            text['attention_mask']).to(self.device)
-        
-        features = self.cond_stage_model(**text)
-        return features['projection_state']
   
 if __name__ == "__main__":
-    import sys
-    # sys.path.append('/sharefs/baai-mrnd/liuguang/FlagStudio/stable-diffusion')
     from ldm.util import count_params
-    model = FrozenAltCLIPEmbedder()
+    model = FrozenCLIPEmbedder()
     count_params(model, verbose=True)
     
