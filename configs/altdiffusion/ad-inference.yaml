@@ -67,4 +67,6 @@ model:
           target: torch.nn.Identity
 
     cond_stage_config:
-      target: ldm.modules.encoders.modules.FrozenAltCLIPEmbedder
+      target: ldm.modules.encoders.xlmr.BertSeriesModelWithTransformation
+      params:
+        name: "XLMR-Large"
