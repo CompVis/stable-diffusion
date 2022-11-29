@@ -273,6 +273,7 @@ else:
 seeds = ""
 with torch.no_grad():
 
+    base_count = 1
     all_samples = list()
     for n in trange(opt.n_iter, desc="Sampling"):
         for prompts in tqdm(data, desc="data"):
@@ -328,11 +329,15 @@ with torch.no_grad():
                     x_samples_ddim = modelFS.decode_first_stage(samples_ddim[i].unsqueeze(0))
                     x_sample = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
                     x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
+                    file_name = "temp"
+                    if opt.n_iter > 1:
+                        file_name = "temp" + f"{base_count}"
                     Image.fromarray(x_sample.astype(np.uint8)).save(
-                        os.path.join(outpath, "temp.png")
+                        os.path.join(outpath, file_name + ".png")
                     )
                     seeds += str(opt.seed) + ","
                     opt.seed += 1
+                    base_count += 1
 
                 if opt.device != "cpu":
                     mem = torch.cuda.memory_allocated() / 1e6
