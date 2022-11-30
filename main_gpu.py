@@ -724,7 +724,11 @@ if __name__ == "__main__":
         # run
         if opt.train:
             try:
+                start = time.time()
                 trainer.fit(model, data)
+                stop = time.time()
+                print('******** ss: training over *****')
+                print(f"Training time: {stop - start}s")
             except Exception:
                 melk()
                 raise
