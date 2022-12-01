@@ -957,7 +957,6 @@ def main():
 
     save_checkpoint(global_step)
 
-    torch.distributed.barrier()
     cleanup()
 
     print(get_gpu_ram())
