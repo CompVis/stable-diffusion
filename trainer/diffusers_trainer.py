@@ -717,6 +717,7 @@ def main():
 
     # Set seed
     torch.manual_seed(args.seed)
+    random.seed(args.seed)
     print('RANDOM SEED:', args.seed)
 
     if args.resume:
