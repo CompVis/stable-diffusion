@@ -171,7 +171,7 @@ class HPACombineDatasetMetadataInMemory():
         with open(cache_file, 'wb') as fp:
             pickle.dump(samples, fp)
 
-    def __init__(self, cache_file, seed=123, train_split=0.95, group='train', channels=None, include_location=False, return_info=False, filter_func=None):
+    def __init__(self, cache_file, seed=123, train_split=0.95, group='train', channels=None, include_location=False, return_info=False, filter_func=None, dump_to_file=None):
         if cache_file in HPACombineDatasetMetadataInMemory.samples_dict:
             self.samples = HPACombineDatasetMetadataInMemory.samples_dict[cache_file]
         else:
@@ -198,6 +198,12 @@ class HPACombineDatasetMetadataInMemory():
                 filter_func = lambda x: int( x['info']['status']) == 35 and x['info']['Ab state'] == 'IF_FINISHED' and str(x['info']['locations']) != "nan"
 
             self.samples = list(filter(filter_func, self.samples))
+        
+        if dump_to_file:
+            assert dump_to_file != cache_file, "please do not overwrite the cache file"
+            with open(dump_to_file, 'wb') as fp:
+                pickle.dump(self.samples, fp)
+
         self.channels = channels
         assert "info" in self.samples[0]
 
@@ -390,6 +396,8 @@ class HPAHybridEmbedder(nn.Module):
 
 
 if __name__ == "__main__":
-    HPACombineDatasetMetadataInMemory.generate_cache(f"{HPA_DATA_ROOT}/HPACombineDatasetMetadataInMemory-256-1000.pickle", size=256, total_length=1000)
-    HPACombineDatasetMetadataInMemory.generate_cache(f"{HPA_DATA_ROOT}/HPACombineDatasetMetadataInMemory-256.pickle", size=256)
+    HPACombineDatasetMetadataInMemory(seed=123, train_split=0.95, group='train', cache_file=f"{HPA_DATA_ROOT}/HPACombineDatasetMetadataInMemory-256.pickle", channels= [1, 1, 1],
+        filter_func="has_location", dump_to_file=f"{HPA_DATA_ROOT}/HPACombineDatasetMetadataInMemory-256-has-location.pickle")
+    # HPACombineDatasetMetadataInMemory.generate_cache(f"{HPA_DATA_ROOT}/HPACombineDatasetMetadataInMemory-256-1000.pickle", size=256, total_length=1000)
+    # HPACombineDatasetMetadataInMemory.generate_cache(f"{HPA_DATA_ROOT}/HPACombineDatasetMetadataInMemory-256.pickle", size=256)
     # dump_info(f"{HPA_DATA_ROOT}/HPACombineDatasetInfo.pickle")

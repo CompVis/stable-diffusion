@@ -404,9 +404,11 @@ class ImageLogger(Callback):
         if self.log_to_slack and self.monitor_val_metric and self.monitor_val_metric in trainer.logged_metrics:
             val = trainer.logged_metrics[self.monitor_val_metric]
             if self._last_val_loss:
-                if self._last_val_loss < val:
+                if self._last_val_loss > val:
+                    self._last_val_loss = val
                     send_message_to_slack(f"🎉 Validation metric updated: {self.monitor_val_metric} reached {val}")
-            self._last_val_loss = val
+            else:
+                self._last_val_loss = val
 
         
         
