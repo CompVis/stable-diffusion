@@ -998,7 +998,7 @@ def main():
                                 scheduler=PNDMScheduler.from_pretrained(args.model, subfolder="scheduler", use_auth_token=args.hf_token)
 
                             pipeline = StableDiffusionPipeline(
-                                text_encoder=text_encoder,
+                                text_encoder=text_encoder if type(text_encoder) is not torch.nn.parallel.DistributedDataParallel else text_encoder.module,
                                 vae=vae,
                                 unet=unet.module,
                                 tokenizer=tokenizer,
