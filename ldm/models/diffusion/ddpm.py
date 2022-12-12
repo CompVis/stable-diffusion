@@ -342,15 +342,15 @@ class DDPM(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         loss, loss_dict = self.shared_step(batch)
 
-        self.log_dict(loss_dict, prog_bar=True,
-                      logger=True, on_step=True, on_epoch=True)
+        # self.log_dict(loss_dict, prog_bar=True,
+        #              logger=True, on_step=True, on_epoch=True)
 
-        self.log("global_step", self.global_step,
-                 prog_bar=True, logger=True, on_step=True, on_epoch=False)
+        # self.log("global_step", self.global_step,
+        #         prog_bar=True, logger=True, on_step=True, on_epoch=False)
 
         if self.use_scheduler:
             lr = self.optimizers().param_groups[0]['lr']
-            self.log('lr_abs', lr, prog_bar=True, logger=True, on_step=True, on_epoch=False)
+        #    self.log('lr_abs', lr, prog_bar=True, logger=True, on_step=True, on_epoch=False)
 
         return loss
 
@@ -360,8 +360,8 @@ class DDPM(pl.LightningModule):
         with self.ema_scope():
             _, loss_dict_ema = self.shared_step(batch)
             loss_dict_ema = {key + '_ema': loss_dict_ema[key] for key in loss_dict_ema}
-        self.log_dict(loss_dict_no_ema, prog_bar=False, logger=True, on_step=False, on_epoch=True)
-        self.log_dict(loss_dict_ema, prog_bar=False, logger=True, on_step=False, on_epoch=True)
+        # self.log_dict(loss_dict_no_ema, prog_bar=False, logger=True, on_step=False, on_epoch=True)
+        # self.log_dict(loss_dict_ema, prog_bar=False, logger=True, on_step=False, on_epoch=True)
 
     def on_train_batch_end(self, *args, **kwargs):
         if self.use_ema:
