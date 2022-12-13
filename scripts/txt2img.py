@@ -232,6 +232,11 @@ def main():
         choices=["full", "autocast"],
         default="autocast"
     )
+    parser.add_argument(
+        "--fprefix",
+        type=str,
+        help="filename prefix for sample outputs"
+    )
     opt = parser.parse_args()
 
     if opt.laion400m:
@@ -323,7 +328,7 @@ def main():
                                 x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                                 img = Image.fromarray(x_sample.astype(np.uint8))
                                 img = put_watermark(img, wm_encoder)
-                                img.save(os.path.join(sample_path, f"{base_count:05}.png"))
+                                img.save(os.path.join(sample_path, f"{opt.fprefix or ''}{base_count:05}.png"))
                                 base_count += 1
 
                         if not opt.skip_grid:
