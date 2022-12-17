@@ -377,8 +377,10 @@ def main():
     start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
     last_start_code = start_code
     c = model.get_learned_conditioning([opt.prompt])
-    # prompt_delta = torch.randn_like(c, device=device).unsqueeze(0).repeat(opt.n_samples, 1, 1, 1) * opt.prompt_mutation_rate
-    prompt_delta = None
+    prompt_delta = torch.randn_like(c, device=device).unsqueeze(0).repeat(opt.n_samples, 1, 1, 1) * opt.prompt_mutation_rate
+    prompt_delta += torch.randn_like(prompt_delta, device=device) * opt.prompt_mutation_rate
+    
+    # prompt_delta = None
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
     while True:
         try:
@@ -419,6 +421,10 @@ def main():
                         elif response.startswith("m="):
                             opt.mutation_rate = float(response[2:])
                             print(f"\tmutation rate set to {opt.mutation_rate}")
+                            return get_input(start_code)
+                        elif response.startswith("pm="):
+                            opt.prompt_mutation_rate = float(response[3:])
+                            print(f"\tprompt mutation rate set to {opt.prompt_mutation_rate}")
                             return get_input(start_code)
                         elif response.startswith("s="):
                             opt.n_samples = int(response[2:])
