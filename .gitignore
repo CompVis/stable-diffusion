@@ -4,3 +4,4 @@ models/first_stage_models/*/model.*
 logs/
 profiling/
 src/clip/*
+./**/*.pyc
