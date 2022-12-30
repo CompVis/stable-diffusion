@@ -50,7 +50,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--prompt", type=str, nargs="?", default="a painting of a virus monster playing guitar", help="the prompt to render"
 )
-parser.add_argument("--outdir", type=str, nargs="?", help="dir to write results to", default="temp")
+parser.add_argument(
+    "--negative_prompt", type=str, nargs="?", default="", help="the negative prompt to render"
+)
+parser.add_argument(
+    "--outdir", type=str, nargs="?", help="dir to write results to", default="temp"
+)
 parser.add_argument(
     "--skip_grid",
     action="store_true",
@@ -182,6 +187,11 @@ parser.add_argument(
     default="euler_a",
 )
 parser.add_argument(
+    "--cheap_decode",
+    action="store_true",
+    help="decode latents directly to RGB"
+)
+parser.add_argument(
     "--ckpt",
     type=str,
     help="path to checkpoint of model",
@@ -248,21 +258,11 @@ if opt.fixed_code:
     start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=opt.device)
 
 
-batch_size = opt.n_samples
-n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
-if not opt.from_file:
-    assert opt.prompt is not None
-    prompt = opt.prompt
-    data = [batch_size * [prompt]]
-
-else:
-    print(f"reading prompts from {opt.from_file}")
-    with open(opt.from_file, "r") as f:
-        text = f.read()
-        print(f"Using prompt: {text.strip()}")
-        data = text.splitlines()
-        data = batch_size * list(data)
-        data = list(chunk(sorted(data), batch_size))
+assert opt.prompt is not None
+prompt = opt.prompt
+negative_prompt = opt.negative_prompt
+data = [prompt]
+negative_data = [negative_prompt]
 
 
 if opt.precision == "autocast" and opt.device != "cpu":
@@ -282,13 +282,13 @@ with torch.no_grad():
                 modelCS.to(opt.device)
                 uc = None
                 if opt.scale != 1.0:
-                    uc = modelCS.get_learned_conditioning(batch_size * [""])
+                    uc = modelCS.get_learned_conditioning(negative_data)
                 if isinstance(prompts, tuple):
                     prompts = list(prompts)
 
                 subprompts, weights = split_weighted_subprompts(prompts[0])
                 if len(subprompts) > 1:
-                    c = torch.zeros_like(uc)
+                    c = torch.zeros_like(modelCS.get_learned_conditioning([""]))
                     totalWeight = sum(weights)
                     # normalize each "sub prompt" and add it
                     for i in range(len(subprompts)):
@@ -324,20 +324,38 @@ with torch.no_grad():
 
                 print(samples_ddim.shape)
                 print("saving images")
-                for i in range(batch_size):
 
-                    x_samples_ddim = modelFS.decode_first_stage(samples_ddim[i].unsqueeze(0))
-                    x_sample = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
+                if opt.cheap_decode == False:
+                    x_sample = modelFS.decode_first_stage(samples_ddim[0].unsqueeze(0))
+                    x_sample = torch.clamp((x_sample + 1.0) / 2.0, min=0.0, max=1.0)
                     x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
-                    file_name = "temp"
-                    if opt.n_iter > 1:
-                        file_name = "temp" + f"{base_count}"
-                    Image.fromarray(x_sample.astype(np.uint8)).save(
-                        os.path.join(outpath, file_name + ".png")
-                    )
-                    seeds += str(opt.seed) + ","
-                    opt.seed += 1
-                    base_count += 1
+                else:
+                    coefs = torch.tensor([
+                        [0.298, 0.207, 0.208],
+                        [0.187, 0.286, 0.173],
+                        [-0.158, 0.189, 0.264],
+                        [-0.184, -0.271, -0.473],
+                    ]).to(samples_ddim[0].device)
+                    x_sample = torch.einsum("lxy,lr -> rxy", samples_ddim[0], coefs)
+                    x_sample = torch.clamp((x_sample + 1.0) / 2.0, min=0.0, max=1.0)
+                    x_sample = 255. * np.moveaxis(x_sample.cpu().numpy(), 0, 2)
+                
+                x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
+
+                if opt.cheap_decode == True:
+                    x_sample_image = x_sample_image.resize((opt.W, opt.H), resample=0)
+                
+                x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
+
+                file_name = "temp"
+                if opt.n_iter > 1:
+                    file_name = "temp" + f"{base_count}"
+                x_sample_image.save(
+                    os.path.join(outpath, file_name + ".png")
+                )
+                seeds += str(opt.seed) + ","
+                opt.seed += 1
+                base_count += 1
 
                 if opt.device != "cpu":
                     mem = torch.cuda.memory_allocated() / 1e6

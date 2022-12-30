@@ -63,8 +63,15 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--prompt", type=str, nargs="?", default="a painting of a virus monster playing guitar", help="the prompt to render"
 )
-parser.add_argument("--outdir", type=str, nargs="?", help="dir to write results to", default="temp")
-parser.add_argument("--init_img", type=str, nargs="?", help="path to the input image", default="temp/input.png")
+parser.add_argument(
+    "--negative_prompt", type=str, nargs="?", default="", help="the negative prompt to render"
+)
+parser.add_argument(
+    "--outdir", type=str, nargs="?", help="dir to write results to", default="temp"
+)
+parser.add_argument(
+    "--init_img", type=str, nargs="?", help="path to the input image", default="temp/input.png"
+)
 
 parser.add_argument(
     "--skip_grid",
@@ -183,6 +190,11 @@ parser.add_argument(
     default="ddim",
 )
 parser.add_argument(
+    "--cheap_decode",
+    action="store_true",
+    help="decode latents directly to RGB"
+)
+parser.add_argument(
     "--ckpt",
     type=str,
     help="path to checkpoint of model",
@@ -248,23 +260,16 @@ if opt.device != "cpu" and opt.precision == "autocast":
     modelFS.half()
     init_image = init_image.half()
 
-batch_size = opt.n_samples
-n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
-if not opt.from_file:
-    assert opt.prompt is not None
-    prompt = opt.prompt
-    data = [batch_size * [prompt]]
+assert opt.prompt is not None
+prompt = opt.prompt
+negative_prompt = opt.negative_prompt
+data = [prompt]
+negative_data = [negative_prompt]
 
-else:
-    print(f"reading prompts from {opt.from_file}")
-    with open(opt.from_file, "r") as f:
-        data = f.read().splitlines()
-        data = batch_size * list(data)
-        data = list(chunk(sorted(data), batch_size))
 
 modelFS.to(opt.device)
 
-init_image = repeat(init_image, "1 ... -> b ...", b=batch_size)
+init_image = repeat(init_image, "1 ... -> b ...", b=1)
 init_latent = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image))  # move to latent space
 
 if opt.device != "cpu":
@@ -296,7 +301,7 @@ with torch.no_grad():
                 modelCS.to(opt.device)
                 uc = None
                 if opt.scale != 1.0:
-                    uc = modelCS.get_learned_conditioning(batch_size * [""])
+                    uc = modelCS.get_learned_conditioning(negative_data)
                 if isinstance(prompts, tuple):
                     prompts = list(prompts)
 
@@ -322,7 +327,7 @@ with torch.no_grad():
                 # encode (scaled latent)
                 z_enc = model.stochastic_encode(
                     init_latent,
-                    torch.tensor([t_enc] * batch_size).to(opt.device),
+                    torch.tensor([t_enc]).to(opt.device),
                     opt.seed,
                     opt.ddim_eta,
                     opt.ddim_steps,
@@ -339,20 +344,36 @@ with torch.no_grad():
 
                 modelFS.to(opt.device)
                 print("saving images")
-                for i in range(batch_size):
 
-                    x_samples_ddim = modelFS.decode_first_stage(samples_ddim[i].unsqueeze(0))
-                    x_sample = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
+                if opt.cheap_decode == False:
+                    x_sample = modelFS.decode_first_stage(samples_ddim[0].unsqueeze(0))
+                    x_sample = torch.clamp((x_sample + 1.0) / 2.0, min=0.0, max=1.0)
                     x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
-                    file_name = "temp"
-                    if opt.n_iter > 1:
-                        file_name = "temp" + f"{base_count}"
-                    Image.fromarray(x_sample.astype(np.uint8)).save(
-                        os.path.join(outpath, file_name + ".png")
-                    )
-                    seeds += str(opt.seed) + ","
-                    opt.seed += 1
-                    base_count += 1
+                else:
+                    coefs = torch.tensor([
+                        [0.298, 0.207, 0.208],
+                        [0.187, 0.286, 0.173],
+                        [-0.158, 0.189, 0.264],
+                        [-0.184, -0.271, -0.473],
+                    ]).to(samples_ddim[0].device)
+                    x_sample = torch.einsum("lxy,lr -> rxy", samples_ddim[0], coefs)
+                    x_sample = torch.clamp((x_sample + 1.0) / 2.0, min=0.0, max=1.0)
+                    x_sample = 255. * np.moveaxis(x_sample.cpu().numpy(), 0, 2)
+
+                x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
+
+                if opt.cheap_decode == True:
+                    x_sample_image = x_sample_image.resize((opt.W, opt.H), resample=0)
+
+                file_name = "temp"
+                if opt.n_iter > 1:
+                    file_name = "temp" + f"{base_count}"
+                x_sample_image.save(
+                    os.path.join(outpath, file_name + ".png")
+                )
+                seeds += str(opt.seed) + ","
+                opt.seed += 1
+                base_count += 1
 
                 if opt.device != "cpu":
                     mem = torch.cuda.memory_allocated(device=opt.device) / 1e6
