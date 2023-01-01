@@ -105,13 +105,14 @@ and renders images of size 512x512 (which it was trained on) in 50 steps. All su
 
 
 ```commandline
-usage: txt2img.py [-h] [--prompt [PROMPT]] [--outdir [OUTDIR]] [--skip_grid] [--skip_save] [--ddim_steps DDIM_STEPS] [--plms] [--laion400m] [--fixed_code] [--ddim_eta DDIM_ETA]
+usage: txt2img.py [-h] [--prompt [PROMPT]] [--negative_prompt] [--outdir [OUTDIR]] [--skip_grid] [--skip_save] [--ddim_steps DDIM_STEPS] [--plms] [--laion400m] [--fixed_code] [--ddim_eta DDIM_ETA]
                   [--n_iter N_ITER] [--H H] [--W W] [--C C] [--f F] [--n_samples N_SAMPLES] [--n_rows N_ROWS] [--scale SCALE] [--from-file FROM_FILE] [--config CONFIG] [--ckpt CKPT]
                   [--seed SEED] [--precision {full,autocast}]
 
 optional arguments:
   -h, --help            show this help message and exit
   --prompt [PROMPT]     the prompt to render
+  --negative_prompt     the negative prompt to render
   --outdir [OUTDIR]     dir to write results to
   --skip_grid           do not save a grid, only individual samples. Helpful when evaluating lots of samples
   --skip_save           do not save individual samples. For speed measurements.
