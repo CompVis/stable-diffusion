@@ -32,14 +32,16 @@ def chunk(it, size):
 
 
 def load_model_from_config(ckpt, verbose=False):
-    if ckpt == "model.ckpt":
+    if ckpt == "model.ckpt" or ckpt == "modelmini.ckpt" or ckpt == "PaletteGen.ckpt":
         print(f"Loading model")
     else:
         print(f"Loading custom model from {ckpt}")
     pl_sd = torch.load(ckpt, map_location="cpu")
     if "global_step" in pl_sd:
         print(f"Global Step: {pl_sd['global_step']}")
-    sd = pl_sd["state_dict"]
+    sd = pl_sd
+    if 'state_dict' in sd:
+        sd = pl_sd["state_dict"]
     return sd
 
 def load_img(path, h0, w0):
