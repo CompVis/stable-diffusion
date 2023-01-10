@@ -10,6 +10,7 @@ dependencies:
   - pytorch=1.12.1
   - torchvision=0.13.1
   - numpy=1.20.3
+  - curl
   - pip:
     - albumentations==0.4.3
     - opencv-python==4.1.2.30
@@ -27,7 +28,6 @@ dependencies:
     - torchmetrics==0.7.0
     - kornia==0.6
     - accelerate==0.12.0
-    - gdown
     - git+https://www.github.com/hbldh/hitherdither
     - -e git+https://github.com/CompVis/taming-transformers#egg=taming-transformers
     - -e git+https://github.com/openai/CLIP#egg=clip

@@ -23,4 +23,4 @@ IF "%CONDA_PATH%"=="" (
 :foundPath
 call "%CONDA_PATH%\Scripts\activate.bat"
 call "%CONDA_PATH%\Scripts\activate.bat" "%conda_env_name%"
-python scripts\%*
+call python scripts\%* || color 04 && echo An error has occured. && conda deactivate && timeout /t -1 && exit
