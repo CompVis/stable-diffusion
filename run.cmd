@@ -2,10 +2,10 @@
 
 set conda_env_name=lda
 
-set paths=%ProgramData%\miniconda3
-set paths=%paths%;%USERPROFILE%\miniconda3
-set paths=%paths%;%ProgramData%\anaconda3
-set paths=%paths%;%USERPROFILE%\anaconda3
+set paths="%ProgramData%\miniconda3"
+set paths=%paths%;"%USERPROFILE%\miniconda3"
+set paths=%paths%;"%ProgramData%\anaconda3"
+set paths=%paths%;"%USERPROFILE%\anaconda3"
 
 for %%a in (%paths%) do ( 
  if EXIST "%%a\Scripts\activate.bat" (
@@ -21,6 +21,6 @@ IF "%CONDA_PATH%"=="" (
 )
 
 :foundPath
-call "%CONDA_PATH%\Scripts\activate.bat"
-call "%CONDA_PATH%\Scripts\activate.bat" "%conda_env_name%"
+call %CONDA_PATH%\Scripts\activate.bat
+call %CONDA_PATH%\Scripts\activate.bat "%conda_env_name%"
 call python scripts\%* || color 04 && echo An error has occured. && conda deactivate && timeout /t -1 && exit
