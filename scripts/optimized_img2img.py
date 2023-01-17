@@ -17,6 +17,11 @@ from ldm.util import instantiate_from_config
 from optimUtils import split_weighted_subprompts, logger
 from transformers import logging
 import pandas as pd
+
+from torch import Tensor
+from torch.nn import functional as F
+from torch.nn.modules.utils import _pair
+from typing import Optional
 logging.set_verbosity_error()
 
 def patch_conv(**patch):
@@ -25,6 +30,20 @@ def patch_conv(**patch):
     def __init__(self, *args, **kwargs):
         return init(self, *args, **kwargs, **patch)
     cls.__init__ = __init__
+
+def patch_conv_asymmetric(model, x, y):
+    for layer in flatten(model):
+        if type(layer) == torch.nn.Conv2d:
+            layer.padding_modeX = 'circular' if x else 'constant'
+            layer.padding_modeY = 'circular' if y else 'constant'
+            layer.paddingX = (layer._reversed_padding_repeated_twice[0], layer._reversed_padding_repeated_twice[1], 0, 0)
+            layer.paddingY = (0, 0, layer._reversed_padding_repeated_twice[2], layer._reversed_padding_repeated_twice[3])
+            layer._conv_forward = __replacementConv2DConvForward.__get__(layer, torch.nn.Conv2d)
+
+def __replacementConv2DConvForward(self, input: Tensor, weight: Tensor, bias: Optional[Tensor]):
+    working = F.pad(input, self.paddingX, mode=self.padding_modeX)
+    working = F.pad(working, self.paddingY, mode=self.padding_modeY)
+    return F.conv2d(working, weight, bias, self.stride, _pair(0), self.dilation, self.groups)
 
 def chunk(it, size):
     it = iter(it)
@@ -92,12 +111,23 @@ parser.add_argument(
     help="Tiles the generated image",
 )
 parser.add_argument(
+    "--tilingX",
+    type=str,
+    default="false",
+    help="Tiles the generated image in the x direction",
+)
+parser.add_argument(
+    "--tilingY",
+    type=str,
+    default="false",
+    help="Tiles the generated image in the y direction",
+)
+parser.add_argument(
     "--ddim_steps",
     type=int,
     default=50,
     help="number of ddim sampling steps",
 )
-
 parser.add_argument(
     "--ddim_eta",
     type=float,
@@ -215,7 +245,7 @@ seed_everything(opt.seed)
 
 if opt.tiling == "true":
     patch_conv(padding_mode='circular')
-    print("patched for tiling")
+    print("Patched for tiling")
 
 sd = load_model_from_config(f"{opt.ckpt}")
 li, lo = [], []
@@ -268,6 +298,17 @@ negative_prompt = opt.negative_prompt
 data = [prompt]
 negative_data = [negative_prompt]
 
+if opt.tilingX == "true" and opt.tilingY == "true":
+    patch_conv(padding_mode='circular')
+    print("Patched for tiling in x and y")
+elif opt.tilingX == "true":
+    patch_conv_asymmetric(model, True, False)
+    patch_conv_asymmetric(modelFS, True, False)
+    print("Patched for tiling in x direction")
+elif opt.tilingY == "true":
+    patch_conv_asymmetric(model, False, True)
+    patch_conv_asymmetric(modelFS, False, True)
+    print("Patched for tiling in y direction")
 
 modelFS.to(opt.device)
 
