@@ -6,7 +6,7 @@ import torch
 import numpy as np
 from omegaconf import OmegaConf
 from PIL import Image
-from tqdm import tqdm, trange
+from tqdm.auto import tqdm, trange
 from itertools import islice
 from einops import rearrange, repeat
 from torchvision.utils import make_grid
