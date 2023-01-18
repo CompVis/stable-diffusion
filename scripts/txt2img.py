@@ -1,4 +1,4 @@
-import argparse, os, sys, glob
+import argparse, os, sys, glob, re
 import cv2
 import torch
 import numpy as np
@@ -18,10 +18,13 @@ from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 from ldm.models.diffusion.dpm_solver import DPMSolverSampler
+from ldm.prompt_weights import get_learned_conditioning_with_prompt_weights
 
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
 
+# When using prompt weights, use this to recover the original non-weighted prompt
+prompt_filter_regex = r'[\(\)]|:\d+(\.\d+)?'
 
 # load safety model
 safety_model_id = "CompVis/stable-diffusion-safety-checker"
@@ -96,14 +99,16 @@ def check_safety(x_image):
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument(
         "--prompt",
         type=str,
         nargs="?",
         default="a painting of a virus monster playing guitar",
-        help="the prompt to render"
+        help="the prompt to render.\n" +
+             "Give subprompts more or less weight by encapsulating them in (), and adding a :weight. For example:\n" +
+             "'a photograph of (an astronaut:1.1) riding a horse' would give the subprompt 'an astronaut' a 10%% boost."
     )
     parser.add_argument(
         "--outdir",
@@ -298,7 +303,9 @@ def main():
                             uc = model.get_learned_conditioning(batch_size * [""])
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
-                        c = model.get_learned_conditioning(prompts)
+                        c = torch.cat([get_learned_conditioning_with_prompt_weights(prompt, model)
+                                         for prompt in prompts])
+
                         shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
                         samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
                                                          conditioning=c,
