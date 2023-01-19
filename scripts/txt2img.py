@@ -105,6 +105,15 @@ def main():
         default="a painting of a virus monster playing guitar",
         help="the prompt to render"
     )
+    
+    parser.add_argument(
+        "--negative_prompt",
+        type=str,
+        nargs="?",
+        default="",
+        help="the negative prompt to render"
+    )
+    
     parser.add_argument(
         "--outdir",
         type=str,
@@ -267,6 +276,7 @@ def main():
     n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
     if not opt.from_file:
         prompt = opt.prompt
+        negative_prompt = opt.negative_prompt
         assert prompt is not None
         data = [batch_size * [prompt]]
 
@@ -294,8 +304,11 @@ def main():
                 for n in trange(opt.n_iter, desc="Sampling"):
                     for prompts in tqdm(data, desc="data"):
                         uc = None
-                        if opt.scale != 1.0:
+                        if negative_prompt:
+                            uc = model.get_learned_conditioning(batch_size * [negative_prompt])
+                        elif opt.scale != 1.0:
                             uc = model.get_learned_conditioning(batch_size * [""])
+                            
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
                         c = model.get_learned_conditioning(prompts)
