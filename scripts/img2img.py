@@ -259,7 +259,9 @@ def main():
                     for prompts in tqdm(data, desc="data"):
                         uc = None
                         if negative_prompt:
-                            uc = model.get_learned_conditioning(len(prompts) * [negative_prompt])
+                            uc = model.get_learned_conditioning(batch_size * [negative_prompt])
+                        elif opt.scale != 1.0:
+                            uc = model.get_learned_conditioning(batch_size * [""]
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
                         c = model.get_learned_conditioning(prompts)
