@@ -2,6 +2,7 @@ import argparse, os, sys, glob
 import cv2
 import torch
 import numpy as np
+import questionary
 from omegaconf import OmegaConf
 from PIL import Image
 from tqdm import tqdm, trange
@@ -22,6 +23,8 @@ from ldm.models.diffusion.dpm_solver import DPMSolverSampler
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
 
+#ckpt dir
+dir = 'models/ldm/stable-diffusion-v1/'
 
 # load safety model
 safety_model_id = "CompVis/stable-diffusion-safety-checker"
@@ -216,7 +219,7 @@ def main():
     parser.add_argument(
         "--ckpt",
         type=str,
-        default="models/ldm/stable-diffusion-v1/model.ckpt",
+        default="",
         help="path to checkpoint of model",
     )
     parser.add_argument(
@@ -239,8 +242,28 @@ def main():
         opt.config = "configs/latent-diffusion/txt2img-1p4B-eval.yaml"
         opt.ckpt = "models/ldm/text2img-large/model.ckpt"
         opt.outdir = "outputs/txt2img-samples-laion400m"
-
+    
+    if opt.ckpt == '':
+        if len(glob.glob(f'{dir}/*.ckpt')) > 1:
+            opt.ckpt = questionary.select(
+                'please select ckpt',
+                choices = glob.glob(f'{dir}/*.ckpt'),
+                use_shortcuts=True
+            ).ask()
+        else:
+            opt.ckpt = glob.glob(f'{dir}/*.ckpt')[0]
+            
     seed_everything(opt.seed)
+    
+    if opt.ckpt == '' and len(glob.glob(f'{dir}/*.ckpt')) >=1:
+        opt.ckpt = questionary.select(
+            'please select ckpt',
+            choices = glob.glob(f'{dir}/*.ckpt'),
+            use_shortcuts=True
+        ).ask()
+    else:
+        opt.ckpt == f'{dir}/model.ckpt'
+    print(opt.ckpt)
 
     config = OmegaConf.load(f"{opt.config}")
     model = load_model_from_config(config, f"{opt.ckpt}")
