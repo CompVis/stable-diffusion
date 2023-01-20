@@ -4,6 +4,7 @@ import argparse, os, sys, glob
 import PIL
 import torch
 import numpy as np
+import questionary
 from omegaconf import OmegaConf
 from PIL import Image
 from tqdm import tqdm, trange
@@ -19,6 +20,8 @@ from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 
+#ckpt dir
+dir = 'models/ldm/stable-diffusion-v1/'
 
 def chunk(it, size):
     it = iter(it)
@@ -176,7 +179,7 @@ def main():
     parser.add_argument(
         "--ckpt",
         type=str,
-        default="models/ldm/stable-diffusion-v1/model.ckpt",
+        default="",
         help="path to checkpoint of model",
     )
     parser.add_argument(
@@ -194,6 +197,17 @@ def main():
     )
 
     opt = parser.parse_args()
+    
+    if opt.ckpt == '':
+        if len(glob.glob(f'{dir}/*.ckpt')) > 1:
+            opt.ckpt = questionary.select(
+                'please select ckpt',
+                choices = glob.glob(f'{dir}/*.ckpt'),
+                use_shortcuts=True
+            ).ask()
+        else:
+            opt.ckpt = glob.glob(f'{dir}/*.ckpt')[0]
+    
     seed_everything(opt.seed)
 
     config = OmegaConf.load(f"{opt.config}")
