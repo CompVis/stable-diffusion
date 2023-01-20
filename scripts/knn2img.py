@@ -3,6 +3,7 @@ import clip
 import torch
 import torch.nn as nn
 import numpy as np
+import questionary
 from omegaconf import OmegaConf
 from PIL import Image
 from tqdm import tqdm, trange
@@ -32,6 +33,8 @@ DATABASES = [
     "artbench-ukiyo_e",
 ]
 
+#ckpt dir
+dir = 'models/ldm/stable-diffusion-v1/'
 
 def chunk(it, size):
     it = iter(it)
@@ -274,7 +277,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--ckpt",
         type=str,
-        default="models/rdm/rdm768x768/model.ckpt",
+        default="",
         help="path to checkpoint of model",
     )
 
@@ -305,6 +308,16 @@ if __name__ == "__main__":
     )
 
     opt = parser.parse_args()
+    
+    if opt.ckpt == '':
+        if len(glob.glob(f'{dir}/*.ckpt')) > 1:
+            opt.ckpt = questionary.select(
+                'please select ckpt',
+                choices = glob.glob(f'{dir}/*.ckpt'),
+                use_shortcuts=True
+            ).ask()
+        else:
+            opt.ckpt = glob.glob(f'{dir}/*.ckpt')[0]
 
     config = OmegaConf.load(f"{opt.config}")
     model = load_model_from_config(config, f"{opt.ckpt}")
