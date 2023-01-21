@@ -120,7 +120,7 @@ optional arguments:
   --plms                use plms sampling
   --laion400m           uses the LAION400M model
   --fixed_code          if enabled, uses the same starting code across samples
-  --ddim_eta DDIM_ETA   ddim eta (eta=0.0 corresponds to deterministic sampling
+  --ddim_eta DDIM_ETA   ddim eta (eta=0.0 corresponds to deterministic sampling)
   --n_iter N_ITER       sample this often
   --H H                 image height, in pixel space
   --W W                 image width, in pixel space
