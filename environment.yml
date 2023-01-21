@@ -1,12 +1,13 @@
 name: invokeai
 channels:
   - pytorch
+  - nvidia
   - defaults
 dependencies:
   - python>=3.9
   - pip>=22.2
-  - cudatoolkit
-  - pytorch
+  - pytorch=1.12.1
+  - pytorch-cuda=11.6
   - torchvision
   - numpy
   - pip:
