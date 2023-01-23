@@ -6,7 +6,7 @@ import torch
 import cv2
 from torchvision.utils import make_grid
 from datetime import datetime
-#import matplotlib.pyplot as plt   # TODO: check with Dominik, also bsrgan.py vs bsrgan_light.py
+import matplotlib.pyplot as plt
 
 
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
