@@ -733,6 +733,8 @@ class UNetModel(nn.Module):
             hs.append(h)
         h = self.middle_block(h, emb, context)
         for module in self.output_blocks:
+            if h.shape[-2:] != hs[-1].shape[-2:]:
+                h = F.interpolate(h, hs[-1].shape[-2:], mode="nearest")
             h = th.cat([h, hs.pop()], dim=1)
             h = module(h, emb, context)
         h = h.type(x.dtype)

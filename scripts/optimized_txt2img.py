@@ -376,6 +376,8 @@ with torch.no_grad():
                 print(samples_ddim.shape)
                 print("saving images")
 
+                #torch.save(samples_ddim, "tensors.pt")
+
                 if opt.cheap_decode == False:
                     x_sample = modelFS.decode_first_stage(samples_ddim[0].unsqueeze(0))
                     x_sample = torch.clamp((x_sample + 1.0) / 2.0, min=0.0, max=1.0)
@@ -395,8 +397,6 @@ with torch.no_grad():
 
                 if opt.cheap_decode == True:
                     x_sample_image = x_sample_image.resize((opt.W, opt.H), resample=0)
-                
-                x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
 
                 file_name = "temp"
                 if opt.n_iter > 1:

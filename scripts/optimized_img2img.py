@@ -69,7 +69,7 @@ def load_img(path, h0, w0):
     print(f"loaded input image of size ({w}, {h}) from {path}")
     if h0 is not None and w0 is not None:
         h, w = h0, w0
-    w, h = map(lambda x: x - x % 64, (w, h))
+    w, h = map(lambda x: x - x % 8, (w, h))
     image = image.resize((w, h), resample=Image.Resampling.LANCZOS)
     image = np.array(image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
