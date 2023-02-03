@@ -49,12 +49,12 @@ def chunk(it, size):
     return iter(lambda: tuple(islice(it, size)), ())
 
 
-def load_model_from_config(ckpt, verbose=False):
-    if ckpt == "model.ckpt" or ckpt == "modelmini.ckpt" or ckpt == "PaletteGen.ckpt":
+def load_model_from_config(model, verbose=False):
+    if model == "models/base/v1-5.ckpt" or model == "models/base/model.pxlm" or model == "models/base/modelmini.pxlm" or model == "models/base/PaletteGen.pxlm":
         print(f"Loading model")
     else:
-        print(f"Loading custom model from {ckpt}")
-    pl_sd = torch.load(ckpt, map_location="cpu")
+        print(f"Loading custom model from {model}")
+    pl_sd = torch.load(model, map_location="cpu")
     if "global_step" in pl_sd:
         print(f"Global Step: {pl_sd['global_step']}")
     sd = pl_sd
@@ -71,7 +71,7 @@ def flatten(el):
 
 
 config = "scripts/v1-inference.yaml"
-DEFAULT_CKPT = "model.ckpt"
+DEFAULT_MODEL = "models/base/v1-5.ckpt"
 
 parser = argparse.ArgumentParser()
 
@@ -79,7 +79,7 @@ parser.add_argument(
     "--prompt", type=str, nargs="?", default="a painting of a virus monster playing guitar", help="the prompt to render"
 )
 parser.add_argument(
-    "--negative_prompt", type=str, nargs="?", default="", help="the negative prompt to render"
+    "--negative", type=str, nargs="?", default="", help="the negative prompt to render"
 )
 parser.add_argument(
     "--outdir", type=str, nargs="?", help="dir to write results to", default="temp"
@@ -232,10 +232,10 @@ parser.add_argument(
     help="decode latents directly to RGB"
 )
 parser.add_argument(
-    "--ckpt",
+    "--model",
     type=str,
     help="path to checkpoint of model",
-    default=DEFAULT_CKPT,
+    default=DEFAULT_MODEL,
 )
 opt = parser.parse_args()
 
@@ -252,7 +252,7 @@ if opt.tiling == "true":
     patch_conv(padding_mode='circular')
     print("Patched for tiling")
 
-sd = load_model_from_config(f"{opt.ckpt}")
+sd = load_model_from_config(f"{opt.model}")
 li, lo = [], []
 for key, value in sd.items():
     sp = key.split(".")
@@ -300,9 +300,9 @@ if opt.fixed_code:
 
 assert opt.prompt is not None
 prompt = opt.prompt
-negative_prompt = opt.negative_prompt
+negative = opt.negative
 data = [prompt]
-negative_data = [negative_prompt]
+negative_data = [negative]
 
 if opt.tilingX == "true" and opt.tilingY == "true":
     patch_conv(padding_mode='circular')
@@ -375,8 +375,6 @@ with torch.no_grad():
 
                 print(samples_ddim.shape)
                 print("saving images")
-
-                #torch.save(samples_ddim, "tensors.pt")
 
                 if opt.cheap_decode == False:
                     x_sample = modelFS.decode_first_stage(samples_ddim[0].unsqueeze(0))
