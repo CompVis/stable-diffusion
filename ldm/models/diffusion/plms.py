@@ -7,7 +7,6 @@ from functools import partial
 
 from ldm.modules.diffusionmodules.util import make_ddim_sampling_parameters, make_ddim_timesteps, noise_like
 
-
 class PLMSSampler(object):
     def __init__(self, model, schedule="linear", **kwargs):
         super().__init__()
@@ -17,7 +16,7 @@ class PLMSSampler(object):
 
     def register_buffer(self, name, attr):
         if type(attr) == torch.Tensor:
-            if attr.device != torch.device("cuda"):
+            if torch.cuda.is_available() and attr.device != torch.device("cuda"):
                 attr = attr.to(torch.device("cuda"))
         setattr(self, name, attr)
 
