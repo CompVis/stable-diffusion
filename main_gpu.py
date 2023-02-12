@@ -479,8 +479,6 @@ if __name__ == "__main__":
             raise ValueError("Cannot find {}".format(opt.resume))
         if os.path.isfile(opt.resume):
             paths = opt.resume.split("/")
-            # idx = len(paths)-paths[::-1].index("logs")+1
-            # logdir = "/".join(paths[:idx])
             logdir = "/".join(paths[:-2])
             ckpt = opt.resume
         else:
@@ -536,40 +534,6 @@ if __name__ == "__main__":
 
         # trainer and callbacks
         trainer_kwargs = dict()
-
-        # default logger configs
-        default_logger_cfgs = {
-            "wandb": {
-                "target": "pytorch_lightning.loggers.WandbLogger",
-                "params": {
-                    "name": nowname,
-                    "save_dir": logdir,
-                    "offline": opt.debug,
-                    "id": nowname,
-                }
-            },
-            "testtube": {
-                "target": "pytorch_lightning.loggers.TestTubeLogger",
-                "params": {
-                    "name": "testtube",
-                    "save_dir": logdir,
-                }
-            },
-            "tensboard": {
-                "target": "pytorch_lightning.loggers.TensorBoardLogger",
-                "params": {
-                    "name": "tensboard",
-                    "save_dir": logdir,
-                }
-            },
-        }
-        # default_logger_cfg = default_logger_cfgs["tensboard"]
-        # if "logger" in lightning_config:
-        #     logger_cfg = lightning_config.logger
-        # else:
-        #     logger_cfg = OmegaConf.create()
-        # logger_cfg = OmegaConf.merge(default_logger_cfg, logger_cfg)
-        # trainer_kwargs["logger"] = instantiate_from_config(logger_cfg)
         trainer_kwargs["logger"] = pl.loggers.TensorBoardLogger(logdir)
 
         # modelcheckpoint - use TrainResult/EvalResult(checkpoint_on=metric) to
@@ -580,7 +544,7 @@ if __name__ == "__main__":
                 "dirpath": ckptdir,
                 "filename": "{epoch:06}",
                 "verbose": True,
-                "save_last": True,
+                "save_last": False,
             }
         }
         if hasattr(model, "monitor"):
@@ -611,24 +575,6 @@ if __name__ == "__main__":
                     "lightning_config": lightning_config,
                 }
             },
-            # "image_logger": {
-            #     "target": "main.ImageLogger",
-            #     "params": {
-            #         "batch_frequency": 750,
-            #         "max_images": 4,
-            #         "clamp": True
-            #     }
-            # },
-            # "learning_rate_logger": {
-            #     "target": "main.LearningRateMonitor",
-            #     "params": {
-            #         "logging_interval": "step",
-            #         # "log_momentum": True
-            #     }
-            # },
-            # "cuda_callback": {
-            #     "target": "main.CUDACallback"
-            # },
         }
         if version.parse(pl.__version__) >= version.parse('1.4.0'):
             default_callbacks_cfg.update({'checkpoint_callback': modelckpt_cfg})
@@ -700,7 +646,6 @@ if __name__ == "__main__":
             print("++++ NOT USING LR SCALING ++++")
             print(f"Setting learning rate to {model.learning_rate:.2e}")
 
-
         # allow checkpointing via USR1
         def melk(*args, **kwargs):
             # run all checkpoint hooks
@@ -709,12 +654,10 @@ if __name__ == "__main__":
                 ckpt_path = os.path.join(ckptdir, "last.ckpt")
                 trainer.save_checkpoint(ckpt_path)
 
-
         def divein(*args, **kwargs):
             if trainer.global_rank == 0:
                 import pudb;
                 pudb.set_trace()
-
 
         import signal
 
@@ -727,7 +670,7 @@ if __name__ == "__main__":
                 start = time.time()
                 trainer.fit(model, data)
                 stop = time.time()
-                print('******** ss: training over *****')
+                print('***** Training over *****')
                 print(f"Training time: {stop - start}s")
             except Exception:
                 melk()
@@ -751,4 +694,5 @@ if __name__ == "__main__":
             os.rename(logdir, dst)
         if trainer.global_rank == 0:
             print(trainer.profiler.summary())
+    print('Everything is done!')
 

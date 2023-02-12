@@ -120,7 +120,7 @@ def get_parser(**parser_kwargs):
         nargs="?",
         const=True,
         default=True,
-        help="scale base-lr by ngpu * batch_size * n_accumulate",
+        help="scale base-lr by ntpu * batch_size * n_accumulate",
     )
     return parser
 
@@ -481,8 +481,6 @@ if __name__ == "__main__":
             raise ValueError("Cannot find {}".format(opt.resume))
         if os.path.isfile(opt.resume):
             paths = opt.resume.split("/")
-            # idx = len(paths)-paths[::-1].index("logs")+1
-            # logdir = "/".join(paths[:idx])
             logdir = "/".join(paths[:-2])
             ckpt = opt.resume
         else:
@@ -523,63 +521,16 @@ if __name__ == "__main__":
         trainer_config["accelerator"] = "ddp"
         for k in nondefault_trainer_args(opt):
             trainer_config[k] = getattr(opt, k)
-        # if not "gpus" in trainer_config:
-        #     del trainer_config["accelerator"]
-        #     cpu = True
-        # else:
-        #     gpuinfo = trainer_config["gpus"]
-        #     print(f"Running on GPUs {gpuinfo}")
-        #     cpu = False
+
         cpu = False
         trainer_opt = argparse.Namespace(**trainer_config)
         lightning_config.trainer = trainer_config
 
         # model
         model = instantiate_from_config(config.model)
-        n_params = sum(
-          dict((p.data_ptr(), p.numel()) for p in model.parameters()).values()
-        )
-        print('**** ssusie model instantiated !!! ****')
-        print('*** num params ***', n_params)
+
         # trainer and callbacks
         trainer_kwargs = dict()
-
-        # default logger configs
-        default_logger_cfgs = {
-            "wandb": {
-                "target": "pytorch_lightning.loggers.WandbLogger",
-                "params": {
-                    "name": nowname,
-                    "save_dir": logdir,
-                    "offline": opt.debug,
-                    "id": nowname,
-                }
-            },
-            "testtube": {
-                "target": "pytorch_lightning.loggers.TestTubeLogger",
-                "params": {
-                    "name": "testtube",
-                    "save_dir": logdir,
-                }
-            },
-            "tensboard": {
-                "target": "pytorch_lightning.loggers.TensorBoardLogger",
-                "params": {
-                    "name": "tensboard",
-                    "save_dir": logdir,
-                }
-            },
-        }
-        # default_logger_cfg = default_logger_cfgs["testtube"]
-        default_logger_cfg = default_logger_cfgs["tensboard"]
-
-        # if "logger" in lightning_config:
-        #     logger_cfg = lightning_config.logger
-        # else:
-        #     logger_cfg = OmegaConf.create()
-        # # pdb.set_trace()
-        # logger_cfg = OmegaConf.merge(default_logger_cfg, logger_cfg)
-        # trainer_kwargs["logger"] = instantiate_from_config(logger_cfg)
         trainer_kwargs["logger"] = pl.loggers.TensorBoardLogger(logdir)
         # modelcheckpoint - use TrainResult/EvalResult(checkpoint_on=metric) to
         # specify which metric is used to determine best models
@@ -590,6 +541,7 @@ if __name__ == "__main__":
                 "filename": "{epoch:06}",
                 "verbose": True,
                 "save_last": True,
+                "every_n_epochs": 15
             }
         }
         if hasattr(model, "monitor"):
@@ -620,25 +572,7 @@ if __name__ == "__main__":
                     "lightning_config": lightning_config,
                 }
             },
-            # "image_logger": {
-            #     "target": "main.ImageLogger",
-            #     "params": {
-            #         "batch_frequency": 750,
-            #         "max_images": 4,
-            #         "clamp": True
-            #     }
-            # },
-            # "learning_rate_logger": {
-            #     "target": "main.LearningRateMonitor",
-            #     "params": {
-            #         "logging_interval": "step",
-            #         # "log_momentum": True
-            #     }
-            # },
-            # "cuda_callback": {
-            #     "target": "main.CUDACallback"
-            # },
-        }
+          }
         if version.parse(pl.__version__) >= version.parse('1.4.0'):
             default_callbacks_cfg.update({'checkpoint_callback': modelckpt_cfg})
 
@@ -674,9 +608,7 @@ if __name__ == "__main__":
         trainer_kwargs["callbacks"] = [instantiate_from_config(callbacks_cfg[k]) for k in callbacks_cfg]
         print(trainer_opt, trainer_kwargs)
         trainer = Trainer.from_argparse_args(trainer_opt, **trainer_kwargs)
-        trainer.logdir = logdir  ###
-
-        # server = xp.start_server(3294)
+        trainer.logdir = logdir
 
         # data
         data = instantiate_from_config(config.data)
@@ -691,11 +623,8 @@ if __name__ == "__main__":
 
         # configure learning rate
         bs, base_lr = config.data.params.batch_size, config.model.base_learning_rate
-        # if not cpu:
-        #     ngpu = len(lightning_config.trainer.gpus.strip(",").split(','))
-        # else:
-        #     ngpu = 1
-        ngpu = lightning_config.trainer.tpu_cores
+
+        ntpu = lightning_config.trainer.tpu_cores
         if 'accumulate_grad_batches' in lightning_config.trainer:
             accumulate_grad_batches = lightning_config.trainer.accumulate_grad_batches
         else:
@@ -703,15 +632,14 @@ if __name__ == "__main__":
         print(f"accumulate_grad_batches = {accumulate_grad_batches}")
         lightning_config.trainer.accumulate_grad_batches = accumulate_grad_batches
         if opt.scale_lr:
-            model.learning_rate = accumulate_grad_batches * ngpu * bs * base_lr
+            model.learning_rate = accumulate_grad_batches * ntpu * bs * base_lr
             print(
                 "Setting learning rate to {:.2e} = {} (accumulate_grad_batches) * {} (num_gpus) * {} (batchsize) * {:.2e} (base_lr)".format(
-                    model.learning_rate, accumulate_grad_batches, ngpu, bs, base_lr))
+                    model.learning_rate, accumulate_grad_batches, ntpu, bs, base_lr))
         else:
             model.learning_rate = base_lr
             print("++++ NOT USING LR SCALING ++++")
             print(f"Setting learning rate to {model.learning_rate:.2e}")
-
 
         # allow checkpointing via USR1
         def melk(*args, **kwargs):
@@ -721,12 +649,10 @@ if __name__ == "__main__":
                 ckpt_path = os.path.join(ckptdir, "last.ckpt")
                 trainer.save_checkpoint(ckpt_path)
 
-
         def divein(*args, **kwargs):
             if trainer.global_rank == 0:
                 import pudb;
                 pudb.set_trace()
-
 
         import signal
 
@@ -739,7 +665,7 @@ if __name__ == "__main__":
                 start = time.time()
                 trainer.fit(model, data)
                 stop = time.time()
-                print('******** ss: training over *****')
+                print('***** Training is over *****')
                 print(f"Training time: {stop - start}s")
             except Exception:
                 melk()
@@ -763,4 +689,4 @@ if __name__ == "__main__":
             os.rename(logdir, dst)
         if trainer.global_rank == 0:
             print(trainer.profiler.summary())
-    print('SS: everything is done!')
+    print('Everything is done!')

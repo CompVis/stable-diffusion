@@ -99,5 +99,5 @@ lightning:
     benchmark: false
     tpu_cores: 4
     max_epochs: 10
-    # max_steps: 15000
     log_every_n_steps: 200
+    progress_bar_refresh_rate: 0
