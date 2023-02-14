@@ -8,7 +8,7 @@ from functools import partial
 
 import multiprocessing as mp
 from threading import Thread
-from queue import Queue
+from custom.queue import Queue
 
 from inspect import isfunction
 from PIL import Image, ImageDraw, ImageFont

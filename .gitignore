@@ -1,0 +1,8 @@
+__pycache__
+.idea
+*.ckpt
+_ckpts
+_prompts
+logs
+venv
+latent_diffusion.egg-info
