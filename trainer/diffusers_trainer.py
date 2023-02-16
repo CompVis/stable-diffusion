@@ -81,7 +81,7 @@ parser.add_argument('--fp16', dest='fp16', type=bool_t, default='False', help='T
 parser.add_argument('--image_log_steps', type=int, default=500, help='Number of steps to log images at.')
 parser.add_argument('--image_log_amount', type=int, default=4, help='Number of images to log every image_log_steps')
 parser.add_argument('--image_log_inference_steps', type=int, default=50, help='Number of inference steps to use to log images.')
-parser.add_argument('--image_log_scheduler', type=str, default="PNDMScheduler", help='Number of inference steps to use to log images.')
+parser.add_argument('--image_log_scheduler', type=str, default="PNDMScheduler", help='Scheduler to use to log images.')
 parser.add_argument('--clip_penultimate', type=bool_t, default='False', help='Use penultimate CLIP layer for text embedding')
 parser.add_argument('--output_bucket_info', type=bool_t, default='False', help='Outputs bucket information and exits')
 parser.add_argument('--resize', type=bool_t, default='False', help="Resizes dataset's images to the appropriate bucket dimensions.")
