@@ -1,22 +1,24 @@
 [project]
 authors = [
-  {name = "Robin Rombach", email = "email"},
-  {name = "Patrick von Platen", email = "email"},
-  {name = "Andreas Blattmann", email = "email"},
-  {name = "Patrick Esser", email = "email"},
-  {name = "Cheng Lu", email = "email"},
-  {name = "Patrick von Platen", email = "email"},
+  {name = "Robin Rombach", email = "email@email.eu"},
+  {name = "Patrick von Platen", email = "email@email.eu"},
+  {name = "Andreas Blattmann", email = "email@email.eu"},
+  {name = "Patrick Esser", email = "email@email.eu"},
+  {name = "Cheng Lu", email = "email@email.eu"},
+  {name = "Patrick von Platen", email = "email@email.eu"},
 ]
 
 dependencies = [
-  'torch',
-  'numpy',
-  'tqdm',
+  # "torch>=2.0.0", it is not playing nice with pip
+  # pip3 install --pre torch torchvision pytorch_lightning --extra-index-url https://download.pytorch.org/whl/nightly/cpu
+  "numpy==1.24.2",
+  "tqdm==4.64.1",
+  "omegaconf==2.3.0",
 ]
 
 description = "A latent text-to-image diffusion model"
 keywords = ["ai", "data"]
-license = "LICENSE"
+license = {file = "LICENSE"}
 name = "stable-diffusion"
 readme = "README.md"
 requires-python = ">=3.9"
