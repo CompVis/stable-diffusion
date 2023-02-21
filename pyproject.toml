@@ -1,0 +1,27 @@
+[project]
+authors = [
+  {name = "Robin Rombach", email = "email"},
+  {name = "Patrick von Platen", email = "email"},
+  {name = "Andreas Blattmann", email = "email"},
+  {name = "Patrick Esser", email = "email"},
+  {name = "Cheng Lu", email = "email"},
+  {name = "Patrick von Platen", email = "email"},
+]
+
+dependencies = [
+  'torch',
+  'numpy',
+  'tqdm',
+]
+
+description = "A latent text-to-image diffusion model"
+keywords = ["ai", "data"]
+license = "LICENSE"
+name = "stable-diffusion"
+readme = "README.md"
+requires-python = ">=3.9"
+version = "0.0.1"
+
+[project.urls]
+Documentation = "https://ommer-lab.com/research/latent-diffusion-models/"
+Source = "https://github.com/CompVis/stable-diffusion"
