@@ -23,7 +23,8 @@ try:
 except:
    import pickle
 
-HPA_DATA_ROOT = os.environ.get("HPA_DATA_ROOT", "/data/wei/hpa-webdataset-all-composite")
+HPA_DATA_ROOT = "/data/wei/hpa-webdataset-all-composite"
+HPA_WRITE_ROOT = os.environ.get("HPA_WRITE_ROOT", "/data/xikunz/hpa-webdataset-all-composite")
 
 class HPACombineDataset(Dataset):
     def __init__(self, filename, include_metadata=False, length=80000):
@@ -171,7 +172,7 @@ class HPACombineDatasetMetadataInMemory():
         with open(cache_file, 'wb') as fp:
             pickle.dump(samples, fp)
 
-    def __init__(self, cache_file, seed=123, train_split=0.95, group='train', channels=None, include_location=False, return_info=False, filter_func=None, dump_to_file=None):
+    def __init__(self, cache_file, seed=123, train_split=0.95, group='train', channels=None, include_location=False, return_info=False, filter_func=None, dump_to_file=None, rotate_and_flip=False):
         if cache_file in HPACombineDatasetMetadataInMemory.samples_dict:
             self.samples = HPACombineDatasetMetadataInMemory.samples_dict[cache_file]
         else:
@@ -209,6 +210,11 @@ class HPACombineDatasetMetadataInMemory():
 
         self.include_location = include_location
         self.return_info = return_info
+        self.rotate_and_flip = rotate_and_flip
+        if rotate_and_flip:
+            self.preprocessor = albumentations.Compose(
+                [albumentations.Rotate(limit=180, border_mode=4, p=1, interpolation=0),
+                albumentations.Flip(p=0.75)])
         self.length = len(self.samples)
         assert group in ['train', 'validation']
         assert train_split < 1 and train_split > 0
@@ -238,9 +244,15 @@ class HPACombineDatasetMetadataInMemory():
             locations_encoding = np.zeros((len(location_mapping) + 1, ), dtype=np.float32)
             locations_encoding[loc_labels] = 1
             sample["location_classes"] = locations_encoding
+        sample_copy = sample.copy()
+        if self.rotate_and_flip:
+            image, ref_image = sample["image"], sample["ref-image"]
+            image = self.preprocessor(image=image)["image"]
+            ref_image = self.preprocessor(image=ref_image)["image"]
+            sample_copy["image"], sample_copy["ref-image"] = image, ref_image
         if not self.return_info:
-            del sample["info"] # Remove info to avoid issue in the dataloader
-        return sample
+            del sample_copy["info"] # Remove info to avoid issue in the dataloader
+        return sample_copy
 
 
 class HPACombineDatasetSR(Dataset):
@@ -396,8 +408,10 @@ class HPAHybridEmbedder(nn.Module):
 
 
 if __name__ == "__main__":
-    HPACombineDatasetMetadataInMemory(seed=123, train_split=0.95, group='train', cache_file=f"{HPA_DATA_ROOT}/HPACombineDatasetMetadataInMemory-256.pickle", channels= [1, 1, 1],
-        filter_func="has_location", dump_to_file=f"{HPA_DATA_ROOT}/HPACombineDatasetMetadataInMemory-256-has-location.pickle")
-    # HPACombineDatasetMetadataInMemory.generate_cache(f"{HPA_DATA_ROOT}/HPACombineDatasetMetadataInMemory-256-1000.pickle", size=256, total_length=1000)
+    # HPACombineDatasetMetadataInMemory(seed=123, train_split=0.95, group='train', cache_file=f"{HPA_DATA_ROOT}/HPACombineDatasetMetadataInMemory-256.pickle", channels= [1, 1, 1],
+        # filter_func="has_location", dump_to_file=f"{HPA_DATA_ROOT}/HPACombineDatasetMetadataInMemory-256-has-location.pickle")
+    # HPACombineDatasetMetadataInMemory.generate_cache(f"{HPA_WRITE_ROOT}/HPACombineDatasetMetadataInMemory-256-1000.pickle", size=256, total_length=1000)
+    # HPACombineDatasetMetadataInMemory.generate_cache(f"{HPA_WRITE_ROOT}/HPACombineDatasetMetadataInMemory-256-1000-rotate.pickle", size=256, total_length=1000, rotate_and_flip=True)
     # HPACombineDatasetMetadataInMemory.generate_cache(f"{HPA_DATA_ROOT}/HPACombineDatasetMetadataInMemory-256.pickle", size=256)
+    HPACombineDatasetMetadataInMemory.generate_cache(f"{HPA_WRITE_ROOT}/HPACombineDatasetMetadataInMemory-256-rotate.pickle", size=256, rotate_and_flip=True)
     # dump_info(f"{HPA_DATA_ROOT}/HPACombineDatasetInfo.pickle")
