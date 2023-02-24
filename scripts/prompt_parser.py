@@ -1,6 +1,9 @@
 import numpy as np
 import re
 
+from rich import print as rprint
+from colorama import just_fix_windows_console
+just_fix_windows_console()
 
 class PromptParser:
     def __init__(self, model):
@@ -19,7 +22,7 @@ class PromptParser:
         for i in range(0, steps):
             if i == next_step:
                 _, text = prompts[index]
-                print(f"Swapping at step {i} to: {text}")
+                rprint(f"Swapping at step {i} to: [#48a971]{text}")
                 cg = self.model.get_learned_conditioning(batch_size * text)
 
                 index += 1

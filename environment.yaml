@@ -12,6 +12,10 @@ dependencies:
   - numpy=1.20.3
   - curl
   - pip:
+    - pygetwindow
+    - colorama
+    - rich
+    - websockets
     - albumentations==0.4.3
     - opencv-python==4.1.2.30
     - opencv-python-headless==4.1.2.30
@@ -28,7 +32,7 @@ dependencies:
     - torchmetrics==0.7.0
     - kornia==0.6
     - accelerate==0.12.0
-    - git+https://www.github.com/hbldh/hitherdither
+    - -e git+https://github.com/Astropulse/hitherdither#egg=hitherdither
     - -e git+https://github.com/CompVis/taming-transformers#egg=taming-transformers
     - -e git+https://github.com/openai/CLIP#egg=clip
     - -e git+https://github.com/hlky/k-diffusion-sd#egg=k_diffusion

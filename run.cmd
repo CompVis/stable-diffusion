@@ -10,7 +10,7 @@ set paths=%paths%;"%USERPROFILE%\anaconda3"
 for %%a in (%paths%) do ( 
  if EXIST "%%a\Scripts\activate.bat" (
     SET CONDA_PATH=%%a
-    echo anaconda3/miniconda3 detected in %%a
+    ::echo anaconda3/miniconda3 detected in %%a
     goto :foundPath
  )
 )
