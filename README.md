@@ -21,6 +21,8 @@ See [this section](#stable-diffusion-v1) below and the [model card](https://hugg
 
   
 ## Requirements
+Note that this will only function in Windows with an NVIDIA card. For help accessing stable diffusion on an AMD card in windows, checkout [this thread in the issues section.](https://github.com/CompVis/stable-diffusion/issues/48)
+
 A suitable [conda](https://conda.io/) environment named `ldm` can be created
 and activated with:
 
