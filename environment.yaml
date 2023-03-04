@@ -11,7 +11,7 @@ dependencies:
   - numpy=1.19.2
   - pip:
     - albumentations==0.4.3
-    - diffusers
+    - diffusers==0.12.1
     - opencv-python==4.1.2.30
     - pudb==2019.2
     - invisible-watermark
