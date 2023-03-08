@@ -146,7 +146,7 @@ which contain both types of weights. For these, `use_ema=False` will load and us
 
 #### 🧨 Diffusers Integration
 
-[`diffusers`]((https://github.com/huggingface/diffusers/) is a actively maintained and optimized library for diffusion models.
+[`diffusers`](https://github.com/huggingface/diffusers/) is a actively maintained and optimized library for diffusion models.
 
 Install it via `pip`
 
