@@ -144,26 +144,34 @@ non-EMA to EMA weights. If you want to examine the effect of EMA vs no EMA, we p
 which contain both types of weights. For these, `use_ema=False` will load and use the non-EMA weights.
 
 
-#### Diffusers Integration
+#### 🧨 Diffusers Integration
 
-A simple way to download and sample Stable Diffusion is by using the [diffusers library](https://github.com/huggingface/diffusers/tree/main#new--stable-diffusion-is-now-fully-compatible-with-diffusers):
+[`diffusers`]((https://github.com/huggingface/diffusers/) is a actively maintained and optimized library for diffusion models.
+
+Install it via `pip`
+
+```
+$ pip install diffusers transformers accelerate
+```
+
+and then you can run Stable Diffusion with just 5 lines of code:
+
 ```py
-# make sure you're logged in with `huggingface-cli login`
-from torch import autocast
-from diffusers import StableDiffusionPipeline
+from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler
+import torch
 
-pipe = StableDiffusionPipeline.from_pretrained(
-	"CompVis/stable-diffusion-v1-4", 
-	use_auth_token=True
-).to("cuda")
+pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", torch_dtype=torch.float16).to("cuda")
+# use a faster scheduler
+pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config)
 
+# generate in just 20 steps
 prompt = "a photo of an astronaut riding a horse on mars"
-with autocast("cuda"):
-    image = pipe(prompt)["sample"][0]  
+image = pipe(prompt, num_inference_steps=20).images[0]
     
 image.save("astronaut_rides_horse.png")
 ```
 
+For more information, you can check out the [Stable Diffusion Pipeline docs](https://huggingface.co/docs/diffusers/api/pipelines/stable_diffusion/overview).
 
 ### Image Modification with Stable Diffusion
 
