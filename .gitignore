@@ -1,0 +1,10 @@
+# Unnecessary compiled python files.
+__pycache__
+*.pyc
+*.pyo
+
+# Output Images
+outputs
+
+# Log files for colab-convert
+cc-outputs.log
