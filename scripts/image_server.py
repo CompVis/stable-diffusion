@@ -177,7 +177,7 @@ def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disa
         if total > 0:
             iterable = iterable[0:total]
         else:
-            total = len(iterable)
+            total = max(1, len(iterable))
         name = f"{name}"
         speed = f" {total}/{total} at 100.00 {unit}/s "
         prediction = f" 00:00 < 00:00 "
