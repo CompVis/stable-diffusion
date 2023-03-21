@@ -12,10 +12,11 @@ dependencies:
   - numpy=1.20.3
   - curl
   - pip:
-    - pygetwindow
-    - colorama
-    - rich
-    - websockets
+    - pygetwindow==0.0.9
+    - colorama==0.4.6
+    - rich==13.3.2
+    - websockets==10.4
+    - rembg==2.0.30
     - albumentations==0.4.3
     - opencv-python==4.1.2.30
     - opencv-python-headless==4.1.2.30

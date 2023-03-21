@@ -1,4 +1,4 @@
-import os, re, time, sys, asyncio, ctypes, math, traceback
+import os, re, time, sys, asyncio, ctypes, math, traceback, warnings
 import torch
 import numpy as np
 from random import randint
@@ -13,6 +13,7 @@ from contextlib import contextmanager, nullcontext
 from ldm.util import instantiate_from_config
 from optimUtils import split_weighted_subprompts, logger
 from transformers import logging
+from rembg import remove
 
 import pygetwindow as gw  
 import hitherdither
@@ -407,6 +408,25 @@ def palettize(numFiles, colors, paletteFile, dithering):
         img_indexed.save(file)
     rprint(f"[#c4f129]Palettized [#48a971]{len(files)}[#c4f129] images in [#48a971]{round(time.time()-timer, 2)}[#c4f129] seconds")
 
+def rembg(numFiles):
+    
+    timer = time.time()
+    files = []
+
+    rprint(f"\n[#48a971]Removing [#48a971]{numFiles}[white] backgrounds")
+    
+    for n in range(numFiles):
+        files.append(f"temp/input{n+1}.png")
+
+    for file in clbar(files, name = "Processed", position = "", unit = "image", prefixwidth = 12, suffixwidth = 28):
+        img = Image.open(file).convert('RGB')
+        
+        if os.path.isfile(file):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                remove(img).save(file)
+    rprint(f"[#c4f129]Removed [#48a971]{len(files)}[#c4f129] backgrounds in [#48a971]{round(time.time()-timer, 2)}[#c4f129] seconds")
+
 def paletteGen(colors):
     image = Image.open("temp/temp.png")
 
@@ -730,6 +750,16 @@ async def server(websocket):
             try:
                 palettize(int(numFiles), int(colors), paletteFile, int(dithering))
                 await websocket.send("returning palettize")
+            except Exception as e: 
+                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                await websocket.send("returning error")
+
+        elif re.search(r"rembg.+", message):
+            await websocket.send("running rembg")
+            numFiles = searchString(message, "dnumfiles", "end")
+            try:
+                rembg(int(numFiles[0]))
+                await websocket.send("returning rembg")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                 await websocket.send("returning error")
