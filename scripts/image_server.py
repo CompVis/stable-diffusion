@@ -261,17 +261,6 @@ def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disa
             yield item
 
 def load_model_from_config(model, verbose=False):
-    print()
-    if model == "models/base/v1-5.ckpt":
-        print(f"Loading base model (SD-1.5)")
-    elif model == "models/base/model.pxlm":
-        print(f"Loading pixel model")
-    elif model == "models/base/modelmini.pxlm":
-        print(f"Loading mini pixel model")
-    elif model == "models/base/paletteGen.pxlm":
-        print(f"Loading PaletteGen model")
-    else:
-        rprint(f"Loading custom model from [#48a971]{model}")
     pl_sd = torch.load(model, map_location="cpu")
     sd = pl_sd
     if 'state_dict' in sd:
@@ -298,13 +287,29 @@ def flatten(el):
         res += c
     return res
 
-def load_model(modelpath, config, device, precision, optimized):
+def load_model(modelpath, modelfile, config, device, precision, optimized):
     timer = time.time()
+
+    print()
+    if modelfile == "v1-5.ckpt":
+        print(f"Loading base model (SD-1.5)")
+    elif modelfile == "model.pxlm":
+        print(f"Loading pixel model")
+    elif modelfile == "modelmini.pxlm":
+        print(f"Loading mini pixel model")
+    elif modelfile == "modelRPG.pxlm":
+        print(f"Loading game item pixel model")
+    elif modelfile == "modelRPGmini.pxlm":
+        print(f"Loading mini game item pixel model")
+    elif modelfile == "paletteGen.pxlm":
+        print(f"Loading PaletteGen model")
+    else:
+        rprint(f"Loading custom model from [#48a971]{modelfile}")
 
     turbo = True
     if optimized == "true":
         turbo = False
-    sd = load_model_from_config(f"{modelpath}")
+    sd = load_model_from_config(f"{modelpath+modelfile}")
     li, lo = [], []
     for key, value in sd.items():
         sp = key.split(".")
@@ -768,9 +773,9 @@ async def server(websocket):
             await websocket.send("loading model")
             global loaded
             if loaded != message:
-                device, optimized, precision, model = searchString(message, "ddevice", "doptimized", "dprecision", "dmodel", "end")
+                device, optimized, precision, path, model = searchString(message, "ddevice", "doptimized", "dprecision", "dpath", "dmodel", "end")
                 try:
-                    load_model(model, "scripts/v1-inference.yaml", device, precision, optimized)
+                    load_model(path, model, "scripts/v1-inference.yaml", device, precision, optimized)
                     loaded = message
                 except Exception as e: rprint(f"\n[#ab333d]ERROR:\n{e}")
                 
