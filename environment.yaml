@@ -1,15 +1,16 @@
 name: lda
 channels:
   - pytorch
+  - nvidia
   - defaults
 dependencies:
   - git
   - python=3.8.5
   - pip=20.3
-  - cudatoolkit=11.3
-  - pytorch=1.12.1
-  - torchvision=0.13.1
-  - numpy=1.20.3
+  - pytorch-cuda=11.8
+  - pytorch=2.0.0
+  - torchvision=0.15.0
+  - numpy=1.23.5
   - curl
   - pip:
     - pygetwindow==0.0.9
