@@ -6,12 +6,11 @@ from omegaconf import OmegaConf
 from PIL import Image
 from itertools import islice
 from einops import rearrange, repeat
-from torchvision.utils import make_grid
 from pytorch_lightning import seed_everything
 from torch import autocast
-from contextlib import contextmanager, nullcontext
+from contextlib import nullcontext
 from ldm.util import instantiate_from_config
-from optimUtils import split_weighted_subprompts, logger
+from optimUtils import split_weighted_subprompts
 from transformers import logging
 from rembg import remove
 
@@ -813,12 +812,6 @@ async def server(websocket):
             await websocket.close()
             asyncio.get_event_loop().call_soon_threadsafe(asyncio.get_event_loop().stop)
 
-async def timer(timeout):
-    global running
-    running = True
-    while running:
-        await asyncio.sleep(timeout)
-
 async def connectSend(uri, message):
     async with connect(uri) as websocket:
         await websocket.send(message)
@@ -834,5 +827,4 @@ start_server = serve(server, "localhost", 8765)
 timeout = 1
 
 asyncio.get_event_loop().run_until_complete(start_server)
-#asyncio.get_event_loop().run_until_complete(timer(timeout))
 asyncio.get_event_loop().run_forever()
