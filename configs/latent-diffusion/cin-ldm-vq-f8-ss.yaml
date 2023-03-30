@@ -97,7 +97,7 @@ lightning:
 
   trainer:
     benchmark: false
-    tpu_cores: 4
+    devices: 4
     max_epochs: 10
     log_every_n_steps: 200
-    progress_bar_refresh_rate: 0
+    enable_progress_bar: False
