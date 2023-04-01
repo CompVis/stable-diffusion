@@ -1,0 +1,36 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
+{
+	"name": "Python 3",
+	// "image": "mcr.microsoft.com/devcontainers/python:0-3.11",
+	"build": { 
+		"context": "..",
+		"dockerfile": "Dockerfile"
+	},
+	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+	"runArgs": ["--gpu", "all", "-t", "nvidia/cuda", "--runtime=nvidia"],
+	"features": {
+		"ghcr.io/devcontainers/features/anaconda:1": {
+			"version": "latest"
+		}
+	},
+
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "conda env create -y -f environment.yaml",
+
+	// Configure tool-specific properties.
+	"customizations": {
+		"extensions": [
+			"ms-python.python",
+			"ms-python.vscode-pylance"
+		]
+	},
+
+	"remoteUser": "vscode"
+}
