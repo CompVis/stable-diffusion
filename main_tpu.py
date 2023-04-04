@@ -5,6 +5,7 @@ import torch
 import torchvision
 import pytorch_lightning as pl
 import pdb
+import faulthandler
 
 from packaging import version
 from omegaconf import OmegaConf
@@ -22,6 +23,9 @@ from ldm.data.base import Txt2ImgIterableBaseDataset
 from ldm.util import instantiate_from_config
 
 import torch_xla.debug.profiler as xp
+
+
+# faulthandler.dump_traceback_later(timeout=600)
 
 def get_parser(**parser_kwargs):
     def str2bool(v):
@@ -540,7 +544,7 @@ if __name__ == "__main__":
                 "dirpath": ckptdir,
                 "filename": "{epoch:06}",
                 "verbose": True,
-                "save_last": True,
+                "save_last": False,
                 "every_n_epochs": 15
             }
         }

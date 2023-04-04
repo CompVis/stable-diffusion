@@ -71,7 +71,7 @@ model:
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 64
+    batch_size: 2
     num_workers: 12
     wrap: false
     train:
@@ -87,17 +87,16 @@ data:
 
 
 lightning:
-  # callbacks:
-  #   image_logger:
-  #     target: main.ImageLogger
-  #     params:
-  #       batch_frequency: 5000
-  #       max_images: 8
-  #       increase_log_steps: False
-
   trainer:
-    benchmark: false
+    # max_steps: 100
+    max_epochs: 2
     tpu_cores: 4
-    max_epochs: 10
-    log_every_n_steps: 200
-    progress_bar_refresh_rate: 0
+
+  # trainer:
+  #   checkpoint_callback: false
+  #   benchmark: false
+  #   tpu_cores: 4
+  #   max_epochs: 20
+  #   # max_steps: 100
+  #   log_every_n_steps: 200
+  #   # progress_bar_refresh_rate: 0
