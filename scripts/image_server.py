@@ -1,4 +1,5 @@
-import os, re, time, sys, asyncio, ctypes, math, traceback, warnings
+import os, re, time, sys, asyncio, ctypes, math, traceback, warnings, requests
+from io import BytesIO
 import torch
 import numpy as np
 from random import randint
@@ -286,6 +287,14 @@ def flatten(el):
         res += c
     return res
 
+def adjust_gamma(image, gamma=1.0):
+    # Create a lookup table for the gamma function
+    gamma_map = [255 * ((i / 255.0) ** (1.0 / gamma)) for i in range(256)]
+    gamma_table = bytes([(int(x / 255.0 * 65535.0) >> 8) for x in gamma_map] * 3)
+
+    # Apply the gamma correction using the lookup table
+    return image.point(gamma_table)
+
 def load_model(modelpath, modelfile, config, device, precision, optimized):
     timer = time.time()
 
@@ -354,12 +363,18 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
     
     rprint(f"[#c4f129]Loaded model to [#48a971]{model.cdevice}[#c4f129] at [#48a971]{precision} precision[#c4f129] in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
 
-def palettize(numFiles, colors, paletteFile, dithering):
+def palettize(numFiles, colors, paletteFile, paletteURL, dithering, strength):
     
+    if paletteURL != "None":
+        try:
+            paletteFile = BytesIO(requests.get(paletteURL).content)
+            testImg = Image.open(paletteFile).convert('RGB')
+        except:
+            rprint(f"\n[#ab333d]ERROR: URL {paletteURL} cannot be reached or is not an image\nReverting to Adaptive palette")
+            paletteFile = ""
+
     timer = time.time()
     files = []
-    if dithering == 1:
-        dithering = 0
     for n in range(numFiles):
         files.append(f"temp/input{n+1}.png")
     if paletteFile != "":
@@ -376,17 +391,21 @@ def palettize(numFiles, colors, paletteFile, dithering):
     for file in clbar(files, name = "Processed", position = "last", unit = "image", prefixwidth = 12, suffixwidth = 28):
         img = Image.open(file).convert('RGB')
         palette = []
+
+        threshold = (16*strength)/4
         
         if paletteFile != "" and os.path.isfile(file):
 
             palImg = Image.open(paletteFile).convert('RGB')
             numColors = len(palImg.getcolors(16777216))
 
-            if dithering > 0:
-                for i in palImg.getcolors(16777216): 
-                    palette.append(i[1])
-                palette = hitherdither.palette.Palette(palette)
-                img_indexed = hitherdither.ordered.yliluoma.yliluomas_1_ordered_dithering(img, palette, order=dithering).convert('RGB')
+            if strength > 0:
+                for _ in clbar([img], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28):
+                    img = adjust_gamma(img, 1.0-(0.02*strength))
+                    for i in palImg.getcolors(16777216): 
+                        palette.append(i[1])
+                    palette = hitherdither.palette.Palette(palette)
+                    img_indexed = hitherdither.ordered.bayer.bayer_dithering(img, palette, [threshold, threshold, threshold], order=dithering).convert('RGB')
             else:
                 for i in palImg.getcolors(16777216):
                     palette.append(i[1][0])
@@ -398,13 +417,14 @@ def palettize(numFiles, colors, paletteFile, dithering):
                     img_indexed = img.quantize(method=1, kmeans=numColors, palette=palImg, dither=0).convert('RGB')
         elif colors > 0 and os.path.isfile(file):
 
-            if dithering > 0:
-                img_indexed = img.quantize(colors=colors, method=1, kmeans=colors, dither=0).convert('RGB')
-
-                for i in img_indexed.convert("RGB").getcolors(16777216): 
-                    palette.append(i[1])
-                palette = hitherdither.palette.Palette(palette)
-                img_indexed = hitherdither.ordered.yliluoma.yliluomas_1_ordered_dithering(img, palette, order=dithering).convert('RGB')
+            if strength > 0:
+                for _ in clbar([img], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28):
+                    img_indexed = img.quantize(colors=colors, method=1, kmeans=colors, dither=0).convert('RGB')
+                    img = adjust_gamma(img, 1.0-(0.03*strength))
+                    for i in img_indexed.convert("RGB").getcolors(16777216): 
+                        palette.append(i[1])
+                    palette = hitherdither.palette.Palette(palette)
+                    img_indexed = hitherdither.ordered.bayer.bayer_dithering(img, palette, [threshold, threshold, threshold], order=dithering).convert('RGB')
 
             else:
                 for _ in clbar([img], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28):
@@ -750,9 +770,9 @@ async def server(websocket):
 
         elif re.search(r"palettize.+", message):
             await websocket.send("running palettize")
-            numFiles, colors, paletteFile, dithering = searchString(message, "dnumfiles", "dcolors", "dpalettefile", "ddithering", "end")
+            numFiles, colors, paletteFile, paletteURL, dithering, strength = searchString(message, "dnumfiles", "dcolors", "dpalettefile", "dpaletteURL", "ddithering", "dstrength", "end")
             try:
-                palettize(int(numFiles), int(colors), paletteFile, int(dithering))
+                palettize(int(numFiles), int(colors), paletteFile, paletteURL, int(dithering), int(strength))
                 await websocket.send("returning palettize")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
