@@ -383,7 +383,7 @@ def palettize(numFiles, colors, paletteFile, paletteURL, dithering, strength):
     else:
         numColors = colors
     string = f"\n[#48a971]Converting output[white] to [#48a971]{numColors}[white] colors"
-    if dithering > 0:
+    if strength > 0 and dithering > 0:
         string = f'{string} with order [#48a971]{dithering}[white] dithering'
 
     rprint(string)
@@ -399,7 +399,7 @@ def palettize(numFiles, colors, paletteFile, paletteURL, dithering, strength):
             palImg = Image.open(paletteFile).convert('RGB')
             numColors = len(palImg.getcolors(16777216))
 
-            if strength > 0:
+            if strength > 0 and dithering > 0:
                 for _ in clbar([img], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28):
                     img = adjust_gamma(img, 1.0-(0.02*strength))
                     for i in palImg.getcolors(16777216): 
@@ -417,7 +417,7 @@ def palettize(numFiles, colors, paletteFile, paletteURL, dithering, strength):
                     img_indexed = img.quantize(method=1, kmeans=numColors, palette=palImg, dither=0).convert('RGB')
         elif colors > 0 and os.path.isfile(file):
 
-            if strength > 0:
+            if strength > 0 and dithering > 0:
                 for _ in clbar([img], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28):
                     img_indexed = img.quantize(colors=colors, method=1, kmeans=colors, dither=0).convert('RGB')
                     img = adjust_gamma(img, 1.0-(0.03*strength))
