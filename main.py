@@ -173,7 +173,7 @@ class DataModuleFromConfig(pl.LightningDataModule):
         super().__init__()
         self.batch_size = batch_size
         self.dataset_configs = dict()
-        self.num_workers = 0  # num_workers if num_workers is not None else batch_size * 2
+        self.num_workers = num_workers if num_workers is not None else batch_size * 2
         self.use_worker_init_fn = use_worker_init_fn
         if train is not None:
             self.dataset_configs["train"] = train
@@ -211,7 +211,7 @@ class DataModuleFromConfig(pl.LightningDataModule):
         else:
             init_fn = None
         return DataLoader(self.datasets["train"], batch_size=self.batch_size,
-                          num_workers=self.num_workers, shuffle=False,  # if is_iterable_dataset else True,
+                          num_workers=self.num_workers, shuffle=False if is_iterable_dataset else True,
                           worker_init_fn=init_fn)
 
     def _val_dataloader(self, shuffle=False):
@@ -545,6 +545,7 @@ if __name__ == "__main__":
             gpuinfo = trainer_config["gpus"]
             print(f"Running on GPUs {gpuinfo}")
             cpu = False
+
         trainer_opt = argparse.Namespace(**trainer_config)
         lightning_config.trainer = trainer_config
 
@@ -681,28 +682,46 @@ if __name__ == "__main__":
         trainer.logdir = logdir
 
         # data
-        data = instantiate_from_config(config.data)
+
+        # **********************GENS********************
+        # data = instantiate_from_config(config.data)
+        # print("\n\n data", dir(data), data)
+        # data.prepare_data()
+        # print("\n\n data", dir(data), data)
+        # data.setup()
+        # print("\n\n data", dir(data), data)
+
+        import ldm.data.GENS_handler as DSH
+        Dl_train = DSH.ISData_Loader_train()
+        data, dataset = Dl_train.loader()
+
+        # # **********************stable********************
+        # data = instantiate_from_config(config.data)
         # NOTE according to https://pytorch-lightning.readthedocs.io/en/latest/datamodules.html
         # calling these ourselves should not be necessary but it is.
         # lightning still takes care of proper multiprocessing though
-        data.prepare_data()
-        data.setup()
-        print("#### Data #####")
-        for k in data.datasets:
-            print(
-                f"{k}, {data.datasets[k].__class__.__name__}, {len(data.datasets[k])}")
+        # data.prepare_data()
+        # data.setup()
+        # print("#### Data #####", dir(data.datasets["train"]["data"]))
+        # for k in data.datasets:
+
+        #     print(
+        #         f"{k}, {data.datasets[k].__class__.__name__}, {len(data.datasets[k])}")
 
         # configure learning rate
         bs, base_lr = config.data.params.batch_size, config.model.base_learning_rate
         if not cpu:
-            ngpu = len(lightning_config.trainer.gpus.strip(",").split(','))
+            ngpu = 1 if lightning_config.trainer.gpus == 0 else len(
+                lightning_config.trainer.gpus.strip(",").split(','))
         else:
             ngpu = 1
+        print("\n\n\n\n ******************     ngpu", ngpu)
         if 'accumulate_grad_batches' in lightning_config.trainer:
             accumulate_grad_batches = lightning_config.trainer.accumulate_grad_batches
         else:
             accumulate_grad_batches = 1
         print(f"accumulate_grad_batches = {accumulate_grad_batches}")
+
         lightning_config.trainer.accumulate_grad_batches = accumulate_grad_batches
         if opt.scale_lr:
             model.learning_rate = accumulate_grad_batches * ngpu * bs * base_lr

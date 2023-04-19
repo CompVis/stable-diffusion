@@ -43,7 +43,7 @@ model:
       params:
         embed_dim: 4
         n_embed: 16384
-        ckpt_path: configs/first_stage_models/vq-f8/model.yaml
+        ckpt_path: models/first_stage_models/vq-f8/model.ckpt
         ddconfig:
           double_z: false
           z_channels: 4
@@ -70,7 +70,7 @@ model:
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 64
+    batch_size: 1
     num_workers: 12
     wrap: false
     train:

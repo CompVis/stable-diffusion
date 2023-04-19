@@ -27,7 +27,7 @@
                 "configs/autoencoder/autoencoder_kl_64x64x3.yaml",
                 "-t",
                 "--gpus",
-                "0,"
+                "0"
             ]
         }
     ]
