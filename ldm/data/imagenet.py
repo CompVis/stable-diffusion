@@ -185,7 +185,11 @@ class ImageNetTrain(ImageNetBase):
                     assert atpath == path
 
                 print("Extracting {} to {}".format(path, datadir))
-                os.makedirs(datadir, exist_ok=True)
+                # os.makedirs(datadir, exist_ok=True)
+                path_temp = datadir
+                if not os.path.exists(path_temp) : 
+                    os.makedirs(path_temp) 
+
                 with tarfile.open(path, "r:") as tar:
                     tar.extractall(path=datadir)
 
@@ -193,7 +197,11 @@ class ImageNetTrain(ImageNetBase):
                 subpaths = sorted(glob.glob(os.path.join(datadir, "*.tar")))
                 for subpath in tqdm(subpaths):
                     subdir = subpath[:-len(".tar")]
-                    os.makedirs(subdir, exist_ok=True)
+                    # os.makedirs(subdir, exist_ok=True)
+                    path_temp = subdir
+                    if not os.path.exists(path_temp) : 
+                        os.makedirs(path_temp) 
+
                     with tarfile.open(subpath, "r:") as tar:
                         tar.extractall(path=subdir)
 
@@ -251,7 +259,10 @@ class ImageNetValidation(ImageNetBase):
                     assert atpath == path
 
                 print("Extracting {} to {}".format(path, datadir))
-                os.makedirs(datadir, exist_ok=True)
+                # os.makedirs(datadir, exist_ok=True)
+                path_temp = datadir
+                if not os.path.exists(path_temp) : 
+                    os.makedirs(path_temp) 
                 with tarfile.open(path, "r:") as tar:
                     tar.extractall(path=datadir)
 
@@ -266,7 +277,12 @@ class ImageNetValidation(ImageNetBase):
                 print("Reorganizing into synset folders")
                 synsets = np.unique(list(synset_dict.values()))
                 for s in synsets:
-                    os.makedirs(os.path.join(datadir, s), exist_ok=True)
+                    # os.makedirs(os.path.join(datadir, s), exist_ok=True)
+                    path_temp = os.path.join(datadir, s)
+                    if not os.path.exists(path_temp) : 
+                        os.makedirs(path_temp) 
+
+
                 for k, v in synset_dict.items():
                     src = os.path.join(datadir, k)
                     dst = os.path.join(datadir, v)

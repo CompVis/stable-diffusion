@@ -52,7 +52,6 @@ class ISDataset(Dataset):
 
     def __getitem__(self, idx):
 
-        print(idx)
         # idx=idx+19
         sample_path = os.path.join(self.data_dir, self.labels.iloc[idx, 0])
         #print(sample_path, idx)

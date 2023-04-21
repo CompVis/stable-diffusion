@@ -27,7 +27,7 @@ model:
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 1
+    batch_size: 8
     wrap: True
 
 lightning:
@@ -41,4 +41,5 @@ lightning:
 
   trainer:
     benchmark: True
-    accumulate_grad_batches: 2
+    # accumulate_grad_batches: 2
+    accelerator: ddp

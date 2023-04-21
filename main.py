@@ -1,5 +1,25 @@
-import argparse
 import os
+from pathlib import Path
+
+makedirs_origin = os.makedirs
+
+def makedirs_pathlib(path, mode=0o777, exist_ok=False):
+    p = Path(path)
+    try:
+        p.mkdir(mode=mode, exist_ok=exist_ok)
+    except FileNotFoundError as e:
+        print(f"WARNING : {e} \n=> Nested directory creation activates")
+        p.mkdir(mode=mode, parents=True, exist_ok=exist_ok)
+    except FileExistsError as e:
+        print(f"WARNING : {e} \n=> the nested directory already exist")
+        pass
+    pass
+
+os.makedirs = makedirs_pathlib
+
+
+
+import argparse
 import sys
 import datetime
 import glob
@@ -269,17 +289,42 @@ class SetupCallback(Callback):
         if trainer.global_rank == 0:
             # Create logdirs and save configs
             os.makedirs(self.logdir, exist_ok=True)
+            # path_temp = self.logdir
+            # if not os.path.exists(path_temp) : 
+            #     os.makedirs(path_temp) 
+
             os.makedirs(self.ckptdir, exist_ok=True)
+            # path_temp = self.ckptdir
+            # if not os.path.exists(path_temp) : 
+            #     os.makedirs(path_temp) 
+            
             os.makedirs(self.cfgdir, exist_ok=True)
+            print("\n\n********************")
+            print("self.logdir", self.logdir, Path(self.logdir).is_dir())
+            print("self.ckptdir", self.ckptdir, Path(self.ckptdir).is_dir())
+            print("self.cfgdir", self.cfgdir, Path(self.cfgdir).is_dir())
+
+            print("\n\n********************")
+            
+            # path = self.cfgdir
+            # isExist = os.path.exists(path)
+            # if not isExist:
+            #     os.makedirs(path)
 
             if "callbacks" in self.lightning_config:
                 if 'metrics_over_trainsteps_checkpoint' in self.lightning_config['callbacks']:
                     os.makedirs(os.path.join(
                         self.ckptdir, 'trainstep_checkpoints'), exist_ok=True)
+                    # path_temp = self.ckptdiros.path.join(
+                    #     self.ckptdir, 'trainstep_checkpoints')
+                    # if not os.path.exists(path_temp) : 
+                    #     os.makedirs(path_temp) 
+
             print("Project config")
             print(OmegaConf.to_yaml(self.config))
+
             OmegaConf.save(self.config,
-                           os.path.join(self.cfgdir, "{}-project.yaml".format(self.now)))
+                        os.path.join(self.cfgdir, "{}-project.yaml".format(self.now)))            
 
             print("Lightning config")
             print(OmegaConf.to_yaml(self.lightning_config))
@@ -292,6 +337,12 @@ class SetupCallback(Callback):
                 dst, name = os.path.split(self.logdir)
                 dst = os.path.join(dst, "child_runs", name)
                 os.makedirs(os.path.split(dst)[0], exist_ok=True)
+                # if not os.path.exists(os.path.split(dst)[0]) : 
+                    # os.makedirs(os.path.split(dst)[0]) 
+                print('\n\n********')
+                print('self.logdir', self.logdir)
+                print('dst', dst)
+                print('\n\n********')
                 try:
                     os.rename(self.logdir, dst)
                 except FileNotFoundError:
@@ -348,6 +399,10 @@ class ImageLogger(Callback):
                 batch_idx)
             path = os.path.join(root, filename)
             os.makedirs(os.path.split(path)[0], exist_ok=True)
+            # path_temp = os.path.split(path)[0]
+            # if not os.path.exists(path_temp) : 
+            #     os.makedirs(path_temp) 
+
             Image.fromarray(grid).save(path)
 
     def log_img(self, pl_module, batch, batch_idx, split="train"):
@@ -373,6 +428,8 @@ class ImageLogger(Callback):
                     images[k] = images[k].detach().cpu()
                     if self.clamp:
                         images[k] = torch.clamp(images[k], -1., 1.)
+
+            print("******* log_local ImageLogger ", pl_module.logger.save_dir)
 
             self.log_local(pl_module.logger.save_dir, split, images,
                            pl_module.global_step, pl_module.current_epoch, batch_idx)
@@ -678,6 +735,9 @@ if __name__ == "__main__":
         trainer_kwargs["callbacks"] = [instantiate_from_config(
             callbacks_cfg[k]) for k in callbacks_cfg]
 
+        print("\n\n\n **************  trainer_opt", trainer_opt)
+        print("trainer_kwargs", trainer_kwargs)
+
         trainer = Trainer.from_argparse_args(trainer_opt, **trainer_kwargs)
         trainer.logdir = logdir
 
@@ -692,7 +752,7 @@ if __name__ == "__main__":
         # print("\n\n data", dir(data), data)
 
         import ldm.data.GENS_handler as DSH
-        Dl_train = DSH.ISData_Loader_train()
+        Dl_train = DSH.ISData_Loader_train(config.data.params.batch_size)
         data, dataset = Dl_train.loader()
 
         # # **********************stable********************
@@ -775,6 +835,9 @@ if __name__ == "__main__":
             dst, name = os.path.split(logdir)
             dst = os.path.join(dst, "debug_runs", name)
             os.makedirs(os.path.split(dst)[0], exist_ok=True)
+            # path_temp = os.path.split(dst)[0]
+            # if not os.path.exists(path_temp) : 
+            #     os.makedirs(path_temp) 
             os.rename(logdir, dst)
         if trainer.global_rank == 0:
             print(trainer.profiler.summary())
