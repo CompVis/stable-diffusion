@@ -122,7 +122,7 @@ class ISData_Loader_train():
         return loader, dataset
 
 
-class ISData_Loader_test():
+class ISData_Loader_val():
     def __init__(self,
                  batch_size=1,
                  var_indexes=[1, 2, 3],
