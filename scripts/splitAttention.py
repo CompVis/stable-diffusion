@@ -8,6 +8,7 @@ from torch.nn.modules.module import _IncompatibleKeys
 from torch import nn, einsum, Tensor
 from einops import rearrange, repeat
 
+import psutil
 from ldm.modules.diffusionmodules.util import checkpoint
 
 
@@ -92,7 +93,7 @@ class LinearAttention(nn.Module):
         b, c, h, w = x.shape
         qkv = self.to_qkv(x)
         q, k, v = rearrange(qkv, 'b (qkv heads c) h w -> qkv b heads c (h w)', heads = self.heads, qkv=3)
-        k = k.softmax(dim=-1)  
+        k = k.softmax(dim=-1)
         context = torch.einsum('bhdn,bhen->bhde', k, v)
         out = torch.einsum('bhde,bhdn->bhen', context, q)
         out = rearrange(out, 'b heads c (h w) -> b (heads c) h w', heads=self.heads, h=h, w=w)
@@ -151,7 +152,22 @@ class SpatialSelfAttention(nn.Module):
 
         return x+h_
 
-    
+def get_mem_free_total(device):
+    device_type = "cpu" if device.type == "cpu" else "cuda"
+    if device_type == "cuda":
+        stats = torch.cuda.memory_stats(device)
+        mem_active = stats["active_bytes.all.current"]
+        mem_reserved = stats["reserved_bytes.all.current"]
+        mem_free_cuda, _ = torch.cuda.mem_get_info(torch.cuda.current_device())
+        mem_free_torch = mem_reserved - mem_active
+        mem_free_total = mem_free_cuda + mem_free_torch
+        mem_free_total *= 0.9
+    else:
+        # if we don't add a buffer, larger images come out as noise
+        mem_free_total = psutil.virtual_memory().available * 0.6
+
+    return mem_free_total
+
 class CrossAttention(nn.Module):
     def __init__(self, query_dim, context_dim=None, heads=8, dim_head=64, dropout=0.):
         super().__init__()
@@ -183,12 +199,7 @@ class CrossAttention(nn.Module):
 
         r1 = torch.zeros(q.shape[0], q.shape[1], v.shape[2], device=q.device)
 
-        stats = torch.cuda.memory_stats(q.device)
-        mem_active = stats['active_bytes.all.current']
-        mem_reserved = stats['reserved_bytes.all.current']
-        mem_free_cuda, _ = torch.cuda.mem_get_info(torch.cuda.current_device())
-        mem_free_torch = mem_reserved - mem_active
-        mem_free_total = mem_free_cuda + mem_free_torch
+        mem_free_total = get_mem_free_total(q.device)
 
         gb = 1024 ** 3
         tensor_size = q.shape[0] * q.shape[1] * k.shape[1] * q.element_size()

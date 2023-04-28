@@ -474,12 +474,19 @@ def kCentroidVerbose(width, height, centroids):
     for _ in clbar(range(1), name = "Processed", unit = "image", prefixwidth = 12, suffixwidth = 28):
         kCentroid(init_img, int(width), int(height), int(centroids)).save("temp/temp.png")
         
-def paletteGen(colors):
+def paletteGen(colors, device, precision, prompt, seed):
+
+    base = 2**round(math.log2(colors))
+
+    width = 512+((512/base)*(colors-base))
+
+    txt2img("false", device, precision, prompt, "", int(width), 512, 20, 7.0, int(seed), 1, "false", "false")
+
     image = Image.open("temp/temp.png")
 
     image = image.convert('RGB')
 
-    image = image.resize((int(image.width/(512/colors)), int(image.height/512)), resample=3)
+    image = kCentroid(image, int(image.width/(512/base)), int(image.height/512), 2)
 
     palette = Image.new('P', (colors, 1))
 
@@ -780,8 +787,7 @@ async def server(websocket):
             await websocket.send("running txt2pal")
             device, precision, prompt, seed, colors = searchString(message, "ddevice", "dprecision", "dprompt", "dseed", "dcolors", "end")
             try:
-                txt2img(device, precision, prompt, "", 512, 512, 20, 7.0, int(seed), 1, "false", "false")
-                paletteGen(int(colors))
+                paletteGen(int(colors), device, precision, prompt, int(seed))
                 await websocket.send("returning txt2pal")
             except Exception as e:
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
