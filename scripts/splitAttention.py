@@ -1,8 +1,11 @@
+from __future__ import annotations
 from inspect import isfunction
 import math
 import torch
 import torch.nn.functional as F
-from torch import nn, einsum
+from torch.nn import MultiheadAttention
+from torch.nn.modules.module import _IncompatibleKeys
+from torch import nn, einsum, Tensor
 from einops import rearrange, repeat
 
 from ldm.modules.diffusionmodules.util import checkpoint
@@ -148,21 +151,19 @@ class SpatialSelfAttention(nn.Module):
 
         return x+h_
 
-
+    
 class CrossAttention(nn.Module):
-    def __init__(self, query_dim, context_dim=None, heads=8, dim_head=64, dropout=0., att_step=1):
+    def __init__(self, query_dim, context_dim=None, heads=8, dim_head=64, dropout=0.):
         super().__init__()
         inner_dim = dim_head * heads
         context_dim = default(context_dim, query_dim)
 
         self.scale = dim_head ** -0.5
         self.heads = heads
-        self.att_step = att_step
 
         self.to_q = nn.Linear(query_dim, inner_dim, bias=False)
         self.to_k = nn.Linear(context_dim, inner_dim, bias=False)
         self.to_v = nn.Linear(context_dim, inner_dim, bias=False)
-
         self.to_out = nn.Sequential(
             nn.Linear(inner_dim, query_dim),
             nn.Dropout(dropout)
@@ -171,54 +172,105 @@ class CrossAttention(nn.Module):
     def forward(self, x, context=None, mask=None):
         h = self.heads
 
-        q = self.to_q(x)
+        q_in = self.to_q(x)
         context = default(context, x)
-        k = self.to_k(context)
-        v = self.to_v(context)
+        k_in = self.to_k(context)
+        v_in = self.to_v(context)
         del context, x
 
-        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (q, k, v))
+        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (q_in, k_in, v_in))
+        del q_in, k_in, v_in
+
+        r1 = torch.zeros(q.shape[0], q.shape[1], v.shape[2], device=q.device)
+
+        stats = torch.cuda.memory_stats(q.device)
+        mem_active = stats['active_bytes.all.current']
+        mem_reserved = stats['reserved_bytes.all.current']
+        mem_free_cuda, _ = torch.cuda.mem_get_info(torch.cuda.current_device())
+        mem_free_torch = mem_reserved - mem_active
+        mem_free_total = mem_free_cuda + mem_free_torch
+
+        gb = 1024 ** 3
+        tensor_size = q.shape[0] * q.shape[1] * k.shape[1] * q.element_size()
+        modifier = 3 if q.element_size() == 2 else 2.5
+        mem_required = tensor_size * modifier
+        steps = 1
 
 
-        limit = k.shape[0]
-        att_step = self.att_step
-        q_chunks = list(torch.tensor_split(q, limit//att_step, dim=0))
-        k_chunks = list(torch.tensor_split(k, limit//att_step, dim=0))
-        v_chunks = list(torch.tensor_split(v, limit//att_step, dim=0))
+        if mem_required > mem_free_total:
+            steps = 2**(math.ceil(math.log(mem_required / mem_free_total, 2)))
+            # print(f"Expected tensor size:{tensor_size/gb:0.1f}GB, cuda free:{mem_free_cuda/gb:0.1f}GB "
+            #      f"torch free:{mem_free_torch/gb:0.1f} total:{mem_free_total/gb:0.1f} steps:{steps}")
 
-        q_chunks.reverse()
-        k_chunks.reverse()
-        v_chunks.reverse()
-        sim = torch.zeros(q.shape[0], q.shape[1], v.shape[2], device=q.device)
-        del k, q, v
-        for i in range (0, limit, att_step):
+        if steps > 64:
+            max_res = math.floor(math.sqrt(math.sqrt(mem_free_total / 2.5)) / 8) * 64
+            raise RuntimeError(f'Not enough memory, use lower resolution (max approx. {max_res}x{max_res}). '
+                               f'Need: {mem_required/64/gb:0.1f}GB free, Have:{mem_free_total/gb:0.1f}GB free')
 
-            q_buffer = q_chunks.pop()
-            k_buffer = k_chunks.pop()
-            v_buffer = v_chunks.pop()
-            sim_buffer = einsum('b i d, b j d -> b i j', q_buffer, k_buffer) * self.scale
+        slice_size = q.shape[1] // steps if (q.shape[1] % steps) == 0 else q.shape[1]
+        for i in range(0, q.shape[1], slice_size):
+            end = i + slice_size
+            s1 = einsum('b i d, b j d -> b i j', q[:, i:end], k) * self.scale
 
-            del k_buffer, q_buffer
-        # attention, what we cannot get enough of, by chunks
+            s2 = s1.softmax(dim=-1, dtype=q.dtype)
+            del s1
 
-            sim_buffer = sim_buffer.softmax(dim=-1)
+            r1[:, i:end] = einsum('b i j, b j d -> b i d', s2, v)
+            del s2
 
-            sim_buffer = einsum('b i j, b j d -> b i d', sim_buffer, v_buffer)
-            del v_buffer
-            sim[i:i+att_step,:,:] = sim_buffer
+        del q, k, v
 
-            del sim_buffer
-        sim = rearrange(sim, '(b h) n d -> b n (h d)', h=h)
-        return self.to_out(sim)
+        r2 = rearrange(r1, '(b h) n d -> b n (h d)', h=h)
+        del r1
 
+        return self.to_out(r2)
+
+class SelfAttention(MultiheadAttention):
+    def __init__(self, query_dim, heads=8, dim_head=64, dropout=0.):
+        inner_dim = dim_head * heads
+
+        super().__init__(
+            embed_dim=inner_dim,
+            # we don't actually use bias, but torch._native_multi_head_attention explodes if you pass None to it
+            # so this is a way to get an empty bias tensor created
+            bias=True,
+            dropout=dropout,
+            batch_first=True,
+            num_heads=heads,
+        )
+
+        self.to_q = nn.Linear(query_dim, inner_dim, bias=False)
+        self.to_k = nn.Linear(query_dim, inner_dim, bias=False)
+        self.to_v = nn.Linear(query_dim, inner_dim, bias=False)
+
+        self.to_out = nn.Sequential(
+            nn.Linear(inner_dim, query_dim),
+            nn.Dropout(dropout)
+        )
+
+        super().register_load_state_dict_post_hook(self.init_multihead)
+    
+    def init_multihead(self, module: SelfAttention, incompatible_keys: _IncompatibleKeys) -> None:
+        self.get_parameter('in_proj_weight').data = torch.cat([self.to_q.weight, self.to_k.weight, self.to_v.weight])
+        self.out_proj.weight = self.to_out[0].weight
+        self.out_proj.bias = self.to_out[0].bias
+    
+    def forward(self, x: Tensor) -> Tensor:
+        out, _ = super().forward(
+            query=x,
+            key=x,
+            value=x,
+            need_weights=False,
+        )
+        return out
 
 class BasicTransformerBlock(nn.Module):
     def __init__(self, dim, n_heads, d_head, dropout=0., context_dim=None, gated_ff=True, checkpoint=True):
         super().__init__()
-        self.attn1 = CrossAttention(query_dim=dim, heads=n_heads, dim_head=d_head, dropout=dropout)  # is a self-attention
+        self.attn1 = SelfAttention(query_dim=dim, heads=n_heads, dim_head=d_head, dropout=dropout)
         self.ff = FeedForward(dim, dropout=dropout, glu=gated_ff)
         self.attn2 = CrossAttention(query_dim=dim, context_dim=context_dim,
-                                    heads=n_heads, dim_head=d_head, dropout=dropout)  # is self-attn if context is none
+                                    heads=n_heads, dim_head=d_head, dropout=dropout)
         self.norm1 = nn.LayerNorm(dim)
         self.norm2 = nn.LayerNorm(dim)
         self.norm3 = nn.LayerNorm(dim)
@@ -228,6 +280,7 @@ class BasicTransformerBlock(nn.Module):
         return checkpoint(self._forward, (x, context), self.parameters(), self.checkpoint)
 
     def _forward(self, x, context=None):
+        x = x.contiguous() if x.device.type == 'mps' else x
         x = self.attn1(self.norm1(x)) + x
         x = self.attn2(self.norm2(x), context=context) + x
         x = self.ff(self.norm3(x)) + x
@@ -267,7 +320,6 @@ class SpatialTransformer(nn.Module):
                                               padding=0))
 
     def forward(self, x, context=None):
-        # note: if no context is given, cross-attention defaults to self-attention
         b, c, h, w = x.shape
         x_in = x
         x = self.norm(x)

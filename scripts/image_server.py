@@ -13,6 +13,7 @@ from contextlib import nullcontext
 from ldm.util import instantiate_from_config
 from optimUtils import split_weighted_subprompts
 from transformers import logging
+from itertools import product
 from rembg import remove
 
 import pygetwindow as gw  
@@ -363,6 +364,18 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
     
     rprint(f"[#c4f129]Loaded model to [#48a971]{model.cdevice}[#c4f129] at [#48a971]{precision} precision[#c4f129] in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
 
+def kCentroid(image: Image, width: int, height: int, centroids: int):
+    image = image.convert("RGB")
+    downscaled = np.zeros((height, width, 3), dtype=np.uint8)
+    wFactor = image.width/width
+    hFactor = image.height/height
+    for x, y in product(range(width), range(height)):
+            tile = image.crop((x*wFactor, y*hFactor, (x*wFactor)+wFactor, (y*hFactor)+hFactor)).quantize(colors=centroids, method=1, kmeans=centroids).convert("RGB")
+            color_counts = tile.getcolors()
+            most_common_color = max(color_counts, key=lambda x: x[0])[1]
+            downscaled[y, x, :] = most_common_color
+    return Image.fromarray(downscaled, mode='RGB')
+
 def palettize(numFiles, colors, paletteFile, paletteURL, dithering, strength):
     
     if paletteURL != "None":
@@ -451,6 +464,16 @@ def rembg(numFiles):
                 remove(img).save(file)
     rprint(f"[#c4f129]Removed [#48a971]{len(files)}[#c4f129] backgrounds in [#48a971]{round(time.time()-timer, 2)}[#c4f129] seconds")
 
+def kCentroidVerbose(width, height, centroids):
+
+    assert os.path.isfile("temp/input.png")
+    init_img = Image.open("temp/input.png")
+
+    rprint(f"\n[#48a971]K-Centroid downscaling[white] from [#48a971]{init_img.width}[white]x[#48a971]{init_img.height}[white] to [#48a971]{width}[white]x[#48a971]{height}[white] with [#48a971]{centroids}[white] centroids")
+
+    for _ in clbar(range(1), name = "Processed", unit = "image", prefixwidth = 12, suffixwidth = 28):
+        kCentroid(init_img, int(width), int(height), int(centroids)).save("temp/temp.png")
+        
 def paletteGen(colors):
     image = Image.open("temp/temp.png")
 
@@ -470,7 +493,7 @@ def paletteGen(colors):
 
     rprint(f"[#c4f129]Image converted to color palette with [#48a971]{colors}[#c4f129] colors")
 
-def txt2img(device, precision, prompt, negative, W, H, ddim_steps, scale, seed, n_iter, tilingX, tilingY):
+def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale, seed, n_iter, tilingX, tilingY):
     os.makedirs("temp", exist_ok=True)
     outpath = "temp"
 
@@ -553,7 +576,8 @@ def txt2img(device, precision, prompt, negative, W, H, ddim_steps, scale, seed, 
                     modelFS.to(device)
 
                     if cheap_decode == False:
-                        x_sample = modelFS.decode_first_stage(samples_ddim[0].unsqueeze(0))
+                        x_sample = [modelFS.decode_first_stage(samples_ddim[i:i+1].to(device))[0].cpu() for i in range(samples_ddim.size(0))]
+                        x_sample = torch.stack(x_sample).float()
                         x_sample = torch.clamp((x_sample + 1.0) / 2.0, min=0.0, max=1.0)
                         x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
                     else:
@@ -575,6 +599,8 @@ def txt2img(device, precision, prompt, negative, W, H, ddim_steps, scale, seed, 
                     file_name = "temp"
                     if n_iter > 1:
                         file_name = "temp" + f"{base_count}"
+                    if pixel == "true":
+                        x_sample_image = kCentroid(x_sample_image, int(W/8), int(H/8), 2)
                     x_sample_image.save(
                         os.path.join(outpath, file_name + ".png")
                     )
@@ -590,7 +616,7 @@ def txt2img(device, precision, prompt, negative, W, H, ddim_steps, scale, seed, 
                     del samples_ddim
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
 
-def img2img(device, precision, prompt, negative, W, H, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY):
+def img2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY):
     
     timer = time.time()
     init_img = "temp/input.png"
@@ -696,7 +722,8 @@ def img2img(device, precision, prompt, negative, W, H, ddim_steps, scale, streng
                     modelFS.to(device)
 
                     if cheap_decode == False:
-                        x_sample = modelFS.decode_first_stage(samples_ddim[0].unsqueeze(0))
+                        x_sample = [modelFS.decode_first_stage(samples_ddim[i:i+1].to(device))[0].cpu() for i in range(samples_ddim.size(0))]
+                        x_sample = torch.stack(x_sample).float()
                         x_sample = torch.clamp((x_sample + 1.0) / 2.0, min=0.0, max=1.0)
                         x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
                     else:
@@ -718,6 +745,8 @@ def img2img(device, precision, prompt, negative, W, H, ddim_steps, scale, streng
                     file_name = "temp"
                     if n_iter > 1:
                         file_name = "temp" + f"{base_count}"
+                    if pixel == "true":
+                        x_sample_image = kCentroid(x_sample_image, int(W/8), int(H/8), 2)
                     x_sample_image.save(
                         os.path.join(outpath, file_name + ".png")
                     )
@@ -739,9 +768,9 @@ async def server(websocket):
     async for message in websocket:
         if re.search(r"txt2img.+", message):
             await websocket.send("running txt2img")
-            device, precision, prompt, negative, w, h, ddim_steps, scale, seed, n_iter, tilingX, tilingY = searchString(message, "ddevice", "dprecision", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dseed", "diter", "dtilingx", "dtilingy", "end")
+            pixel, device, precision, prompt, negative, w, h, ddim_steps, scale, seed, n_iter, tilingX, tilingY = searchString(message, "dpixel", "ddevice", "dprecision", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dseed", "diter", "dtilingx", "dtilingy", "end")
             try:
-                txt2img(device, precision, prompt, negative, int(w), int(h), int(ddim_steps), float(scale), int(seed), int(n_iter), tilingX, tilingY)
+                txt2img(pixel, device, precision, prompt, negative, int(w), int(h), int(ddim_steps), float(scale), int(seed), int(n_iter), tilingX, tilingY)
                 await websocket.send("returning txt2img")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
@@ -760,9 +789,9 @@ async def server(websocket):
 
         elif re.search(r"img2img.+", message):
             await websocket.send("running img2img")
-            device, precision, prompt, negative, w, h, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY = searchString(message, "ddevice", "dprecision", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dstrength", "dseed", "diter", "dtilingx", "dtilingy", "end")
+            pixel, device, precision, prompt, negative, w, h, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY = searchString(message, "dpixel", "ddevice", "dprecision", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dstrength", "dseed", "diter", "dtilingx", "dtilingy", "end")
             try:
-                img2img(device, precision, prompt, negative, int(w), int(h), int(ddim_steps), float(scale), float(strength)/100, int(seed), int(n_iter), tilingX, tilingY)
+                img2img(pixel, device, precision, prompt, negative, int(w), int(h), int(ddim_steps), float(scale), float(strength)/100, int(seed), int(n_iter), tilingX, tilingY)
                 await websocket.send("returning img2img")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
@@ -784,6 +813,16 @@ async def server(websocket):
             try:
                 rembg(int(numFiles[0]))
                 await websocket.send("returning rembg")
+            except Exception as e: 
+                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                await websocket.send("returning error")
+
+        elif re.search(r"kcentroid.+", message):
+            await websocket.send("running kcentroid")
+            width, height, centroids = searchString(message, "dwidth", "dheight", "dcentroids", "end")
+            try:
+                kCentroidVerbose(int(width), int(height), int(centroids))
+                await websocket.send("returning kcentroid")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                 await websocket.send("returning error")

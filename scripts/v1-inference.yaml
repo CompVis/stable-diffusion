@@ -69,7 +69,7 @@ modelFirstStage:
     scale_factor: 0.18215
     use_ema: False
     first_stage_config:
-      target: ldm.models.autoencoder.AutoencoderKL
+      target: autoencoder.autoencoder.AutoencoderKL
       params:
         embed_dim: 4
         monitor: val/rec_loss
