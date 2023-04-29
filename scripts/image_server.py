@@ -306,6 +306,8 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
         print(f"Loading pixel model")
     elif modelfile == "modelmini.pxlm":
         print(f"Loading mini pixel model")
+    elif modelfile == "modelmega.pxlm":
+        print(f"Loading mega pixel model")
     elif modelfile == "modelRPG.pxlm":
         print(f"Loading game item pixel model")
     elif modelfile == "modelRPGmini.pxlm":
@@ -376,6 +378,7 @@ def kCentroid(image: Image, width: int, height: int, centroids: int):
             downscaled[y, x, :] = most_common_color
     return Image.fromarray(downscaled, mode='RGB')
 
+warnings.filterwarnings("ignore")
 def palettize(numFiles, colors, paletteFile, paletteURL, dithering, strength):
     
     if paletteURL != "None":
