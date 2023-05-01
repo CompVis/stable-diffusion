@@ -27,7 +27,6 @@ from torch import Tensor
 from torch.nn import functional as F
 from torch.nn.modules.utils import _pair
 from typing import Optional
-# from samplers import CompVisDenoiser
 import logging as pylog
 
 kernel32 = ctypes.windll.kernel32
@@ -271,11 +270,10 @@ def load_model_from_config(model, verbose=False):
 def load_img(path, h0, w0):
     image = Image.open(path).convert("RGB")
     w, h = image.size
-    #print(f"loaded input image from Aseprite")
     if h0 is not None and w0 is not None:
         h, w = h0, w0
     w, h = map(lambda x: x - x % 8, (w, h))
-    image = image.resize((w, h), resample=Image.Resampling.LANCZOS)
+    image = image.resize((w, h), resample=Image.Resampling.BILINEAR)
     image = np.array(image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
     image = torch.from_numpy(image)
@@ -366,7 +364,7 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
     
     rprint(f"[#c4f129]Loaded model to [#48a971]{model.cdevice}[#c4f129] at [#48a971]{precision} precision[#c4f129] in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
 
-def kCentroid(image: Image, width: int, height: int, centroids: int):
+def kCentroid(image, width, height, centroids):
     image = image.convert("RGB")
     downscaled = np.zeros((height, width, 3), dtype=np.uint8)
     wFactor = image.width/width
@@ -378,8 +376,25 @@ def kCentroid(image: Image, width: int, height: int, centroids: int):
             downscaled[y, x, :] = most_common_color
     return Image.fromarray(downscaled, mode='RGB')
 
-warnings.filterwarnings("ignore")
-def palettize(numFiles, colors, paletteFile, paletteURL, dithering, strength):
+def kDenoise(image, smoothing, strength):
+    image = image.convert("RGB")
+    downscaled = np.zeros((image.height, image.width, 3), dtype=np.uint8)
+    for x, y in product(range(image.width), range(image.height)):
+            tile = image.crop((max(0, x-1), max(0, y-1), min(x+2, image.width), min(y+2, image.height)))
+            centroids = max(2, min(round((tile.width*tile.height)*(1/strength)), (tile.width*tile.height)-1))
+            tile = tile.quantize(colors=centroids, method=1, kmeans=centroids).convert("RGB")
+            color_counts = tile.getcolors()
+            final_color = tile.getpixel((1, 1))
+            count = 0
+            for ele in color_counts:
+                if (ele[1] == final_color):
+                    count = ele[0]
+            if count < 1+round(((tile.width*tile.height)*0.8)*(smoothing/10)):
+                final_color = max(color_counts, key=lambda x: x[0])[1]
+            downscaled[y, x, :] = final_color
+    return Image.fromarray(downscaled, mode='RGB')
+
+def palettize(numFiles, colors, paletteFile, paletteURL, dithering, strength, denoise, smoothness, intensity):
     
     if paletteURL != "None":
         try:
@@ -406,9 +421,11 @@ def palettize(numFiles, colors, paletteFile, paletteURL, dithering, strength):
 
     for file in clbar(files, name = "Processed", position = "last", unit = "image", prefixwidth = 12, suffixwidth = 28):
         img = Image.open(file).convert('RGB')
+        if denoise == "true":
+            img = kDenoise(img, smoothness, intensity)
         palette = []
 
-        threshold = (16*strength)/4
+        threshold = 4*strength
         
         if paletteFile != "" and os.path.isfile(file):
 
@@ -660,7 +677,10 @@ def img2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
     modelFS.to(device)
 
     init_image = repeat(init_image, "1 ... -> b ...", b=1)
+
     init_latent = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image))  # move to latent space
+
+    init_latent = torch.nn.functional.interpolate(init_latent, size=(H // 8, W // 8), mode="bilinear")
 
     if device != "cpu":
         mem = torch.cuda.memory_allocated(device=device) / 1e6
@@ -808,9 +828,9 @@ async def server(websocket):
 
         elif re.search(r"palettize.+", message):
             await websocket.send("running palettize")
-            numFiles, colors, paletteFile, paletteURL, dithering, strength = searchString(message, "dnumfiles", "dcolors", "dpalettefile", "dpaletteURL", "ddithering", "dstrength", "end")
+            numFiles, colors, paletteFile, paletteURL, dithering, strength, denoise, smoothness, intensity = searchString(message, "dnumfiles", "dcolors", "dpalettefile", "dpaletteURL", "ddithering", "dstrength", "ddenoise", "dsmoothness", "dintensity", "end")
             try:
-                palettize(int(numFiles), int(colors), paletteFile, paletteURL, int(dithering), int(strength))
+                palettize(int(numFiles), int(colors), paletteFile, paletteURL, int(dithering), int(strength), denoise, int(smoothness), int(intensity))
                 await websocket.send("returning palettize")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
@@ -876,7 +896,6 @@ async def server(websocket):
             global running
             global timeout
             running = False
-            #await asyncio.sleep(timeout)
             await websocket.close()
             asyncio.get_event_loop().call_soon_threadsafe(asyncio.get_event_loop().stop)
 
