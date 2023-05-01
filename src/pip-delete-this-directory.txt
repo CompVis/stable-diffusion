@@ -1,5 +1,0 @@
-This file is placed here by pip to indicate the source was put
-here by pip.
-
-Once this package is successfully installed this source code will be
-deleted (unless you remove this file).
