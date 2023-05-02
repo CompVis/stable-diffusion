@@ -10,7 +10,7 @@ from itertools import islice
 from einops import rearrange
 from torchvision.utils import make_grid
 import time
-from pytorch_lightning import seed_everything
+from lightning.pytorch import seed_everything
 from torch import autocast
 from contextlib import contextmanager, nullcontext
 

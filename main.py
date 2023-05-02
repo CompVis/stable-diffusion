@@ -3,7 +3,7 @@ import numpy as np
 import time
 import torch
 import torchvision
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 
 from packaging import version
 from omegaconf import OmegaConf
@@ -11,11 +11,11 @@ from torch.utils.data import random_split, DataLoader, Dataset, Subset
 from functools import partial
 from PIL import Image
 
-from pytorch_lightning import seed_everything
-from pytorch_lightning.trainer import Trainer
-from pytorch_lightning.callbacks import ModelCheckpoint, Callback, LearningRateMonitor
-from pytorch_lightning.utilities.distributed import rank_zero_only
-from pytorch_lightning.utilities import rank_zero_info
+from lightning.pytorch import seed_everything
+from lightning.pytorch.trainer import Trainer
+from lightning.pytorch.callbacks import ModelCheckpoint, Callback, LearningRateMonitor
+from lightning.pytorch.utilities.rank_zero import rank_zero_only
+from lightning.pytorch.utilities import rank_zero_info
 
 from ldm.data.base import Txt2ImgIterableBaseDataset
 from ldm.util import instantiate_from_config
@@ -540,7 +540,7 @@ if __name__ == "__main__":
         # default logger configs
         default_logger_cfgs = {
             "wandb": {
-                "target": "pytorch_lightning.loggers.WandbLogger",
+                "target": "lightning.pytorch.loggers.WandbLogger",
                 "params": {
                     "name": nowname,
                     "save_dir": logdir,
@@ -549,7 +549,7 @@ if __name__ == "__main__":
                 }
             },
             "testtube": {
-                "target": "pytorch_lightning.loggers.TestTubeLogger",
+                "target": "lightning.pytorch.loggers.TestTubeLogger",
                 "params": {
                     "name": "testtube",
                     "save_dir": logdir,
@@ -567,7 +567,7 @@ if __name__ == "__main__":
         # modelcheckpoint - use TrainResult/EvalResult(checkpoint_on=metric) to
         # specify which metric is used to determine best models
         default_modelckpt_cfg = {
-            "target": "pytorch_lightning.callbacks.ModelCheckpoint",
+            "target": "lightning.pytorch.callbacks.ModelCheckpoint",
             "params": {
                 "dirpath": ckptdir,
                 "filename": "{epoch:06}",
@@ -635,7 +635,7 @@ if __name__ == "__main__":
                 'Caution: Saving checkpoints every n train steps without deleting. This might require some free space.')
             default_metrics_over_trainsteps_ckpt_dict = {
                 'metrics_over_trainsteps_checkpoint':
-                    {"target": 'pytorch_lightning.callbacks.ModelCheckpoint',
+                    {"target": 'lightning.pytorch.callbacks.ModelCheckpoint',
                      'params': {
                          "dirpath": os.path.join(ckptdir, 'trainstep_checkpoints'),
                          "filename": "{epoch:06}-{step:09}",

@@ -16,10 +16,10 @@ from typing import Any, List, MutableSequence, Optional, Tuple, Union
 
 import torch
 
-from pytorch_lightning.plugins.environments import TorchElasticEnvironment
-from pytorch_lightning.utilities import _TPU_AVAILABLE, rank_zero_deprecation
-from pytorch_lightning.utilities.exceptions import MisconfigurationException
-from pytorch_lightning.utilities.imports import _compare_version
+from lightning.pytorch.plugins.environments import TorchElasticEnvironment
+from lightning.pytorch.utilities import _TPU_AVAILABLE, rank_zero_deprecation
+from lightning.pytorch.utilities.exceptions import MisconfigurationException
+from lightning.pytorch.utilities.imports import _compare_version
 
 
 def determine_root_gpu_device(gpus: List[int]) -> Optional[int]:
@@ -53,7 +53,7 @@ def determine_root_gpu_device(gpus: List[int]) -> Optional[int]:
 def parse_gpu_ids(gpus: Optional[Union[int, str, List[int]]]) -> Optional[List[int]]:
     """
     Parses the GPU ids given in the format as accepted by the
-    :class:`~pytorch_lightning.trainer.Trainer`.
+    :class:`~lightning.pytorch.trainer.Trainer`.
 
     Args:
         gpus: An int -1 or string '-1' indicate that all available GPUs should be used.
@@ -75,7 +75,7 @@ def parse_gpu_ids(gpus: Optional[Union[int, str, List[int]]]) -> Optional[List[i
     if gpus is None or isinstance(gpus, int) and gpus == 0:
         return None
 
-    if _compare_version("pytorch_lightning", operator.ge, "1.5") and isinstance(gpus, str) and gpus.strip() == "0":
+    if _compare_version("lightning.pytorch", operator.ge, "1.5") and isinstance(gpus, str) and gpus.strip() == "0":
         # TODO: in v1.5 combine this with the above if statement
         return None
 
@@ -94,7 +94,7 @@ def parse_gpu_ids(gpus: Optional[Union[int, str, List[int]]]) -> Optional[List[i
 def parse_tpu_cores(tpu_cores: Union[int, str, List]) -> Optional[Union[int, List[int]]]:
     """
     Parses the tpu_cores given in the format as accepted by the
-    :class:`~pytorch_lightning.trainer.Trainer`.
+    :class:`~lightning.pytorch.trainer.Trainer`.
 
     Args:
         tpu_cores: An int 1 or string '1' indicate that 1 core with multi-processing should be used
@@ -131,7 +131,7 @@ def _normalize_parse_gpu_string_input(s: Union[int, str, List[int]]) -> Union[in
     if "," in s:
         return [int(x.strip()) for x in s.split(",") if len(x) > 0]
     num_gpus = int(s.strip())
-    if _compare_version("pytorch_lightning", operator.lt, "1.5"):
+    if _compare_version("lightning.pytorch", operator.lt, "1.5"):
         rank_zero_deprecation(
             f"Parsing of the Trainer argument gpus='{s}' (string) will change in the future."
             " In the current version of Lightning, this will select"
