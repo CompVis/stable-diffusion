@@ -47,3 +47,4 @@ lightning:
     benchmark: True
     # accumulate_grad_batches: 2
     accelerator: ddp
+    max_epochs: 3000

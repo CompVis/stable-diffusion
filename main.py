@@ -759,24 +759,24 @@ if __name__ == "__main__":
 
         if opt.batch_size != None:
             config.data.params.batch_size = opt.batch_size
-            
+
         import ldm.data.GENS_handler as DSH
         Dl_train = DSH.ISData_Loader_train(config.data.params.batch_size)
         data, dataset = Dl_train.loader()
         # split the train set into two
-        seed = torch.Generator().manual_seed(42)
-        train_set, valid_set = random_split(dataset, [train_set_size:=8001, valid_set_size:=2000], generator=seed)
-        print(f"\n\n ******** train_set : {len(train_set)} **********")
-        print(f"\n\n ******** valid_set : {len(valid_set)} **********")
-        train_loader = DataLoader(
-            train_set, 
-            batch_size=config.data.params.batch_size,
-            num_workers= config.data.params.batch_size * 2, 
-            shuffle=True)
-        valid_loader = DataLoader(valid_set, 
-            batch_size=config.data.params.batch_size,
-            num_workers= config.data.params.batch_size * 2, 
-            shuffle=True)
+        # seed = torch.Generator().manual_seed(42)
+        # train_set, valid_set = random_split(dataset, [train_set_size:=8001, valid_set_size:=2000], generator=seed)
+        # print(f"\n\n ******** train_set : {len(train_set)} **********")
+        # print(f"\n\n ******** valid_set : {len(valid_set)} **********")
+        # train_loader = DataLoader(
+        #     train_set, 
+        #     batch_size=config.data.params.batch_size,
+        #     num_workers= config.data.params.batch_size * 2, 
+        #     shuffle=True)
+        # valid_loader = DataLoader(valid_set, 
+        #     batch_size=config.data.params.batch_size,
+        #     num_workers= config.data.params.batch_size * 2, 
+        #     shuffle=True)
 
 
         # # **********************stable********************
@@ -839,7 +839,7 @@ if __name__ == "__main__":
         # run
         if opt.train:
             try:
-                trainer.fit(model, train_loader, valid_loader)
+                trainer.fit(model, data)
 
             except Exception:
                 melk()

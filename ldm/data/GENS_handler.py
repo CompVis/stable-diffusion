@@ -64,12 +64,12 @@ class ISDataset(Dataset):
         # transpose to get off with transform.Normalize builtin transposition
         sample = sample.transpose((1, 2, 0))
         # sample[:,:,2]=2.*(sample[:,:,2]-251.14634704589844)/(315.44622802734375-251.14634704589844)-1.
-        #sample[:,:,0]=2.*(sample[:,:,0]+27.318836212158203)/(29.181968688964844 + 27.318836212158203)-1.
-        #sample[:,:,1]=2.*(sample[:,:,1]+25.84168815612793)/(27.698963165283203 + 25.84168815612793)-1.
+        # sample[:,:,0]=2.*(sample[:,:,0]+27.318836212158203)/(29.181968688964844 + 27.318836212158203)-1.
+        # sample[:,:,1]=2.*(sample[:,:,1]+25.84168815612793)/(27.698963165283203 + 25.84168815612793)-1.
         self.transform = transforms.Compose(
             [
                 # transforms.ToPILImage(),
-                #transforms.Resize((self.img_size, self.img_size)),
+                # transforms.Resize((self.img_size, self.img_size)),
                 transforms.ToTensor(),
                 transforms.Normalize(self.means, self.stds),
                 # transforms.Lambda(lambda x: torch.nn.functional.avg_pool2d(x, kernel_size=self.coef_avg2D,
@@ -112,9 +112,10 @@ class ISData_Loader_train():
     def loader(self):
         dataset = ISDataset(self.path, 'IS_method_labels.csv',
                             self.VI, self.CI)
+
         loader = DataLoader(dataset=dataset,
                             batch_size=self.batch,
-                            num_workers=2,
+                            num_workers=self.batch*2,
                             pin_memory=False,
                             shuffle=True,
                             drop_last=True,
@@ -144,12 +145,17 @@ class ISData_Loader_val():
         self.stds = list(tuple((1.0/0.95)*(Maxs)))
         self.add_coords = add_coords
 
+
+    def _prepare(self):
+        ISDataset(self.path, 'IS_method_labels.csv',
+                            self.VI, self.CI)
+
     def loader(self):
         dataset = ISDataset(self.path, 'IS_method_labels.csv',
                             self.VI, self.CI)
         loader = DataLoader(dataset=dataset,
                             batch_size=self.batch,
-                            num_workers=2,
+                            num_workers=1,
                             pin_memory=False,
                             shuffle=True,
                             drop_last=True,

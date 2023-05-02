@@ -97,8 +97,11 @@ class VQLPIPSWithDiscriminator(nn.Module):
 
     def forward(self, codebook_loss, inputs, reconstructions, optimizer_idx,
                 global_step, last_layer=None, cond=None, split="train", predicted_indices=None):
-        if not exists(codebook_loss):
+        try: 
+            codebook_loss
+        except NameError:
             codebook_loss = torch.tensor([0.]).to(inputs.device)
+
         #rec_loss = torch.abs(inputs.contiguous() - reconstructions.contiguous())
         rec_loss = self.pixel_loss(inputs.contiguous(), reconstructions.contiguous())
         if self.perceptual_weight > 0:
@@ -140,12 +143,12 @@ class VQLPIPSWithDiscriminator(nn.Module):
                    "{}/disc_factor".format(split): torch.tensor(disc_factor),
                    "{}/g_loss".format(split): g_loss.detach().mean(),
                    }
-            if predicted_indices is not None:
-                assert self.n_classes is not None
-                with torch.no_grad():
-                    perplexity, cluster_usage = measure_perplexity(predicted_indices, self.n_classes)
-                log[f"{split}/perplexity"] = perplexity
-                log[f"{split}/cluster_usage"] = cluster_usage
+            # if predicted_indices is not None:
+            #     assert self.n_classes is not None
+            #     with torch.no_grad():
+            #         perplexity, cluster_usage = measure_perplexity(predicted_indices, self.n_classes)
+            #     log[f"{split}/perplexity"] = perplexity
+            #     log[f"{split}/cluster_usage"] = cluster_usage
             return loss, log
 
         if optimizer_idx == 1:
