@@ -18,6 +18,31 @@ import torchvision.transforms as transforms
 import torch
 
 
+def print_stat(image, inc="=", depht=2, type="numpy", tranpose=True):
+
+    if type == "numpy":
+        if tranpose:
+            print("numpy tranpose image", image.shape)
+            image = np.transpose(image, axes=[2, 1, 0])
+            print("numpy tranpose image 2", image.shape)
+
+        print("\n"+inc*depht +
+              f" grid u  \t m {np.mean(image[0,:,:])},\t s {np.std(image[0,:,:])},\t min  {np.min(image[0,:,:])},\t max {np.max(image[0,:,:])}")
+        print(inc*depht +
+              f" grid v \t m {np.mean(image[1,:,:])},\t s {np.std(image[1,:,:])},\t min  {np.min(image[1,:,:])},\t max {np.max(image[1,:,:])}")
+        print(inc*depht +
+              f" grid t \t m {np.mean(image[2,:,:])},\t s {np.std(image[2,:,:])},\t min  {np.min(image[2,:,:])},\t max {np.max(image[2,:,:])}")
+    else:
+        if tranpose:
+            image = torch.transpose(image, 0, 2)
+        print("\n"+inc*depht +
+              f" grid u  \t m {torch.mean(image[0,:,:])},\t s {torch.std(image[0,:,:])},\t min  {torch.min(image[0,:,:])},\t max {torch.max(image[0,:,:])}")
+        print(inc*depht +
+              f" grid v \t m {torch.mean(image[1,:,:])},\t s {torch.std(image[1,:,:])},\t min  {torch.min(image[1,:,:])},\t max {torch.max(image[1,:,:])}")
+        print(inc*depht +
+              f" grid t \t m {torch.mean(image[2,:,:])},\t s {torch.std(image[2,:,:])},\t min  {torch.min(image[2,:,:])},\t max {torch.max(image[2,:,:])}")
+
+
 # reference dictionary to know what variables to sample where
 # do not modify unless you know what you are doing
 
@@ -76,6 +101,7 @@ class ISDataset(Dataset):
                 # transforms.Resize((self.img_size, self.img_size)),
                 transforms.ToTensor(),
                 transforms.Normalize(self.means, self.stds),
+                transforms.Normalize([-1, -1, -1], [2, 2, 2]),
                 # transforms.Lambda(lambda x: torch.nn.functional.avg_pool2d(x, kernel_size=self.coef_avg2D,
                 #                                                           stride=self.coef_avg2D)),
                 # transforms.RandomHorizontalFlip(p=0.5),
@@ -86,7 +112,96 @@ class ISDataset(Dataset):
             ]
         )
 
-        sample = self.transform(sample)
+        # TransM0 = transforms.Compose([
+        #     transforms.ToTensor(),
+        # ])
+
+        # TransM1 = transforms.Compose([
+        #     transforms.ToTensor(),
+        #     transforms.Normalize(self.means, self.stds),
+        # ])
+
+        # TransM2 = transforms.Compose([
+        #     transforms.Normalize([-1, -1, -1], [2, 2, 2]),
+        # ])
+
+        # invTransM1 = transforms.Compose([
+        #     transforms.Normalize(
+        #         mean=[0.] * 3, std=[1 / el for el in self.stds]),
+        #     transforms.Normalize(
+        #         mean=[-el for el in self.means], std=[1.] * 3),
+        # ])
+
+        # invTransM2 = transforms.Compose([
+        #     transforms.Normalize(
+        #         mean=[0.] * 3, std=[1 / el for el in [2, 2, 2]]),
+        #     transforms.Normalize(
+        #         mean=[-el for el in [-1, -1, -1]], std=[1.] * 3),
+        # ])
+
+        # invTrans = transforms.Compose([
+        #     transforms.Normalize(
+        #         mean=[0.] * 3, std=[1 / el for el in [2, 2, 2]]),
+        #     transforms.Normalize(
+        #         mean=[-el for el in [-1, -1, -1]], std=[1.] * 3),
+        #     transforms.Normalize(
+        #         mean=[0.] * 3, std=[1 / el for el in self.stds]),
+        #     transforms.Normalize(
+        #         mean=[-el for el in self.means], std=[1.] * 3),
+
+        # ])
+
+        # test0 = sample.copy()
+
+        # # test1 = test0.copy()
+        # test1 = TransM1(test0)
+
+        # # test2 = test1.detach().clone()
+        # test2 = TransM2(test1)
+        # # print_stat(test2, inc="--", depht=2,
+        # #            type="tensor", tranpose=False)
+
+        # # invtest2 = test2.detach().clone()
+        # invtest2 = invTransM2(test2)
+
+        # MAE = torch.mean(
+        #     torch.abs(invtest2 - test1))
+        # print("MAE test2 :", MAE.item())
+
+        # # invtest1 = invtest2.detach().clone()
+        # invtest1 = invTransM1(invtest2)
+
+        # print("test0", test0.shape)
+        # print("TransM0(test0)", TransM0(test0).shape)
+
+        # MAE = torch.mean(
+        #     torch.abs(invtest1 - TransM0(test0)))
+        # print("MAE test1 :", MAE.item())
+
+        # invtest = invTrans(test2)
+        # MAE = torch.mean(
+        #     torch.abs(invtest - TransM0(test0)))
+        # print("MAE test :", MAE.item())
+
+        # sample_init = sample.copy()
+
+        # sample = self.transform(sample)
+
+        # sample_verif = invTransM1(sample)
+
+        # sample_verif = invTransM2(sample_verif)
+
+        # print("sample_verif invTransM2", sample_verif.shape)
+        # print("sample_init", sample_init.shape)
+        # print_stat(sample_verif, inc="**", depht=2,
+        #            type="tensor", tranpose=False)
+
+        # print_stat(sample_init, inc="--", depht=2, type="numpy")
+
+        # MAE = torch.mean(
+        #     torch.abs(torch.from_numpy(np.transpose(sample_init, axes=[2, 1, 0])) - sample_verif))
+
+        # print("MAE M1 :", MAE.item())
 
         # print("Handle 3", sample.shape)
         # print("sample", sample.shape)
