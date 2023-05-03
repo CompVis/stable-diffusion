@@ -38,7 +38,7 @@ class ISDataset(Dataset):
 
         self.CI = crop_indexes
         self.VI = var_indexes
-        #self.coef_avg2D = coef_avg2D
+        # self.coef_avg2D = coef_avg2D
 
         # adding 'positional encoding'
         self.add_coords = add_coords
@@ -54,18 +54,22 @@ class ISDataset(Dataset):
 
         # idx=idx+19
         sample_path = os.path.join(self.data_dir, self.labels.iloc[idx, 0])
-        #print(sample_path, idx)
+        # print(sample_path, idx)
         sample = np.float32(np.load(sample_path+'.npy')
                             )[self.VI, self.CI[0]:self.CI[1], self.CI[2]:self.CI[3]]
-        #print("where I am", len(sample))
+        # print("where I am", len(sample))
         importance = self.labels.iloc[idx, 1]
         position = self.labels.iloc[idx, 2]
 
         # transpose to get off with transform.Normalize builtin transposition
+        # print("Handle 1", sample.shape)
         sample = sample.transpose((1, 2, 0))
+        # print("Handle 2", sample.shape)
+
         # sample[:,:,2]=2.*(sample[:,:,2]-251.14634704589844)/(315.44622802734375-251.14634704589844)-1.
         # sample[:,:,0]=2.*(sample[:,:,0]+27.318836212158203)/(29.181968688964844 + 27.318836212158203)-1.
         # sample[:,:,1]=2.*(sample[:,:,1]+25.84168815612793)/(27.698963165283203 + 25.84168815612793)-1.
+
         self.transform = transforms.Compose(
             [
                 # transforms.ToPILImage(),
@@ -83,6 +87,18 @@ class ISDataset(Dataset):
         )
 
         sample = self.transform(sample)
+
+        # print("Handle 3", sample.shape)
+        # print("sample", sample.shape)
+        # T1 = sample
+        # print("sample trans", torch.transpose(sample, 0, 2).shape)
+        # print("sample trans *2", torch.transpose(
+        #     torch.transpose(sample, 0, 2), 0, 2).shape)
+
+        # T2 = torch.transpose(
+        #     torch.transpose(sample, 0, 2), 0, 2)
+
+        # print("torch.eq(T1, T2)", torch.equal(T1, T2))
 
         return torch.transpose(sample, 0, 2), importance, position
 
@@ -122,6 +138,9 @@ class ISData_Loader_train():
                             )
         return loader, dataset
 
+    def norm_info(self):
+        return self.means, self.stds
+
 
 class ISData_Loader_val():
     def __init__(self,
@@ -145,10 +164,9 @@ class ISData_Loader_val():
         self.stds = list(tuple((1.0/0.95)*(Maxs)))
         self.add_coords = add_coords
 
-
     def _prepare(self):
         ISDataset(self.path, 'IS_method_labels.csv',
-                            self.VI, self.CI)
+                  self.VI, self.CI)
 
     def loader(self):
         dataset = ISDataset(self.path, 'IS_method_labels.csv',
@@ -161,3 +179,6 @@ class ISData_Loader_val():
                             drop_last=True,
                             )
         return loader, dataset
+
+    def norm_info(self):
+        return self.means, self.stds

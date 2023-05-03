@@ -1,7 +1,31 @@
+from ldm.util import instantiate_from_config
+from ldm.data.base import Txt2ImgIterableBaseDataset
+from pytorch_lightning.utilities import rank_zero_info
+from pytorch_lightning.utilities.distributed import rank_zero_only
+from pytorch_lightning.callbacks import ModelCheckpoint, Callback, LearningRateMonitor
+from pytorch_lightning.trainer import Trainer
+from pytorch_lightning import seed_everything
+from PIL import Image
+from functools import partial
+from torch.utils.data import random_split, DataLoader, Dataset, Subset
+from omegaconf import OmegaConf
+from packaging import version
+import pytorch_lightning as pl
+import torchvision
+import torch
+import time
+import numpy as np
+import csv
+import importlib
+import glob
+import datetime
+import sys
+import argparse
 import os
 from pathlib import Path
 
 makedirs_origin = os.makedirs
+
 
 def makedirs_pathlib(path, mode=0o777, exist_ok=False):
     p = Path(path)
@@ -15,36 +39,8 @@ def makedirs_pathlib(path, mode=0o777, exist_ok=False):
         pass
     pass
 
+
 os.makedirs = makedirs_pathlib
-
-
-
-import argparse
-import sys
-import datetime
-import glob
-import importlib
-import csv
-import numpy as np
-import time
-import torch
-import torchvision
-import pytorch_lightning as pl
-
-from packaging import version
-from omegaconf import OmegaConf
-from torch.utils.data import random_split, DataLoader, Dataset, Subset
-from functools import partial
-from PIL import Image
-
-from pytorch_lightning import seed_everything
-from pytorch_lightning.trainer import Trainer
-from pytorch_lightning.callbacks import ModelCheckpoint, Callback, LearningRateMonitor
-from pytorch_lightning.utilities.distributed import rank_zero_only
-from pytorch_lightning.utilities import rank_zero_info
-
-from ldm.data.base import Txt2ImgIterableBaseDataset
-from ldm.util import instantiate_from_config
 
 
 def get_parser(**parser_kwargs):
@@ -296,14 +292,14 @@ class SetupCallback(Callback):
             # Create logdirs and save configs
             os.makedirs(self.logdir, exist_ok=True)
             # path_temp = self.logdir
-            # if not os.path.exists(path_temp) : 
-            #     os.makedirs(path_temp) 
+            # if not os.path.exists(path_temp) :
+            #     os.makedirs(path_temp)
 
             os.makedirs(self.ckptdir, exist_ok=True)
             # path_temp = self.ckptdir
-            # if not os.path.exists(path_temp) : 
-            #     os.makedirs(path_temp) 
-            
+            # if not os.path.exists(path_temp) :
+            #     os.makedirs(path_temp)
+
             os.makedirs(self.cfgdir, exist_ok=True)
             print("\n\n********************")
             print("self.logdir", self.logdir, Path(self.logdir).is_dir())
@@ -311,7 +307,7 @@ class SetupCallback(Callback):
             print("self.cfgdir", self.cfgdir, Path(self.cfgdir).is_dir())
 
             print("\n\n********************")
-            
+
             # path = self.cfgdir
             # isExist = os.path.exists(path)
             # if not isExist:
@@ -323,14 +319,14 @@ class SetupCallback(Callback):
                         self.ckptdir, 'trainstep_checkpoints'), exist_ok=True)
                     # path_temp = self.ckptdiros.path.join(
                     #     self.ckptdir, 'trainstep_checkpoints')
-                    # if not os.path.exists(path_temp) : 
-                    #     os.makedirs(path_temp) 
+                    # if not os.path.exists(path_temp) :
+                    #     os.makedirs(path_temp)
 
             print("Project config")
             print(OmegaConf.to_yaml(self.config))
 
             OmegaConf.save(self.config,
-                        os.path.join(self.cfgdir, "{}-project.yaml".format(self.now)))            
+                           os.path.join(self.cfgdir, "{}-project.yaml".format(self.now)))
 
             print("Lightning config")
             print(OmegaConf.to_yaml(self.lightning_config))
@@ -343,8 +339,8 @@ class SetupCallback(Callback):
                 dst, name = os.path.split(self.logdir)
                 dst = os.path.join(dst, "child_runs", name)
                 os.makedirs(os.path.split(dst)[0], exist_ok=True)
-                # if not os.path.exists(os.path.split(dst)[0]) : 
-                    # os.makedirs(os.path.split(dst)[0]) 
+                # if not os.path.exists(os.path.split(dst)[0]) :
+                # os.makedirs(os.path.split(dst)[0])
                 print('\n\n********')
                 print('self.logdir', self.logdir)
                 print('dst', dst)
@@ -406,8 +402,8 @@ class ImageLogger(Callback):
             path = os.path.join(root, filename)
             os.makedirs(os.path.split(path)[0], exist_ok=True)
             # path_temp = os.path.split(path)[0]
-            # if not os.path.exists(path_temp) : 
-            #     os.makedirs(path_temp) 
+            # if not os.path.exists(path_temp) :
+            #     os.makedirs(path_temp)
 
             Image.fromarray(grid).save(path)
 
@@ -769,15 +765,14 @@ if __name__ == "__main__":
         # print(f"\n\n ******** train_set : {len(train_set)} **********")
         # print(f"\n\n ******** valid_set : {len(valid_set)} **********")
         # train_loader = DataLoader(
-        #     train_set, 
+        #     train_set,
         #     batch_size=config.data.params.batch_size,
-        #     num_workers= config.data.params.batch_size * 2, 
+        #     num_workers= config.data.params.batch_size * 2,
         #     shuffle=True)
-        # valid_loader = DataLoader(valid_set, 
+        # valid_loader = DataLoader(valid_set,
         #     batch_size=config.data.params.batch_size,
-        #     num_workers= config.data.params.batch_size * 2, 
+        #     num_workers= config.data.params.batch_size * 2,
         #     shuffle=True)
-
 
         # # **********************stable********************
         # data = instantiate_from_config(config.data)
@@ -804,7 +799,6 @@ if __name__ == "__main__":
             accumulate_grad_batches = lightning_config.trainer.accumulate_grad_batches
         else:
             accumulate_grad_batches = 1
-        print(f"accumulate_grad_batches = {accumulate_grad_batches}")
 
         lightning_config.trainer.accumulate_grad_batches = accumulate_grad_batches
         if opt.scale_lr:
@@ -861,8 +855,8 @@ if __name__ == "__main__":
             dst = os.path.join(dst, "debug_runs", name)
             os.makedirs(os.path.split(dst)[0], exist_ok=True)
             # path_temp = os.path.split(dst)[0]
-            # if not os.path.exists(path_temp) : 
-            #     os.makedirs(path_temp) 
+            # if not os.path.exists(path_temp) :
+            #     os.makedirs(path_temp)
             os.rename(logdir, dst)
         if trainer.global_rank == 0:
             print(trainer.profiler.summary())

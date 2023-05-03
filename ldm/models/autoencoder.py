@@ -247,13 +247,21 @@ class VQModel(pl.LightningModule):
             log["inputs"] = x
             return log
         xrec, _ = self(x)
+
+        h = torch.randn_like(self.encoder(x))
+        h = self.quant_conv(h)
+        quant, emb_loss, info = self.quantize(h)
+        dec = self.decode(quant)
+
         if x.shape[1] > 3:
             # colorize with random projection
             assert xrec.shape[1] > 3
             x = self.to_rgb(x)
             xrec = self.to_rgb(xrec)
+            dec = self.to_rgb(dec)
         log["inputs"] = x
         log["reconstructions"] = xrec
+        log["samples"] = dec
         if plot_ema:
             with self.ema_scope():
                 xrec_ema, _ = self(x)
@@ -431,6 +439,7 @@ class AutoencoderKL(pl.LightningModule):
             log["samples"] = self.decode(torch.randn_like(posterior.sample()))
             log["reconstructions"] = xrec
         log["inputs"] = x
+
         return log
 
     def to_rgb(self, x):

@@ -1,0 +1,46 @@
+model:
+  base_learning_rate: 4.5e-6
+  target: ldm.models.autoencoder.VQModel
+  params:
+    embed_dim: 256
+    n_embed: 1024
+    image_key: 0
+    ddconfig:
+      double_z: False
+      z_channels: 256
+      resolution: 256
+      in_channels: 3
+      out_ch: 3
+      ch: 128
+      ch_mult: [ 1,1,2,2,4]  # num_down = len(ch_mult)-1
+      num_res_blocks: 2
+      attn_resolutions: [16]
+      dropout: 0.0
+
+    lossconfig:
+      target: ldm.modules.losses.vqperceptual.VQLPIPSWithDiscriminator
+      params:
+        disc_conditional: False
+        disc_in_channels: 3
+        disc_start: 10000
+        disc_weight: 0.8
+        codebook_weight: 1.0
+
+data:
+  target: main.DataModuleFromConfig
+  params:
+    batch_size: 1
+    wrap: True
+
+lightning:
+  callbacks:
+    image_logger:
+      target: main.ImageLogger
+      params:
+        batch_frequency: 1000
+        max_images: 8
+        increase_log_steps: True
+
+  trainer:
+    benchmark: True
+    accumulate_grad_batches: 2
