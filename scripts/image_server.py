@@ -273,7 +273,7 @@ def load_img(path, h0, w0):
     if h0 is not None and w0 is not None:
         h, w = h0, w0
     w, h = map(lambda x: x - x % 8, (w, h))
-    image = image.resize((w, h), resample=Image.Resampling.BILINEAR)
+    image = image.resize((w, h), resample=Image.Resampling.BICUBIC)
     image = np.array(image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
     image = torch.from_numpy(image)
@@ -380,8 +380,8 @@ def kDenoise(image, smoothing, strength):
     image = image.convert("RGB")
     downscaled = np.zeros((image.height, image.width, 3), dtype=np.uint8)
     for x, y in product(range(image.width), range(image.height)):
-            tile = image.crop((max(0, x-1), max(0, y-1), min(x+2, image.width), min(y+2, image.height)))
-            centroids = max(2, min(round((tile.width*tile.height)*(1/strength)), (tile.width*tile.height)-1))
+            tile = image.crop((x-1, y-1, min(x+2, image.width), min(y+2, image.height)))
+            centroids = max(2, min(round((tile.width*tile.height)*(1/strength)), (tile.width*tile.height)))
             tile = tile.quantize(colors=centroids, method=1, kmeans=centroids).convert("RGB")
             color_counts = tile.getcolors()
             final_color = tile.getpixel((1, 1))
