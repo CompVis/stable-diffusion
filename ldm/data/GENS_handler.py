@@ -185,7 +185,6 @@ class ISDataset(Dataset):
 
         # sample_init = sample.copy()
 
-        # sample = self.transform(sample)
 
         # sample_verif = invTransM1(sample)
 
@@ -214,6 +213,14 @@ class ISDataset(Dataset):
         #     torch.transpose(sample, 0, 2), 0, 2)
 
         # print("torch.eq(T1, T2)", torch.equal(T1, T2))
+
+        sample = self.transform(sample)
+
+        # print("sample max 0", torch.max(sample))
+        # # test 0 learn: 
+        # sample =  torch.minimum(sample, torch.zeros_like(sample))
+
+        # print("sample max 1", torch.max(sample))
 
         return torch.transpose(sample, 0, 2), importance, position
 

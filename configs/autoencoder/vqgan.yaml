@@ -1,5 +1,5 @@
 model:
-  base_learning_rate: 4.5e-6
+  base_learning_rate: 3.e-5
   target: ldm.models.autoencoder.VQModel
   params:
     embed_dim: 256
@@ -22,7 +22,7 @@ model:
       params:
         disc_conditional: False
         disc_in_channels: 3
-        disc_start: 10000
+        disc_start: 15000
         disc_weight: 0.8
         codebook_weight: 1.0
 
@@ -41,7 +41,11 @@ lightning:
         max_images: 8
         increase_log_steps: True
 
+  modelcheckpoint:
+      every_n_epochs: 200
+      save_last: True
+
   trainer:
     benchmark: True
     accelerator: ddp
-    max_epochs: 3000
+    max_epochs: 30000
