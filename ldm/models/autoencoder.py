@@ -239,7 +239,7 @@ class VQModel(pl.LightningModule):
     def get_last_layer(self):
         return self.decoder.conv_out.weight
 
-    def log_images(self, batch, only_inputs=False, plot_ema=False, **kwargs):
+    def log_images(self, batch, only_inputs=False, only_samples=False, plot_ema=False, **kwargs):
         log = dict()
         x = self.get_input(batch, self.image_key)
         x = x.to(self.device)
@@ -259,8 +259,9 @@ class VQModel(pl.LightningModule):
             x = self.to_rgb(x)
             xrec = self.to_rgb(xrec)
             dec = self.to_rgb(dec)
-        log["inputs"] = x
-        log["reconstructions"] = xrec
+        if not only_samples:
+            log["inputs"] = x
+            log["reconstructions"] = xrec
         log["samples"] = dec
         if plot_ema:
             with self.ema_scope():
