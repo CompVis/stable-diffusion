@@ -24,6 +24,10 @@ import argparse
 import os
 from pathlib import Path
 
+os.environ["NCCL_DEBUG"] = "INFO"
+
+
+
 makedirs_origin = os.makedirs
 
 

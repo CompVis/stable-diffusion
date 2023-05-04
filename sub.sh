@@ -13,6 +13,7 @@ done
 # -w : walltime
 # -b : batchsize
 # -r : checkpoint file or dir
+# -y : config file
 
 if [ -z "$w" ];
 then
@@ -21,8 +22,15 @@ else
     wtime=$w
 fi
 
+
+if [ -z "$y" ];
+then
+    y=configs/autoencoder/vqgan.yaml
+fi
+
+
 gpus=$(($g-1))
-gseq=$(seq -s ',' $gpus)
+gseq=$(seq -s ',' 0 $gpus)
 
 echo -p $p
 echo -g $g
@@ -30,6 +38,7 @@ echo -gseq $gseq
 echo -w $w
 echo -b $b
 echo -r "'$r'"
+echo -y $y
 
 if [ -z "$p" ];
 then
