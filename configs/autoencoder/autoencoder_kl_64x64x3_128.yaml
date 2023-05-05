@@ -1,5 +1,5 @@
 model:
-  base_learning_rate: 4.5e-5
+  base_learning_rate: 1.e-5
   target: ldm.models.autoencoder.AutoencoderKL
   params:
     monitor: "val/rec_loss"
@@ -43,6 +43,10 @@ lightning:
         max_images: 8
         increase_log_steps: True
 
+  modelcheckpoint:
+      every_n_epochs: 200
+      save_last: True
+      
   trainer:
     benchmark: True
     # accumulate_grad_batches: 2
