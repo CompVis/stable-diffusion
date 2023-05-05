@@ -1,0 +1,12 @@
+__pycache__
+*.tar
+*.sif
+src/
+logs/
+taming/
+logs_sample/
+*.ckpt
+data/test_IS_1_1.0_0_0_0_0_0_256_done_red/
+data/train_IS_1_1.0_0_0_0_0_0_256_done_red/
+data/noisy_imagenette.csv
+latent_diffusion.egg-info/
