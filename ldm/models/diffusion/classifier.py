@@ -1,6 +1,6 @@
 import os
 import torch
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 from omegaconf import OmegaConf
 from torch.nn import functional as F
 from torch.optim import AdamW

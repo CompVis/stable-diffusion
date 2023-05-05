@@ -13,7 +13,7 @@ from torchvision.utils import make_grid
 from torch import autocast
 from contextlib import nullcontext
 import time
-from pytorch_lightning import seed_everything
+from lightning.pytorch import seed_everything
 
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
