@@ -69,7 +69,7 @@ model:
         embed_dim: 512
         key: class_label
 data:
-  target: main.DataModuleFromConfig
+  target: main_tpu.DataModuleFromConfig
   params:
     batch_size: 64
     num_workers: 12
@@ -87,16 +87,12 @@ data:
 
 
 lightning:
-  # trainer:
-  #   # max_steps: 100
-  #   max_epochs: 2
-  #   tpu_cores: 4
-
   trainer:
-    # checkpoint_callback: false
     benchmark: false
     devices: 4
     max_epochs: 10
-    # max_steps: 100
     log_every_n_steps: 200
     enable_progress_bar: False
+  strategy:
+    name: xla
+    sync_module_states: False
