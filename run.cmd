@@ -1,5 +1,7 @@
 @echo off
 
+echo Loading Python and Anaconda environment, this may take up to a minute...
+
 set conda_env_name=lda
 
 set paths="%ProgramData%\miniconda3"

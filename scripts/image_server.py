@@ -911,6 +911,8 @@ rprint("[#48a971]Starting Image Generator...")
 
 start_server = serve(server, "localhost", 8765)
 
+rprint("[#c4f129]Connected")
+
 timeout = 1
 
 asyncio.get_event_loop().run_until_complete(start_server)
