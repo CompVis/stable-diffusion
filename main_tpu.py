@@ -15,6 +15,7 @@ from PIL import Image
 
 from lightning import seed_everything
 from lightning.pytorch.trainer import Trainer
+from lightning.pytorch.strategies.xla import XLAStrategy
 from lightning.pytorch.callbacks import ModelCheckpoint, Callback, LearningRateMonitor
 from lightning.pytorch.utilities.rank_zero import rank_zero_only
 from lightning.pytorch.utilities import rank_zero_info
@@ -399,29 +400,6 @@ class ImageLogger(Callback):
                 self.log_gradients(trainer, pl_module, batch_idx=batch_idx)
 
 
-class CUDACallback(Callback):
-    # see https://github.com/SeanNaren/minGPT/blob/master/mingpt/callback.py
-    def on_train_epoch_start(self, trainer, pl_module):
-        # Reset the memory use counter
-        # torch.cuda.reset_peak_memory_stats(trainer.root_gpu)
-        # torch.cuda.synchronize(trainer.root_gpu)
-        self.start_time = time.time()
-
-    def on_train_epoch_end(self, trainer, pl_module, outputs):
-        # torch.cuda.synchron ize(trainer.root_gpu)
-        # max_memory = torch.cuda.max_memory_allocated(trainer.root_gpu) / 2 ** 20
-        epoch_time = time.time() - self.start_time
-
-        try:
-            # max_memory = trainer.training_type_plugin.reduce(max_memory)
-            epoch_time = trainer.training_type_plugin.reduce(epoch_time)
-
-            rank_zero_info(f"Average Epoch time: {epoch_time:.2f} seconds")
-            # rank_zero_info(f"Average Peak memory {max_memory:.2f}MiB")
-        except AttributeError:
-            pass
-
-
 if __name__ == "__main__":
     # custom parser to specify config files, train, test and debug mode,
     # postfix, resume.
@@ -463,6 +441,9 @@ if __name__ == "__main__":
     #           target: importpath
     #           params:
     #               key: value
+    #   strategy:
+    #       name: str
+    #       sync_module_states: bool
 
     now = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 
@@ -521,8 +502,8 @@ if __name__ == "__main__":
         lightning_config = config.pop("lightning", OmegaConf.create())
         # merge trainer cli with config
         trainer_config = lightning_config.get("trainer", OmegaConf.create())
-        # default to ddp
-        trainer_config["accelerator"] = "tpu"
+        # merge strategy cli with config
+        strategy_config = lightning_config.get("strategy", OmegaConf.create())
         for k in nondefault_trainer_args(opt):
             trainer_config[k] = getattr(opt, k)
 
@@ -565,7 +546,7 @@ if __name__ == "__main__":
         # add callback which sets up log directory
         default_callbacks_cfg = {
             "setup_callback": {
-                "target": "main.SetupCallback",
+                "target": "main_tpu.SetupCallback",
                 "params": {
                     "resume": opt.resume,
                     "now": now,
@@ -611,7 +592,16 @@ if __name__ == "__main__":
 
         trainer_kwargs["callbacks"] = [instantiate_from_config(callbacks_cfg[k]) for k in callbacks_cfg]
         print(trainer_opt, trainer_kwargs)
-        trainer = Trainer(**vars(trainer_opt), **trainer_kwargs)
+
+        # use strategy from config if specified
+        strategy = 'auto'
+        if hasattr(strategy_config, 'name'):
+            if strategy_config.name == 'xla':
+                strategy = XLAStrategy(**strategy_config)
+            else:
+                strategy = strategy_config.name
+
+        trainer = Trainer(strategy=strategy, **vars(trainer_opt), **trainer_kwargs)
         trainer.logdir = logdir
 
         # data
