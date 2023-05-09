@@ -1,0 +1,9 @@
+diffusers==0.10.2
+invisible-watermark
+torchmetrics==0.7.0
+lmdb einops omegaconf
+transformers==4.19.2
+kornia==0.6
+albumentations==0.4.3
+starlette==0.22.0
+tensorboard
