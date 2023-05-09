@@ -90,7 +90,7 @@ lightning:
   trainer:
     benchmark: false
     devices: 4
-    max_epochs: 2
+    max_epochs: 10
     log_every_n_steps: 200
     enable_progress_bar: False
   strategy:
