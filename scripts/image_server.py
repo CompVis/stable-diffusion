@@ -1251,9 +1251,10 @@ async def server(websocket):
         elif message == "recieved":
             if background == "false":
                 rd = gw.getWindowsWithTitle("Retro Diffusion Image Generator")[0]
-                if gw.getActiveWindow().title == "Retro Diffusion Image Generator":
-                    # Minimize the window
-                    rd.minimize()
+                if gw.getActiveWindow() is not None:
+                    if gw.getActiveWindow().title == "Retro Diffusion Image Generator":
+                        # Minimize the window
+                        rd.minimize()
             await websocket.send("free")
         elif message == "shutdown":
             rprint("[#ab333d]Shutting down...")
