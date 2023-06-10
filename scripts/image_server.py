@@ -854,8 +854,7 @@ def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                 with precision_scope("cuda"):
                     modelCS.to(device)
                     uc = None
-                    if scale != 1.0:
-                        uc = modelCS.get_learned_conditioning(negative_data)
+                    uc = modelCS.get_learned_conditioning(negative_data)
                     if isinstance(prompts, tuple):
                         prompts = list(prompts)
                     
@@ -1028,8 +1027,7 @@ def img2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                 with precision_scope("cuda"):
                     modelCS.to(device)
                     uc = None
-                    if scale != 1.0:
-                        uc = modelCS.get_learned_conditioning(negative_data)
+                    uc = modelCS.get_learned_conditioning(negative_data)
                     if isinstance(prompts, tuple):
                         prompts = list(prompts)
 
