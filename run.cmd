@@ -9,6 +9,21 @@ set paths=%paths%;"%USERPROFILE%\miniconda3"
 set paths=%paths%;"%ProgramData%\anaconda3"
 set paths=%paths%;"%USERPROFILE%\anaconda3"
 
+set custom_conda_path=%1
+
+shift
+set python=%1
+:loop
+shift
+if [%1]==[] goto afterloop
+set python=%python% %1
+goto loop
+:afterloop
+
+IF NOT %custom_conda_path%=="Select Folder" (
+  set paths=%custom_conda_path%
+)
+
 for %%a in (%paths%) do ( 
  if EXIST "%%a\Scripts\activate.bat" (
     SET CONDA_PATH=%%a
@@ -18,11 +33,16 @@ for %%a in (%paths%) do (
 )
 
 IF "%CONDA_PATH%"=="" (
-  echo anaconda3/miniconda3 not found. Install from here https://docs.conda.io/en/latest/miniconda.html
-  exit /b 1
+  IF NOT %custom_conda_path%=="Select Folder" (
+    call color 04 && echo Anaconda3/Miniconda3 not found in custom path: %custom_conda_path%. Please check your settings
+  ) else (
+    call color 04 && echo Anaconda3/Miniconda3 not found. Please install from here https://docs.conda.io/en/latest/miniconda.html
+  )
+  pause
+  exit
 )
 
 :foundPath
 call %CONDA_PATH%\Scripts\activate.bat
 call %CONDA_PATH%\Scripts\activate.bat "%conda_env_name%"
-call python scripts\%* || color 04 && echo An error has occured. && conda deactivate && timeout /t -1 && exit
+call python scripts\%python% || color 04 && echo An error has occured. && conda deactivate && timeout /t -1 && exit

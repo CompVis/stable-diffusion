@@ -824,7 +824,7 @@ def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
 
     start_code = None
     cheap_decode = False
-    sampler = "euler_a"
+    sampler = "euler"
 
     assert prompt is not None
     data = [prompt]
