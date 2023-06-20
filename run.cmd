@@ -21,7 +21,11 @@ goto loop
 :afterloop
 
 IF NOT %custom_conda_path%=="Select Folder" (
-  set paths=%custom_conda_path%
+  if NOT %custom_conda_path%=="image_server.py" (
+    set paths=%custom_conda_path%
+  ) else (
+    set python="image_server.py"
+  )
 )
 
 for %%a in (%paths%) do ( 
