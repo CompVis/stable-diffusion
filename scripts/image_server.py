@@ -41,6 +41,8 @@ import pygetwindow as gw
 from rich import print as rprint
 from colorama import just_fix_windows_console
 
+import tomesd
+
 # Fix windows console for color codes
 just_fix_windows_console()
 
@@ -356,11 +358,11 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
     if modelfile == "v1-5.ckpt":
         print(f"Loading base model (SD-1.5)")
     elif modelfile == "model.pxlm":
-        print(f"Loading pixel model")
+        print(f"Loading model")
     elif modelfile == "modelmini.pxlm":
-        print(f"Loading mini pixel model")
+        print(f"Loading mini model")
     elif modelfile == "modelmega.pxlm":
-        print(f"Loading mega pixel model")
+        print(f"Loading mega model")
     elif modelfile == "modelRPG.pxlm":
         print(f"Loading game item pixel model")
     elif modelfile == "modelRPGmini.pxlm":
@@ -407,6 +409,7 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
     _, _ = model.load_state_dict(sd, strict=False)
     model.eval()
     model.unet_bs = 1
+    tomesd.apply_patch(model, ratio=0.5, use_rand=False, merge_attn=True, merge_crossattn=False, merge_mlp=False)
     model.cdevice = device
     model.turbo = turbo
 

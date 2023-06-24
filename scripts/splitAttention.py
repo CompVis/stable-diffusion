@@ -266,7 +266,7 @@ class SelfAttention(MultiheadAttention):
         self.out_proj.weight = self.to_out[0].weight
         self.out_proj.bias = self.to_out[0].bias
     
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor, context = None) -> Tensor:
         out, _ = super().forward(
             query=x,
             key=x,

@@ -38,4 +38,5 @@ dependencies:
     - -e git+https://github.com/CompVis/taming-transformers#egg=taming-transformers
     - -e git+https://github.com/openai/CLIP#egg=clip
     - -e git+https://github.com/Astropulse/k-diffusion#egg=k_diffusion
+    - -e git+https://github.com/Astropulse/tomesd-aseprite#egg=tomesd
     - -e .
