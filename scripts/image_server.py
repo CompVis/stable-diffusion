@@ -409,9 +409,9 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
     _, _ = model.load_state_dict(sd, strict=False)
     model.eval()
     model.unet_bs = 1
-    tomesd.apply_patch(model, ratio=0.5, use_rand=False, merge_attn=True, merge_crossattn=False, merge_mlp=False)
     model.cdevice = device
     model.turbo = turbo
+    tomesd.apply_patch(model, ratio=0.6, use_rand=True, merge_attn=True, merge_crossattn=True, merge_mlp=True)
 
     # Instantiate and load the conditional stage model
     global modelCS
