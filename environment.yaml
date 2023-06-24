@@ -8,8 +8,8 @@ dependencies:
   - python=3.8.5
   - pip=20.3
   - pytorch-cuda=11.8
-  - pytorch=2.0.0
-  - torchvision=0.15.0
+  - pytorch=2.0.1
+  - torchvision=0.15.2
   - numpy=1.23.5
   - curl
   - pip:
