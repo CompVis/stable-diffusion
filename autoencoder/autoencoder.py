@@ -202,7 +202,12 @@ class AutoencoderKL(pl.LightningModule):
             try:
                 return self.decode_sliced(z, chunk_size=128)
             except:
-                return self.decode_sliced(z, chunk_size=64)
+                # Out of memory, trying smaller slice.
+                try:
+                    return self.decode_sliced(z, chunk_size=64)
+                except:
+                    # Out of memory, trying smaller slice.
+                    return self.decode_sliced(z, chunk_size=32)
 
     def decode_all_at_once(self, z):
         z = self.post_quant_conv(z)
