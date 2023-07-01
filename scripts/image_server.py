@@ -11,10 +11,13 @@ from einops import rearrange, repeat
 from pytorch_lightning import seed_everything
 from contextlib import nullcontext
 from typing import Optional
+from safetensors.torch import load_file
 
 # Import built libraries
 from ldm.util import instantiate_from_config
 from optimUtils import split_weighted_subprompts
+from autoencoder.pixelvae import load_pixelvae_model
+import tomesd
 
 # Import PyTorch functions
 from torch import autocast
@@ -41,8 +44,6 @@ import pygetwindow as gw
 from rich import print as rprint
 from colorama import just_fix_windows_console
 
-import tomesd
-
 # Fix windows console for color codes
 just_fix_windows_console()
 
@@ -58,6 +59,7 @@ logging.set_verbosity_error()
 global model
 global modelCS
 global modelFS
+global modelPV
 global running
 
 global timeout
@@ -102,7 +104,7 @@ def __replacementConv2DConvForward(self, input: Tensor, weight: Tensor, bias: Op
     working = F.pad(working, self.paddingY, mode=self.padding_modeY)
     return F.conv2d(working, weight, bias, self.stride, _pair(0), self.dilation, self.groups)
 
-def patch_tiling(tilingX, tilingY, model, modelFS):
+def patch_tiling(tilingX, tilingY, model, modelFS, modelPV):
     # Convert tilingX and tilingY to boolean values
     X = bool(tilingX == "true")
     Y = bool(tilingY == "true")
@@ -110,12 +112,13 @@ def patch_tiling(tilingX, tilingY, model, modelFS):
     # Patch Conv2d layers in the given models for asymmetric padding
     patch_conv_asymmetric(model, X, Y)
     patch_conv_asymmetric(modelFS, X, Y)
+    patch_conv_asymmetric(modelPV.model, X, Y)
 
     if X or Y:
         # Print a message indicating the direction(s) patched for tiling
         rprint("[#494b9b]Patched for tiling in the [#48a971]" + "X" * X + "[#494b9b] and [#48a971]" * (X and Y) + "Y" * Y + "[#494b9b] direction" + "s" * (X and Y))
 
-    return model, modelFS
+    return model, modelFS, modelPV
 
 def chunk(it, size):
     # Create an iterator from the input iterable
@@ -304,14 +307,17 @@ def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disa
 
 def load_model_from_config(model, verbose=False):
     # Load the model's state dictionary from the specified file
-    pl_sd = torch.load(model, map_location="cpu")
-    sd = pl_sd
+    try:
+        pl_sd = load_file(model, device="cpu")
+        sd = pl_sd
 
-    # If "state_dict" is found in the loaded dictionary, assign it to sd
-    if 'state_dict' in sd:
-        sd = pl_sd["state_dict"]
+        # If "state_dict" is found in the loaded dictionary, assign it to sd
+        if 'state_dict' in sd:
+            sd = pl_sd["state_dict"]
 
-    return sd
+        return sd
+    except Exception as e: 
+                rprint(f"[#ab333d]{traceback.format_exc()}\n\nThis may indicate a model has not been downloaded fully, is corrupted, or is not in the Safetensor format. Please ensure the integirty of the file, and that it is a Safetensor model.")
 
 def load_img(path, h0, w0):
     # Open the image at the specified path and prepare it for image to image
@@ -355,18 +361,12 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
 
     # Check the modelfile and print corresponding loading message
     print()
-    if modelfile == "v1-5.ckpt":
-        print(f"Loading base model (SD-1.5)")
-    elif modelfile == "model.pxlm":
-        print(f"Loading model")
+    if modelfile == "model.pxlm":
+        print(f"Loading primary model")
     elif modelfile == "modelmini.pxlm":
         print(f"Loading mini model")
     elif modelfile == "modelmega.pxlm":
         print(f"Loading mega model")
-    elif modelfile == "modelRPG.pxlm":
-        print(f"Loading game item pixel model")
-    elif modelfile == "modelRPGmini.pxlm":
-        print(f"Loading mini game item pixel model")
     elif modelfile == "paletteGen.pxlm":
         print(f"Loading PaletteGen model")
     else:
@@ -402,6 +402,13 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
 
     # Load the model configuration
     config = OmegaConf.load(f"{config}")
+
+    global modelPV
+    # Ignore an annoying userwaring
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        # Load the pixelvae
+        modelPV = load_pixelvae_model(f"models/decoder/decoder.px", device, "eVWtlIBjTRr0-gyZB0smWSwxCiF8l4PVJcNJOIFLFqE=")
 
     # Instantiate and load the main model
     global model
@@ -573,6 +580,47 @@ def determine_best_k(image, max_k):
 
     return best_k
 
+def determine_best_palette_verbose(image, paletteFolder = "./palettes"):
+    # Convert the image to RGB mode
+    image = image.convert("RGB")
+
+    paletteImages = []
+    paletteImages.extend(os.listdir(paletteFolder))
+
+    # Prepare arrays for distortion calculation
+    pixels = np.array(image)
+    pixel_indices = np.reshape(pixels, (-1, 3))
+
+    # Calculate distortion for different values of k
+    distortions = []
+    for palImg in clbar(paletteImages, name = "Searching", position = "first", prefixwidth = 12, suffixwidth = 28):
+        palImg = Image.open(f"{paletteFolder}/{palImg}").convert('RGB')
+        palette = []
+        # Extract palette colors
+        palColors = palImg.getcolors(16777216)
+        numColors = len(palColors)
+
+        palette = np.concatenate([x[1] for x in palColors]).tolist()
+        
+        # Create a new palette image
+        palImg = Image.new('P', (256, 1))
+        palImg.putpalette(palette)
+
+        quantized_image = image.quantize(method=1, kmeans=numColors, palette=palImg, dither=0)
+
+        centroids = np.array(quantized_image.getpalette()[:numColors * 3]).reshape(-1, 3)
+        
+        # Calculate distortions
+        distances = np.linalg.norm(pixel_indices[:, np.newaxis] - centroids, axis=2)
+        min_distances = np.min(distances, axis=1)
+        distortions.append(np.sum(min_distances ** 2))
+    
+    # Find the elbow point (best k value)
+    elbow_index = np.argmin(distortions)
+    best_palette = Image.open(f"{paletteFolder}/{paletteImages[elbow_index]}").convert('RGB')
+
+    return best_palette
+
 def determine_best_k_verbose(image, max_k, accuracy):
     # Convert the image to RGB mode
     image = image.convert("RGB")
@@ -681,8 +729,6 @@ def palettize(numFiles, source, colors, accuracy, paletteFile, paletteURL, dithe
         # Apply denoising if enabled
         if denoise == "true":
             img = kDenoise(img, smoothness, intensity)
-        
-        palette = []
 
         # Calculate the threshold for dithering
         threshold = 4*strength
@@ -694,6 +740,7 @@ def palettize(numFiles, source, colors, accuracy, paletteFile, paletteURL, dithe
         if paletteFile != "" and os.path.isfile(file):
             # Open the palette image and calculate the number of colors
             palImg = Image.open(paletteFile).convert('RGB')
+            palImg = determine_best_palette_verbose(img)
             numColors = len(palImg.getcolors(16777216))
 
             if strength > 0 and dithering > 0:
@@ -702,18 +749,14 @@ def palettize(numFiles, source, colors, accuracy, paletteFile, paletteURL, dithe
                     img = adjust_gamma(img, 1.0-(0.02*strength))
 
                     # Extract palette colors
-                    for i in palImg.getcolors(16777216): 
-                        palette.append(i[1])
+                    palette = [x[1] for x in palImg.getcolors(16777216)]
 
                     # Perform ordered dithering using Bayer matrix
                     palette = hitherdither.palette.Palette(palette)
                     img_indexed = hitherdither.ordered.bayer.bayer_dithering(img, palette, [threshold, threshold, threshold], order=dithering).convert('RGB')
             else:
                 # Extract palette colors
-                for i in palImg.getcolors(16777216):
-                    palette.append(i[1][0])
-                    palette.append(i[1][1])
-                    palette.append(i[1][2])
+                palette = np.concatenate([x[1] for x in palImg.getcolors(16777216)]).tolist()
                 
                 # Create a new palette image
                 palImg = Image.new('P', (256, 1))
@@ -793,7 +836,7 @@ def paletteGen(colors, device, precision, prompt, seed):
     width = 512+((512/base)*(colors-base))
 
     # Generate text-to-image conversion with specified parameters
-    txt2img("false", device, precision, prompt, "", int(width), 512, 20, 7.0, int(seed), 1, "false", "false")
+    txt2img("false", device, precision, prompt, "", int(width), 512, 20, 7.0, int(seed), 1, "false", "false", "false")
 
     # Open the generated image
     image = Image.open("temp/temp.png").convert('RGB')
@@ -812,7 +855,7 @@ def paletteGen(colors, device, precision, prompt, seed):
     palette.save("temp/temp.png")
     rprint(f"[#c4f129]Image converted to color palette with [#48a971]{colors}[#c4f129] colors")
 
-def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale, seed, n_iter, tilingX, tilingY):
+def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale, seed, n_iter, tilingX, tilingY, pixelvae):
     os.makedirs("temp", exist_ok=True)
     outpath = "temp"
 
@@ -826,7 +869,6 @@ def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
     rprint(f"\n[#48a971]Text to Image[white] generating for [#48a971]{n_iter}[white] iterations with [#48a971]{ddim_steps}[white] steps per iteration at [#48a971]{W}[white]x[#48a971]{H}")
 
     start_code = None
-    cheap_decode = False
     sampler = "euler"
 
     assert prompt is not None
@@ -836,9 +878,10 @@ def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
     global model
     global modelCS
     global modelFS
+    global modelPV
 
     # Patch tiling for model and modelFS
-    model, modelFS = patch_tiling(tilingX, tilingY, model, modelFS)
+    model, modelFS, modelPV = patch_tiling(tilingX, tilingY, model, modelFS, modelPV)
 
     # Set the precision scope based on device and precision
     if device != "cpu" and precision == "autocast":
@@ -898,9 +941,17 @@ def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                         sampler = sampler,
                     )
 
-                    modelFS.to(device)
-
-                    if cheap_decode == False:
+                    skip_downscale = False
+                    if pixelvae == "true":
+                        # Pixel clustering mode, lower threshold means bigger clusters
+                        denoise = 0.08
+                        x_sample = modelPV.run_cluster(samples_ddim, threshold=denoise, wrap_x=bool(tilingX == "true"), wrap_y=bool(tilingY == "true"))
+                        #x_sample = modelPV.run_plain(samples_ddim)
+                        # Convert to numpy format, skip downscale later
+                        x_sample = x_sample[0].cpu().numpy()
+                        skip_downscale = True
+                    else:
+                        modelFS.to(device)
                         # Decode the samples using the first stage of the model
                         x_sample = [modelFS.decode_first_stage(samples_ddim[i:i+1].to(device))[0].cpu() for i in range(samples_ddim.size(0))]
                         # Convert the list of decoded samples to a tensor and normalize the values to [0, 1]
@@ -909,33 +960,14 @@ def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
 
                         # Rearrange the dimensions of the tensor and scale the values to the range [0, 255]
                         x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
-                    else:
-                        # Decode the samples using the latents only
-                        # Define the coefficients for color transformation
-                        coefs = torch.tensor([
-                            [0.298, 0.207, 0.208],
-                            [0.187, 0.286, 0.173],
-                            [-0.158, 0.189, 0.264],
-                            [-0.184, -0.271, -0.473],
-                        ]).to(samples_ddim[0].device)
-
-                        # Apply the color transformation to the samples and normalize the values to [0, 1]
-                        x_sample = torch.einsum("lxy,lr -> rxy", samples_ddim[0], coefs)
-                        x_sample = torch.clamp((x_sample + 1.0) / 2.0, min=0.0, max=1.0)
-                        
-                        # Rearrange the dimensions of the tensor and scale the values to the range [0, 255]
-                        x_sample = 255. * np.moveaxis(x_sample.cpu().numpy(), 0, 2)
                     
                     # Convert the numpy array to an image
                     x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
 
-                    if cheap_decode == True:
-                        x_sample_image = x_sample_image.resize((W, H), resample=0)
-
                     file_name = "temp"
                     if n_iter > 1:
                         file_name = "temp" + f"{base_count}"
-                    if pixel == "true":
+                    if pixel == "true" and not skip_downscale:
                         # Resize the image if pixel is true
                         x_sample_image = kCentroid(x_sample_image, int(W/8), int(H/8), 2)
                     x_sample_image.save(
@@ -946,7 +978,7 @@ def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                     base_count += 1
 
                     # Move modelFS to CPU if necessary to free up GPU memory
-                    if device != "cpu":
+                    if device != "cpu" and modelFS.device != torch.device("cpu"):
                         mem = torch.cuda.memory_allocated() / 1e6
                         modelFS.to("cpu")
                         # Wait until memory usage decreases
@@ -957,7 +989,7 @@ def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                     del samples_ddim
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
 
-def img2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY):
+def img2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae):
     timer = time.time()
     init_img = "temp/input.png"
 
@@ -975,7 +1007,6 @@ def img2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
 
     rprint(f"\n[#48a971]Image to Image[white] generating for [#48a971]{n_iter}[white] iterations with [#48a971]{ddim_steps}[white] steps per iteration at [#48a971]{W}[white]x[#48a971]{H}")
 
-    cheap_decode = False
     sampler = "ddim"
 
     assert prompt is not None
@@ -985,9 +1016,10 @@ def img2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
     global model
     global modelCS
     global modelFS
+    global modelPV
 
     # Patch tiling for model and modelFS
-    model, modelFS = patch_tiling(tilingX, tilingY, model, modelFS)
+    model, modelFS, modelPV = patch_tiling(tilingX, tilingY, model, modelFS, modelPV)
 
     # Move the modelFS to the specified device
     modelFS.to(device)
@@ -1074,9 +1106,17 @@ def img2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                         sampler = sampler
                     )
 
-                    modelFS.to(device)
-
-                    if cheap_decode == False:
+                    skip_downscale = False
+                    if pixelvae == "true":
+                        # Pixel clustering mode, lower threshold means bigger clusters
+                        denoise = 0.08
+                        x_sample = modelPV.run_cluster(samples_ddim, threshold=denoise, wrap_x=bool(tilingX == "true"), wrap_y=bool(tilingY == "true"))
+                        #x_sample = modelPV.run_plain(samples_ddim)
+                        # Convert to numpy format, skip downscale later
+                        x_sample = x_sample[0].cpu().numpy()
+                        skip_downscale = True
+                    else:
+                        modelFS.to(device)
                         # Decode the samples using the first stage of the model
                         x_sample = [modelFS.decode_first_stage(samples_ddim[i:i+1].to(device))[0].cpu() for i in range(samples_ddim.size(0))]
                         # Convert the list of decoded samples to a tensor and normalize the values to [0, 1]
@@ -1085,33 +1125,14 @@ def img2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
 
                         # Rearrange the dimensions of the tensor and scale the values to the range [0, 255]
                         x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
-                    else:
-                        # Decode the samples using the latents only
-                        # Define the coefficients for color transformation
-                        coefs = torch.tensor([
-                            [0.298, 0.207, 0.208],
-                            [0.187, 0.286, 0.173],
-                            [-0.158, 0.189, 0.264],
-                            [-0.184, -0.271, -0.473],
-                        ]).to(samples_ddim[0].device)
-
-                        # Apply the color transformation to the samples and normalize the values to [0, 1]
-                        x_sample = torch.einsum("lxy,lr -> rxy", samples_ddim[0], coefs)
-                        x_sample = torch.clamp((x_sample + 1.0) / 2.0, min=0.0, max=1.0)
-                        
-                        # Rearrange the dimensions of the tensor and scale the values to the range [0, 255]
-                        x_sample = 255. * np.moveaxis(x_sample.cpu().numpy(), 0, 2)
                     
                     # Convert the numpy array to an image
                     x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
 
-                    if cheap_decode == True:
-                        x_sample_image = x_sample_image.resize((W, H), resample=0)
-
                     file_name = "temp"
                     if n_iter > 1:
                         file_name = "temp" + f"{base_count}"
-                    if pixel == "true":
+                    if pixel == "true" and not skip_downscale:
                         # Resize the image if pixel is true
                         x_sample_image = kCentroid(x_sample_image, int(W/8), int(H/8), 2)
                     x_sample_image.save(
@@ -1122,7 +1143,7 @@ def img2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                     base_count += 1
 
                     # Move modelFS to CPU if necessary to free up GPU memory
-                    if device != "cpu":
+                    if device != "cpu" and modelFS.device != torch.device("cpu"):
                         mem = torch.cuda.memory_allocated() / 1e6
                         modelFS.to("cpu")
                         # Wait until memory usage decreases
@@ -1140,9 +1161,9 @@ async def server(websocket):
             await websocket.send("running txt2img")
 
             # Extract parameters from the message
-            pixel, device, precision, prompt, negative, w, h, ddim_steps, scale, seed, n_iter, tilingX, tilingY = searchString(message, "dpixel", "ddevice", "dprecision", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dseed", "diter", "dtilingx", "dtilingy", "end")
+            pixel, device, precision, prompt, negative, w, h, ddim_steps, scale, seed, n_iter, tilingX, tilingY, pixelvae = searchString(message, "dpixel", "ddevice", "dprecision", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "end")
             try:
-                txt2img(pixel, device, precision, prompt, negative, int(w), int(h), int(ddim_steps), float(scale), int(seed), int(n_iter), tilingX, tilingY)
+                txt2img(pixel, device, precision, prompt, negative, int(w), int(h), int(ddim_steps), float(scale), int(seed), int(n_iter), tilingX, tilingY, pixelvae)
                 await websocket.send("returning txt2img")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
@@ -1164,9 +1185,9 @@ async def server(websocket):
             await websocket.send("running img2img")
 
             # Extract parameters from the message
-            pixel, device, precision, prompt, negative, w, h, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY = searchString(message, "dpixel", "ddevice", "dprecision", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dstrength", "dseed", "diter", "dtilingx", "dtilingy", "end")
+            pixel, device, precision, prompt, negative, w, h, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae = searchString(message, "dpixel", "ddevice", "dprecision", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dstrength", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "end")
             try:
-                img2img(pixel, device, precision, prompt, negative, int(w), int(h), int(ddim_steps), float(scale), float(strength)/100, int(seed), int(n_iter), tilingX, tilingY)
+                img2img(pixel, device, precision, prompt, negative, int(w), int(h), int(ddim_steps), float(scale), float(strength)/100, int(seed), int(n_iter), tilingX, tilingY, pixelvae)
                 await websocket.send("returning img2img")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
