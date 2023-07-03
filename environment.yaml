@@ -3,6 +3,7 @@ channels:
   - pytorch
   - nvidia
   - defaults
+  - anaconda
 dependencies:
   - git
   - python=3.8.5
@@ -11,6 +12,7 @@ dependencies:
   - pytorch=2.0.1
   - torchvision=0.15.2
   - numpy=1.23.5
+  - cudatoolkit
   - curl
   - pip:
     - pygetwindow==0.0.9
