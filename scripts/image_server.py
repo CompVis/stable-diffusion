@@ -580,7 +580,7 @@ def determine_best_k(image, max_k):
 
     return best_k
 
-def determine_best_palette_verbose(image, paletteFolder = "./palettes"):
+def determine_best_palette_verbose(image, paletteFolder):
     # Convert the image to RGB mode
     image = image.convert("RGB")
 
@@ -594,7 +594,10 @@ def determine_best_palette_verbose(image, paletteFolder = "./palettes"):
     # Calculate distortion for different values of k
     distortions = []
     for palImg in clbar(paletteImages, name = "Searching", position = "first", prefixwidth = 12, suffixwidth = 28):
-        palImg = Image.open(f"{paletteFolder}/{palImg}").convert('RGB')
+        try:
+            palImg = Image.open(f"{paletteFolder}/{palImg}").convert('RGB')
+        except:
+            continue
         palette = []
         # Extract palette colors
         palColors = palImg.getcolors(16777216)
@@ -619,7 +622,7 @@ def determine_best_palette_verbose(image, paletteFolder = "./palettes"):
     elbow_index = np.argmin(distortions)
     best_palette = Image.open(f"{paletteFolder}/{paletteImages[elbow_index]}").convert('RGB')
 
-    return best_palette
+    return best_palette, paletteImages[elbow_index]
 
 def determine_best_k_verbose(image, max_k, accuracy):
     # Convert the image to RGB mode
@@ -684,7 +687,7 @@ def determine_best_k_verbose(image, max_k, accuracy):
 
     return best_k
 
-def palettize(numFiles, source, colors, accuracy, paletteFile, paletteURL, dithering, strength, denoise, smoothness, intensity):
+def palettize(numFiles, source, colors, accuracy, bestPaletteFolder, paletteFile, paletteURL, dithering, strength, denoise, smoothness, intensity):
     # Check if a palette URL is provided and try to download the palette image
     if source == "URL":
         try:
@@ -716,11 +719,14 @@ def palettize(numFiles, source, colors, accuracy, paletteFile, paletteURL, dithe
         string = f'{string} with order [#48a971]{dithering}[white] dithering'
 
     if source == "Automatic":
+        string = f"\n[#48a971]Converting output[white] to best number of colors"
+    elif source == "Best Palette":
         string = f"\n[#48a971]Converting output[white] to best color palette"
 
     # Print the conversion message
     rprint(string)
 
+    palFiles = []
     # Process each file in the list
     for file in clbar(files, name = "Processed", position = "last", unit = "image", prefixwidth = 12, suffixwidth = 28):
 
@@ -737,10 +743,14 @@ def palettize(numFiles, source, colors, accuracy, paletteFile, paletteURL, dithe
             numColors = determine_best_k_verbose(img, 64, accuracy)
         
         # Check if a palette file is provided
-        if paletteFile != "" and os.path.isfile(file):
+        if (paletteFile != "" and os.path.isfile(file)) or source == "Best Palette":
             # Open the palette image and calculate the number of colors
-            palImg = Image.open(paletteFile).convert('RGB')
-            palImg = determine_best_palette_verbose(img)
+            if source == "Best Palette":
+                palImg, palFile = determine_best_palette_verbose(img, bestPaletteFolder)
+                palFiles.append(str(palFile))
+            else:
+                palImg = Image.open(paletteFile).convert('RGB')
+            
             numColors = len(palImg.getcolors(16777216))
 
             if strength > 0 and dithering > 0:
@@ -791,6 +801,8 @@ def palettize(numFiles, source, colors, accuracy, paletteFile, paletteURL, dithe
 
         img_indexed.save(file)
     rprint(f"[#c4f129]Palettized [#48a971]{len(files)}[#c4f129] images in [#48a971]{round(time.time()-timer, 2)}[#c4f129] seconds")
+    if source == "Best Palette":
+        rprint(f"[#c4f129]Palettes used: [#494b9b]{', '.join(palFiles)}")
 
 def rembg(numFiles):
     
@@ -1151,6 +1163,7 @@ def img2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                             time.sleep(1)
                     
                     # Delete the samples to free up memory
+                    del samples_ddim
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
 
 async def server(websocket):
@@ -1197,9 +1210,9 @@ async def server(websocket):
             await websocket.send("running palettize")
 
             # Extract parameters from the message
-            numFiles, source, colors, accuracy, paletteFile, paletteURL, dithering, strength, denoise, smoothness, intensity = searchString(message, "dnumfiles", "dsource", "dcolors", "daccuracy", "dpalettefile", "dpaletteURL", "ddithering", "dstrength", "ddenoise", "dsmoothness", "dintensity", "end")
+            numFiles, source, colors, accuracy, bestPaletteFolder, paletteFile, paletteURL, dithering, strength, denoise, smoothness, intensity = searchString(message, "dnumfiles", "dsource", "dcolors", "daccuracy", "dbestpalettefolder", "dpalettefile", "dpaletteURL", "ddithering", "dstrength", "ddenoise", "dsmoothness", "dintensity", "end")
             try:
-                palettize(int(numFiles), source,  int(colors), int(accuracy), paletteFile, paletteURL, int(dithering), int(strength), denoise, int(smoothness), int(intensity))
+                palettize(int(numFiles), source,  int(colors), int(accuracy), bestPaletteFolder, paletteFile, paletteURL, int(dithering), int(strength), denoise, int(smoothness), int(intensity))
                 await websocket.send("returning palettize")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
@@ -1278,6 +1291,7 @@ async def server(websocket):
                         # Minimize the window
                         rd.minimize()
             await websocket.send("free")
+            torch.cuda.empty_cache()
         elif message == "shutdown":
             rprint("[#ab333d]Shutting down...")
             global running
