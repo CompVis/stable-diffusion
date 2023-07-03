@@ -38,3 +38,4 @@ src/hitherdither/
 src/k-diffusion/
 src/taming-transformers/
 src/tomesd/
+models/base/StableDiffusionV1-5.safetensors
