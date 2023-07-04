@@ -1,4 +1,4 @@
-print("Checking python environment")
+print("\nChecking python environment, this may take one or more minutes.")
 
 # Import core libraries
 import os, re, time, sys, asyncio, ctypes, math
@@ -15,11 +15,17 @@ from contextlib import nullcontext
 from typing import Optional
 from safetensors.torch import load_file
 
+print("\nImported core libraries")
+
 # Import built libraries
 from ldm.util import instantiate_from_config
 from optimUtils import split_weighted_subprompts
 from autoencoder.pixelvae import load_pixelvae_model
+from rembg import remove
+import hitherdither
 import tomesd
+
+print("\nImported built libraries")
 
 # Import PyTorch functions
 from torch import autocast
@@ -37,13 +43,9 @@ import requests
 from websockets import serve, connect
 from io import BytesIO
 
-# Import post-processing libraries
-import hitherdither
-from rembg import remove
-
 # Import console management libraries
 import pygetwindow as gw
 from rich import print as rprint
 from colorama import just_fix_windows_console
 
-print("Python environment initialized successfully")
+print("\nPython environment initialized successfully\n")
