@@ -17,6 +17,8 @@ from safetensors.torch import load_file
 from ldm.util import instantiate_from_config
 from optimUtils import split_weighted_subprompts
 from autoencoder.pixelvae import load_pixelvae_model
+from rembg import remove
+import hitherdither
 import tomesd
 
 # Import PyTorch functions
@@ -34,10 +36,6 @@ from transformers import logging
 import requests
 from websockets import serve, connect
 from io import BytesIO
-
-# Import post-processing libraries
-import hitherdither
-from rembg import remove
 
 # Import console management libraries
 import pygetwindow as gw
@@ -1285,11 +1283,14 @@ async def server(websocket):
             await websocket.send("loaded model")
         elif message == "recieved":
             if background == "false":
-                rd = gw.getWindowsWithTitle("Retro Diffusion Image Generator")[0]
-                if gw.getActiveWindow() is not None:
-                    if gw.getActiveWindow().title == "Retro Diffusion Image Generator":
-                        # Minimize the window
-                        rd.minimize()
+                try:
+                    rd = gw.getWindowsWithTitle("Retro Diffusion Image Generator")[0]
+                    if gw.getActiveWindow() is not None:
+                        if gw.getActiveWindow().title == "Retro Diffusion Image Generator":
+                            # Minimize the window
+                            rd.minimize()
+                except:
+                    pass
             await websocket.send("free")
             torch.cuda.empty_cache()
         elif message == "shutdown":
