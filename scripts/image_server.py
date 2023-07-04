@@ -560,7 +560,7 @@ def determine_best_k(image, max_k):
     # Calculate distortion for different values of k
     distortions = []
     for k in range(1, max_k + 1):
-        quantized_image = image.quantize(colors=k, method=2, kmeans=k, dither=0)
+        quantized_image = image.quantize(colors=k, method=1, kmeans=k, dither=0)
         centroids = np.array(quantized_image.getpalette()[:k * 3]).reshape(-1, 3)
         
         # Calculate distortions
@@ -575,8 +575,8 @@ def determine_best_k(image, max_k):
     if len(rate_of_change) == 0:
         best_k = 2
     else:
-        elbow_index = np.argmax(rate_of_change) + 1
-        best_k = elbow_index + 2
+        elbow_index = np.argmax(rate_of_change)
+        best_k = elbow_index
 
     return best_k
 
@@ -643,7 +643,7 @@ def determine_best_k_verbose(image, max_k, accuracy):
     for k in clbar(range(4, round(max_k/8) + 2), name = "Finding K", position = "first", prefixwidth = 12, suffixwidth = 28):
         for n in range(round(max_k/k)):
             count += 1
-            quantized_image = image.quantize(colors=count, method=2, kmeans=count, dither=0)
+            quantized_image = image.quantize(colors=count, method=1, kmeans=count, dither=0)
             centroids = np.array(quantized_image.getpalette()[:count * 3]).reshape(-1, 3)
             
             # Calculate distortions
@@ -667,8 +667,8 @@ def determine_best_k_verbose(image, max_k, accuracy):
     if len(rate_of_change) == 0:
         best_k = 1
     else:
-        elbow_index = np.argmax(rate_of_change) + 1
-        best_k = elbow_index + 2
+        elbow_index = np.argmax(rate_of_change)
+        best_k = elbow_index
 
     # Unused accuracy slider
     """
