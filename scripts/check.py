@@ -1,4 +1,4 @@
-print("\nChecking python environment, this may take one or more minutes.")
+print("Checking python environment, this may take one or more minutes.")
 
 # Import core libraries
 import os, re, time, sys, asyncio, ctypes, math
