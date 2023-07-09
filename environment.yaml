@@ -15,6 +15,7 @@ dependencies:
   - cudatoolkit
   - curl
   - pip:
+    - cryptography
     - pygetwindow==0.0.9
     - colorama==0.4.6
     - rich==13.3.2
