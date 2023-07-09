@@ -589,7 +589,7 @@ def determine_best_palette_verbose(image, paletteFolder):
     pixels = np.array(image)
     pixel_indices = np.reshape(pixels, (-1, 3))
 
-    # Calculate distortion for different values of k
+    # Calculate distortion for different palettes
     distortions = []
     for palImg in clbar(paletteImages, name = "Searching", position = "first", prefixwidth = 12, suffixwidth = 28):
         try:
@@ -597,10 +597,10 @@ def determine_best_palette_verbose(image, paletteFolder):
         except:
             continue
         palette = []
+
         # Extract palette colors
         palColors = palImg.getcolors(16777216)
         numColors = len(palColors)
-
         palette = np.concatenate([x[1] for x in palColors]).tolist()
         
         # Create a new palette image
@@ -608,7 +608,6 @@ def determine_best_palette_verbose(image, paletteFolder):
         palImg.putpalette(palette)
 
         quantized_image = image.quantize(method=1, kmeans=numColors, palette=palImg, dither=0)
-
         centroids = np.array(quantized_image.getpalette()[:numColors * 3]).reshape(-1, 3)
         
         # Calculate distortions
@@ -616,11 +615,11 @@ def determine_best_palette_verbose(image, paletteFolder):
         min_distances = np.min(distances, axis=1)
         distortions.append(np.sum(min_distances ** 2))
     
-    # Find the elbow point (best k value)
-    elbow_index = np.argmin(distortions)
-    best_palette = Image.open(f"{paletteFolder}/{paletteImages[elbow_index]}").convert('RGB')
+    # Find the best match
+    best_match_index = np.argmin(distortions)
+    best_palette = Image.open(f"{paletteFolder}/{paletteImages[best_match_index]}").convert('RGB')
 
-    return best_palette, paletteImages[elbow_index]
+    return best_palette, paletteImages[best_match_index]
 
 def determine_best_k_verbose(image, max_k, accuracy):
     # Convert the image to RGB mode
