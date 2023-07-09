@@ -306,7 +306,13 @@ def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disa
 def load_model_from_config(model, verbose=False):
     # Load the model's state dictionary from the specified file
     try:
-        pl_sd = load_file(model, device="cpu")
+        # First try to load as a Safetensor, then as a pickletensor
+        try:
+            pl_sd = load_file(model, device="cpu")
+        except: 
+            rprint(f"[#ab333d]Model is not a Safetensor. Please consider using Safetensors format for better security.")
+            pl_sd = torch.load(model, map_location="cpu")
+
         sd = pl_sd
 
         # If "state_dict" is found in the loaded dictionary, assign it to sd
@@ -315,7 +321,7 @@ def load_model_from_config(model, verbose=False):
 
         return sd
     except Exception as e: 
-                rprint(f"[#ab333d]{traceback.format_exc()}\n\nThis may indicate a model has not been downloaded fully, is corrupted, or is not in the Safetensor format. Please ensure the integirty of the file, and that it is a Safetensor model.")
+                rprint(f"[#ab333d]{traceback.format_exc()}\n\nThis may indicate a model has not been downloaded fully, or is corrupted.")
 
 def load_img(path, h0, w0):
     # Open the image at the specified path and prepare it for image to image
