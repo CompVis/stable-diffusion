@@ -564,7 +564,7 @@ def determine_best_k(image, max_k):
     # Calculate distortion for different values of k
     distortions = []
     for k in range(1, max_k + 1):
-        quantized_image = image.quantize(colors=k, method=1, kmeans=k, dither=0)
+        quantized_image = image.quantize(colors=k, method=2, kmeans=k, dither=0)
         centroids = np.array(quantized_image.getpalette()[:k * 3]).reshape(-1, 3)
         
         # Calculate distortions
@@ -580,7 +580,7 @@ def determine_best_k(image, max_k):
         best_k = 2
     else:
         elbow_index = np.argmax(rate_of_change)
-        best_k = elbow_index
+        best_k = elbow_index + 1
 
     return best_k
 
@@ -635,10 +635,6 @@ def determine_best_k_verbose(image, max_k, accuracy):
     pixels = np.array(image)
     pixel_indices = np.reshape(pixels, (-1, 3))
 
-    # Do some math on threshold
-    # Unused
-    threshold = 0.5/(accuracy**3)
-
     # Calculate distortion for different values of k
     # Divided into 'chunks' for nice progress displaying
     distortions = []
@@ -646,22 +642,13 @@ def determine_best_k_verbose(image, max_k, accuracy):
     for k in clbar(range(4, round(max_k/8) + 2), name = "Finding K", position = "first", prefixwidth = 12, suffixwidth = 28):
         for n in range(round(max_k/k)):
             count += 1
-            quantized_image = image.quantize(colors=count, method=1, kmeans=count, dither=0)
+            quantized_image = image.quantize(colors=count, method=2, kmeans=count, dither=0)
             centroids = np.array(quantized_image.getpalette()[:count * 3]).reshape(-1, 3)
             
             # Calculate distortions
             distances = np.linalg.norm(pixel_indices[:, np.newaxis] - centroids, axis=2)
             min_distances = np.min(distances, axis=1)
             distortions.append(np.sum(min_distances ** 2))
-
-
-    # Remap distortions to the range of 0-1
-    # Unused
-    """
-    distortion_min = np.min(distortions)
-    distortion_max = np.max(distortions)
-    distortions = 10 * (distortions - distortion_min) / (distortion_max - distortion_min)
-    """
 
     # Calculate the rate of change of distortions
     rate_of_change = np.diff(distortions) / np.array(distortions[:-1])
@@ -671,22 +658,7 @@ def determine_best_k_verbose(image, max_k, accuracy):
         best_k = 1
     else:
         elbow_index = np.argmax(rate_of_change)
-        best_k = elbow_index
-
-    # Unused accuracy slider
-    """
-    # Interactive, decided it defeated the purpose of doing it "automatically"
-    
-    best_k = 1
-    for i in range(1, len(rate_of_change)):
-        diff = np.abs(distortions[i] - distortions[i-1])
-        if diff <= threshold:
-            best_k = i + 1  # Elbow point found
-            break
-    if best_k == 1:
-        elbow_index = np.argmax(rate_of_change) + 1
         best_k = elbow_index + 1
-    """
 
     return best_k
 
