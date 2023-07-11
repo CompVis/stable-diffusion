@@ -762,8 +762,7 @@ def palettize(numFiles, source, colors, accuracy, bestPaletteFolder, paletteFile
                     img = adjust_gamma(img, 1.0-(0.03*strength))
 
                     # Extract palette colors
-                    for i in img_indexed.convert("RGB").getcolors(16777216): 
-                        palette.append(i[1])
+                    palette = [x[1] for x in palImg.getcolors(16777216)]
 
                     # Perform ordered dithering using Bayer matrix
                     palette = hitherdither.palette.Palette(palette)
