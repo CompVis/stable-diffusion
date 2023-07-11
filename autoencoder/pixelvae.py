@@ -282,7 +282,7 @@ def load_pixelvae_model(weights_path, device, key):
     binning = HSVCube(32, 8, 16)
 
     model = Decoder(binning.bins_per_channel)
-    state_dict = torch.load(decryptedStream, weights_only=True)
+    state_dict = torch.load(decryptedStream, map_location=device)
     model.load_state_dict(state_dict['state_dict'])
     model.eval()
     model = model.to(device)
