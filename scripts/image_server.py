@@ -1081,6 +1081,9 @@ def img2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                         0.0,
                         ddim_steps,
                     )
+
+                    del init_image 
+                    del init_latent
                     
                     # Generate samples using the model
                     samples_ddim = model.sample(
