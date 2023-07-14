@@ -169,72 +169,61 @@ def get_mem_free_total(device):
     return mem_free_total
 
 class CrossAttention(nn.Module):
-    def __init__(self, query_dim, context_dim=None, heads=8, dim_head=64, dropout=0.):
+    def __init__(self, query_dim, context_dim=None, heads=8, dim_head=64, dropout=0., att_step=1):
         super().__init__()
         inner_dim = dim_head * heads
         context_dim = default(context_dim, query_dim)
 
         self.scale = dim_head ** -0.5
         self.heads = heads
+        self.att_step = att_step
 
         self.to_q = nn.Linear(query_dim, inner_dim, bias=False)
         self.to_k = nn.Linear(context_dim, inner_dim, bias=False)
         self.to_v = nn.Linear(context_dim, inner_dim, bias=False)
+        
         self.to_out = nn.Sequential(
             nn.Linear(inner_dim, query_dim),
             nn.Dropout(dropout)
         )
 
     def forward(self, x, context=None, mask=None):
-        h = self.heads
+        batch_size, sequence_length, inner_dim = x.shape
 
+        if mask is not None:
+            mask = self.prepare_attention_mask(mask, sequence_length, batch_size)
+            mask = mask.view(batch_size, self.heads, -1, mask.shape[-1])
+
+        h = self.heads
         q_in = self.to_q(x)
         context = default(context, x)
+
         k_in = self.to_k(context)
         v_in = self.to_v(context)
-        del context, x
 
-        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (q_in, k_in, v_in))
+        head_dim = inner_dim // h
+        q = q_in.view(batch_size, -1, h, head_dim).transpose(1, 2)
+        k = k_in.view(batch_size, -1, h, head_dim).transpose(1, 2)
+        v = v_in.view(batch_size, -1, h, head_dim).transpose(1, 2)
+
         del q_in, k_in, v_in
 
-        r1 = torch.zeros(q.shape[0], q.shape[1], v.shape[2], device=q.device)
+        dtype = q.dtype
+        q, k, v = q.float(), k.float(), v.float()
 
-        mem_free_total = get_mem_free_total(q.device)
+        # the output of sdp = (batch, num_heads, seq_len, head_dim)
+        hidden_states = torch.nn.functional.scaled_dot_product_attention(
+            q, k, v, attn_mask=mask, dropout_p=0.0, is_causal=False
+        )
 
-        gb = 1024 ** 3
-        tensor_size = q.shape[0] * q.shape[1] * k.shape[1] * q.element_size()
-        modifier = 3 if q.element_size() == 2 else 2.5
-        mem_required = tensor_size * modifier
-        steps = 1
+        hidden_states = hidden_states.transpose(1, 2).reshape(batch_size, -1, h * head_dim)
+        hidden_states = hidden_states.to(dtype)
 
-
-        if mem_required > mem_free_total:
-            steps = 2**(math.ceil(math.log(mem_required / mem_free_total, 2)))
-            # print(f"Expected tensor size:{tensor_size/gb:0.1f}GB, cuda free:{mem_free_cuda/gb:0.1f}GB "
-            #      f"torch free:{mem_free_torch/gb:0.1f} total:{mem_free_total/gb:0.1f} steps:{steps}")
-
-        if steps > 64:
-            max_res = math.floor(math.sqrt(math.sqrt(mem_free_total / 2.5)) / 8) * 64
-            raise RuntimeError(f'Not enough memory, use lower resolution (max approx. {max_res}x{max_res}). '
-                               f'Need: {mem_required/64/gb:0.1f}GB free, Have:{mem_free_total/gb:0.1f}GB free')
-
-        slice_size = q.shape[1] // steps if (q.shape[1] % steps) == 0 else q.shape[1]
-        for i in range(0, q.shape[1], slice_size):
-            end = i + slice_size
-            s1 = einsum('b i d, b j d -> b i j', q[:, i:end], k) * self.scale
-
-            s2 = s1.softmax(dim=-1, dtype=q.dtype)
-            del s1
-
-            r1[:, i:end] = einsum('b i j, b j d -> b i d', s2, v)
-            del s2
-
-        del q, k, v
-
-        r2 = rearrange(r1, '(b h) n d -> b n (h d)', h=h)
-        del r1
-
-        return self.to_out(r2)
+        # linear proj
+        hidden_states = self.to_out[0](hidden_states)
+        # dropout
+        hidden_states = self.to_out[1](hidden_states)
+        return hidden_states
 
 class SelfAttention(MultiheadAttention):
     def __init__(self, query_dim, heads=8, dim_head=64, dropout=0.):
