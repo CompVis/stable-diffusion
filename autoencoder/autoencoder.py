@@ -128,7 +128,20 @@ class AutoencoderKL(pl.LightningModule):
             self.model_ema(self)
 
     def encode(self, x):
-        return self.encode_sliced(x)
+        try:
+            return self.encode_all_at_once(x)
+        except:
+            # Out of memory, trying sliced encoding.
+            try:
+                return self.encode_sliced(x, chunk_size=128)
+            except:
+                # Out of memory, trying smaller slice.
+                try:
+                    return self.encode_sliced(x, chunk_size=64)
+                except:
+                    # Out of memory, trying smaller slice.
+                    return self.encode_sliced(x, chunk_size=32)
+                    
 
     def encode_all_at_once(self, x):
         h = self.encoder(x)
