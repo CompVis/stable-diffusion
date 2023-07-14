@@ -11,7 +11,7 @@ from tqdm.auto import trange, tqdm
 import torch
 from einops import rearrange
 from tqdm import tqdm
-from ldm.modules.distributions.distributions import DiagonalGaussianDistribution
+from autoencoder.distributions import DiagonalGaussianDistribution
 from ldm.models.autoencoder import VQModelInterface
 import torch.nn as nn
 import numpy as np
