@@ -635,6 +635,10 @@ class UNet(DDPM):
                                         )
 
         elif sampler == "ddim":
+            try:
+                test = self.ddim_timesteps
+            except:
+                self.make_schedule(ddim_num_steps=S, ddim_eta=eta, verbose=False)
             samples = self.ddim_sampling(x_latent, conditioning, S, unconditional_guidance_scale=unconditional_guidance_scale,
                                          unconditional_conditioning=unconditional_conditioning,
                                          mask = mask,init_latent=x_T,use_original_steps=False)
