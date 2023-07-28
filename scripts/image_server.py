@@ -60,6 +60,8 @@ global modelFS
 global modelPV
 global running
 
+expectedVersion = "7.5.0"
+
 global timeout
 global loaded
 loaded = ""
@@ -367,6 +369,8 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
     print()
     if modelfile == "model.pxlm":
         print(f"Loading primary model")
+    elif modelfile == "modelmicro.pxlm":
+        print(f"Loading micro model")
     elif modelfile == "modelmini.pxlm":
         print(f"Loading mini model")
     elif modelfile == "modelmega.pxlm":
@@ -510,7 +514,7 @@ def pixelDetectVerbose():
     for _ in clbar(range(1), name = "Processed", position = "last", unit = "image", prefixwidth = 12, suffixwidth = 28):
         downscale = pixelDetect(init_img)
 
-        numColors = determine_best_k_verbose(downscale, 64, 10)
+        numColors = determine_best_k_verbose(downscale, 64)
 
         for _ in clbar([downscale], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28): 
             img_indexed = downscale.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
@@ -627,7 +631,7 @@ def determine_best_palette_verbose(image, paletteFolder):
 
     return best_palette, paletteImages[best_match_index]
 
-def determine_best_k_verbose(image, max_k, accuracy):
+def determine_best_k_verbose(image, max_k):
     # Convert the image to RGB mode
     image = image.convert("RGB")
 
@@ -662,7 +666,7 @@ def determine_best_k_verbose(image, max_k, accuracy):
 
     return best_k
 
-def palettize(numFiles, source, colors, accuracy, bestPaletteFolder, paletteFile, paletteURL, dithering, strength, denoise, smoothness, intensity):
+def palettize(numFiles, source, colors, bestPaletteFolder, paletteFile, paletteURL, dithering, strength, denoise, smoothness, intensity):
     # Check if a palette URL is provided and try to download the palette image
     if source == "URL":
         try:
@@ -715,7 +719,7 @@ def palettize(numFiles, source, colors, accuracy, bestPaletteFolder, paletteFile
         threshold = 4*strength
 
         if source == "Automatic":
-            numColors = determine_best_k_verbose(img, 64, accuracy)
+            numColors = determine_best_k_verbose(img, 64)
         
         # Check if a palette file is provided
         if (paletteFile != "" and os.path.isfile(file)) or source == "Best Palette":
@@ -778,6 +782,23 @@ def palettize(numFiles, source, colors, accuracy, bestPaletteFolder, paletteFile
     if source == "Best Palette":
         rprint(f"[#c4f129]Palettes used: [#494b9b]{', '.join(palFiles)}")
 
+def palettizeOutput(numFiles):
+    # Create a list to store file paths
+    files = []
+    for n in range(numFiles):
+        files.append(f"temp/temp{n+1}.png")
+    
+    # Process the image using pixelDetect and save the result
+    for file in clbar(files, name = "Processed", position = "last", unit = "image", prefixwidth = 12, suffixwidth = 28):
+        img = Image.open(file).convert('RGB')
+
+        numColors = determine_best_k_verbose(img, 64)
+
+        for _ in clbar([img], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28): 
+            img_indexed = img.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
+        
+            img_indexed.save(file)
+
 def rembg(numFiles):
     
     timer = time.time()
@@ -825,7 +846,7 @@ def paletteGen(colors, device, precision, prompt, seed):
     txt2img("false", device, precision, prompt, "", int(width), 512, 20, 7.0, int(seed), 1, "false", "false", "false")
 
     # Open the generated image
-    image = Image.open("temp/temp.png").convert('RGB')
+    image = Image.open("temp/temp1.png").convert('RGB')
 
     # Perform k-centroid downscaling on the image
     image = kCentroid(image, int(image.width/(512/base)), 1, 2)
@@ -838,10 +859,10 @@ def paletteGen(colors, device, precision, prompt, seed):
 
             palette.putpixel((x, y), (r, g, b))
 
-    palette.save("temp/temp.png")
+    palette.save("temp/temp1.png")
     rprint(f"[#c4f129]Image converted to color palette with [#48a971]{colors}[#c4f129] colors")
 
-def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale, seed, n_iter, tilingX, tilingY, pixelvae):
+def txt2img(pixel, device, precision, pixelSize, prompt, negative, W, H, ddim_steps, scale, seed, n_iter, tilingX, tilingY, pixelvae, post):
     os.makedirs("temp", exist_ok=True)
     outpath = "temp"
 
@@ -927,7 +948,7 @@ def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                         sampler = sampler,
                     )
 
-                    skip_downscale = False
+                    skip_downscale = pixelSize <= 1
                     if pixelvae == "true":
                         # Pixel clustering mode, lower threshold means bigger clusters
                         denoise = 0.08
@@ -950,12 +971,12 @@ def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                     # Convert the numpy array to an image
                     x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
 
-                    file_name = "temp"
-                    if n_iter > 1:
-                        file_name = "temp" + f"{base_count}"
-                    if pixel == "true" and not skip_downscale:
+                    file_name = "temp" + f"{base_count}"
+                    if not skip_downscale:
                         # Resize the image if pixel is true
-                        x_sample_image = kCentroid(x_sample_image, int(W/8), int(H/8), 2)
+                        x_sample_image = kCentroid(x_sample_image, int(W/pixelSize), int(H/pixelSize), 2)
+                    elif pixelvae == "true":
+                        x_sample_image = x_sample_image.resize((W, H), resample=Image.Resampling.NEAREST)
                     x_sample_image.save(
                         os.path.join(outpath, file_name + ".png")
                     )
@@ -973,9 +994,11 @@ def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                     
                     # Delete the samples to free up memory
                     del samples_ddim
+        if post == "true":
+            palettizeOutput(int(n_iter))
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
 
-def img2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae):
+def img2img(pixel, device, precision, pixelSize, prompt, negative, W, H, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post):
     timer = time.time()
     init_img = "temp/input.png"
 
@@ -1092,7 +1115,7 @@ def img2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                         sampler = sampler
                     )
 
-                    skip_downscale = False
+                    skip_downscale = pixelSize <= 1
                     if pixelvae == "true":
                         # Pixel clustering mode, lower threshold means bigger clusters
                         denoise = 0.08
@@ -1115,12 +1138,12 @@ def img2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                     # Convert the numpy array to an image
                     x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
 
-                    file_name = "temp"
-                    if n_iter > 1:
-                        file_name = "temp" + f"{base_count}"
-                    if pixel == "true" and not skip_downscale:
+                    file_name = "temp" + f"{base_count}"
+                    if not skip_downscale:
                         # Resize the image if pixel is true
-                        x_sample_image = kCentroid(x_sample_image, int(W/8), int(H/8), 2)
+                        x_sample_image = kCentroid(x_sample_image, int(W/pixelSize), int(H/pixelSize), 2)
+                    elif pixelvae == "true":
+                        x_sample_image = x_sample_image.resize((W, H), resample=Image.Resampling.NEAREST)
                     x_sample_image.save(
                         os.path.join(outpath, file_name + ".png")
                     )
@@ -1138,6 +1161,8 @@ def img2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                     
                     # Delete the samples to free up memory
                     del samples_ddim
+        if post == "true":
+            palettizeOutput(int(n_iter))
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
 
 async def server(websocket):
@@ -1148,9 +1173,9 @@ async def server(websocket):
             await websocket.send("running txt2img")
 
             # Extract parameters from the message
-            pixel, device, precision, prompt, negative, w, h, ddim_steps, scale, seed, n_iter, tilingX, tilingY, pixelvae = searchString(message, "dpixel", "ddevice", "dprecision", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "end")
+            pixel, device, precision, pixelSize, prompt, negative, w, h, ddim_steps, scale, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dmodel", "ddevice", "dprecision", "dpixelsize", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
             try:
-                txt2img(pixel, device, precision, prompt, negative, int(w), int(h), int(ddim_steps), float(scale), int(seed), int(n_iter), tilingX, tilingY, pixelvae)
+                txt2img(pixel, device, precision, int(pixelSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
                 await websocket.send("returning txt2img")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
@@ -1172,9 +1197,9 @@ async def server(websocket):
             await websocket.send("running img2img")
 
             # Extract parameters from the message
-            pixel, device, precision, prompt, negative, w, h, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae = searchString(message, "dpixel", "ddevice", "dprecision", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dstrength", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "end")
+            pixel, device, precision, pixelSize, prompt, negative, w, h, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dmodel", "ddevice", "dprecision", "dpixelsize", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dstrength", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
             try:
-                img2img(pixel, device, precision, prompt, negative, int(w), int(h), int(ddim_steps), float(scale), float(strength)/100, int(seed), int(n_iter), tilingX, tilingY, pixelvae)
+                img2img(pixel, device, precision, int(pixelSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), float(strength)/100, int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
                 await websocket.send("returning img2img")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
@@ -1184,9 +1209,9 @@ async def server(websocket):
             await websocket.send("running palettize")
 
             # Extract parameters from the message
-            numFiles, source, colors, accuracy, bestPaletteFolder, paletteFile, paletteURL, dithering, strength, denoise, smoothness, intensity = searchString(message, "dnumfiles", "dsource", "dcolors", "daccuracy", "dbestpalettefolder", "dpalettefile", "dpaletteURL", "ddithering", "dstrength", "ddenoise", "dsmoothness", "dintensity", "end")
+            numFiles, source, colors, bestPaletteFolder, paletteFile, paletteURL, dithering, strength, denoise, smoothness, intensity = searchString(message, "dnumfiles", "dsource", "dcolors", "dbestpalettefolder", "dpalettefile", "dpaletteURL", "ddithering", "dstrength", "ddenoise", "dsmoothness", "dintensity", "end")
             try:
-                palettize(int(numFiles), source,  int(colors), int(accuracy), bestPaletteFolder, paletteFile, paletteURL, int(dithering), int(strength), denoise, int(smoothness), int(intensity))
+                palettize(int(numFiles), source,  int(colors), bestPaletteFolder, paletteFile, paletteURL, int(dithering), int(strength), denoise, int(smoothness), int(intensity))
                 await websocket.send("returning palettize")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
@@ -1239,7 +1264,7 @@ async def server(websocket):
             await websocket.send("loaded model")
 
         elif re.search(r"connected.+", message):
-            background = searchString(message, "dbackground", "end")[0]
+            background, extensionVersion = searchString(message, "dbackground", "dversion", "end")
             rd = gw.getWindowsWithTitle("Retro Diffusion Image Generator")[0]
             if background == "false":
                 try:
@@ -1254,7 +1279,12 @@ async def server(websocket):
                     rd.minimize()
                 except:
                     pass
-            await websocket.send("connected")
+
+            if extensionVersion == expectedVersion:
+                await websocket.send("connected")
+            else:
+                rprint(f"\n[#ab333d]The current client is on a version that is incompatible with the image generator version. Please update the extension.")
+                
         elif message == "no model":
             await websocket.send("loaded model")
         elif message == "recieved":
