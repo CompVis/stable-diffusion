@@ -873,6 +873,7 @@ def txt2img(pixel, device, precision, pixelSize, prompt, negative, W, H, ddim_st
         seed = randint(0, 1000000)
     seed_everything(seed)
 
+    print(pixelSize)
     rprint(f"\n[#48a971]Text to Image[white] generating for [#48a971]{n_iter}[white] iterations with [#48a971]{ddim_steps}[white] steps per iteration at [#48a971]{W}[white]x[#48a971]{H}")
 
     start_code = None
@@ -948,7 +949,6 @@ def txt2img(pixel, device, precision, pixelSize, prompt, negative, W, H, ddim_st
                         sampler = sampler,
                     )
 
-                    skip_downscale = pixelSize <= 1
                     if pixelvae == "true":
                         # Pixel clustering mode, lower threshold means bigger clusters
                         denoise = 0.08
@@ -956,7 +956,6 @@ def txt2img(pixel, device, precision, pixelSize, prompt, negative, W, H, ddim_st
                         #x_sample = modelPV.run_plain(samples_ddim)
                         # Convert to numpy format, skip downscale later
                         x_sample = x_sample[0].cpu().numpy()
-                        skip_downscale = True
                     else:
                         modelFS.to(device)
                         # Decode the samples using the first stage of the model
@@ -972,10 +971,10 @@ def txt2img(pixel, device, precision, pixelSize, prompt, negative, W, H, ddim_st
                     x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
 
                     file_name = "temp" + f"{base_count}"
-                    if not skip_downscale:
+                    if x_sample_image.width > int(W/pixelSize) and x_sample_image.height > int(H/pixelSize):
                         # Resize the image if pixel is true
                         x_sample_image = kCentroid(x_sample_image, int(W/pixelSize), int(H/pixelSize), 2)
-                    elif pixelvae == "true":
+                    elif x_sample_image.width < int(W/pixelSize) and x_sample_image.height < int(H/pixelSize):
                         x_sample_image = x_sample_image.resize((W, H), resample=Image.Resampling.NEAREST)
                     x_sample_image.save(
                         os.path.join(outpath, file_name + ".png")
@@ -1115,7 +1114,6 @@ def img2img(pixel, device, precision, pixelSize, prompt, negative, W, H, ddim_st
                         sampler = sampler
                     )
 
-                    skip_downscale = pixelSize <= 1
                     if pixelvae == "true":
                         # Pixel clustering mode, lower threshold means bigger clusters
                         denoise = 0.08
@@ -1123,7 +1121,6 @@ def img2img(pixel, device, precision, pixelSize, prompt, negative, W, H, ddim_st
                         #x_sample = modelPV.run_plain(samples_ddim)
                         # Convert to numpy format, skip downscale later
                         x_sample = x_sample[0].cpu().numpy()
-                        skip_downscale = True
                     else:
                         modelFS.to(device)
                         # Decode the samples using the first stage of the model
@@ -1139,10 +1136,10 @@ def img2img(pixel, device, precision, pixelSize, prompt, negative, W, H, ddim_st
                     x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
 
                     file_name = "temp" + f"{base_count}"
-                    if not skip_downscale:
+                    if x_sample_image.width > int(W/pixelSize) and x_sample_image.height > int(H/pixelSize):
                         # Resize the image if pixel is true
                         x_sample_image = kCentroid(x_sample_image, int(W/pixelSize), int(H/pixelSize), 2)
-                    elif pixelvae == "true":
+                    elif x_sample_image.width < int(W/pixelSize) and x_sample_image.height < int(H/pixelSize):
                         x_sample_image = x_sample_image.resize((W, H), resample=Image.Resampling.NEAREST)
                     x_sample_image.save(
                         os.path.join(outpath, file_name + ".png")
