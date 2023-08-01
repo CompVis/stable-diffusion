@@ -44,7 +44,6 @@ from websockets import serve, connect
 from io import BytesIO
 
 # Import console management libraries
-import pygetwindow as gw
 from rich import print as rprint
 from colorama import just_fix_windows_console
 

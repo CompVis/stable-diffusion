@@ -17,6 +17,7 @@ from safetensors.torch import load_file
 from ldm.util import instantiate_from_config
 from optimUtils import split_weighted_subprompts
 from autoencoder.pixelvae import load_pixelvae_model
+from lora.lora import apply_lora, assign_lora_names_to_compvis_modules, load_lora, register_lora_for_inference, remove_lora_for_inference
 from rembg import remove
 import hitherdither
 import tomesd
@@ -38,8 +39,13 @@ from websockets import serve, connect
 from io import BytesIO
 
 # Import console management libraries
-import pygetwindow as gw
 from rich import print as rprint
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    try:
+        import pygetwindow as gw
+    except:
+        rprint(f"[#ab333d]Pygetwindow could not be loaded. This will limit some cosmetic functionality.")
 from colorama import just_fix_windows_console
 
 # Fix windows console for color codes
@@ -446,7 +452,9 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
         model.half()
         modelCS.half()
         precision = "half"
-    
+
+    assign_lora_names_to_compvis_modules(model, modelCS)
+
     # Print loading information
     rprint(f"[#c4f129]Loaded model to [#48a971]{model.cdevice}[#c4f129] at [#48a971]{precision} precision[#c4f129] in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
 
@@ -843,7 +851,7 @@ def paletteGen(colors, device, precision, prompt, seed):
     width = 512+((512/base)*(colors-base))
 
     # Generate text-to-image conversion with specified parameters
-    txt2img("false", device, precision, prompt, "", int(width), 512, 20, 7.0, int(seed), 1, "false", "false", "false")
+    txt2img(None, "none", None, device, precision, 1, prompt, "", int(width), 512, 20, 7.0, int(seed), 1, "false", "false", "false", "false")
 
     # Open the generated image
     image = Image.open("temp/temp1.png").convert('RGB')
@@ -862,7 +870,7 @@ def paletteGen(colors, device, precision, prompt, seed):
     palette.save("temp/temp1.png")
     rprint(f"[#c4f129]Image converted to color palette with [#48a971]{colors}[#c4f129] colors")
 
-def txt2img(pixel, device, precision, pixelSize, prompt, negative, W, H, ddim_steps, scale, seed, n_iter, tilingX, tilingY, pixelvae, post):
+def txt2img(loraPath, loraFile, loraWeight, device, precision, pixelSize, prompt, negative, W, H, ddim_steps, scale, seed, n_iter, tilingX, tilingY, pixelvae, post):
     os.makedirs("temp", exist_ok=True)
     outpath = "temp"
 
@@ -873,7 +881,6 @@ def txt2img(pixel, device, precision, pixelSize, prompt, negative, W, H, ddim_st
         seed = randint(0, 1000000)
     seed_everything(seed)
 
-    print(pixelSize)
     rprint(f"\n[#48a971]Text to Image[white] generating for [#48a971]{n_iter}[white] iterations with [#48a971]{ddim_steps}[white] steps per iteration at [#48a971]{W}[white]x[#48a971]{H}")
 
     start_code = None
@@ -896,6 +903,15 @@ def txt2img(pixel, device, precision, pixelSize, prompt, negative, W, H, ddim_st
         precision_scope = autocast
     else:
         precision_scope = nullcontext
+
+    if loraFile != "none":
+        lora_filename = os.path.join(loraPath, loraFile)
+        lora_tensors = load_file(lora_filename)
+        lora = load_lora(lora_filename, lora_tensors, model)
+        lora.multiplier = loraWeight/100
+        register_lora_for_inference(lora)
+        apply_lora()
+        rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraFile)[0]} [#494b9b]LoRA with [#48a971]{loraWeight}% [#494b9b]strength")
 
     seeds = []
     with torch.no_grad():
@@ -993,11 +1009,17 @@ def txt2img(pixel, device, precision, pixelSize, prompt, negative, W, H, ddim_st
                     
                     # Delete the samples to free up memory
                     del samples_ddim
+
+        if loraFile != "none":
+            # Release lora
+            remove_lora_for_inference(lora)
+            del lora
+        
         if post == "true":
             palettizeOutput(int(n_iter))
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
 
-def img2img(pixel, device, precision, pixelSize, prompt, negative, W, H, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post):
+def img2img(loraPath, loraFile, loraWeight, device, precision, pixelSize, prompt, negative, W, H, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post):
     timer = time.time()
     init_img = "temp/input.png"
 
@@ -1052,6 +1074,15 @@ def img2img(pixel, device, precision, pixelSize, prompt, negative, W, H, ddim_st
         precision_scope = autocast
     else:
         precision_scope = nullcontext
+
+    if loraFile != "none":
+        lora_filename = os.path.join(loraPath, loraFile)
+        lora_tensors = load_file(lora_filename)
+        lora = load_lora(lora_filename, lora_tensors, model)
+        lora.multiplier = loraWeight/100
+        register_lora_for_inference(lora)
+        apply_lora()
+        rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraFile)[0]} [#494b9b]LoRA with [#48a971]{loraWeight}% [#494b9b]strength")
 
     seeds = []
     assert 0.0 <= strength <= 1.0, "can only work with strength in [0.0, 1.0]"
@@ -1158,6 +1189,12 @@ def img2img(pixel, device, precision, pixelSize, prompt, negative, W, H, ddim_st
                     
                     # Delete the samples to free up memory
                     del samples_ddim
+
+        if loraFile != "none":
+            # Release lora
+            remove_lora_for_inference(lora)
+            del lora
+
         if post == "true":
             palettizeOutput(int(n_iter))
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
@@ -1170,9 +1207,9 @@ async def server(websocket):
             await websocket.send("running txt2img")
 
             # Extract parameters from the message
-            pixel, device, precision, pixelSize, prompt, negative, w, h, ddim_steps, scale, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dmodel", "ddevice", "dprecision", "dpixelsize", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
+            loraPath, loraFile, loraWeight, device, precision, pixelSize, prompt, negative, w, h, ddim_steps, scale, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafile", "dloraweight", "ddevice", "dprecision", "dpixelsize", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
             try:
-                txt2img(pixel, device, precision, int(pixelSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
+                txt2img(loraPath, loraFile, int(loraWeight), device, precision, int(pixelSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
                 await websocket.send("returning txt2img")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
@@ -1194,9 +1231,9 @@ async def server(websocket):
             await websocket.send("running img2img")
 
             # Extract parameters from the message
-            pixel, device, precision, pixelSize, prompt, negative, w, h, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dmodel", "ddevice", "dprecision", "dpixelsize", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dstrength", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
+            loraPath, loraFile, loraWeight, device, precision, pixelSize, prompt, negative, w, h, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafile", "dloraweight", "ddevice", "dprecision", "dpixelsize", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dstrength", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
             try:
-                img2img(pixel, device, precision, int(pixelSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), float(strength)/100, int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
+                img2img(loraPath, loraFile, int(loraWeight), device, precision, int(pixelSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), float(strength)/100, int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
                 await websocket.send("returning img2img")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
@@ -1262,20 +1299,23 @@ async def server(websocket):
 
         elif re.search(r"connected.+", message):
             background, extensionVersion = searchString(message, "dbackground", "dversion", "end")
-            rd = gw.getWindowsWithTitle("Retro Diffusion Image Generator")[0]
-            if background == "false":
-                try:
-                    # Restore and activate the window
-                    rd.restore()
-                    rd.activate()
-                except:
-                    pass
-            else:
-                try:
-                    # Minimize the window
-                    rd.minimize()
-                except:
-                    pass
+            try:
+                rd = gw.getWindowsWithTitle("Retro Diffusion Image Generator")[0]
+                if background == "false":
+                    try:
+                        # Restore and activate the window
+                        rd.restore()
+                        rd.activate()
+                    except:
+                        pass
+                else:
+                    try:
+                        # Minimize the window
+                        rd.minimize()
+                    except:
+                        pass
+            except:
+                pass
 
             if extensionVersion == expectedVersion:
                 await websocket.send("connected")
