@@ -851,7 +851,7 @@ def paletteGen(colors, device, precision, prompt, seed):
     width = 512+((512/base)*(colors-base))
 
     # Generate text-to-image conversion with specified parameters
-    txt2img(None, "none", None, device, precision, 1, prompt, "", int(width), 512, 20, 7.0, int(seed), 1, "false", "false", "false", "false")
+    txt2img(None, ["none"], [0], device, precision, 1, prompt, "", int(width), 512, 20, 7.0, int(seed), 1, "false", "false", "false", "false")
 
     # Open the generated image
     image = Image.open("temp/temp1.png").convert('RGB')
@@ -870,7 +870,7 @@ def paletteGen(colors, device, precision, prompt, seed):
     palette.save("temp/temp1.png")
     rprint(f"[#c4f129]Image converted to color palette with [#48a971]{colors}[#c4f129] colors")
 
-def txt2img(loraPath, loraFile, loraWeight, device, precision, pixelSize, prompt, negative, W, H, ddim_steps, scale, seed, n_iter, tilingX, tilingY, pixelvae, post):
+def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prompt, negative, W, H, ddim_steps, scale, seed, n_iter, tilingX, tilingY, pixelvae, post):
     os.makedirs("temp", exist_ok=True)
     outpath = "temp"
 
@@ -904,14 +904,19 @@ def txt2img(loraPath, loraFile, loraWeight, device, precision, pixelSize, prompt
     else:
         precision_scope = nullcontext
 
-    if loraFile != "none":
-        lora_filename = os.path.join(loraPath, loraFile)
-        lora_tensors = load_file(lora_filename)
-        lora = load_lora(lora_filename, lora_tensors, model)
-        lora.multiplier = loraWeight/100
-        register_lora_for_inference(lora)
-        apply_lora()
-        rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraFile)[0]} [#494b9b]LoRA with [#48a971]{loraWeight}% [#494b9b]strength")
+    loras = []
+    for i, loraFile in enumerate(loraFiles):
+        if loraFile != "none":
+            lora_filename = os.path.join(loraPath, loraFile)
+            lora_tensors = load_file(lora_filename)
+            loras.append(load_lora(lora_filename, lora_tensors, model))
+            loras[i].multiplier = loraWeights[i]/100
+            register_lora_for_inference(loras[i])
+            apply_lora()
+            rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraFile)[0]} [#494b9b]LoRA with [#48a971]{loraWeights[i]}% [#494b9b]strength")
+        else:
+            loras.append(None)
+
 
     seeds = []
     with torch.no_grad():
@@ -925,21 +930,8 @@ def txt2img(loraPath, loraFile, loraWeight, device, precision, pixelSize, prompt
                     modelCS.to(device)
                     uc = None
                     uc = modelCS.get_learned_conditioning(negative_data)
-                    if isinstance(prompts, tuple):
-                        prompts = list(prompts)
-                    
-                    # Split weighted subprompts if multiple prompts are provided
-                    subprompts, weights = split_weighted_subprompts(prompts[0])
-                    if len(subprompts) > 1:
-                        c = torch.zeros_like(modelCS.get_learned_conditioning([""]))
-                        totalWeight = sum(weights)
-                        # Normalize each "sub prompt" and add it
-                        for i in range(len(subprompts)):
-                            weight = weights[i]
-                            weight = weight / totalWeight
-                            c = torch.add(c, modelCS.get_learned_conditioning(subprompts[i]), alpha=weight)
-                    else:
-                        c = modelCS.get_learned_conditioning(prompts)
+
+                    c = modelCS.get_learned_conditioning(prompts)
 
                     shape = [1, 4, H // 8, W // 8]
 
@@ -1010,16 +1002,17 @@ def txt2img(loraPath, loraFile, loraWeight, device, precision, pixelSize, prompt
                     # Delete the samples to free up memory
                     del samples_ddim
 
-        if loraFile != "none":
-            # Release lora
-            remove_lora_for_inference(lora)
-            del lora
-        
+        for lora in loras:
+            if lora is not None:
+                # Release lora
+                remove_lora_for_inference(lora)
+        del loras
+
         if post == "true":
             palettizeOutput(int(n_iter))
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
 
-def img2img(loraPath, loraFile, loraWeight, device, precision, pixelSize, prompt, negative, W, H, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post):
+def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prompt, negative, W, H, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post):
     timer = time.time()
     init_img = "temp/input.png"
 
@@ -1075,14 +1068,18 @@ def img2img(loraPath, loraFile, loraWeight, device, precision, pixelSize, prompt
     else:
         precision_scope = nullcontext
 
-    if loraFile != "none":
-        lora_filename = os.path.join(loraPath, loraFile)
-        lora_tensors = load_file(lora_filename)
-        lora = load_lora(lora_filename, lora_tensors, model)
-        lora.multiplier = loraWeight/100
-        register_lora_for_inference(lora)
-        apply_lora()
-        rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraFile)[0]} [#494b9b]LoRA with [#48a971]{loraWeight}% [#494b9b]strength")
+    loras = []
+    for i, loraFile in enumerate(loraFiles):
+        if loraFile != "none":
+            lora_filename = os.path.join(loraPath, loraFile)
+            lora_tensors = load_file(lora_filename)
+            loras.append(load_lora(lora_filename, lora_tensors, model))
+            loras[i].multiplier = loraWeights[i]/100
+            register_lora_for_inference(loras[i])
+            apply_lora()
+            rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraFile)[0]} [#494b9b]LoRA with [#48a971]{loraWeights[i]}% [#494b9b]strength")
+        else:
+            loras.append(None)
 
     seeds = []
     assert 0.0 <= strength <= 1.0, "can only work with strength in [0.0, 1.0]"
@@ -1102,21 +1099,8 @@ def img2img(loraPath, loraFile, loraWeight, device, precision, pixelSize, prompt
                     modelCS.to(device)
                     uc = None
                     uc = modelCS.get_learned_conditioning(negative_data)
-                    if isinstance(prompts, tuple):
-                        prompts = list(prompts)
 
-                    # Split weighted subprompts if multiple prompts are provided
-                    subprompts, weights = split_weighted_subprompts(prompts[0])
-                    if len(subprompts) > 1:
-                        c = torch.zeros_like(uc)
-                        totalWeight = sum(weights)
-                        # Normalize each "sub prompt" and add it
-                        for i in range(len(subprompts)):
-                            weight = weights[i]
-                            weight = weight / totalWeight
-                            c = torch.add(c, modelCS.get_learned_conditioning(subprompts[i]), alpha=weight)
-                    else:
-                        c = modelCS.get_learned_conditioning(prompts)
+                    c = modelCS.get_learned_conditioning(prompts)
 
                     # Move modelCS to CPU if necessary to free up GPU memory
                     if device != "cpu":
@@ -1190,10 +1174,11 @@ def img2img(loraPath, loraFile, loraWeight, device, precision, pixelSize, prompt
                     # Delete the samples to free up memory
                     del samples_ddim
 
-        if loraFile != "none":
-            # Release lora
-            remove_lora_for_inference(lora)
-            del lora
+        for lora in loras:
+            if lora is not None:
+                # Release lora
+                remove_lora_for_inference(lora)
+        del loras
 
         if post == "true":
             palettizeOutput(int(n_iter))
@@ -1207,9 +1192,11 @@ async def server(websocket):
             await websocket.send("running txt2img")
 
             # Extract parameters from the message
-            loraPath, loraFile, loraWeight, device, precision, pixelSize, prompt, negative, w, h, ddim_steps, scale, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafile", "dloraweight", "ddevice", "dprecision", "dpixelsize", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
+            loraPath, loraFiles, loraWeights, device, precision, pixelSize, prompt, negative, w, h, ddim_steps, scale, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafiles", "dloraweights", "ddevice", "dprecision", "dpixelsize", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
+            loraFiles = loraFiles.split('|')
+            loraWeights = [int(x) for x in loraWeights.split('|')]
             try:
-                txt2img(loraPath, loraFile, int(loraWeight), device, precision, int(pixelSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
+                txt2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
                 await websocket.send("returning txt2img")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
@@ -1231,9 +1218,11 @@ async def server(websocket):
             await websocket.send("running img2img")
 
             # Extract parameters from the message
-            loraPath, loraFile, loraWeight, device, precision, pixelSize, prompt, negative, w, h, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafile", "dloraweight", "ddevice", "dprecision", "dpixelsize", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dstrength", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
+            loraPath, loraFiles, loraWeights, device, precision, pixelSize, prompt, negative, w, h, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafiles", "dloraweights", "ddevice", "dprecision", "dpixelsize", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dstrength", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
+            loraFiles = loraFiles.split('|')
+            loraWeights = [int(x) for x in loraWeights.split('|')]
             try:
-                img2img(loraPath, loraFile, int(loraWeight), device, precision, int(pixelSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), float(strength)/100, int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
+                img2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), float(strength)/100, int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
                 await websocket.send("returning img2img")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
