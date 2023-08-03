@@ -295,9 +295,6 @@ def lora_reset_cached_weight(self: Union[torch.nn.Conv2d, torch.nn.Linear]):
 
 
 def lora_Linear_forward(self, input):
-    # if shared.opts.lora_functional:
-    #     return lora_forward(self, input, torch.nn.Linear_forward_before_lora)
-
     lora_apply_weights(self)
 
     return torch.nn.Linear_forward_before_lora(self, input)
@@ -310,9 +307,6 @@ def lora_Linear_load_state_dict(self, *args, **kwargs):
 
 
 def lora_Conv2d_forward(self, input):
-    # if shared.opts.lora_functional:
-    #     return lora_forward(self, input, torch.nn.Conv2d_forward_before_lora)
-
     lora_apply_weights(self)
 
     return torch.nn.Conv2d_forward_before_lora(self, input)
