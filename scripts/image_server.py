@@ -72,6 +72,20 @@ sounds = False
 
 expectedVersion = "7.5.0"
 
+# For testing only, limits memory usage to "maxMemory"
+maxMemory = 4
+if False:
+    cardMemory = torch.cuda.get_device_properties("cuda").total_memory / 1073741824
+    usedMemory = cardMemory - (torch.cuda.mem_get_info()[0] / 1073741824)
+
+    fractionalMaxMemory = (maxMemory - (usedMemory+0.3)) / cardMemory
+    print(usedMemory)
+    print(cardMemory)
+    print(maxMemory)
+    print(cardMemory*fractionalMaxMemory)
+
+    torch.cuda.set_per_process_memory_fraction(fractionalMaxMemory)
+
 global timeout
 global loaded
 loaded = ""
