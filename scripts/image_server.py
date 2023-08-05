@@ -1,5 +1,5 @@
 # Import core libraries
-import os, re, time, sys, asyncio, ctypes, math
+import os, re, time, sys, asyncio, ctypes, math, threading
 import torch
 import scipy
 import numpy as np
@@ -47,6 +47,7 @@ with warnings.catch_warnings():
     except:
         rprint(f"[#ab333d]Pygetwindow could not be loaded. This will limit some cosmetic functionality.")
 from colorama import just_fix_windows_console
+import playsound
 
 # Fix windows console for color codes
 just_fix_windows_console()
@@ -66,11 +67,31 @@ global modelFS
 global modelPV
 global running
 
+global sounds
+sounds = False
+
 expectedVersion = "7.5.0"
 
 global timeout
 global loaded
 loaded = ""
+
+def audioThread(file):
+    try:
+        absoluteFile = os.path.abspath(f"../sounds/{file}")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            playsound.playsound(absoluteFile)
+    except:
+        pass
+
+def play(file):
+    global sounds
+    if sounds == "true":
+        try:
+            threading.Thread(target=audioThread, args=(file,), daemon=True).start()
+        except:
+            pass
 
 def patch_conv(**patch):
     # Patch the Conv2d class with a custom __init__ method
@@ -456,6 +477,7 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
     assign_lora_names_to_compvis_modules(model, modelCS)
 
     # Print loading information
+    play("iteration.wav")
     rprint(f"[#c4f129]Loaded model to [#48a971]{model.cdevice}[#c4f129] at [#48a971]{precision} precision[#c4f129] in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
 
 def kCentroid(image, width, height, centroids):
@@ -528,6 +550,7 @@ def pixelDetectVerbose():
             img_indexed = downscale.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
         
         img_indexed.save("temp/temp.png")
+    play("batch.wav")
 
 def kDenoise(image, smoothing, strength):
     image = image.convert("RGB")
@@ -786,6 +809,12 @@ def palettize(numFiles, source, colors, bestPaletteFolder, paletteFile, paletteU
                     img_indexed = img.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
 
         img_indexed.save(file)
+
+        if file != files[-1]:
+            play("iteration.wav")
+        else:
+            play("batch.wav")
+
     rprint(f"[#c4f129]Palettized [#48a971]{len(files)}[#c4f129] images in [#48a971]{round(time.time()-timer, 2)}[#c4f129] seconds")
     if source == "Best Palette":
         rprint(f"[#c4f129]Palettes used: [#494b9b]{', '.join(palFiles)}")
@@ -806,6 +835,10 @@ def palettizeOutput(numFiles):
             img_indexed = img.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
         
             img_indexed.save(file)
+        if file != files[-1]:
+            play("iteration.wav")
+        else:
+            play("batch.wav")
 
 def rembg(numFiles):
     
@@ -827,9 +860,14 @@ def rembg(numFiles):
             # Ignore warnings during background removal
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-
+                warnings.filterwarnings("ignore", category=DeprecationWarning)
                 # Remove the background and save the image
                 remove(img).save(file)
+
+            if file != files[-1]:
+                play("iteration.wav")
+            else:
+                play("batch.wav")
     rprint(f"[#c4f129]Removed [#48a971]{len(files)}[#c4f129] backgrounds in [#48a971]{round(time.time()-timer, 2)}[#c4f129] seconds")
 
 def kCentroidVerbose(width, height, centroids):
@@ -842,6 +880,7 @@ def kCentroidVerbose(width, height, centroids):
     # Perform k-centroid downscaling and save the image
     for _ in clbar(range(1), name = "Processed", unit = "image", prefixwidth = 12, suffixwidth = 28):
         kCentroid(init_img, int(width), int(height), int(centroids)).save("temp/temp.png")
+    play("batch.wav")
         
 def paletteGen(colors, device, precision, prompt, seed):
     # Calculate the base for palette generation
@@ -987,6 +1026,10 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
                     x_sample_image.save(
                         os.path.join(outpath, file_name + ".png")
                     )
+
+                    if n_iter > 1 and base_count < n_iter:
+                        play("iteration.wav")
+
                     seeds.append(str(seed))
                     seed += 1
                     base_count += 1
@@ -1009,7 +1052,10 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
         del loras
 
         if post == "true":
+            play("iteration.wav")
             palettizeOutput(int(n_iter))
+        else:
+            play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
 
 def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prompt, negative, W, H, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post):
@@ -1159,6 +1205,10 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
                     x_sample_image.save(
                         os.path.join(outpath, file_name + ".png")
                     )
+
+                    if n_iter > 1 and base_count < n_iter:
+                        play("iteration.wav")
+
                     seeds.append(str(seed))
                     seed += 1
                     base_count += 1
@@ -1181,7 +1231,10 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
         del loras
 
         if post == "true":
+            play("iteration.wav")
             palettizeOutput(int(n_iter))
+        else:
+            play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
 
 async def server(websocket):
@@ -1200,6 +1253,7 @@ async def server(websocket):
                 await websocket.send("returning txt2img")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                play("error.wav")
                 await websocket.send("returning error")
 
         elif re.search(r"txt2pal.+", message):
@@ -1212,6 +1266,7 @@ async def server(websocket):
                 await websocket.send("returning txt2pal")
             except Exception as e:
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                play("error.wav")
                 await websocket.send("returning error")
 
         elif re.search(r"img2img.+", message):
@@ -1226,6 +1281,7 @@ async def server(websocket):
                 await websocket.send("returning img2img")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                play("error.wav")
                 await websocket.send("returning error")
 
         elif re.search(r"palettize.+", message):
@@ -1238,6 +1294,7 @@ async def server(websocket):
                 await websocket.send("returning palettize")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                play("error.wav")
                 await websocket.send("returning error")
 
         elif re.search(r"rembg.+", message):
@@ -1250,6 +1307,7 @@ async def server(websocket):
                 await websocket.send("returning rembg")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                play("error.wav")
                 await websocket.send("returning error")
 
         elif re.search(r"pixelDetect.+", message):
@@ -1259,6 +1317,7 @@ async def server(websocket):
                 await websocket.send("returning pixelDetect")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                play("error.wav")
                 await websocket.send("returning error")
 
         elif re.search(r"kcentroid.+", message):
@@ -1271,6 +1330,7 @@ async def server(websocket):
                 await websocket.send("returning kcentroid")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                play("error.wav")
                 await websocket.send("returning error")
 
         elif re.search(r"load.+", message):
@@ -1282,12 +1342,16 @@ async def server(websocket):
                 try:
                     load_model(path, model, "scripts/v1-inference.yaml", device, precision, optimized)
                     loaded = message
-                except Exception as e: rprint(f"\n[#ab333d]ERROR:\n{e}")
+                except Exception as e:
+                    rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                    play("error.wav")
+                    await websocket.send("returning error")
                 
             await websocket.send("loaded model")
 
         elif re.search(r"connected.+", message):
-            background, extensionVersion = searchString(message, "dbackground", "dversion", "end")
+            global sounds
+            background, sounds, extensionVersion = searchString(message, "dbackground", "dsound", "dversion", "end")
             try:
                 rd = gw.getWindowsWithTitle("Retro Diffusion Image Generator")[0]
                 if background == "false":
@@ -1307,6 +1371,7 @@ async def server(websocket):
                 pass
 
             if extensionVersion == expectedVersion:
+                play("click.wav")
                 await websocket.send("connected")
             else:
                 rprint(f"\n[#ab333d]The current client is on a version that is incompatible with the image generator version. Please update the extension.")
