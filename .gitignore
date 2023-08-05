@@ -43,3 +43,4 @@ models/base/StableDiffusionV1-5.safetensors
 models/base/modelmicro.pxlm
 *.pxlm
 *.safetensors
+*.ckpt
