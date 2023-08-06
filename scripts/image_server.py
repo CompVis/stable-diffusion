@@ -1037,6 +1037,17 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
                         x_sample_image = kCentroid(x_sample_image, int(W/pixelSize), int(H/pixelSize), 2)
                     elif x_sample_image.width < int(W/pixelSize) and x_sample_image.height < int(H/pixelSize):
                         x_sample_image = x_sample_image.resize((W, H), resample=Image.Resampling.NEAREST)
+
+                    if "1bit.pxlm" in loraFiles:
+                        x_sample_image = x_sample_image.quantize(colors=4, method=1, kmeans=4, dither=0).convert('RGB')
+                        x_sample_image = x_sample_image.quantize(colors=2, method=1, kmeans=2, dither=0).convert('RGB')
+                        pixels = list(x_sample_image.getdata())
+                        darkest, brightest = min(pixels), max(pixels)
+                        new_pixels = [0 if pixel == darkest else 255 if pixel == brightest else pixel for pixel in pixels]
+                        new_image = Image.new("L", x_sample_image.size)
+                        new_image.putdata(new_pixels)
+                        x_sample_image = new_image.convert('RGB')
+
                     x_sample_image.save(
                         os.path.join(outpath, file_name + ".png")
                     )
@@ -1216,6 +1227,17 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
                         x_sample_image = kCentroid(x_sample_image, int(W/pixelSize), int(H/pixelSize), 2)
                     elif x_sample_image.width < int(W/pixelSize) and x_sample_image.height < int(H/pixelSize):
                         x_sample_image = x_sample_image.resize((W, H), resample=Image.Resampling.NEAREST)
+
+                    if "1bit.pxlm" in loraFiles:
+                        x_sample_image = x_sample_image.quantize(colors=4, method=1, kmeans=4, dither=0).convert('RGB')
+                        x_sample_image = x_sample_image.quantize(colors=2, method=1, kmeans=2, dither=0).convert('RGB')
+                        pixels = list(x_sample_image.getdata())
+                        darkest, brightest = min(pixels), max(pixels)
+                        new_pixels = [0 if pixel == darkest else 255 if pixel == brightest else pixel for pixel in pixels]
+                        new_image = Image.new("L", x_sample_image.size)
+                        new_image.putdata(new_pixels)
+                        x_sample_image = new_image.convert('RGB')
+
                     x_sample_image.save(
                         os.path.join(outpath, file_name + ".png")
                     )
