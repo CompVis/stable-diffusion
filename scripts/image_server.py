@@ -1156,17 +1156,20 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
         precision_scope = nullcontext
 
     loras = []
+    fernet = Fernet("I47jl1hqUPug4KbVYd60_zeXhn_IH_ECT3QRGiBxdxo=")
     for i, loraFile in enumerate(loraFiles):
         if loraFile != "none":
             lora_filename = os.path.join(loraPath, loraFile)
             if os.path.splitext(loraFile)[1] == ".pxlm":
-                fernet = Fernet("I47jl1hqUPug4KbVYd60_zeXhn_IH_ECT3QRGiBxdxo=")
                 with open(lora_filename, 'rb') as enc_file:
                     encrypted = enc_file.read()
-
-                lora_filename = io.BytesIO(fernet.decrypt(encrypted))
-            lora_tensors = load_file(lora_filename)
-            loras.append(load_lora(lora_filename, lora_tensors, model))
+                try:
+                    decrypted = fernet.decrypt(encrypted)
+                except:
+                    decrypted = encrypted
+                with open(lora_filename, 'wb') as dec_file:
+                    dec_file.write(decrypted)
+            loras.append(load_lora(lora_filename, model))
             loras[i].multiplier = loraWeights[i]/100
             register_lora_for_inference(loras[i])
             apply_lora()
@@ -1282,10 +1285,16 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
                     # Delete the samples to free up memory
                     del samples_ddim
 
-        for lora in loras:
+        for i, lora in enumerate(loras):
             if lora is not None:
                 # Release lora
                 remove_lora_for_inference(lora)
+            if os.path.splitext(loraFiles[i])[1] == ".pxlm":
+                with open(os.path.join(loraPath, loraFiles[i]), 'rb') as enc_file:
+                    decrypted = enc_file.read()
+                encrypted = fernet.encrypt(decrypted)
+                with open(os.path.join(loraPath, loraFiles[i]), 'wb') as dec_file:
+                    dec_file.write(encrypted)
         del loras
 
         if post == "true":
