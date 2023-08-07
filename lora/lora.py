@@ -1,7 +1,9 @@
 import os
 import re
+import io
 from typing import Union
 import torch
+from safetensors.torch import load_file
 
 re_unet_down_blocks = re.compile(r"lora_unet_down_blocks_(\d+)_attentions_(\d+)_(.+)")
 re_unet_mid_blocks = re.compile(r"lora_unet_mid_block_attentions_(\d+)_(.+)")
@@ -142,7 +144,8 @@ def assign_lora_names_to_compvis_modules(model, modelCS):
     print("Added LoRA weight mapping layers")
 
 
-def load_lora(filename, lora_tensors, model):
+def load_lora(filename, model):
+    lora_tensors = load_file(filename)
     lora = LoraModule(filename)
     lora.mtime = os.path.getmtime(filename)
 
