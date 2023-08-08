@@ -630,7 +630,7 @@ def determine_best_k(image, max_k):
         best_k = 2
     else:
         elbow_index = np.argmax(rate_of_change)
-        best_k = elbow_index + 1
+        best_k = elbow_index + 2
 
     return best_k
 
@@ -708,7 +708,7 @@ def determine_best_k_verbose(image, max_k):
         best_k = 1
     else:
         elbow_index = np.argmax(rate_of_change)
-        best_k = elbow_index + 1
+        best_k = elbow_index + 2
 
     return best_k
 
