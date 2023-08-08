@@ -44,3 +44,4 @@ models/base/modelmicro.pxlm
 *.pxlm
 *.safetensors
 *.ckpt
+models/loras/LICENSE
