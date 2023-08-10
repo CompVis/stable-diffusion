@@ -7,39 +7,13 @@ from contextlib import contextmanager
 import pytorch_lightning as pl
 import torch
 
-from einops import rearrange
 from autoencoder.feather_tile import rebuild_image, tile_image
-import ldm.modules.diffusionmodules.model
 from ldm.modules.diffusionmodules.model import Decoder, Encoder
 from autoencoder.distributions import DiagonalGaussianDistribution
 from ldm.modules.ema import LitEma
 from ldm.util import instantiate_from_config
 
 logger = logging.getLogger(__name__)
-
-def autoencoder_sdp_forward(self, x):
-    h_ = x
-    h_ = self.norm(h_)
-    q = self.q(h_)
-    k = self.k(h_)
-    v = self.v(h_)
-
-    # compute attention
-    b, c, h, w = q.shape
-    q, k, v = (rearrange(t, 'b c h w -> b (h w) c') for t in (q, k, v))
-    dtype = q.dtype
-    q, k, v = q.float(), k.float(), v.float()
-    q = q.contiguous()
-    k = k.contiguous()
-    v = v.contiguous()
-    h_ = torch.nn.functional.scaled_dot_product_attention(q, k, v, dropout_p=0.0, is_causal=False)
-    h_ = h_.to(dtype)
-    h_ = rearrange(h_, 'b (h w) c -> b c h w', h=h)
-    h_ = self.proj_out(h_)
-
-    return x+h_
-
-ldm.modules.diffusionmodules.model.AttnBlock.forward = autoencoder_sdp_forward
 
 class AutoencoderKL(pl.LightningModule):
     def __init__(

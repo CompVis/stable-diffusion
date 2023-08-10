@@ -179,20 +179,16 @@ class AttnBlock(nn.Module):
         v = self.v(h_)
 
         # compute attention
-        b,c,h,w = q.shape
-        q = q.reshape(b,c,h*w)
-        q = q.permute(0,2,1)   # b,hw,c
-        k = k.reshape(b,c,h*w) # b,c,hw
-        w_ = torch.bmm(q,k)     # b,hw,hw    w[b,i,j]=sum_c q[b,i,c]k[b,c,j]
-        w_ = w_ * (int(c)**(-0.5))
-        w_ = torch.nn.functional.softmax(w_, dim=2)
-
-        # attend to values
-        v = v.reshape(b,c,h*w)
-        w_ = w_.permute(0,2,1)   # b,hw,hw (first hw of k, second of q)
-        h_ = torch.bmm(v,w_)     # b, c,hw (hw of q) h_[b,c,j] = sum_i v[b,c,i] w_[b,i,j]
-        h_ = h_.reshape(b,c,h,w)
-
+        b, c, h, w = q.shape
+        q, k, v = (rearrange(t, 'b c h w -> b (h w) c') for t in (q, k, v))
+        dtype = q.dtype
+        q, k, v = q.float(), k.float(), v.float()
+        q = q.contiguous()
+        k = k.contiguous()
+        v = v.contiguous()
+        h_ = torch.nn.functional.scaled_dot_product_attention(q, k, v, dropout_p=0.0, is_causal=False)
+        h_ = h_.to(dtype)
+        h_ = rearrange(h_, 'b (h w) c -> b c h w', h=h)
         h_ = self.proj_out(h_)
 
         return x+h_
