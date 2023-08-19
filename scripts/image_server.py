@@ -176,7 +176,10 @@ def searchString(string, *args):
     for x in range(len(args)-1):
         # Perform a regex search in the string using the current and next argument as lookaround patterns
         # Append the matched substring to the output list
-        out.append(re.search(f"(?<={{{args[x]}}}).*(?={{{args[x+1]}}})", string).group())
+        try:
+            out.append(re.search(f"(?<={{{args[x]}}}).*(?={{{args[x+1]}}})", string).group())
+        except:
+            rprint(f"\n[#ab333d]Could not find: {args[x]}")
 
     return out
 
@@ -1310,12 +1313,11 @@ async def server(websocket):
     async for message in websocket:
         if re.search(r"txt2img.+", message):
             await websocket.send("running txt2img")
-
-            # Extract parameters from the message
-            loraPath, loraFiles, loraWeights, device, precision, pixelSize, prompt, negative, w, h, ddim_steps, scale, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafiles", "dloraweights", "ddevice", "dprecision", "dpixelsize", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
-            loraFiles = loraFiles.split('|')
-            loraWeights = [int(x) for x in loraWeights.split('|')]
             try:
+                # Extract parameters from the message
+                loraPath, loraFiles, loraWeights, device, precision, pixelSize, prompt, negative, w, h, ddim_steps, scale, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafiles", "dloraweights", "ddevice", "dprecision", "dpixelsize", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
+                loraFiles = loraFiles.split('|')
+                loraWeights = [int(x) for x in loraWeights.split('|')]
                 txt2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
                 await websocket.send("returning txt2img")
             except Exception as e: 
@@ -1325,10 +1327,9 @@ async def server(websocket):
 
         elif re.search(r"txt2pal.+", message):
             await websocket.send("running txt2pal")
-
-            # Extract parameters from the message
-            device, precision, prompt, seed, colors = searchString(message, "ddevice", "dprecision", "dprompt", "dseed", "dcolors", "end")
             try:
+                # Extract parameters from the message
+                device, precision, prompt, seed, colors = searchString(message, "ddevice", "dprecision", "dprompt", "dseed", "dcolors", "end")
                 paletteGen(int(colors), device, precision, prompt, int(seed))
                 await websocket.send("returning txt2pal")
             except Exception as e:
@@ -1338,12 +1339,11 @@ async def server(websocket):
 
         elif re.search(r"img2img.+", message):
             await websocket.send("running img2img")
-
-            # Extract parameters from the message
-            loraPath, loraFiles, loraWeights, device, precision, pixelSize, prompt, negative, w, h, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafiles", "dloraweights", "ddevice", "dprecision", "dpixelsize", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dstrength", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
-            loraFiles = loraFiles.split('|')
-            loraWeights = [int(x) for x in loraWeights.split('|')]
             try:
+                # Extract parameters from the message
+                loraPath, loraFiles, loraWeights, device, precision, pixelSize, prompt, negative, w, h, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafiles", "dloraweights", "ddevice", "dprecision", "dpixelsize", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dstrength", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
+                loraFiles = loraFiles.split('|')
+                loraWeights = [int(x) for x in loraWeights.split('|')]
                 img2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), float(strength)/100, int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
                 await websocket.send("returning img2img")
             except Exception as e: 
@@ -1353,10 +1353,9 @@ async def server(websocket):
 
         elif re.search(r"palettize.+", message):
             await websocket.send("running palettize")
-
-            # Extract parameters from the message
-            numFiles, source, colors, bestPaletteFolder, paletteFile, paletteURL, dithering, strength, denoise, smoothness, intensity = searchString(message, "dnumfiles", "dsource", "dcolors", "dbestpalettefolder", "dpalettefile", "dpaletteURL", "ddithering", "dstrength", "ddenoise", "dsmoothness", "dintensity", "end")
             try:
+                # Extract parameters from the message
+                numFiles, source, colors, bestPaletteFolder, paletteFile, paletteURL, dithering, strength, denoise, smoothness, intensity = searchString(message, "dnumfiles", "dsource", "dcolors", "dbestpalettefolder", "dpalettefile", "dpaletteURL", "ddithering", "dstrength", "ddenoise", "dsmoothness", "dintensity", "end")
                 palettize(int(numFiles), source,  int(colors), bestPaletteFolder, paletteFile, paletteURL, int(dithering), int(strength), denoise, int(smoothness), int(intensity))
                 await websocket.send("returning palettize")
             except Exception as e: 
@@ -1366,10 +1365,9 @@ async def server(websocket):
 
         elif re.search(r"rembg.+", message):
             await websocket.send("running rembg")
-
-            # Extract parameters from the message
-            numFiles = searchString(message, "dnumfiles", "end")
             try:
+                # Extract parameters from the message
+                numFiles = searchString(message, "dnumfiles", "end")
                 rembg(int(numFiles[0]))
                 await websocket.send("returning rembg")
             except Exception as e: 
@@ -1389,10 +1387,9 @@ async def server(websocket):
 
         elif re.search(r"kcentroid.+", message):
             await websocket.send("running kcentroid")
-
-            # Extract parameters from the message
-            width, height, centroids = searchString(message, "dwidth", "dheight", "dcentroids", "end")
             try:
+                # Extract parameters from the message
+                width, height, centroids = searchString(message, "dwidth", "dheight", "dcentroids", "end")
                 kCentroidVerbose(int(width), int(height), int(centroids))
                 await websocket.send("returning kcentroid")
             except Exception as e: 
@@ -1404,9 +1401,9 @@ async def server(websocket):
             await websocket.send("loading model")
             global loaded
             if loaded != message:
-                # Extract parameters from the message
-                device, optimized, precision, path, model = searchString(message, "ddevice", "doptimized", "dprecision", "dpath", "dmodel", "end")
                 try:
+                    # Extract parameters from the message
+                    device, optimized, precision, path, model = searchString(message, "ddevice", "doptimized", "dprecision", "dpath", "dmodel", "end")
                     load_model(path, model, "scripts/v1-inference.yaml", device, precision, optimized)
                     loaded = message
                 except Exception as e:
@@ -1418,8 +1415,8 @@ async def server(websocket):
 
         elif re.search(r"connected.+", message):
             global sounds
-            background, sounds, extensionVersion = searchString(message, "dbackground", "dsound", "dversion", "end")
             try:
+                background, sounds, extensionVersion = searchString(message, "dbackground", "dsound", "dversion", "end")
                 rd = gw.getWindowsWithTitle("Retro Diffusion Image Generator")[0]
                 if background == "false":
                     try:
