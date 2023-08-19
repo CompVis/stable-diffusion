@@ -20,6 +20,9 @@ set python=%python% %1
 goto loop
 :afterloop
 
+call git checkount .
+call git pull
+
 IF NOT %custom_conda_path%=="Select Folder" (
   if NOT %custom_conda_path%=="image_server.py" (
     set paths=%custom_conda_path%
