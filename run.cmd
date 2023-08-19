@@ -20,7 +20,7 @@ set python=%python% %1
 goto loop
 :afterloop
 
-call git checkount .
+call git checkout .
 call git pull
 
 IF NOT %custom_conda_path%=="Select Folder" (
