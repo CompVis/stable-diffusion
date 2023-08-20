@@ -179,7 +179,8 @@ def searchString(string, *args):
         try:
             out.append(re.search(f"(?<={{{args[x]}}}).*(?={{{args[x+1]}}})", string).group())
         except:
-            rprint(f"\n[#ab333d]Could not find: {args[x]}")
+            if args[x] not in string:
+                rprint(f"\n[#ab333d]Could not find: {args[x]}")
 
     return out
 
