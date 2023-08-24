@@ -11,7 +11,6 @@ dependencies:
   - pytorch-cuda=11.8
   - pytorch=2.0.1
   - torchvision=0.15.2
-  - cudatoolkit
   - numpy=1.23.5
   - curl
   - pip:
