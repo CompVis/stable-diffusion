@@ -1,5 +1,3 @@
-numpy==1.23.5
-curl
 cryptography
 pygetwindow==0.0.9
 websockets==10.4
