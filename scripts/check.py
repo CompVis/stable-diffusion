@@ -21,7 +21,6 @@ print("\nImported core libraries")
 from ldm.util import instantiate_from_config
 from optimUtils import split_weighted_subprompts
 from autoencoder.pixelvae import load_pixelvae_model
-from rembg import remove
 import hitherdither
 import tomesd
 
