@@ -1,2 +1,2 @@
---pre torch==2.0.1 -i https://download.pytorch.org/whl/nightly/rocm5.6 --trusted-host download.pytorch.org
---pre torchvision==0.15.2 -i https://download.pytorch.org/whl/nightly/rocm5.6 --trusted-host download.pytorch.org
+--pre torch -i https://download.pytorch.org/whl/nightly/rocm5.6 --trusted-host download.pytorch.org
+--pre torchvision -i https://download.pytorch.org/whl/nightly/rocm5.6 --trusted-host download.pytorch.org
