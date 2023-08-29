@@ -942,11 +942,10 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
     # Set the seed for random number generation if not provided
     if seed == None:
         seed = randint(0, 1000000)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        seed_everything(seed)
-
-    rprint(f"\n[#48a971]Text to Image[white] generating for [#48a971]{n_iter}[white] iterations with [#48a971]{ddim_steps}[white] steps per iteration at [#48a971]{W}[white]x[#48a971]{H}")
+    
+    print()
+    seed_everything(seed)
+    rprint(f"[#48a971]Text to Image[white] generating for [#48a971]{n_iter}[white] iterations with [#48a971]{ddim_steps}[white] steps per iteration at [#48a971]{W}[white]x[#48a971]{H}")
 
     start_code = None
     sampler = "euler"
@@ -1125,11 +1124,10 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
     # Set a random seed if not provided
     if seed == None:
         seed = randint(0, 1000000)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        seed_everything(seed)
 
-    rprint(f"\n[#48a971]Image to Image[white] generating for [#48a971]{n_iter}[white] iterations with [#48a971]{ddim_steps}[white] steps per iteration at [#48a971]{W}[white]x[#48a971]{H}")
+    print()
+    seed_everything(seed)
+    rprint(f"[#48a971]Image to Image[white] generating for [#48a971]{n_iter}[white] iterations with [#48a971]{ddim_steps}[white] steps per iteration at [#48a971]{W}[white]x[#48a971]{H}")
 
     sampler = "ddim"
 
