@@ -967,6 +967,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
     else:
         precision_scope = nullcontext
 
+    # !!! REMEMBER: ALL MODEL FILES ARE BOUND UNDER THE LICENSE AGREEMENTS OUTLINED HERE: https://astropulse.co/#retrodiffusioneula https://astropulse.co/#retrodiffusionmodeleula !!!
     loras = []
     fernet = Fernet("I47jl1hqUPug4KbVYd60_zeXhn_IH_ECT3QRGiBxdxo=")
     for i, loraFile in enumerate(loraFiles):
@@ -1164,6 +1165,7 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
     else:
         precision_scope = nullcontext
 
+    # !!! REMEMBER: ALL MODEL FILES ARE BOUND UNDER THE LICENSE AGREEMENTS OUTLINED HERE: https://astropulse.co/#retrodiffusioneula https://astropulse.co/#retrodiffusionmodeleula !!!
     loras = []
     fernet = Fernet("I47jl1hqUPug4KbVYd60_zeXhn_IH_ECT3QRGiBxdxo=")
     for i, loraFile in enumerate(loraFiles):
