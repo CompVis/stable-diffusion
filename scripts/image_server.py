@@ -790,9 +790,11 @@ def palettize(numFiles, source, colors, bestPaletteFolder, paletteFile, paletteU
                     # Extract palette colors
                     palette = [x[1] for x in palImg.getcolors(16777216)]
 
-                    # Perform ordered dithering using Bayer matrix
-                    palette = hitherdither.palette.Palette(palette)
-                    img_indexed = hitherdither.ordered.bayer.bayer_dithering(img, palette, [threshold, threshold, threshold], order=dithering).convert('RGB')
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        # Perform ordered dithering using Bayer matrix
+                        palette = hitherdither.palette.Palette(palette)
+                        img_indexed = hitherdither.ordered.bayer.bayer_dithering(img, palette, [threshold, threshold, threshold], order=dithering).convert('RGB')
             else:
                 # Extract palette colors
                 palette = np.concatenate([x[1] for x in palImg.getcolors(16777216)]).tolist()
@@ -818,9 +820,11 @@ def palettize(numFiles, source, colors, bestPaletteFolder, paletteFile, paletteU
                     # Extract palette colors
                     palette = [x[1] for x in img_indexed.getcolors(16777216)]
 
-                    # Perform ordered dithering using Bayer matrix
-                    palette = hitherdither.palette.Palette(palette)
-                    img_indexed = hitherdither.ordered.bayer.bayer_dithering(img, palette, [threshold, threshold, threshold], order=dithering).convert('RGB')
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        # Perform ordered dithering using Bayer matrix
+                        palette = hitherdither.palette.Palette(palette)
+                        img_indexed = hitherdither.ordered.bayer.bayer_dithering(img, palette, [threshold, threshold, threshold], order=dithering).convert('RGB')
 
             else:
                 # Perform quantization without dithering
