@@ -21,7 +21,6 @@ from ldm.util import instantiate_from_config
 from optimUtils import split_weighted_subprompts
 from autoencoder.pixelvae import load_pixelvae_model
 from lora.lora import apply_lora, assign_lora_names_to_compvis_modules, load_lora, register_lora_for_inference, remove_lora_for_inference
-from rembg import remove
 import hitherdither
 import tomesd
 
@@ -865,6 +864,7 @@ def palettizeOutput(numFiles):
         else:
             play("batch.wav")
 
+# Unused for now
 def rembg(numFiles):
     
     timer = time.time()
@@ -886,7 +886,7 @@ def rembg(numFiles):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 # Remove the background and save the image
-                remove(img).save(file)
+                #remove(img).save(file)
 
             if file != files[-1]:
                 play("iteration.wav")
