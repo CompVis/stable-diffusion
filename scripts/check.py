@@ -47,4 +47,4 @@ from io import BytesIO
 from rich import print as rprint
 from colorama import just_fix_windows_console
 
-print("\nPython environment initialized successfully\n")
+print("\nPython environment initialized successfully")
