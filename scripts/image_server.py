@@ -1,5 +1,5 @@
 # Import core libraries
-import os, re, time, sys, asyncio, ctypes, math, threading, io
+import os, re, time, sys, asyncio, ctypes, math, threading, platform
 import torch
 import scipy
 import numpy as np
@@ -50,12 +50,15 @@ with warnings.catch_warnings():
 from colorama import just_fix_windows_console
 import playsound
 
-# Fix windows console for color codes
-just_fix_windows_console()
+system = platform.system()
 
-# Patch existing console to remove interactivity
-kernel32 = ctypes.windll.kernel32
-kernel32.SetConsoleMode(kernel32.GetStdHandle(-10), 128)
+if system == "Windows":
+    # Fix windows console for color codes
+    just_fix_windows_console()
+
+    # Patch existing console to remove interactivity
+    kernel32 = ctypes.windll.kernel32
+    kernel32.SetConsoleMode(kernel32.GetStdHandle(-10), 128)
 
 log = pylog.getLogger("pytorch_lightning")
 log.propagate = False
@@ -876,7 +879,6 @@ def rembg(numFiles):
             # Ignore warnings during background removal
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                warnings.filterwarnings("ignore", category=DeprecationWarning)
                 # Remove the background and save the image
                 remove(img).save(file)
 
@@ -1467,7 +1469,7 @@ async def connectSend(uri, message):
 
 os.system("title Retro Diffusion Image Generator")
 
-rprint("\n" + climage("logo.png", "centered") + "\n\n")
+rprint("\n" + climage(Image.open("logo.png"), "centered") + "\n\n")
 
 rprint("[#48a971]Starting Image Generator...")
 
@@ -1478,5 +1480,7 @@ rprint("[#c4f129]Connected")
 timeout = 1
 
 # Run the server until it is completed
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    asyncio.get_event_loop().run_until_complete(start_server)
+    asyncio.get_event_loop().run_forever()
