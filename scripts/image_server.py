@@ -76,7 +76,7 @@ global running
 global sounds
 sounds = False
 
-expectedVersion = "7.5.0"
+expectedVersion = "8.0.0"
 
 # For testing only, limits memory usage to "maxMemory"
 maxMemory = 4
@@ -1483,8 +1483,10 @@ else:
     os.system("echo -ne '\\033]0;Retro Diffusion Image Generator\\007'")
 
 try:
+    subprocess.run(['git', 'switch', '-f', expectedVersion], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     subprocess.run(['git', 'checkout', '.'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    subprocess.run(['git', 'pull'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    subprocess.run(['git', 'fetch', 'origin', expectedVersion], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    subprocess.run(['git', 'reset', '--hard', "FETCH_HEAD"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     print("Updated local files")
 except:
     print("Local files could not be updated, this is safe to ignore")
