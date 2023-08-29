@@ -1,3 +1,5 @@
+print("Importing libraries and attempting to update files. This may take one or more minutes.")
+
 # Import core libraries
 import os, re, time, sys, asyncio, ctypes, math, threading, platform, subprocess
 import torch
