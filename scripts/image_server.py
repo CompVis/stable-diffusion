@@ -1,5 +1,5 @@
 # Import core libraries
-import os, re, time, sys, asyncio, ctypes, math, threading, platform
+import os, re, time, sys, asyncio, ctypes, math, threading, platform, subprocess
 import torch
 import scipy
 import numpy as np
@@ -1471,7 +1471,19 @@ async def connectSend(uri, message):
         # Send a message over the WebSocket connection
         await websocket.send(message)
 
-os.system("title Retro Diffusion Image Generator")
+if system == "Windows":
+    os.system("title Retro Diffusion Image Generator")
+elif system == "Darwin":
+    os.system("printf '\\033]0;Retro Diffusion Image Generator\\007'")
+else:
+    os.system("echo -ne '\\033]0;Retro Diffusion Image Generator\\007'")
+
+try:
+    subprocess.run(['git', 'checkout', '.'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    subprocess.run(['git', 'pull'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    print("Updated local files")
+except:
+    print("Local files could not be updated, this is safe to ignore")
 
 rprint("\n" + climage(Image.open("logo.png"), "centered") + "\n\n")
 
