@@ -184,13 +184,12 @@ def searchString(string, *args):
 
     return out
 
-def climage(file, alignment, *args):
+def climage(image, alignment, *args):
 
     # Get console bounds with a small margin - better safe than sorry
     twidth, theight = os.get_terminal_size().columns-1, (os.get_terminal_size().lines-1)*2
 
     # Set up variables
-    image = Image.open(file)
     image = image.convert('RGBA')
     iwidth, iheight = min(twidth, image.width), min(theight, image.height)
     line = []
@@ -210,8 +209,7 @@ def climage(file, alignment, *args):
     for y2 in range(int(iheight/2)):
 
         # Add default colors to the start of the line
-        line = ["[white on black]" + " "*margin]
-        rgbp, rgb2p = "", ""
+        line = [" "*margin]
 
         # Loop over width
         for x in range(iwidth):
@@ -224,26 +222,24 @@ def climage(file, alignment, *args):
             rgb, rgb2 = '#{:02x}{:02x}{:02x}'.format(r, g, b), '#{:02x}{:02x}{:02x}'.format(r2, g2, b2)
 
             # Lookup table because I was bored
-            colorCodes = [f"[{rgb2} on {rgb}]", f"[{rgb2} on black]", f"[black on {rgb}]", "[white on black]", f"[{rgb}]"]
+            colorCodes = [f"{rgb2} on {rgb}", f"{rgb2}", f"{rgb}", "nothing", f"{rgb}"]
             # ~It just works~
-            color = colorCodes[int(a < 200)+(int(a2 < 200)*2)+(int(rgb == rgb2 and a + a2 > 400)*4)]
-
-            # Don't change the color if the color doesn't change...
-            if rgb == rgbp and rgb2 == rgb2p:
-                color = ""
+            maping = int(a < 200)+(int(a2 < 200)*2)+(int(rgb == rgb2 and a + a2 > 400)*4)
+            color = colorCodes[maping]
             
             # Set text characters, nothing, full block, half block. Half block + background color = 2 pixels
             if a < 200 and a2 < 200:
-                line.append(color + " ")
+                line.append(f" ")
             elif rgb == rgb2:
-                line.append(color + "█")
+                line.append(f"[{color}]█[/{color}]")
             else:
-                line.append(color + "▄")
-
-            rgbp, rgb2p = rgb, rgb2
+                if maping == 2:
+                    line.append(f"[{color}]▀[/{color}]")
+                else:
+                    line.append(f"[{color}]▄[/{color}]")
         
         # Add default colors to the end of the line
-        lines.append("".join(line) + "[white on black]")
+        lines.append("".join(line) + "")
     return "\n".join(lines)
 
 def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disable = False, prefixwidth = 1, suffixwidth = 1, total = 0):
@@ -267,7 +263,8 @@ def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disa
         
         # Set up variables
         if total > 0:
-            iterable = iterable[0:total]
+            #iterable = iterable[0:total]
+            pass
         else:
             total = max(1, len(iterable))
         name = f"{name}"
@@ -281,18 +278,18 @@ def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disa
         def printProgressBar (iteration, delay):
 
             # Define progress bar graphic
-            line1 = ["[#494b9b on #3b1725]▄", 
-                    "[#c4f129 on #494b9b]▄" * int(int(barwidth * iteration // total) > 0), 
-                    "[#ffffff on #494b9b]▄" * max(0, int(barwidth * iteration // total)-2),
-                    "[#c4f129 on #494b9b]▄" * int(int(barwidth * iteration // total) > 1),
-                    "[#3b1725 on #494b9b]▄" * max(0, barwidth-int(barwidth * iteration // total)),
-                    "[#494b9b on #3b1725]▄[white on black]"]
-            line2 = ["[#3b1725 on #494b9b]▄", 
-                    "[#494b9b on #48a971]▄" * int(int(barwidth * iteration // total) > 0), 
-                    "[#494b9b on #c4f129]▄" * max(0, int(barwidth * iteration // total)-2),
-                    "[#494b9b on #48a971]▄" * int(int(barwidth * iteration // total) > 1),
-                    "[#494b9b on #3b1725]▄" * max(0, barwidth-int(barwidth * iteration // total)),
-                    "[#3b1725 on #494b9b]▄[white on black]"]
+            line1 = ["[#494b9b on #3b1725]▄[/#494b9b on #3b1725]", 
+                    "[#c4f129 on #494b9b]▄[/#c4f129 on #494b9b]" * int(int(barwidth * iteration // total) > 0), 
+                    "[#ffffff on #494b9b]▄[/#ffffff on #494b9b]" * max(0, int(barwidth * iteration // total)-2),
+                    "[#c4f129 on #494b9b]▄[/#c4f129 on #494b9b]" * int(int(barwidth * iteration // total) > 1),
+                    "[#3b1725 on #494b9b]▄[/#3b1725 on #494b9b]" * max(0, barwidth-int(barwidth * iteration // total)),
+                    "[#494b9b on #3b1725]▄[/#494b9b on #3b1725]"]
+            line2 = ["[#3b1725 on #494b9b]▄[/#3b1725 on #494b9b]", 
+                    "[#494b9b on #48a971]▄[/#494b9b on #48a971]" * int(int(barwidth * iteration // total) > 0), 
+                    "[#494b9b on #c4f129]▄[/#494b9b on #c4f129]" * max(0, int(barwidth * iteration // total)-2),
+                    "[#494b9b on #48a971]▄[/#494b9b on #48a971]" * int(int(barwidth * iteration // total) > 1),
+                    "[#494b9b on #3b1725]▄[/#494b9b on #3b1725]" * max(0, barwidth-int(barwidth * iteration // total)),
+                    "[#3b1725 on #494b9b]▄[/#3b1725 on #494b9b]"]
 
             percent = ("{0:.0f}").format(100 * (iteration / float(total)))
 
@@ -303,7 +300,7 @@ def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disa
 
             # Fancy color stuff and formating
             if iteration == 0:
-                speedColor = "[#48a971 on black]"
+                speedColor = "[#48a971]"
                 measure = f"... {unit}/s"
                 passed = f"00:00"
                 remaining = f"??:??"
@@ -314,13 +311,13 @@ def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disa
                     measure = f"{round(np.mean(delay), 2)} s/{unit}"
 
                 if np.mean(delay) <= 1:
-                    speedColor = "[#c4f129 on black]"
+                    speedColor = "[#c4f129]"
                 elif np.mean(delay) <= 10:
-                    speedColor = "[#48a971 on black]"
+                    speedColor = "[#48a971]"
                 elif np.mean(delay) <= 30:
-                    speedColor = "[#494b9b on black]"
+                    speedColor = "[#494b9b]"
                 else:
-                    speedColor = "[#ab333d on black]"
+                    speedColor = "[#ab333d]"
 
                 passed = "{:02d}:{:02d}".format(math.floor(sum(delay)/60), round(sum(delay))%60)
                 remaining = "{:02d}:{:02d}".format(math.floor((total*np.mean(delay)-sum(delay))/60), round(total*np.mean(delay)-sum(delay))%60)
@@ -329,8 +326,8 @@ def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disa
             prediction = f" {passed} < {remaining} "
 
             # Print single bar across two lines
-            rprint(f'\r{f"{name}".center(prefix)} {"".join(line1)}{speedColor}{speed.center(suffix-1)}[white on black]')
-            rprint(f'[#48a971 on black]{f"{percent}%".center(prefix)}[white on black] {"".join(line2)}[#494b9b on black]{prediction.center(suffix-1)}', end = printEnd)
+            rprint(f'\r{f"{name}".center(prefix)} {"".join(line1)}{speedColor}{speed.center(suffix-1)}[white]')
+            rprint(f'[#48a971]{f"{percent}%".center(prefix)}[/#48a971] {"".join(line2)}[#494b9b]{prediction.center(suffix-1)}', end = printEnd)
             delay.append(time.time())
 
             return delay
