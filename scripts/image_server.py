@@ -1487,8 +1487,6 @@ else:
 try:
     subprocess.run(['git', 'switch', '-f', expectedVersion], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     subprocess.run(['git', 'checkout', '.'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    subprocess.run(['git', 'fetch', 'origin', expectedVersion], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    subprocess.run(['git', 'reset', '--hard', "FETCH_HEAD"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     print("Updated local files")
 except:
     print("Local files could not be updated, this is safe to ignore")
