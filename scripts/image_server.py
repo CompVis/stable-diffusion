@@ -412,9 +412,12 @@ def adjust_gamma(image, gamma=1.0):
 def load_model(modelpath, modelfile, config, device, precision, optimized):
     timer = time.time()
 
-    if not torch.cuda.is_available():
+    if not torch.cuda.is_available() and not torch.backends.mps.is_available():
         device = "cpu"
-        rprint(f"\n[#ab333d]CUDA is not responding, loading model in CPU mode\n")
+        rprint(f"\n[#ab333d]GPU is not responding, loading model in CPU mode\n")
+    elif torch.backends.mps.is_available():
+        device = "mps"
+
 
     # Check the modelfile and print corresponding loading message
     print()
@@ -948,9 +951,11 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
         seed = randint(0, 1000000)
     
     print()
-    if not torch.cuda.is_available():
+    if not torch.cuda.is_available() and not torch.backends.mps.is_available():
         device = "cpu"
-        rprint(f"\n[#ab333d]CUDA is not responding, generating in CPU mode\n")
+        rprint(f"\n[#ab333d]GPU is not responding, generating in CPU mode\n")
+    elif torch.backends.mps.is_available():
+        device = "mps"
     seed_everything(seed)
     rprint(f"[#48a971]Text to Image[white] generating for [#48a971]{n_iter}[white] iterations with [#48a971]{ddim_steps}[white] steps per iteration at [#48a971]{W}[white]x[#48a971]{H}")
 
@@ -1133,9 +1138,11 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
         seed = randint(0, 1000000)
 
     print()
-    if not torch.cuda.is_available():
+    if not torch.cuda.is_available() and not torch.backends.mps.is_available():
         device = "cpu"
-        rprint(f"\n[#ab333d]CUDA is not responding, generating in CPU mode\n")
+        rprint(f"\n[#ab333d]GPU is not responding, generating in CPU mode\n")
+    elif torch.backends.mps.is_available():
+        device = "mps"
     seed_everything(seed)
     rprint(f"[#48a971]Image to Image[white] generating for [#48a971]{n_iter}[white] iterations with [#48a971]{ddim_steps}[white] steps per iteration at [#48a971]{W}[white]x[#48a971]{H}")
 
