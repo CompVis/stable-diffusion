@@ -153,7 +153,7 @@ class SpatialSelfAttention(nn.Module):
         return x+h_
 
 def get_mem_free_total(device):
-    device_type = "cpu" if device.type == "cpu" or device.type == "mps" else "cuda"
+    device_type = "cpu" if device.type == "cpu" else "cuda"
     if device_type == "cuda":
         stats = torch.cuda.memory_stats(device)
         mem_active = stats["active_bytes.all.current"]

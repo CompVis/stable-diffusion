@@ -547,7 +547,7 @@ class UNet(DDPM):
     def register_buffer1(self, name, attr):
             if type(attr) == torch.Tensor:
                 if attr.device != torch.device(self.cdevice):
-                    attr = attr.to(torch.device(self.cdevice))
+                    attr = attr.to(dtype=torch.float32).to(torch.device(self.cdevice))
             setattr(self, name, attr)
 
     def make_schedule(self, ddim_num_steps, ddim_discretize="uniform", ddim_eta=0., verbose=True):

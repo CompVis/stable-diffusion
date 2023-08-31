@@ -47,7 +47,7 @@ with warnings.catch_warnings():
     try:
         import pygetwindow as gw
     except:
-        rprint(f"[#ab333d]Pygetwindow could not be loaded. This will limit some cosmetic functionality.")
+        pass
 from colorama import just_fix_windows_console
 import playsound
 
@@ -412,12 +412,12 @@ def adjust_gamma(image, gamma=1.0):
 def load_model(modelpath, modelfile, config, device, precision, optimized):
     timer = time.time()
 
-    if not torch.cuda.is_available() and not torch.backends.mps.is_available():
-        device = "cpu"
-        rprint(f"\n[#ab333d]GPU is not responding, loading model in CPU mode\n")
-    elif torch.backends.mps.is_available():
-        device = "mps"
-
+    if device == "cuda" and not torch.cuda.is_available():
+        if torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            device = "cpu"
+            rprint(f"\n[#ab333d]GPU is not responding, loading model in CPU mode")
 
     # Check the modelfile and print corresponding loading message
     print()
@@ -436,7 +436,7 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
 
     # Determine if turbo mode is enabled
     turbo = True
-    if optimized == "true":
+    if optimized == "true" and device == "cuda":
         turbo = False
 
     # Load the model's state dictionary from the specified file
@@ -480,7 +480,8 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
     model.unet_bs = 1
     model.cdevice = device
     model.turbo = turbo
-    tomesd.apply_patch(model, ratio=0.6, use_rand=True, merge_attn=True, merge_crossattn=True, merge_mlp=True)
+    if device != "mps":
+        tomesd.apply_patch(model, ratio=0.6, use_rand=True, merge_attn=True, merge_crossattn=True, merge_mlp=True)
 
     # Instantiate and load the conditional stage model
     global modelCS
@@ -496,7 +497,7 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
     modelFS.eval()
 
     # Set precision and device settings
-    if device != "cpu" and precision == "autocast":
+    if device == "cuda" and precision == "autocast":
         model.half()
         modelCS.half()
         precision = "half"
@@ -951,11 +952,12 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
         seed = randint(0, 1000000)
     
     print()
-    if not torch.cuda.is_available() and not torch.backends.mps.is_available():
-        device = "cpu"
-        rprint(f"\n[#ab333d]GPU is not responding, generating in CPU mode\n")
-    elif torch.backends.mps.is_available():
-        device = "mps"
+    if device == "cuda" and not torch.cuda.is_available():
+        if torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            device = "cpu"
+            rprint(f"\n[#ab333d]GPU is not responding, loading model in CPU mode\n")
     seed_everything(seed)
     rprint(f"[#48a971]Text to Image[white] generating for [#48a971]{n_iter}[white] iterations with [#48a971]{ddim_steps}[white] steps per iteration at [#48a971]{W}[white]x[#48a971]{H}")
 
@@ -975,7 +977,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
     model, modelFS, modelPV = patch_tiling(tilingX, tilingY, model, modelFS, modelPV)
 
     # Set the precision scope based on device and precision
-    if device != "cpu" and precision == "autocast":
+    if device == "cuda" and precision == "autocast":
         precision_scope = autocast
     else:
         precision_scope = nullcontext
@@ -1022,7 +1024,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
                     shape = [1, 4, H // 8, W // 8]
 
                     # Move modelCS to CPU if necessary to free up GPU memory
-                    if device != "cpu":
+                    if device == "cuda":
                         mem = torch.cuda.memory_allocated() / 1e6
                         modelCS.to("cpu")
                         # Wait until memory usage decreases
@@ -1093,7 +1095,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
                     base_count += 1
 
                     # Move modelFS to CPU if necessary to free up GPU memory
-                    if device != "cpu" and modelFS.device != torch.device("cpu"):
+                    if device == "cuda" and modelFS.device != torch.device("cpu"):
                         mem = torch.cuda.memory_allocated() / 1e6
                         modelFS.to("cpu")
                         # Wait until memory usage decreases
@@ -1126,6 +1128,13 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
     timer = time.time()
     init_img = "temp/input.png"
 
+    print()
+    if device == "cuda" and not torch.cuda.is_available():
+        if torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            device = "cpu"
+            rprint(f"\n[#ab333d]GPU is not responding, loading model in CPU mode\n")                                        
     # Load initial image and move it to the specified device
     assert os.path.isfile(init_img)
     init_image = load_img(init_img, H, W).to(device)
@@ -1136,13 +1145,6 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
     # Set a random seed if not provided
     if seed == None:
         seed = randint(0, 1000000)
-
-    print()
-    if not torch.cuda.is_available() and not torch.backends.mps.is_available():
-        device = "cpu"
-        rprint(f"\n[#ab333d]GPU is not responding, generating in CPU mode\n")
-    elif torch.backends.mps.is_available():
-        device = "mps"
     seed_everything(seed)
     rprint(f"[#48a971]Image to Image[white] generating for [#48a971]{n_iter}[white] iterations with [#48a971]{ddim_steps}[white] steps per iteration at [#48a971]{W}[white]x[#48a971]{H}")
 
@@ -1171,7 +1173,7 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
     init_latent = torch.nn.functional.interpolate(init_latent, size=(H // 8, W // 8), mode="bilinear")
 
     # Move modelFS to CPU if necessary to free up GPU memory
-    if device != "cpu":
+    if device == "cuda":
         mem = torch.cuda.memory_allocated(device=device) / 1e6
         modelFS.to("cpu")
         # Wait until memory usage decreases
@@ -1179,7 +1181,7 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
             time.sleep(1)
 
     # Set the precision scope based on device and precision
-    if device != "cpu" and precision == "autocast":
+    if device == "cuda" and precision == "autocast":
         precision_scope = autocast
     else:
         precision_scope = nullcontext
@@ -1229,7 +1231,7 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
                     c = modelCS.get_learned_conditioning(prompts)
 
                     # Move modelCS to CPU if necessary to free up GPU memory
-                    if device != "cpu":
+                    if device == "cuda":
                         mem = torch.cuda.memory_allocated(device=device) / 1e6
                         modelCS.to("cpu")
                         # Wait until memory usage decreases
@@ -1305,7 +1307,7 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
                     base_count += 1
 
                     # Move modelFS to CPU if necessary to free up GPU memory
-                    if device != "cpu" and modelFS.device != torch.device("cpu"):
+                    if device == "cuda" and modelFS.device != torch.device("cpu"):
                         mem = torch.cuda.memory_allocated() / 1e6
                         modelFS.to("cpu")
                         # Wait until memory usage decreases
@@ -1481,6 +1483,8 @@ async def server(websocket):
                     pass
             await websocket.send("free")
             torch.cuda.empty_cache()
+            if torch.backends.mps.is_available():
+                torch.mps.empty_cache()
         elif message == "shutdown":
             rprint("[#ab333d]Shutting down...")
             global running
@@ -1500,14 +1504,14 @@ elif system == "Darwin":
     os.system("printf '\\033]0;Retro Diffusion Image Generator\\007'")
 else:
     os.system("echo '\\033]0;Retro Diffusion Image Generator\\007'")
-
+'''
 try:
     subprocess.run(['git', 'switch', '-f', expectedVersion], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     subprocess.run(['git', 'checkout', '.'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     print("Updated local files")
 except:
     print("Local files could not be updated, this is safe to ignore")
-
+'''
 rprint("\n" + climage(Image.open("logo.png"), "centered") + "\n\n")
 
 rprint("[#48a971]Starting Image Generator...")
