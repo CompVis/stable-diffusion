@@ -61,7 +61,7 @@ if system == "Windows":
     kernel32 = ctypes.windll.kernel32
     kernel32.SetConsoleMode(kernel32.GetStdHandle(-10), 128)
 
-log = pylog.getLogger("pytorch_lightning")
+log = pylog.getLogger("lightning_fabric")
 log.propagate = False
 log.setLevel(pylog.ERROR)
 logging.set_verbosity_error()
@@ -950,13 +950,12 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
 
     timer = time.time()
     
-    print()
     if device == "cuda" and not torch.cuda.is_available():
         if torch.backends.mps.is_available():
             device = "mps"
         else:
             device = "cpu"
-            rprint(f"\n[#ab333d]GPU is not responding, loading model in CPU mode\n")
+            rprint(f"\n[#ab333d]GPU is not responding, loading model in CPU mode")
 
     global maxSize
     size = math.sqrt(W*H)
@@ -970,7 +969,8 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
     if seed == None:
         seed = randint(0, 1000000)
     seed_everything(seed)
-    rprint(f"[#48a971]Text to Image[white] generating [#48a971]{n_iter}[white] images over [#48a971]{runs}[white] batches with [#48a971]{ddim_steps}[white] steps per image at [#48a971]{W}[white]x[#48a971]{H}")
+
+    rprint(f"\n[#48a971]Text to Image[white] generating [#48a971]{n_iter}[white] images over [#48a971]{runs}[white] batches with [#48a971]{ddim_steps}[white] steps per image at [#48a971]{W}[white]x[#48a971]{H}")
 
     start_code = None
     sampler = "euler"
@@ -991,20 +991,37 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
 
     # !!! REMEMBER: ALL MODEL FILES ARE BOUND UNDER THE LICENSE AGREEMENTS OUTLINED HERE: https://astropulse.co/#retrodiffusioneula https://astropulse.co/#retrodiffusionmodeleula !!!
     loras = []
+    decryptedFiles = []
     fernet = Fernet("I47jl1hqUPug4KbVYd60_zeXhn_IH_ECT3QRGiBxdxo=")
     for i, loraFile in enumerate(loraFiles):
+        decryptedFiles[i] = "none"
         if loraFile != "none":
             lora_filename = os.path.join(loraPath, loraFile)
             if os.path.splitext(loraFile)[1] == ".pxlm":
                 with open(lora_filename, 'rb') as enc_file:
                     encrypted = enc_file.read()
-                try:
-                    decrypted = fernet.decrypt(encrypted)
-                except:
-                    decrypted = encrypted
-                with open(lora_filename, 'wb') as dec_file:
-                    dec_file.write(decrypted)
-            loras.append(load_lora(lora_filename, model))
+                    try:
+                        # Assume file is encrypted, decrypt it
+                        decryptedFiles[i] = fernet.decrypt(encrypted)
+                    except:
+                        # Decryption failed, assume not encrypted
+                        decryptedFiles[i] = encrypted
+
+                    with open(lora_filename, 'wb') as dec_file:
+                        # Write attempted decrypted file
+                        dec_file.write(decryptedFiles[i])
+                        try:
+                            # Load decrypted file
+                            loras.append(load_lora(lora_filename, model))
+                        except:
+                            # Decrypted file could not be read, revert to unchanged, and return an error
+                            decryptedFiles[i] = "none"
+                            dec_file.write(encrypted)
+                            loras.append(None)
+                            rprint(f"[#ab333d]Modifier {os.path.splitext(loraFile)[0]} could not be loaded, the file may be corrupted")
+                            continue
+            else:
+                loras.append(load_lora(lora_filename, model))
             loras[i].multiplier = loraWeights[i]/100
             register_lora_for_inference(loras[i])
             apply_lora()
@@ -1121,11 +1138,10 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
                 # Release lora
                 remove_lora_for_inference(lora)
             if os.path.splitext(loraFiles[i])[1] == ".pxlm":
-                with open(os.path.join(loraPath, loraFiles[i]), 'rb') as enc_file:
-                    decrypted = enc_file.read()
-                encrypted = fernet.encrypt(decrypted)
-                with open(os.path.join(loraPath, loraFiles[i]), 'wb') as dec_file:
-                    dec_file.write(encrypted)
+                if decryptedFiles[i] != "none":
+                    encrypted = fernet.encrypt(decryptedFiles[i])
+                    with open(os.path.join(loraPath, loraFiles[i]), 'wb') as dec_file:
+                        dec_file.write(encrypted)
         del loras
 
         if post == "true":
@@ -1141,13 +1157,12 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
     os.makedirs("temp", exist_ok=True)
     outpath = "temp"
 
-    print()
     if device == "cuda" and not torch.cuda.is_available():
         if torch.backends.mps.is_available():
             device = "mps"
         else:
             device = "cpu"
-            rprint(f"\n[#ab333d]GPU is not responding, loading model in CPU mode\n")
+            rprint(f"\n[#ab333d]GPU is not responding, loading model in CPU mode")
                                        
     # Load initial image and move it to the specified device
     init_img = "temp/input.png"
@@ -1166,7 +1181,8 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
     if seed == None:
         seed = randint(0, 1000000)
     seed_everything(seed)
-    rprint(f"[#48a971]Text to Image[white] generating [#48a971]{n_iter}[white] images over [#48a971]{runs}[white] batches with [#48a971]{ddim_steps}[white] steps per image at [#48a971]{W}[white]x[#48a971]{H}")
+
+    rprint(f"\n[#48a971]Text to Image[white] generating [#48a971]{n_iter}[white] images over [#48a971]{runs}[white] batches with [#48a971]{ddim_steps}[white] steps per image at [#48a971]{W}[white]x[#48a971]{H}")
 
     sampler = "ddim"
 
@@ -1208,20 +1224,37 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
 
     # !!! REMEMBER: ALL MODEL FILES ARE BOUND UNDER THE LICENSE AGREEMENTS OUTLINED HERE: https://astropulse.co/#retrodiffusioneula https://astropulse.co/#retrodiffusionmodeleula !!!
     loras = []
+    decryptedFiles = []
     fernet = Fernet("I47jl1hqUPug4KbVYd60_zeXhn_IH_ECT3QRGiBxdxo=")
     for i, loraFile in enumerate(loraFiles):
+        decryptedFiles[i] = "none"
         if loraFile != "none":
             lora_filename = os.path.join(loraPath, loraFile)
             if os.path.splitext(loraFile)[1] == ".pxlm":
                 with open(lora_filename, 'rb') as enc_file:
                     encrypted = enc_file.read()
-                try:
-                    decrypted = fernet.decrypt(encrypted)
-                except:
-                    decrypted = encrypted
-                with open(lora_filename, 'wb') as dec_file:
-                    dec_file.write(decrypted)
-            loras.append(load_lora(lora_filename, model))
+                    try:
+                        # Assume file is encrypted, decrypt it
+                        decryptedFiles[i] = fernet.decrypt(encrypted)
+                    except:
+                        # Decryption failed, assume not encrypted
+                        decryptedFiles[i] = encrypted
+
+                    with open(lora_filename, 'wb') as dec_file:
+                        # Write attempted decrypted file
+                        dec_file.write(decryptedFiles[i])
+                        try:
+                            # Load decrypted file
+                            loras.append(load_lora(lora_filename, model))
+                        except:
+                            # Decrypted file could not be read, revert to unchanged, and return an error
+                            decryptedFiles[i] = "none"
+                            dec_file.write(encrypted)
+                            loras.append(None)
+                            rprint(f"[#ab333d]Modifier {os.path.splitext(loraFile)[0]} could not be loaded, the file may be corrupted")
+                            continue
+            else:
+                loras.append(load_lora(lora_filename, model))
             loras[i].multiplier = loraWeights[i]/100
             register_lora_for_inference(loras[i])
             apply_lora()
@@ -1363,11 +1396,10 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
                 # Release lora
                 remove_lora_for_inference(lora)
             if os.path.splitext(loraFiles[i])[1] == ".pxlm":
-                with open(os.path.join(loraPath, loraFiles[i]), 'rb') as enc_file:
-                    decrypted = enc_file.read()
-                encrypted = fernet.encrypt(decrypted)
-                with open(os.path.join(loraPath, loraFiles[i]), 'wb') as dec_file:
-                    dec_file.write(encrypted)
+                if decryptedFiles[i] != "none":
+                    encrypted = fernet.encrypt(decryptedFiles[i])
+                    with open(os.path.join(loraPath, loraFiles[i]), 'wb') as dec_file:
+                        dec_file.write(encrypted)
         del loras
 
         if post == "true":
