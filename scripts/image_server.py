@@ -994,7 +994,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
     decryptedFiles = []
     fernet = Fernet("I47jl1hqUPug4KbVYd60_zeXhn_IH_ECT3QRGiBxdxo=")
     for i, loraFile in enumerate(loraFiles):
-        decryptedFiles[i] = "none"
+        decryptedFiles.append("none")
         if loraFile != "none":
             lora_filename = os.path.join(loraPath, loraFile)
             if os.path.splitext(loraFile)[1] == ".pxlm":
@@ -1227,7 +1227,7 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
     decryptedFiles = []
     fernet = Fernet("I47jl1hqUPug4KbVYd60_zeXhn_IH_ECT3QRGiBxdxo=")
     for i, loraFile in enumerate(loraFiles):
-        decryptedFiles[i] = "none"
+        decryptedFiles.append("none")
         if loraFile != "none":
             lora_filename = os.path.join(loraPath, loraFile)
             if os.path.splitext(loraFile)[1] == ".pxlm":
