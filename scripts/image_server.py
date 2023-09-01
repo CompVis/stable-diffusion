@@ -80,7 +80,7 @@ expectedVersion = "8.0.0"
 global maxSize
 
 # For testing only, limits memory usage to "maxMemory"
-maxSize = 512
+maxSize = 2048
 maxMemory = 4
 if False:
     cardMemory = torch.cuda.get_device_properties("cuda").total_memory / 1073741824
@@ -964,7 +964,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
         batch = 1
     else:
         batch = min(n_iter, math.floor((maxSize/size)**2))
-    runs = math.floor(n_iter/batch) + (n_iter%batch)
+    runs = math.floor(n_iter/batch) if n_iter % batch == 0 else math.floor(n_iter/batch)+1
 
     # Set the seed for random number generation if not provided
     if seed == None:
@@ -1098,7 +1098,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
                         os.path.join(outpath, file_name + ".png")
                     )
 
-                    if runs > 1 and (base_count+1) < runs:
+                    if n_iter > 1 and (base_count+1) < n_iter:
                         play("iteration.wav")
 
                     seeds.append(str(seed))
@@ -1160,7 +1160,7 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
         batch = 1
     else:
         batch = min(n_iter, math.floor((maxSize/size)**2))
-    runs = math.floor(n_iter/batch) + (n_iter%batch)
+    runs = math.floor(n_iter/batch) if n_iter % batch == 0 else math.floor(n_iter/batch)+1
     
     # Set the seed for random number generation if not provided
     if seed == None:
@@ -1340,7 +1340,7 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
                         os.path.join(outpath, file_name + ".png")
                     )
 
-                    if runs > 1 and (base_count+1) < runs:
+                    if n_iter > 1 and (base_count+1) < n_iter:
                         play("iteration.wav")
 
                     seeds.append(str(seed))
