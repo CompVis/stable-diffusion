@@ -80,7 +80,7 @@ expectedVersion = "8.0.0"
 global maxSize
 
 # For testing only, limits memory usage to "maxMemory"
-maxSize = 2048
+maxSize = 512
 maxMemory = 4
 if False:
     cardMemory = torch.cuda.get_device_properties("cuda").total_memory / 1073741824
@@ -1034,6 +1034,31 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
     data = [prompt]
     negative_data = [negative]
     with torch.no_grad():
+
+        # Create conditioning values for each batch, then unload the text encoder
+        uc = []
+        c = []
+        shape = []
+        # Use the specified precision scope
+        with precision_scope("cuda"):
+            modelCS.to(device)
+            condBatch = batch
+            condCount = 0
+            for n in range(runs):
+                condBatch = min(condBatch, n_iter-condCount)
+                uc.append(modelCS.get_learned_conditioning(condBatch * negative_data))
+                c.append(modelCS.get_learned_conditioning(condBatch * data))
+                shape.append([condBatch, 4, H // 8, W // 8])
+                condCount += condBatch
+
+            # Move modelCS to CPU if necessary to free up GPU memory
+            if device == "cuda":
+                mem = torch.cuda.memory_allocated() / 1e6
+                modelCS.to("cpu")
+                # Wait until memory usage decreases
+                while torch.cuda.memory_allocated() / 1e6 >= mem:
+                    time.sleep(1)
+
         base_count = 0
         # Iterate over the specified number of iterations
         for n in clbar(range(runs), name = "Batches", position = "last", unit = "batch", prefixwidth = 12, suffixwidth = 28):
@@ -1042,31 +1067,15 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
 
             # Use the specified precision scope
             with precision_scope("cuda"):
-                modelCS.to(device)
-                uc = None
-                uc = modelCS.get_learned_conditioning(batch * negative_data)
-
-                c = modelCS.get_learned_conditioning(batch * data)
-
-                shape = [batch, 4, H // 8, W // 8]
-
-                # Move modelCS to CPU if necessary to free up GPU memory
-                if device == "cuda":
-                    mem = torch.cuda.memory_allocated() / 1e6
-                    modelCS.to("cpu")
-                    # Wait until memory usage decreases
-                    while torch.cuda.memory_allocated() / 1e6 >= mem:
-                        time.sleep(1)
-
                 # Generate samples using the model
                 samples_ddim = model.sample(
                     S=ddim_steps,
-                    conditioning=c,
+                    conditioning=c[n],
                     seed=seed,
-                    shape=shape,
+                    shape=shape[n],
                     verbose=False,
                     unconditional_guidance_scale=scale,
-                    unconditional_conditioning=uc,
+                    unconditional_conditioning=uc[n],
                     eta=0.0,
                     x_T=start_code,
                     sampler = sampler,
@@ -1204,24 +1213,6 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
     else:
         precision_scope = nullcontext
 
-    # Move the modelFS to the specified device
-    modelFS.to(device)
-
-    # Repeat the initial image for batch processing
-    init_image_batch = repeat(init_image, "1 ... -> b ...", b=batch)
-
-    # Move the initial image to latent space and resize it
-    init_latent = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image_batch))
-    init_latent = torch.nn.functional.interpolate(init_latent, size=(H // 8, W // 8), mode="bilinear")
-
-    # Move modelFS to CPU if necessary to free up GPU memory
-    if device == "cuda":
-        mem = torch.cuda.memory_allocated(device=device) / 1e6
-        modelFS.to("cpu")
-        # Wait until memory usage decreases
-        while torch.cuda.memory_allocated(device=device) / 1e6 >= mem:
-            time.sleep(1)
-
     # !!! REMEMBER: ALL MODEL FILES ARE BOUND UNDER THE LICENSE AGREEMENTS OUTLINED HERE: https://astropulse.co/#retrodiffusioneula https://astropulse.co/#retrodiffusionmodeleula !!!
     loras = []
     decryptedFiles = []
@@ -1270,63 +1261,86 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
     data = [prompt]
     negative_data = [negative]
     with torch.no_grad():
+        # Create conditioning values for each batch, then unload the text encoder
+        uc = []
+        c = []
+        z_enc = []
+
+        # Move the modelFS to the specified device
+        modelFS.to(device)
+        latentBatch = batch
+        latentCount = 0
+
+        # Repeat the initial image for batch processing
+        init_image_batch = repeat(init_image, "1 ... -> b ...", b=latentBatch)
+
+        # Move the initial image to latent space and resize it
+        init_latent_base = (modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image_batch)))
+        init_latent_base = torch.nn.functional.interpolate(init_latent_base, size=(H // 8, W // 8), mode="bilinear")
+
+        for n in range(runs):
+            if n_iter-latentCount < latentBatch:
+                latentBatch = n_iter-latentCount
+
+                # Repeat the initial image for batch processing
+                init_image_batch = repeat(init_image, "1 ... -> b ...", b=latentBatch)
+
+                # Move the initial image to latent space and resize it
+                init_latent_base = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image_batch))
+                init_latent_base = torch.nn.functional.interpolate(init_latent_base, size=(H // 8, W // 8), mode="bilinear")
+
+            # Encode the scaled latent
+            z_enc.append(model.stochastic_encode(
+                init_latent_base,
+                torch.tensor([t_enc]).to(device),
+                seed+(n*latentCount),
+                0.0,
+                ddim_steps,
+            ))
+            latentCount += latentBatch
+
+        # Move modelFS to CPU if necessary to free up GPU memory
+        if device == "cuda":
+            mem = torch.cuda.memory_allocated(device=device) / 1e6
+            modelFS.to("cpu")
+            # Wait until memory usage decreases
+            while torch.cuda.memory_allocated(device=device) / 1e6 >= mem:
+                time.sleep(1)
+
+        with precision_scope("cuda"):
+            modelCS.to(device)
+            condBatch = batch
+            condCount = 0
+            for n in range(runs):
+                condBatch = min(condBatch, n_iter-condCount)
+                uc.append(modelCS.get_learned_conditioning(condBatch * negative_data))
+                c.append(modelCS.get_learned_conditioning(condBatch * data))
+                condCount += condBatch
+
+            # Move modelCS to CPU if necessary to free up GPU memory
+            if device == "cuda":
+                mem = torch.cuda.memory_allocated() / 1e6
+                modelCS.to("cpu")
+                # Wait until memory usage decreases
+                while torch.cuda.memory_allocated() / 1e6 >= mem:
+                    time.sleep(1)
+
         base_count = 0
         # Iterate over the specified number of iterations
         for n in clbar(range(runs), name = "Batches", position = "last", unit = "batch", prefixwidth = 12, suffixwidth = 28):
 
-            if n_iter-base_count < batch:
-                batch = n_iter-base_count
-
-                # Move the modelFS to the specified device
-                modelFS.to(device)
-
-                # Repeat the initial image for batch processing
-                init_image_batch = repeat(init_image, "1 ... -> b ...", b=batch)
-
-                # Move the initial image to latent space and resize it
-                init_latent = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image_batch))
-                init_latent = torch.nn.functional.interpolate(init_latent, size=(H // 8, W // 8), mode="bilinear")
-
-                # Move modelFS to CPU if necessary to free up GPU memory
-                if device == "cuda":
-                    mem = torch.cuda.memory_allocated(device=device) / 1e6
-                    modelFS.to("cpu")
-                    # Wait until memory usage decreases
-                    while torch.cuda.memory_allocated(device=device) / 1e6 >= mem:
-                        time.sleep(1)
+            batch = min(batch, n_iter-base_count)
 
             # Use the specified precision scope
             with precision_scope("cuda"):
-                modelCS.to(device)
-                uc = None
-                uc = modelCS.get_learned_conditioning(batch * negative_data)
-
-                c = modelCS.get_learned_conditioning(batch * data)
-
-                # Move modelCS to CPU if necessary to free up GPU memory
-                if device == "cuda":
-                    mem = torch.cuda.memory_allocated(device=device) / 1e6
-                    modelCS.to("cpu")
-                    # Wait until memory usage decreases
-                    while torch.cuda.memory_allocated(device=device) / 1e6 >= mem:
-                        time.sleep(1)
-
-                # Encode the scaled latent
-                z_enc = model.stochastic_encode(
-                    init_latent,
-                    torch.tensor([t_enc]).to(device),
-                    seed,
-                    0.0,
-                    ddim_steps,
-                )
                 
                 # Generate samples using the model
                 samples_ddim = model.sample(
                     t_enc,
-                    c,
-                    z_enc,
+                    c[n],
+                    z_enc[n],
                     unconditional_guidance_scale=scale,
-                    unconditional_conditioning=uc,
+                    unconditional_conditioning=uc[n],
                     sampler = sampler
                 )
 
@@ -1409,6 +1423,158 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, prom
             play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
 
+def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, seed):
+    timer = time.time()
+    
+    if device == "cuda" and not torch.cuda.is_available():
+        if torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            device = "cpu"
+            rprint(f"\n[#ab333d]GPU is not responding, loading model in CPU mode")
+
+    global maxSize
+
+    testSize = maxTestSize
+    resize = testSize
+
+    ddim_steps = 1
+
+    tested = []
+
+    tests = round(math.log2(maxTestSize)-math.log2(errorRange))+1
+
+    # Set the seed for random number generation if not provided
+    if seed == None:
+        seed = randint(0, 1000000)
+    seed_everything(seed)
+
+    rprint(f"\n[#48a971]Running benchmark[white] with a maximum generation size of [#48a971]{maxTestSize*8}[white]x[#48a971]{maxTestSize*8}[white] ([#48a971]{maxTestSize}[white]x[#48a971]{maxTestSize}[white] pixels) for [#48a971]{tests}[white] total tests")
+
+    start_code = None
+    sampler = "euler"
+
+    global model
+    global modelCS
+    global modelFS
+    global modelPV
+
+    # Set the precision scope based on device and precision
+    if device == "cuda" and precision == "autocast":
+        precision_scope = autocast
+    else:
+        precision_scope = nullcontext
+
+    data = [""]
+    negative_data = [""]
+    with torch.no_grad():
+        base_count = 0
+        lower = 0
+
+        # Load text encoder
+        modelCS.to(device)
+        uc = None
+        uc = modelCS.get_learned_conditioning(negative_data)
+
+        c = modelCS.get_learned_conditioning(data)
+
+        # Move modelCS to CPU if necessary to free up GPU memory
+        if device == "cuda":
+            mem = torch.cuda.memory_allocated() / 1e6
+            modelCS.to("cpu")
+            # Wait until memory usage decreases
+            while torch.cuda.memory_allocated() / 1e6 >= mem:
+                time.sleep(1)
+
+        # Iterate over the specified number of iterations
+        for n in clbar(range(tests), name = "Tests", position = "last", unit = "test", prefixwidth = 12, suffixwidth = 28):
+            benchTimer = time.time()
+            timerPerStep = 1
+            passedTest = False
+            # Use the specified precision scope
+            with precision_scope("cuda"):
+                try:
+                    shape = [1, 4, testSize, testSize]
+
+                    # Generate samples using the model
+                    samples_ddim = model.sample(
+                        S=ddim_steps,
+                        conditioning=c,
+                        seed=seed,
+                        shape=shape,
+                        verbose=False,
+                        unconditional_guidance_scale=5.0,
+                        unconditional_conditioning=uc,
+                        eta=0.0,
+                        x_T=start_code,
+                        sampler = sampler,
+                    )
+
+                    timerPerStep = round(time.time()-benchTimer, 2)
+
+                    if pixelvae == "true":
+                        # Pixel clustering mode, lower threshold means bigger clusters
+                        denoise = 0.08
+                        x_sample = modelPV.run_cluster(samples_ddim, threshold=denoise, wrap_x=False, wrap_y=False)
+                    else:
+                        modelFS.to(device)
+                        # Decode the samples using the first stage of the model
+                        x_sample = [modelFS.decode_first_stage(samples_ddim.to(device))[0].cpu()]
+
+                        # Move modelFS to CPU if necessary to free up GPU memory
+                        if device == "cuda" and modelFS.device != torch.device("cpu"):
+                            mem = torch.cuda.memory_allocated() / 1e6
+                            modelFS.to("cpu")
+                            # Wait until memory usage decreases
+                            while torch.cuda.memory_allocated() / 1e6 >= mem:
+                                time.sleep(1)
+                        
+                    # Delete the samples to free up memory
+                    del samples_ddim
+                    del x_sample
+                    
+                    passedTest = True
+                except:
+                    if device == "cuda" and modelFS.device != torch.device("cpu"):
+                        mem = torch.cuda.memory_allocated() / 1e6
+                        modelFS.to("cpu")
+                        # Wait until memory usage decreases
+                        while torch.cuda.memory_allocated() / 1e6 >= mem:
+                            time.sleep(1)
+                    
+                    passedTest = False
+
+                if tests > 1 and (base_count+1) < tests:
+                    play("iteration.wav")
+
+                base_count += 1
+
+                torch.cuda.empty_cache()
+                if torch.backends.mps.is_available():
+                    torch.mps.empty_cache()
+
+                if passedTest and timerPerStep <= timeLimit:
+                    maxSize = testSize
+                    tested.append((testSize, "[#c4f129]Passed"))
+                    if n == 0:
+                        rprint(f"\n[#c4f129]Maximum test size passed")
+                        break
+                    lower = testSize
+                    testSize = round(lower + (resize / 2))
+                    resize = testSize - lower
+                else:
+                    tested.append((testSize, "[#ab333d]Failed"))
+                    testSize = round(lower + (resize / 2))
+                    resize = testSize - lower
+        sortedTests = sorted(tested, key=lambda x: (-x[0], x[1]))
+        printTests = f"[#48a971]{sortedTests[0][0]}[white]: {sortedTests[0][1]}[white]"
+        for test in sortedTests[1:]:
+            printTests = f"{printTests}, [#48a971]{test[0]}[white]: {test[1]}[white]"
+            if test[1] == "Passed":
+                break
+        play("batch.wav")
+        rprint(f"[#c4f129]Benchmark completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n{printTests}\n[white]The maximum size possible on your hardware with less than [#48a971]{timeLimit}[white] seconds per step is [#48a971]{maxSize*8}[white]x[#48a971]{maxSize*8}[white] ([#48a971]{maxSize}[white]x[#48a971]{maxSize}[white] pixels)")
+
 async def server(websocket):
     background = False
 
@@ -1422,21 +1588,6 @@ async def server(websocket):
                 loraWeights = [int(x) for x in loraWeights.split('|')]
                 txt2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
                 await websocket.send("returning txt2img")
-            except Exception as e:
-                if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
-                    rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
-                else:
-                    rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                play("error.wav")
-                await websocket.send("returning error")
-
-        elif re.search(r"txt2pal.+", message):
-            await websocket.send("running txt2pal")
-            try:
-                # Extract parameters from the message
-                device, precision, prompt, seed, colors = searchString(message, "ddevice", "dprecision", "dprompt", "dseed", "dcolors", "end")
-                paletteGen(int(colors), device, precision, prompt, int(seed))
-                await websocket.send("returning txt2pal")
             except Exception as e:
                 if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
                     rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
@@ -1459,6 +1610,33 @@ async def server(websocket):
                     rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
                 else:
                     rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                play("error.wav")
+                await websocket.send("returning error")
+
+        elif re.search(r"txt2pal.+", message):
+            await websocket.send("running txt2pal")
+            try:
+                # Extract parameters from the message
+                device, precision, prompt, seed, colors = searchString(message, "ddevice", "dprecision", "dprompt", "dseed", "dcolors", "end")
+                paletteGen(int(colors), device, precision, prompt, int(seed))
+                await websocket.send("returning txt2pal")
+            except Exception as e:
+                if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
+                    rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
+                else:
+                    rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                play("error.wav")
+                await websocket.send("returning error")
+
+        elif re.search(r"benchmark.+", message):
+            await websocket.send("running txt2pal")
+            try:
+                # Extract parameters from the message
+                device, precision, timeLimit, maxTestSize, errorRange, pixelvae, seed = searchString(message, "ddevice", "dprecision", "dtimelimit", "dmaxtestsize", "derrorrange", "dpixelvae", "dseed", "end")
+                benchmark(device, precision, float(timeLimit), int(maxTestSize), int(errorRange), pixelvae, int(seed))
+                await websocket.send(f"returning benchmark {maxSize}")
+            except Exception as e:
+                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                 play("error.wav")
                 await websocket.send("returning error")
 
