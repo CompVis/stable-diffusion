@@ -8,7 +8,7 @@ opencv-python-headless
 pudb==2019.2
 imageio==2.9.0
 imageio-ffmpeg==0.4.2
-pytorch-lightning==2.0.8
+pytorch-lightning==1.9.0
 omegaconf==2.1.1
 test-tube>=0.7.5
 streamlit>=0.73.1
@@ -19,7 +19,7 @@ torchmetrics==0.7.0
 safetensors==0.3.2
 kornia==0.6
 accelerate==0.20.3
-pandas==2.1.0
+pandas
 -e git+https://github.com/Astropulse/hitherdither#egg=hitherdither
 -e git+https://github.com/CompVis/taming-transformers#egg=taming-transformers
 -e git+https://github.com/openai/CLIP#egg=clip
