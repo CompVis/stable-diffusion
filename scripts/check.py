@@ -1,4 +1,4 @@
-
+import traceback
 try:
     print("Checking python environment, this may take one or more minutes.")
 
