@@ -1,49 +1,53 @@
-print("Checking python environment, this may take one or more minutes.")
 
-# Import core libraries
-import os, re, time, sys, asyncio, ctypes, math
-import torch
-import scipy
-import numpy as np
-from random import randint
-from omegaconf import OmegaConf
-from PIL import Image
-from itertools import islice, product
-from einops import rearrange, repeat
-from pytorch_lightning import seed_everything
-from contextlib import nullcontext
-from typing import Optional
-from safetensors.torch import load_file
+try:
+    print("Checking python environment, this may take one or more minutes.")
 
-print("\nImported core libraries")
+    # Import core libraries
+    import os, re, time, sys, asyncio, ctypes, math
+    import torch
+    import scipy
+    import numpy as np
+    from random import randint
+    from omegaconf import OmegaConf
+    from PIL import Image
+    from itertools import islice, product
+    from einops import rearrange, repeat
+    from pytorch_lightning import seed_everything
+    from contextlib import nullcontext
+    from typing import Optional
+    from safetensors.torch import load_file
 
-# Import built libraries
-from ldm.util import instantiate_from_config
-from optimUtils import split_weighted_subprompts
-from autoencoder.pixelvae import load_pixelvae_model
-import hitherdither
-import tomesd
+    print("\nImported core libraries")
 
-print("\nImported built libraries")
+    # Import built libraries
+    from ldm.util import instantiate_from_config
+    from optimUtils import split_weighted_subprompts
+    from autoencoder.pixelvae import load_pixelvae_model
+    import hitherdither
+    import tomesd
 
-# Import PyTorch functions
-from torch import autocast
-from torch import Tensor
-from torch.nn import functional as F
-from torch.nn.modules.utils import _pair
+    print("\nImported built libraries")
 
-# Import logging libraries
-import traceback, warnings
-import logging as pylog
-from transformers import logging
+    # Import PyTorch functions
+    from torch import autocast
+    from torch import Tensor
+    from torch.nn import functional as F
+    from torch.nn.modules.utils import _pair
 
-# Import websocket tools
-import requests
-from websockets import serve, connect
-from io import BytesIO
+    # Import logging libraries
+    import traceback, warnings
+    import logging as pylog
+    from transformers import logging
 
-# Import console management libraries
-from rich import print as rprint
-from colorama import just_fix_windows_console
+    # Import websocket tools
+    import requests
+    from websockets import serve, connect
+    from io import BytesIO
 
-print("\nPython environment initialized successfully")
+    # Import console management libraries
+    from rich import print as rprint
+    from colorama import just_fix_windows_console
+
+    print("\nPython environment initialized successfully")
+except Exception as e:
+    print(f'{traceback.format_exc()}\n\nAn error occured. Please contact the developer')
