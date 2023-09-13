@@ -114,7 +114,11 @@ class AutoencoderKL(pl.LightningModule):
                     return self.encode_sliced(x, chunk_size=64)
                 except:
                     # Out of memory, trying smaller slice.
-                    return self.encode_sliced(x, chunk_size=32)
+                    try:
+                        return self.encode_sliced(x, chunk_size=32)
+                    except:
+                        # Out of memory, trying smaller slice.
+                        return self.encode_sliced(x, chunk_size=16)
                     
 
     def encode_all_at_once(self, x):
