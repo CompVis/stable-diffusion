@@ -689,7 +689,7 @@ class UNet(DDPM):
         total_steps = timesteps.shape[0]
         print(f"Running PLMS Sampling with {total_steps} timesteps")
 
-        iterator = clbar(time_range, name = "Images", position = "first", prefixwidth = 12, suffixwidth = 28, total = total_steps)
+        iterator = clbar(time_range, name = "Samples", position = "first", prefixwidth = 12, suffixwidth = 28, total = total_steps)
         old_eps = []
 
         for i, step in enumerate(iterator):
@@ -828,7 +828,7 @@ class UNet(DDPM):
         total_steps = timesteps.shape[0]
         #print(f"Running DDIM Sampling with {total_steps} timesteps")
 
-        iterator = clbar(time_range, name = "Images", position = "first", prefixwidth = 12, suffixwidth = 28, total = total_steps)
+        iterator = clbar(time_range, name = "Samples", position = "first", prefixwidth = 12, suffixwidth = 28, total = total_steps)
         x_dec = x_latent
         x0 = init_latent
         for i, step in enumerate(iterator):
@@ -901,7 +901,7 @@ class UNet(DDPM):
         x = x*sigmas[0]
 
         s_in = x.new_ones([x.shape[0]]).half()
-        for i in clbar(range(len(sigmas) - 1), name = "Images", position = "first", prefixwidth = 12, suffixwidth = 28):
+        for i in clbar(range(len(sigmas) - 1), name = "Samples", position = "first", prefixwidth = 12, suffixwidth = 28):
             gamma = min(s_churn / (len(sigmas) - 1), 2 ** 0.5 - 1) if s_tmin <= sigmas[i] <= s_tmax else 0.
             eps = torch.randn_like(x) * s_noise
             sigma_hat = (sigmas[i] * (gamma + 1)).half()
@@ -937,7 +937,7 @@ class UNet(DDPM):
         x = x*sigmas[0]
 
         s_in = x.new_ones([x.shape[0]]).half()
-        for i in clbar(range(len(sigmas) - 1), name = "Images", position = "first", prefixwidth = 12, suffixwidth = 28):
+        for i in clbar(range(len(sigmas) - 1), name = "Samples", position = "first", prefixwidth = 12, suffixwidth = 28):
 
             s_i = sigmas[i] * s_in
             x_in = torch.cat([x] * 2)
@@ -971,7 +971,7 @@ class UNet(DDPM):
 
 
         s_in = x.new_ones([x.shape[0]]).half()
-        for i in clbar(range(len(sigmas) - 1), name = "Images", position = "first", prefixwidth = 12, suffixwidth = 28):
+        for i in clbar(range(len(sigmas) - 1), name = "Samples", position = "first", prefixwidth = 12, suffixwidth = 28):
             gamma = min(s_churn / (len(sigmas) - 1), 2 ** 0.5 - 1) if s_tmin <= sigmas[i] <= s_tmax else 0.
             eps = torch.randn_like(x) * s_noise
             sigma_hat = (sigmas[i] * (gamma + 1)).half()
@@ -1022,7 +1022,7 @@ class UNet(DDPM):
         x = x*sigmas[0]
 
         s_in = x.new_ones([x.shape[0]]).half()
-        for i in clbar(range(len(sigmas) - 1), name = "Images", position = "first", prefixwidth = 12, suffixwidth = 28):
+        for i in clbar(range(len(sigmas) - 1), name = "Samples", position = "first", prefixwidth = 12, suffixwidth = 28):
             gamma = min(s_churn / (len(sigmas) - 1), 2 ** 0.5 - 1) if s_tmin <= sigmas[i] <= s_tmax else 0.
             eps = torch.randn_like(x) * s_noise
             sigma_hat = sigmas[i] * (gamma + 1)
@@ -1072,7 +1072,7 @@ class UNet(DDPM):
         x = x*sigmas[0]
 
         s_in = x.new_ones([x.shape[0]]).half()
-        for i in clbar(range(len(sigmas) - 1), name = "Images", position = "first", prefixwidth = 12, suffixwidth = 28):
+        for i in clbar(range(len(sigmas) - 1), name = "Samples", position = "first", prefixwidth = 12, suffixwidth = 28):
 
             s_i =  sigmas[i] * s_in
             x_in = torch.cat([x] * 2)
@@ -1120,7 +1120,7 @@ class UNet(DDPM):
         x = x*sigmas[0]
 
         ds = []
-        for i in clbar(range(len(sigmas) - 1), name = "Images", position = "first", prefixwidth = 12, suffixwidth = 28):
+        for i in clbar(range(len(sigmas) - 1), name = "Samples", position = "first", prefixwidth = 12, suffixwidth = 28):
 
             s_i =  sigmas[i] * s_in
             x_in = torch.cat([x] * 2)
