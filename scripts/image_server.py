@@ -1553,7 +1553,7 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
 
                 torch.cuda.empty_cache()
                 if torch.backends.mps.is_available():
-                    torch.mps.empty_cache()
+                    torch.backends.mps.empty_cache()
 
                 if passedTest and timerPerStep <= timeLimit:
                     maxSize = testSize
@@ -1748,7 +1748,7 @@ async def server(websocket):
             await websocket.send("free")
             torch.cuda.empty_cache()
             if torch.backends.mps.is_available():
-                torch.mps.empty_cache()
+                torch.backends.mps.empty_cache()
         elif message == "shutdown":
             rprint("[#ab333d]Shutting down...")
             global running
