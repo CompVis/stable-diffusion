@@ -1766,8 +1766,8 @@ if system == "Windows":
     os.system("title Retro Diffusion Image Generator")
 elif system == "Darwin":
     os.system("printf '\\033]0;Retro Diffusion Image Generator\\007'")
-else:
-    os.system("echo '\\033]0;Retro Diffusion Image Generator\\007'")
+#else:
+#    os.system("echo '\\033]0;Retro Diffusion Image Generator\\007'")
 '''
 try:
     subprocess.run(['git', 'switch', '-f', expectedVersion], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
