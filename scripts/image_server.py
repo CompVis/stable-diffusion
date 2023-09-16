@@ -71,6 +71,8 @@ global modelCS
 global modelFS
 global modelPV
 global running
+global loadedDevice
+loadedDevice = "cpu"
 
 global sounds
 sounds = False
@@ -421,6 +423,9 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
         else:
             device = "cpu"
             rprint(f"\n[#ab333d]GPU is not responding, loading model in CPU mode")
+
+    global loadedDevice
+    loadedDevice = device
 
     # Check the modelfile and print corresponding loading message
     print()
@@ -1552,7 +1557,7 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
                 base_count += 1
 
                 torch.cuda.empty_cache()
-                if torch.backends.mps.is_available():
+                if torch.backends.mps.is_available() and device != "cpu":
                     torch.mps.empty_cache()
 
                 if passedTest and timerPerStep <= timeLimit:
@@ -1591,7 +1596,9 @@ async def server(websocket):
                 txt2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), int(maxBatchSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
                 await websocket.send("returning txt2img")
             except Exception as e:
-                if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
+                if "[SSL: CERTIFICATE_VERIFY_FAILED]" in traceback.format_exc():
+                    rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run './Install\ Certificates.command' in the python3 folder")
+                elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
                     rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
                 else:
                     rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
@@ -1608,7 +1615,9 @@ async def server(websocket):
                 img2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), int(maxBatchSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), float(strength)/100, int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
                 await websocket.send("returning img2img")
             except Exception as e: 
-                if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
+                if "[SSL: CERTIFICATE_VERIFY_FAILED]" in traceback.format_exc():
+                    rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run './Install\ Certificates.command' in the python3 folder")
+                elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
                     rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
                 elif "Expected batch_size > 0 to be true" in traceback.format_exc():
                     rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources during image encoding. Please lower the maximum batch size")
@@ -1747,7 +1756,7 @@ async def server(websocket):
                     pass
             await websocket.send("free")
             torch.cuda.empty_cache()
-            if torch.backends.mps.is_available():
+            if torch.backends.mps.is_available() and device != "cpu":
                 torch.mps.empty_cache()
         elif message == "shutdown":
             rprint("[#ab333d]Shutting down...")
