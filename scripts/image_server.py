@@ -1597,7 +1597,7 @@ async def server(websocket):
                 await websocket.send("returning txt2img")
             except Exception as e:
                 if "[SSL: CERTIFICATE_VERIFY_FAILED]" in traceback.format_exc():
-                    rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run './Install\ Certificates.command' in the python3 folder")
+                    rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
                 elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
                     rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
                 else:
@@ -1616,7 +1616,7 @@ async def server(websocket):
                 await websocket.send("returning img2img")
             except Exception as e: 
                 if "[SSL: CERTIFICATE_VERIFY_FAILED]" in traceback.format_exc():
-                    rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run './Install\ Certificates.command' in the python3 folder")
+                    rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
                 elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
                     rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
                 elif "Expected batch_size > 0 to be true" in traceback.format_exc():
