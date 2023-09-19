@@ -1596,7 +1596,7 @@ async def server(websocket):
                 txt2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), int(maxBatchSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
                 await websocket.send("returning txt2img")
             except Exception as e:
-                if "[SSL: CERTIFICATE_VERIFY_FAILED]" in traceback.format_exc():
+                if "SSLCertVerificationError" in traceback.format_exc():
                     rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
                 elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
                     rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
@@ -1615,7 +1615,7 @@ async def server(websocket):
                 img2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), int(maxBatchSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), float(strength)/100, int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
                 await websocket.send("returning img2img")
             except Exception as e: 
-                if "[SSL: CERTIFICATE_VERIFY_FAILED]" in traceback.format_exc():
+                if "SSLCertVerificationError" in traceback.format_exc():
                     rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
                 elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
                     rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
@@ -1709,7 +1709,10 @@ async def server(websocket):
                     load_model(path, model, "scripts/v1-inference.yaml", device, precision, optimized)
                     loaded = message
                 except Exception as e:
-                    rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                    if "SSLCertVerificationError" in traceback.format_exc():
+                        rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
+                    else:
+                        rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                     play("error.wav")
                     await websocket.send("returning error")
                 
