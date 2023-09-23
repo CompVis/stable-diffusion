@@ -1,5 +1,6 @@
 colorama==0.4.6
 rich==13.3.2
 playsound==1.2.2
-numpy==1.23.5
+numpy==1.26.0
+intel-openmp
 Pillow==9.3.0
