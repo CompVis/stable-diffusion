@@ -20,8 +20,8 @@ try:
     print("\nImported core libraries")
 
     # Import built libraries
-    from .ldm.util import instantiate_from_config
-    from .optimization.pixelvae import load_pixelvae_model
+    from ldm.util import instantiate_from_config
+    from optimization.pixelvae import load_pixelvae_model
     import hitherdither
     import tomesd
 
