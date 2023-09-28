@@ -76,7 +76,7 @@ loadedDevice = "cpu"
 global sounds
 sounds = False
 
-expectedVersion = "8.0.0"
+expectedVersion = "8.5.0"
 
 global maxSize
 
