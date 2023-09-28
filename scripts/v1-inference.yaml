@@ -1,6 +1,6 @@
-modelUNet:
+model_unet:
   base_learning_rate: 1.0e-04
-  target: scripts.ddpm.UNet
+  target: ddpm.UNet
   params:
     linear_start: 0.00085
     linear_end: 0.0120
@@ -11,14 +11,14 @@ modelUNet:
     cond_stage_key: "txt"
     image_size: 64
     channels: 4
-    cond_stage_trainable: false # Note: different from the one we trained before
+    cond_stage_trainable: false
     conditioning_key: crossattn
     monitor: val/loss_simple_ema
     scale_factor: 0.18215
     use_ema: False
 
-    unetConfigEncode:
-      target: scripts.openaimodelSplit.UNetModelEncode
+    unet_encode_config:
+      target: ldm.modules.UNetModelEncode
       params:
         image_size: 32 # unused
         in_channels: 4
@@ -34,8 +34,8 @@ modelUNet:
         use_checkpoint: True
         legacy: False
 
-    unetConfigDecode:
-      target: scripts.openaimodelSplit.UNetModelDecode
+    unet_decode_config:
+      target: ldm.modules.UNetModelDecode
       params:
         image_size: 32 # unused
         in_channels: 4
@@ -51,8 +51,8 @@ modelUNet:
         use_checkpoint: True
         legacy: False
 
-modelFirstStage:
-  target: scripts.ddpm.FirstStage
+model_first_stage:
+  target: ddpm.FirstStage
   params:
     linear_start: 0.00085
     linear_end: 0.0120
@@ -63,13 +63,13 @@ modelFirstStage:
     cond_stage_key: "txt"
     image_size: 64
     channels: 4
-    cond_stage_trainable: false # Note: different from the one we trained before
+    cond_stage_trainable: false
     conditioning_key: crossattn
     monitor: val/loss_simple_ema
     scale_factor: 0.18215
     use_ema: False
     first_stage_config:
-      target: autoencoder.autoencoder.AutoencoderKL
+      target: autoencoder.AutoencoderKL
       params:
         embed_dim: 4
         monitor: val/rec_loss
@@ -91,8 +91,8 @@ modelFirstStage:
         lossconfig:
           target: torch.nn.Identity
 
-modelCondStage:
-  target: scripts.ddpm.CondStage
+model_cond_stage:
+  target: ddpm.CondStage
   params:
     linear_start: 0.00085
     linear_end: 0.0120
@@ -103,12 +103,12 @@ modelCondStage:
     cond_stage_key: "txt"
     image_size: 64
     channels: 4
-    cond_stage_trainable: false # Note: different from the one we trained before
+    cond_stage_trainable: false
     conditioning_key: crossattn
     monitor: val/loss_simple_ema
     scale_factor: 0.18215
     use_ema: False
     cond_stage_config:
-      target: ldm.modules.encoders.modules.FrozenCLIPEmbedder
+      target: ldm.modules.FrozenCLIPEmbedder
       params:
-        device: cpu
+        device: cuda
