@@ -18,9 +18,8 @@ from cryptography.fernet import Fernet
 
 # Import built libraries
 from ldm.util import instantiate_from_config
-from optimUtils import split_weighted_subprompts
-from autoencoder.pixelvae import load_pixelvae_model
-from lora.lora import apply_lora, assign_lora_names_to_compvis_modules, load_lora, register_lora_for_inference, remove_lora_for_inference
+from optimization.pixelvae import load_pixelvae_model
+from lora import apply_lora, assign_lora_names_to_compvis_modules, load_lora, register_lora_for_inference, remove_lora_for_inference
 import hitherdither
 import tomesd
 
@@ -482,7 +481,7 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
 
     # Instantiate and load the main model
     global model
-    model = instantiate_from_config(config.modelUNet)
+    model = instantiate_from_config(config.model_unet)
     _, _ = model.load_state_dict(sd, strict=False)
     model.eval()
     model.unet_bs = 1
@@ -493,14 +492,14 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
 
     # Instantiate and load the conditional stage model
     global modelCS
-    modelCS = instantiate_from_config(config.modelCondStage)
+    modelCS = instantiate_from_config(config.model_cond_stage)
     _, _ = modelCS.load_state_dict(sd, strict=False)
     modelCS.eval()
     modelCS.cond_stage_model.device = device
 
     # Instantiate and load the first stage model
     global modelFS
-    modelFS = instantiate_from_config(config.modelFirstStage)
+    modelFS = instantiate_from_config(config.model_first_stage)
     _, _ = modelFS.load_state_dict(sd, strict=False)
     modelFS.eval()
 
