@@ -19,9 +19,9 @@ torchmetrics==0.7.0
 safetensors==0.3.2
 kornia==0.6
 accelerate==0.20.3
+taming-transformers-rom1504==0.0.6
 pandas
 -e git+https://github.com/Astropulse/hitherdither#egg=hitherdither
--e git+https://github.com/CompVis/taming-transformers#egg=taming-transformers
 -e git+https://github.com/openai/CLIP#egg=clip
 -e git+https://github.com/Astropulse/k-diffusion#egg=k_diffusion
 -e git+https://github.com/Astropulse/tomesd-aseprite#egg=tomesd
