@@ -1758,11 +1758,9 @@ async def server(websocket):
                     pass
             await websocket.send("free")
             torch.cuda.empty_cache()
-            try:
-                if torch.backends.mps.is_available() and device != "cpu":
-                    torch.mps.empty_cache()
-            except:
-                pass
+            global loadedDevice
+            if torch.backends.mps.is_available() and loadedDevice != "cpu":
+                torch.mps.empty_cache()
         elif message == "shutdown":
             rprint("[#ab333d]Shutting down...")
             global running
