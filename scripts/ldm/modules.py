@@ -20,8 +20,12 @@ from .util import (
     normalization,
     timestep_embedding,
     zero_module,
+    to_tile,
+    from_tile,
+    max_tile
 )
 
+global original_shape
 
 def count_flops_attn(model, _x, y):
     """
@@ -689,7 +693,7 @@ class CrossAttention(nn.Module):
             nn.Linear(inner_dim, query_dim), nn.Dropout(dropout)
         )
 
-    def forward(self, x, context=None, mask=None):
+    def forward(self, x, context=None, value=None, mask=None):
         batch_size, sequence_length, inner_dim = x.shape
 
         if mask is not None:
@@ -701,7 +705,11 @@ class CrossAttention(nn.Module):
         context = default(context, x)
 
         k_in = self.to_k(context)
-        v_in = self.to_v(context)
+        if value is not None:
+            v_in = self.to_v(value)
+            del value
+        else:
+            v_in = self.to_v(context)
 
         head_dim = inner_dim // h
         q = q_in.view(batch_size, -1, h, head_dim).transpose(1, 2)
@@ -776,8 +784,11 @@ class BasicTransformerBlock(nn.Module):
         checkpoint=True,
     ):
         super().__init__()
-        self.attn1 = SelfAttention(
-            query_dim=dim, heads=n_heads, dim_head=d_head, dropout=dropout
+        self.attn1 = CrossAttention(
+            query_dim=dim,
+            heads=n_heads,
+            dim_head=d_head,
+            dropout=dropout
         )
         self.ff = FeedForward(dim, dropout=dropout, glu=gated_ff)
         self.attn2 = CrossAttention(
@@ -785,7 +796,7 @@ class BasicTransformerBlock(nn.Module):
             context_dim=context_dim,
             heads=n_heads,
             dim_head=d_head,
-            dropout=dropout,
+            dropout=dropout
         )
         self.norm1 = nn.LayerNorm(dim)
         self.norm2 = nn.LayerNorm(dim)
@@ -799,7 +810,30 @@ class BasicTransformerBlock(nn.Module):
 
     def _forward(self, x, context=None):
         x = x.contiguous() if x.device.type == "mps" else x
-        x = self.attn1(self.norm1(x)) + x
+
+        n = self.norm1(x)
+        q = n
+        k = q
+        v = k
+
+        global original_shape
+        _, _, h, w = original_shape
+        _, qn, _ = q.shape
+
+        nw, nh = max_tile(w), max_tile(h)
+
+        if qn == h * w:
+            q = to_tile(q, nh, nw, original_shape)
+            k = to_tile(k, nh, nw, original_shape)
+            v = to_tile(v, nh, nw, original_shape)
+
+        n = self.attn1(q, context=k, value=v)
+
+        if qn == h * w:
+            n = from_tile(n, nh, nw, original_shape)
+
+        x += n
+
         x = self.attn2(self.norm2(x), context=context) + x
         x = self.ff(self.norm3(x)) + x
         return x
@@ -1366,6 +1400,8 @@ class UNetModelEncode(nn.Module):
         :param y: an [N] Tensor of labels, if class-conditional.
         :return: an [N x C x ...] Tensor of outputs.
         """
+        global original_shape
+        original_shape = x.shape
         assert (y is not None) == (
             self.num_classes is not None
         ), "must specify y if and only if the model is class-conditional"

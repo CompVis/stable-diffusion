@@ -14,7 +14,7 @@ from inspect import isfunction
 import numpy as np
 import torch
 import torch.nn as nn
-from einops import repeat
+from einops import repeat, rearrange
 
 
 def avg_pool_nd(dims, *args, **kwargs):
@@ -267,3 +267,39 @@ def get_obj_from_str(string, reload=False):
         module_imp = importlib.import_module(module)
         importlib.reload(module_imp)
     return getattr(importlib.import_module(module, package=None), cls)
+
+def to_tile(x, nh, nw, original_shape):
+    _, _, h, w = original_shape
+    assert h % nh == 0, "Height must be divisible by nh"
+    assert w % nw == 0, "Width must be divisible by nw"
+    x = rearrange(x, "b (nh h nw w) c -> (b nh nw) (h w) c", h=h // nh, w=w // nw, nh=nh, nw=nw)
+
+    return x
+
+def from_tile(x, nh, nw, original_shape):
+    _, _, h, w = original_shape
+    x = rearrange(x, "(b nh nw) hw c -> b nh nw hw c", nh=nh, nw=nw)
+    x = rearrange(x, "b nh nw (h w) c -> b (nh h nw w) c", h=h // nh, w=w // nw)
+    
+    return x
+
+def max_tile(row):
+
+    max_value = 1
+
+    if row < 96:
+        return max_value
+    elif row < 150:
+        max_value = 2
+    elif row < 164:
+        max_value = 3
+    elif row < 180:
+        max_value = 4
+    elif row < 228:
+        max_value = 5
+    else:
+        max_value = 6
+
+    for n in reversed(range(1, max_value+1)):
+        if row % n == 0:
+            return n
