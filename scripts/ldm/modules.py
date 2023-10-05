@@ -820,7 +820,8 @@ class BasicTransformerBlock(nn.Module):
         _, _, h, w = original_shape
         _, qn, _ = q.shape
 
-        nw, nh = max_tile(w), max_tile(h)
+        nw = max_tile(w) if w > 96 else 1
+        nh = max_tile(h) if h > 96 else 1
 
         if qn == h * w:
             q = to_tile(q, nh, nw, original_shape)
