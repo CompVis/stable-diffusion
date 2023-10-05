@@ -17,7 +17,7 @@ from safetensors.torch import load_file
 from cryptography.fernet import Fernet
 
 # Import built libraries
-from ldm.util import instantiate_from_config
+from ldm.util import instantiate_from_config, max_tile
 from optimization.pixelvae import load_pixelvae_model
 from lora import apply_lora, assign_lora_names_to_compvis_modules, load_lora, register_lora_for_inference, remove_lora_for_inference
 import hitherdither
@@ -477,7 +477,8 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         # Load the pixelvae
-        modelPV = load_pixelvae_model(f"models/decoder/decoder.px", device, "eVWtlIBjTRr0-gyZB0smWSwxCiF8l4PVJcNJOIFLFqE=")
+        decoder_path = os.path.abspath("models/decoder/decoder.px")
+        modelPV = load_pixelvae_model(decoder_path, device, "eVWtlIBjTRr0-gyZB0smWSwxCiF8l4PVJcNJOIFLFqE=")
 
     # Instantiate and load the main model
     global model
@@ -975,7 +976,10 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         seed = randint(0, 1000000)
     seed_everything(seed)
 
-    rprint(f"\n[#48a971]Text to Image[white] generating [#48a971]{n_iter}[white] images over [#48a971]{runs}[white] batches with [#48a971]{ddim_steps}[white] steps per image at [#48a971]{W}[white]x[#48a971]{H}")
+    wtile = max_tile(W // 8) if W // 8 > 96 else 1
+    htile = max_tile(H // 8) if H // 8 > 96 else 1
+
+    rprint(f"\n[#48a971]Text to Image[white] generating [#48a971]{n_iter}[white] images over [#48a971]{runs}[white] batches with [#48a971]{ddim_steps}[white] steps per image and [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}")
 
     start_code = None
     sampler = "euler"
@@ -1197,7 +1201,10 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         seed = randint(0, 1000000)
     seed_everything(seed)
 
-    rprint(f"\n[#48a971]Image to Image[white] generating [#48a971]{n_iter}[white] images over [#48a971]{runs}[white] batches with [#48a971]{ddim_steps}[white] steps per image at [#48a971]{W}[white]x[#48a971]{H}")
+    wtile = max_tile(W // 8) if W // 8 > 96 else 1
+    htile = max_tile(H // 8) if H // 8 > 96 else 1
+
+    rprint(f"\n[#48a971]Image to Image[white] generating [#48a971]{n_iter}[white] images over [#48a971]{runs}[white] batches with [#48a971]{ddim_steps}[white] steps per image and [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}")
 
     sampler = "ddim"
 
@@ -1760,7 +1767,10 @@ async def server(websocket):
             torch.cuda.empty_cache()
             global loadedDevice
             if torch.backends.mps.is_available() and loadedDevice != "cpu":
-                torch.mps.empty_cache()
+                try:
+                    torch.mps.empty_cache()
+                except:
+                    pass
         elif message == "shutdown":
             rprint("[#ab333d]Shutting down...")
             global running
