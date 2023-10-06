@@ -949,7 +949,7 @@ def paletteGen(colors, device, precision, prompt, seed):
     palette.save("temp/temp1.png")
     rprint(f"[#c4f129]Image converted to color palette with [#48a971]{colors}[#c4f129] colors")
 
-def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, W, H, ddim_steps, scale, seed, n_iter, tilingX, tilingY, pixelvae, post):
+def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, W, H, ddim_steps, scale, upscale, seed, n_iter, tilingX, tilingY, pixelvae, post):
     os.makedirs("temp", exist_ok=True)
     outpath = "temp"
 
@@ -1038,12 +1038,25 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         else:
             loras.append(None)
 
+    gWidth = W // 8
+    gHeight = H // 8
+    g_ddim_steps = ddim_steps
+    if W // 8 > 96 and H // 8 > 96 and upscale == "true":
+        lower = 50
+        aspect = gWidth/gHeight
+        gx = gWidth
+        gy = gHeight
+        gWidth = int((lower * max(1, aspect)) + ((gy/7) * aspect))
+        gHeight = int((lower * max(1, 1/aspect)) + ((gx/7) * (1/aspect)))
+        g_ddim_steps = int(ddim_steps * 0.75)
+    else:
+        upscale = "false"
+
     assert prompt is not None
     seeds = []
     data = [prompt]
     negative_data = [negative]
     with torch.no_grad():
-
         # Create conditioning values for each batch, then unload the text encoder
         uc = []
         c = []
@@ -1057,7 +1070,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                 condBatch = min(condBatch, n_iter-condCount)
                 uc.append(modelCS.get_learned_conditioning(condBatch * negative_data))
                 c.append(modelCS.get_learned_conditioning(condBatch * data))
-                shape.append([condBatch, 4, H // 8, W // 8])
+                shape.append([condBatch, 4, gHeight, gWidth])
                 condCount += condBatch
 
             # Move modelCS to CPU if necessary to free up GPU memory
@@ -1078,7 +1091,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
             with precision_scope("cuda"):
                 # Generate samples using the model
                 samples_ddim = model.sample(
-                    S=ddim_steps,
+                    S=g_ddim_steps,
                     conditioning=c[n],
                     seed=seed,
                     shape=shape[n],
@@ -1089,6 +1102,26 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                     x_T=start_code,
                     sampler = sampler,
                 )
+
+                if upscale == "true":
+                    samples_ddim = torch.nn.functional.interpolate(samples_ddim, size=(H // 8, W // 8), mode="bilinear")
+                    
+                    t_enc = int(12)
+                    z_enc= model.stochastic_encode(
+                        samples_ddim,
+                        torch.tensor([t_enc]).to(device),
+                        seed,
+                        0.0,
+                        ddim_steps,
+                    )
+                    samples_ddim = model.sample(
+                        t_enc,
+                        c[n],
+                        z_enc,
+                        unconditional_guidance_scale=scale,
+                        unconditional_conditioning=uc[n],
+                        sampler = "ddim"
+                    )
 
                 for i in range(batch):
                     if pixelvae == "true":
@@ -1596,10 +1629,10 @@ async def server(websocket):
             await websocket.send("running txt2img")
             try:
                 # Extract parameters from the message
-                loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, w, h, ddim_steps, scale, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafiles", "dloraweights", "ddevice", "dprecision", "dpixelsize", "dmaxbatchsize", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
+                loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, w, h, ddim_steps, scale, upscale, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafiles", "dloraweights", "ddevice", "dprecision", "dpixelsize", "dmaxbatchsize", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dupscale", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
                 loraFiles = loraFiles.split('|')
                 loraWeights = [int(x) for x in loraWeights.split('|')]
-                txt2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), int(maxBatchSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
+                txt2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), int(maxBatchSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), upscale, int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
                 await websocket.send("returning txt2img")
             except Exception as e:
                 if "SSLCertVerificationError" in traceback.format_exc():
