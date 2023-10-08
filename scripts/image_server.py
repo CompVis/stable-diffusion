@@ -21,7 +21,6 @@ from ldm.util import instantiate_from_config, max_tile
 from optimization.pixelvae import load_pixelvae_model
 from lora import apply_lora, assign_lora_names_to_compvis_modules, load_lora, register_lora_for_inference, remove_lora_for_inference
 import hitherdither
-import tomesd
 
 # Import PyTorch functions
 from torch import autocast
@@ -488,8 +487,6 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
     model.unet_bs = 1
     model.cdevice = device
     model.turbo = turbo
-    if device != "mps":
-        tomesd.apply_patch(model, ratio=0.6, use_rand=True, merge_attn=True, merge_crossattn=False, merge_mlp=False)
 
     # Instantiate and load the conditional stage model
     global modelCS
