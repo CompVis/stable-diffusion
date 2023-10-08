@@ -489,7 +489,7 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
     model.cdevice = device
     model.turbo = turbo
     if device != "mps":
-        tomesd.apply_patch(model, ratio=0.6, use_rand=True, merge_attn=True, merge_crossattn=True, merge_mlp=True)
+        tomesd.apply_patch(model, ratio=0.6, use_rand=True, merge_attn=True, merge_crossattn=False, merge_mlp=False)
 
     # Instantiate and load the conditional stage model
     global modelCS
@@ -979,7 +979,25 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
     wtile = max_tile(W // 8) if W // 8 > 96 else 1
     htile = max_tile(H // 8) if H // 8 > 96 else 1
 
+    gWidth = W // 8
+    gHeight = H // 8
+    g_ddim_steps = ddim_steps
+
+    if W // 8 > 96 and H // 8 > 96 and upscale == "true":
+        lower = 50
+        aspect = gWidth/gHeight
+        gx = gWidth
+        gy = gHeight
+        gWidth = int((lower * max(1, aspect)) + ((gy/7) * aspect))
+        gHeight = int((lower * max(1, 1/aspect)) + ((gx/7) * (1/aspect)))
+        g_ddim_steps = int(ddim_steps * 0.75)
+    else:
+        upscale = "false"
+
     rprint(f"\n[#48a971]Text to Image[white] generating [#48a971]{n_iter}[white] images over [#48a971]{runs}[white] batches with [#48a971]{ddim_steps}[white] steps per image and [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}")
+
+    if W // 8 > 96 and H // 8 > 96 and upscale == "true":
+        rprint(f"[#48a971]Pre-generating[white] composition image with [#48a971]{g_ddim_steps}[white] steps at [#48a971]{gWidth*8}[white]x[#48a971]{gHeight*8}")
 
     start_code = None
     sampler = "euler"
@@ -1038,20 +1056,6 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         else:
             loras.append(None)
 
-    gWidth = W // 8
-    gHeight = H // 8
-    g_ddim_steps = ddim_steps
-    if W // 8 > 96 and H // 8 > 96 and upscale == "true":
-        lower = 50
-        aspect = gWidth/gHeight
-        gx = gWidth
-        gy = gHeight
-        gWidth = int((lower * max(1, aspect)) + ((gy/7) * aspect))
-        gHeight = int((lower * max(1, 1/aspect)) + ((gx/7) * (1/aspect)))
-        g_ddim_steps = int(ddim_steps * 0.75)
-    else:
-        upscale = "false"
-
     assert prompt is not None
     seeds = []
     data = [prompt]
@@ -1106,7 +1110,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                 if upscale == "true":
                     samples_ddim = torch.nn.functional.interpolate(samples_ddim, size=(H // 8, W // 8), mode="bilinear")
                     
-                    t_enc = int(12)
+                    t_enc = int(ddim_steps * 0.65)
                     z_enc= model.stochastic_encode(
                         samples_ddim,
                         torch.tensor([t_enc]).to(device),
