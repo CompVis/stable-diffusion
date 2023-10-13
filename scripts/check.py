@@ -23,7 +23,6 @@ try:
     from ldm.util import instantiate_from_config
     from optimization.pixelvae import load_pixelvae_model
     import hitherdither
-    import tomesd
 
     print("\nImported built libraries")
 
