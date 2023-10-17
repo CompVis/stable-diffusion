@@ -927,7 +927,7 @@ def paletteGen(colors, device, precision, prompt, seed):
     width = 512+((512/base)*(colors-base))
 
     # Generate text-to-image conversion with specified parameters
-    txt2img(None, ["none"], [0], device, precision, 1, 512, prompt, "", int(width), 512, 20, 7.0, int(seed), 1, "false", "false", "false", "false")
+    txt2img(None, ["none"], [0], device, precision, 1, 512, prompt, "", int(width), 512, 20, 7.0, "false", int(seed), 1, "false", "false", "false", "false")
 
     # Open the generated image
     image = Image.open("temp/temp1.png").convert('RGB')
