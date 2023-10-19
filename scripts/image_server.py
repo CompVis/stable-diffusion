@@ -1313,48 +1313,48 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         c = []
         z_enc = []
 
-        # Move the modelFS to the specified device
-        modelFS.to(device)
-        latentBatch = batch
-        latentCount = 0
-
-        # Repeat the initial image for batch processing
-        init_image_batch = repeat(init_image, "1 ... -> b ...", b=latentBatch)
-
-        # Move the initial image to latent space and resize it
-        init_latent_base = (modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image_batch)))
-        init_latent_base = torch.nn.functional.interpolate(init_latent_base, size=(H // 8, W // 8), mode="bilinear")
-
-        for n in range(runs):
-            if n_iter-latentCount < latentBatch:
-                latentBatch = n_iter-latentCount
-
-                # Repeat the initial image for batch processing
-                init_image_batch = repeat(init_image, "1 ... -> b ...", b=latentBatch)
-
-                # Move the initial image to latent space and resize it
-                init_latent_base = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image_batch))
-                init_latent_base = torch.nn.functional.interpolate(init_latent_base, size=(H // 8, W // 8), mode="bilinear")
-
-            # Encode the scaled latent
-            z_enc.append(model.stochastic_encode(
-                init_latent_base,
-                torch.tensor([t_enc]).to(device),
-                seed+(n*latentCount),
-                0.0,
-                ddim_steps,
-            ))
-            latentCount += latentBatch
-
-        # Move modelFS to CPU if necessary to free up GPU memory
-        if device == "cuda":
-            mem = torch.cuda.memory_allocated(device=device) / 1e6
-            modelFS.to("cpu")
-            # Wait until memory usage decreases
-            while torch.cuda.memory_allocated(device=device) / 1e6 >= mem:
-                time.sleep(1)
-
         with precision_scope("cuda"):
+            # Move the modelFS to the specified device
+            modelFS.to(device)
+            latentBatch = batch
+            latentCount = 0
+
+            # Repeat the initial image for batch processing
+            init_image_batch = repeat(init_image, "1 ... -> b ...", b=latentBatch)
+
+            # Move the initial image to latent space and resize it
+            init_latent_base = (modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image_batch)))
+            init_latent_base = torch.nn.functional.interpolate(init_latent_base, size=(H // 8, W // 8), mode="bilinear")
+
+            for n in range(runs):
+                if n_iter-latentCount < latentBatch:
+                    latentBatch = n_iter-latentCount
+
+                    # Repeat the initial image for batch processing
+                    init_image_batch = repeat(init_image, "1 ... -> b ...", b=latentBatch)
+
+                    # Move the initial image to latent space and resize it
+                    init_latent_base = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image_batch))
+                    init_latent_base = torch.nn.functional.interpolate(init_latent_base, size=(H // 8, W // 8), mode="bilinear")
+
+                # Encode the scaled latent
+                z_enc.append(model.stochastic_encode(
+                    init_latent_base,
+                    torch.tensor([t_enc]).to(device),
+                    seed+(n*latentCount),
+                    0.0,
+                    ddim_steps,
+                ))
+                latentCount += latentBatch
+
+            # Move modelFS to CPU if necessary to free up GPU memory
+            if device == "cuda":
+                mem = torch.cuda.memory_allocated(device=device) / 1e6
+                modelFS.to("cpu")
+                # Wait until memory usage decreases
+                while torch.cuda.memory_allocated(device=device) / 1e6 >= mem:
+                    time.sleep(1)
+
             modelCS.to(device)
             condBatch = batch
             condCount = 0
