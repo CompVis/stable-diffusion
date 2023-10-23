@@ -20,6 +20,7 @@ from cryptography.fernet import Fernet
 from ldm.util import instantiate_from_config, max_tile
 from optimization.pixelvae import load_pixelvae_model
 from lora import apply_lora, assign_lora_names_to_compvis_modules, load_lora, register_lora_for_inference, remove_lora_for_inference
+import segmenter
 import hitherdither
 
 # Import PyTorch functions
@@ -878,8 +879,7 @@ def palettizeOutput(numFiles):
         else:
             play("batch.wav")
 
-# Unused for now
-def rembg(numFiles):
+def rembg(modelpath, numFiles):
     
     timer = time.time()
     files = []
@@ -893,14 +893,15 @@ def rembg(numFiles):
     # Process each file in the list
     for file in clbar(files, name = "Processed", position = "", unit = "image", prefixwidth = 12, suffixwidth = 28):
         img = Image.open(file).convert('RGB')
+        resize = img.resize((img.width*4, img.height*4), resample=Image.Resampling.NEAREST)
+
+        segmenter.init(modelpath, resize.width, resize.height)
         
         # Check if the file exists
         if os.path.isfile(file):
-            # Ignore warnings during background removal
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                # Remove the background and save the image
-                #remove(img).save(file)
+            [image, mask] = segmenter.segment(resize)
+
+            image.resize((img.width, img.height), resample=Image.Resampling.NEAREST).save(file)
 
             if file != files[-1]:
                 play("iteration.wav")
@@ -1712,8 +1713,8 @@ async def server(websocket):
             await websocket.send("running rembg")
             try:
                 # Extract parameters from the message
-                numFiles = searchString(message, "dnumfiles", "end")
-                rembg(int(numFiles[0]))
+                modelPath, numFiles = searchString(message, "dmodelpath", "dnumfiles", "end")
+                rembg(modelPath, int(numFiles[0]))
                 await websocket.send("returning rembg")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")

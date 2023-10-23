@@ -1,1 +1,1 @@
-from . import optimization, ldm, lora, samplers, autoencoder
+from . import optimization, ldm, segmenter, lora, samplers, autoencoder
