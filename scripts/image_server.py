@@ -224,30 +224,31 @@ def climage(image, alignment, *args):
             # Get the color for the upper and lower half of the text character
             r, g, b, a = image.getpixel((x, (y2*2)))
             r2, g2, b2, a2 = image.getpixel((x, (y2*2)+1))
-
-            # Convert to hex colors for Rich to use
-            rgb, rgb2 = '#{:02x}{:02x}{:02x}'.format(r, g, b), '#{:02x}{:02x}{:02x}'.format(r2, g2, b2)
-
-            # Lookup table because I was bored
-            colorCodes = [f"{rgb2} on {rgb}", f"{rgb2}", f"{rgb}", "nothing", f"{rgb}"]
-            # ~It just works~
-            maping = int(a < 200)+(int(a2 < 200)*2)+(int(rgb == rgb2 and a + a2 > 400)*4)
-            color = colorCodes[maping]
             
             # Set text characters, nothing, full block, half block. Half block + background color = 2 pixels
             if a < 200 and a2 < 200:
                 line.append(f" ")
-            elif rgb == rgb2:
-                line.append(f"[{color}]█[/{color}]")
             else:
-                if maping == 2:
-                    line.append(f"[{color}]▀[/{color}]")
+                # Convert to hex colors for Rich to use
+                rgb, rgb2 = '#{:02x}{:02x}{:02x}'.format(r, g, b), '#{:02x}{:02x}{:02x}'.format(r2, g2, b2)
+
+                # Lookup table because I was bored
+                colorCodes = [f"{rgb2} on {rgb}", f"{rgb2}", f"{rgb}", "nothing", f"{rgb}"]
+                # ~It just works~
+                maping = int(a < 200)+(int(a2 < 200)*2)+(int(rgb == rgb2 and a + a2 > 400)*4)
+                color = colorCodes[maping]
+                
+                if rgb == rgb2:
+                    line.append(f"[{color}]█[/]")
                 else:
-                    line.append(f"[{color}]▄[/{color}]")
+                    if maping == 2:
+                        line.append(f"[{color}]▀[/]")
+                    else:
+                        line.append(f"[{color}]▄[/]")
         
         # Add default colors to the end of the line
-        lines.append("".join(line) + "")
-    return "\n".join(lines)
+        lines.append("".join(line) + "\u202F")
+    return " \n".join(lines)
 
 def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disable = False, prefixwidth = 1, suffixwidth = 1, total = 0):
 
