@@ -892,21 +892,28 @@ def rembg(modelpath, numFiles):
 
     # Process each file in the list
     for file in clbar(files, name = "Processed", position = "", unit = "image", prefixwidth = 12, suffixwidth = 28):
-        img = Image.open(file).convert('RGB')
-        resize = img.resize((img.width*4, img.height*4), resample=Image.Resampling.NEAREST)
 
-        segmenter.init(modelpath, resize.width, resize.height)
-        
-        # Check if the file exists
-        if os.path.isfile(file):
-            [image, mask] = segmenter.segment(resize)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            
+            img = Image.open(file).convert('RGB')
+            size = math.sqrt(img.width*img.height)
 
-            image.resize((img.width, img.height), resample=Image.Resampling.NEAREST).save(file)
+            upscale = max(1, int(1024/size))
+            resize = img.resize((img.width*upscale, img.height*upscale), resample=Image.Resampling.NEAREST)
 
-            if file != files[-1]:
-                play("iteration.wav")
-            else:
-                play("batch.wav")
+            segmenter.init(modelpath, resize.width, resize.height)
+            
+            # Check if the file exists
+            if os.path.isfile(file):
+                [image, mask] = segmenter.segment(resize)
+
+                image.resize((img.width, img.height), resample=Image.Resampling.NEAREST).save(file)
+
+                if file != files[-1]:
+                    play("iteration.wav")
+                else:
+                    play("batch.wav")
     rprint(f"[#c4f129]Removed [#48a971]{len(files)}[#c4f129] backgrounds in [#48a971]{round(time.time()-timer, 2)}[#c4f129] seconds")
 
 def kCentroidVerbose(width, height, centroids):
@@ -1714,7 +1721,7 @@ async def server(websocket):
             try:
                 # Extract parameters from the message
                 modelPath, numFiles = searchString(message, "dmodelpath", "dnumfiles", "end")
-                rembg(modelPath, int(numFiles[0]))
+                rembg(modelPath, int(numFiles))
                 await websocket.send("returning rembg")
             except Exception as e: 
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
