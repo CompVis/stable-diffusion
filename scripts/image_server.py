@@ -989,7 +989,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
     gHeight = H // 8
     g_ddim_steps = ddim_steps
 
-    if W // 8 > 96 and H // 8 > 96 and upscale == "true":
+    if W // 8 >= 96 and H // 8 >= 96 and upscale == "true":
         lower = 50
         aspect = gWidth/gHeight
         gx = gWidth
@@ -1002,7 +1002,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
 
     rprint(f"\n[#48a971]Text to Image[white] generating [#48a971]{n_iter}[white] images over [#48a971]{runs}[white] batches with [#48a971]{ddim_steps}[white] steps and [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
 
-    if W // 8 > 96 and H // 8 > 96 and upscale == "true":
+    if W // 8 >= 96 and H // 8 >= 96 and upscale == "true":
         rprint(f"[#48a971]Pre-generating[white] composition image with [#48a971]{g_ddim_steps}[white] steps at [#48a971]{gWidth * 8}[white]x[#48a971]{gHeight * 8} ([#48a971]{(gWidth * 8) // pixelSize}[white]x[#48a971]{(gHeight * 8) // pixelSize}[white] pixels)")
 
     start_code = None
