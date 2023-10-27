@@ -927,7 +927,48 @@ def kCentroidVerbose(width, height, centroids):
     for _ in clbar(range(1), name = "Processed", unit = "image", prefixwidth = 12, suffixwidth = 28):
         kCentroid(init_img, int(width), int(height), int(centroids)).save("temp/temp.png")
     play("batch.wav")
-        
+
+def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loraFiles, post):
+    if pixelvae == "true":
+        # Pixel clustering mode, lower threshold means bigger clusters
+        denoise = 0.08
+        x_sample = modelPV.run_cluster(samples_ddim[i:i+1], threshold=denoise, wrap_x=bool(tilingX == "true"), wrap_y=bool(tilingY == "true"))
+        #x_sample = modelPV.run_plain(samples_ddim)
+        # Convert to numpy format, skip downscale later
+        x_sample = x_sample[0].cpu().numpy()
+    else:
+        modelFS.to(device)
+        # Decode the samples using the first stage of the model
+        x_sample = [modelFS.decode_first_stage(samples_ddim[i:i+1].to(device))[0].cpu()]
+        # Convert the list of decoded samples to a tensor and normalize the values to [0, 1]
+        x_sample = torch.stack(x_sample).float()
+        x_sample = torch.clamp((x_sample + 1.0) / 2.0, min=0.0, max=1.0)
+
+        # Rearrange the dimensions of the tensor and scale the values to the range [0, 255]
+        x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
+    
+    # Convert the numpy array to an image
+    x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
+
+    if x_sample_image.width > W // pixelSize and x_sample_image.height > H // pixelSize:
+        # Resize the image if pixel is true
+        x_sample_image = kCentroid(x_sample_image, W // pixelSize, H // pixelSize, 2)
+    elif x_sample_image.width < W // pixelSize and x_sample_image.height < H // pixelSize:
+        x_sample_image = x_sample_image.resize((W, H), resample=Image.Resampling.NEAREST)
+
+    if "1bit.pxlm" in loraFiles:
+        post = "false"
+        x_sample_image = x_sample_image.quantize(colors=4, method=1, kmeans=4, dither=0).convert('RGB')
+        x_sample_image = x_sample_image.quantize(colors=2, method=1, kmeans=2, dither=0).convert('RGB')
+        pixels = list(x_sample_image.getdata())
+        darkest, brightest = min(pixels), max(pixels)
+        new_pixels = [0 if pixel == darkest else 255 if pixel == brightest else pixel for pixel in pixels]
+        new_image = Image.new("L", x_sample_image.size)
+        new_image.putdata(new_pixels)
+        x_sample_image = new_image.convert('RGB')
+
+    return x_sample_image, post
+
 def paletteGen(colors, device, precision, prompt, seed):
     # Calculate the base for palette generation
     base = 2**round(math.log2(colors))
@@ -1134,44 +1175,9 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                     )
 
                 for i in range(batch):
-                    if pixelvae == "true":
-                        # Pixel clustering mode, lower threshold means bigger clusters
-                        denoise = 0.08
-                        x_sample = modelPV.run_cluster(samples_ddim[i:i+1], threshold=denoise, wrap_x=bool(tilingX == "true"), wrap_y=bool(tilingY == "true"))
-                        #x_sample = modelPV.run_plain(samples_ddim)
-                        # Convert to numpy format, skip downscale later
-                        x_sample = x_sample[0].cpu().numpy()
-                    else:
-                        modelFS.to(device)
-                        # Decode the samples using the first stage of the model
-                        x_sample = [modelFS.decode_first_stage(samples_ddim[i:i+1].to(device))[0].cpu()]
-                        # Convert the list of decoded samples to a tensor and normalize the values to [0, 1]
-                        x_sample = torch.stack(x_sample).float()
-                        x_sample = torch.clamp((x_sample + 1.0) / 2.0, min=0.0, max=1.0)
-
-                        # Rearrange the dimensions of the tensor and scale the values to the range [0, 255]
-                        x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
+                    x_sample_image, post = render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loraFiles, post)
                     
-                    # Convert the numpy array to an image
-                    x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
-
                     file_name = "temp" + f"{base_count+1}"
-                    if x_sample_image.width > int(W/pixelSize) and x_sample_image.height > int(H/pixelSize):
-                        # Resize the image if pixel is true
-                        x_sample_image = kCentroid(x_sample_image, int(W/pixelSize), int(H/pixelSize), 2)
-                    elif x_sample_image.width < int(W/pixelSize) and x_sample_image.height < int(H/pixelSize):
-                        x_sample_image = x_sample_image.resize((W, H), resample=Image.Resampling.NEAREST)
-
-                    if "1bit.pxlm" in loraFiles:
-                        x_sample_image = x_sample_image.quantize(colors=4, method=1, kmeans=4, dither=0).convert('RGB')
-                        x_sample_image = x_sample_image.quantize(colors=2, method=1, kmeans=2, dither=0).convert('RGB')
-                        pixels = list(x_sample_image.getdata())
-                        darkest, brightest = min(pixels), max(pixels)
-                        new_pixels = [0 if pixel == darkest else 255 if pixel == brightest else pixel for pixel in pixels]
-                        new_image = Image.new("L", x_sample_image.size)
-                        new_image.putdata(new_pixels)
-                        x_sample_image = new_image.convert('RGB')
-
                     x_sample_image.save(
                         os.path.join(outpath, file_name + ".png")
                     )
@@ -1229,6 +1235,11 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
     init_img = "temp/input.png"
     assert os.path.isfile(init_img)
     init_image = load_img(init_img, H, W).to(device)
+
+    # Load mask
+    init_mask = None
+    if os.path.isfile("temp/mask.png"):
+        init_mask = load_img("temp/mask.png", H, W).to(device)
 
     global maxSize
     maxSize = maxBatchSize
@@ -1328,23 +1339,21 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
             latentBatch = batch
             latentCount = 0
 
-            # Repeat the initial image for batch processing
-            init_image_batch = repeat(init_image, "1 ... -> b ...", b=latentBatch)
-
             # Move the initial image to latent space and resize it
-            init_latent_base = (modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image_batch)))
+            init_latent_base = (modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image)))
             init_latent_base = torch.nn.functional.interpolate(init_latent_base, size=(H // 8, W // 8), mode="bilinear")
+            if init_latent_base.shape[0] < latentBatch:
+                init_latent_base = init_latent_base.repeat([math.ceil(latentBatch / init_latent_base.shape[0])] + [1] * (len(init_latent_base.shape) - 1))[:latentBatch]
 
             for n in range(runs):
                 if n_iter-latentCount < latentBatch:
                     latentBatch = n_iter-latentCount
 
-                    # Repeat the initial image for batch processing
-                    init_image_batch = repeat(init_image, "1 ... -> b ...", b=latentBatch)
+                    # Slice latents to new batch size
+                    init_latent_base = init_latent_base[:latentBatch]
 
-                    # Move the initial image to latent space and resize it
-                    init_latent_base = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image_batch))
-                    init_latent_base = torch.nn.functional.interpolate(init_latent_base, size=(H // 8, W // 8), mode="bilinear")
+                    if init_mask is not None:
+                        init_mask = init_mask[:latentBatch]
 
                 # Encode the scaled latent
                 z_enc.append(model.stochastic_encode(
@@ -1401,44 +1410,9 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                 )
 
                 for i in range(batch):
-                    if pixelvae == "true":
-                        # Pixel clustering mode, lower threshold means bigger clusters
-                        denoise = 0.08
-                        x_sample = modelPV.run_cluster(samples_ddim[i:i+1], threshold=denoise, wrap_x=bool(tilingX == "true"), wrap_y=bool(tilingY == "true"))
-                        #x_sample = modelPV.run_plain(samples_ddim)
-                        # Convert to numpy format, skip downscale later
-                        x_sample = x_sample[0].cpu().numpy()
-                    else:
-                        modelFS.to(device)
-                        # Decode the samples using the first stage of the model
-                        x_sample = [modelFS.decode_first_stage(samples_ddim[i:i+1].to(device))[0].cpu()]
-                        # Convert the list of decoded samples to a tensor and normalize the values to [0, 1]
-                        x_sample = torch.stack(x_sample).float()
-                        x_sample = torch.clamp((x_sample + 1.0) / 2.0, min=0.0, max=1.0)
-
-                        # Rearrange the dimensions of the tensor and scale the values to the range [0, 255]
-                        x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
+                    x_sample_image, post = render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loraFiles, post)
                     
-                    # Convert the numpy array to an image
-                    x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
-
                     file_name = "temp" + f"{base_count+1}"
-                    if x_sample_image.width > int(W/pixelSize) and x_sample_image.height > int(H/pixelSize):
-                        # Resize the image if pixel is true
-                        x_sample_image = kCentroid(x_sample_image, int(W/pixelSize), int(H/pixelSize), 2)
-                    elif x_sample_image.width < int(W/pixelSize) and x_sample_image.height < int(H/pixelSize):
-                        x_sample_image = x_sample_image.resize((W, H), resample=Image.Resampling.NEAREST)
-
-                    if "1bit.pxlm" in loraFiles:
-                        x_sample_image = x_sample_image.quantize(colors=4, method=1, kmeans=4, dither=0).convert('RGB')
-                        x_sample_image = x_sample_image.quantize(colors=2, method=1, kmeans=2, dither=0).convert('RGB')
-                        pixels = list(x_sample_image.getdata())
-                        darkest, brightest = min(pixels), max(pixels)
-                        new_pixels = [0 if pixel == darkest else 255 if pixel == brightest else pixel for pixel in pixels]
-                        new_image = Image.new("L", x_sample_image.size)
-                        new_image.putdata(new_pixels)
-                        x_sample_image = new_image.convert('RGB')
-
                     x_sample_image.save(
                         os.path.join(outpath, file_name + ".png")
                     )
