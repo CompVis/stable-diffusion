@@ -509,6 +509,8 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
         modelCS.half()
         precision = "half"
 
+    print("Model loaded")
+
     assign_lora_names_to_compvis_modules(model, modelCS)
 
     # Print loading information

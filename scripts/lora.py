@@ -141,7 +141,7 @@ def assign_lora_names_to_compvis_modules(model, modelCS):
         module.lora_layer_name = lora_name
 
     model.lora_layer_mapping = lora_layer_mapping
-    print("Added LoRA weight mapping layers")
+    print("Added LoRA layers")
 
 
 def load_lora(filename, model):
