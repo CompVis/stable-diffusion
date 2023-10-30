@@ -1,11 +1,8 @@
 import torch
 import torch.nn as nn
-from scipy import integrate
-
 
 def append_zero(x):
     return torch.cat([x, x.new_zeros([1])])
-
 
 def append_dims(x, target_dims):
     """Appends dimensions to the end of a tensor until it has target_dims dimensions."""
@@ -16,36 +13,9 @@ def append_dims(x, target_dims):
         )
     return x[(...,) + (None,) * dims_to_append]
 
-
-def get_ancestral_step(sigma_from, sigma_to):
-    """Calculates the noise level (sigma_down) to step down to and the amount
-    of noise to add (sigma_up) when doing an ancestral sampling step."""
-    sigma_up = (
-        sigma_to**2 * (sigma_from**2 - sigma_to**2) / sigma_from**2
-    ) ** 0.5
-    sigma_down = (sigma_to**2 - sigma_up**2) ** 0.5
-    return sigma_down, sigma_up
-
-
-def linear_multistep_coeff(order, t, i, j):
-    if order - 1 > i:
-        raise ValueError(f"Order {order} too high for step {i}")
-
-    def fn(tau):
-        prod = 1.0
-        for k in range(order):
-            if j == k:
-                continue
-            prod *= (tau - t[i - k]) / (t[i - j] - t[i - k])
-        return prod
-
-    return integrate.quad(fn, t[i], t[i + 1], epsrel=1e-4)[0]
-
-
 def to_d(x, sigma, denoised):
     """Converts a denoiser output to a Karras ODE derivative."""
     return (x - denoised) / append_dims(sigma, x.ndim)
-
 
 class DiscreteSchedule(nn.Module):
     """A mapping between continuous noise levels (sigmas) and a list of discrete noise
@@ -83,7 +53,6 @@ class DiscreteSchedule(nn.Module):
         # print(low_idx, high_idx, w )
         return (1 - w) * self.sigmas[low_idx] + w * self.sigmas[high_idx]
 
-
 class DiscreteEpsDDPMDenoiser(DiscreteSchedule):
     """A wrapper for discrete schedule DDPM models that output eps (the predicted
     noise)."""
@@ -104,7 +73,6 @@ class DiscreteEpsDDPMDenoiser(DiscreteSchedule):
         c_out, c_in = [append_dims(x, input.ndim) for x in self.get_scalings(sigma)]
         eps = self.get_eps(input * c_in, self.sigma_to_t(sigma), **kwargs)
         return input + eps * c_out
-
 
 class CompVisDenoiser(DiscreteEpsDDPMDenoiser):
     """A wrapper for CompVis diffusion models."""
