@@ -1028,6 +1028,7 @@ class UNet(DDPM):
                 cond,
                 ts,
                 index=index,
+                total=len(time_range),
                 use_original_steps=use_original_steps,
                 unconditional_guidance_scale=unconditional_guidance_scale,
                 unconditional_conditioning=unconditional_conditioning,
@@ -1045,6 +1046,7 @@ class UNet(DDPM):
         c,
         t,
         index,
+        total,
         repeat_noise=False,
         use_original_steps=False,
         quantize_denoised=False,
@@ -1057,7 +1059,7 @@ class UNet(DDPM):
     ):
         b, *_, device = *x.shape, x.device
 
-        if unconditional_conditioning is None or unconditional_guidance_scale == 1.0:
+        if unconditional_conditioning is None or unconditional_guidance_scale == 1.0 or (index%3 > 0 and index <= total*(2/3)):
             e_t = self.apply_model(x, t, c)
         else:
             x_in = torch.cat([x] * 2)
@@ -1132,15 +1134,23 @@ class UNet(DDPM):
                 x = x + eps * (sigma_hat**2 - sigmas[i] ** 2) ** 0.5
 
             s_i = sigma_hat * s_in
-            x_in = torch.cat([x] * 2)
-            t_in = torch.cat([s_i] * 2)
-            cond_in = torch.cat([unconditional_conditioning, cond])
-            c_out, c_in = [
-                append_dims(tmp, x_in.ndim) for tmp in cvd.get_scalings(t_in)
-            ]
-            eps = self.apply_model(x_in * c_in, cvd.sigma_to_t(t_in), cond_in)
-            e_t_uncond, e_t = (x_in + eps * c_out).chunk(2)
-            denoised = e_t_uncond + unconditional_guidance_scale * (e_t - e_t_uncond)
+
+            if unconditional_conditioning is None or unconditional_guidance_scale == 1.0 or (i%3 > 0 and i >= len(sigmas)/3):
+                c_out, c_in = [
+                    append_dims(tmp, x.ndim) for tmp in cvd.get_scalings(s_i)
+                ]
+                eps = self.apply_model(x * c_in, cvd.sigma_to_t(s_i), cond)
+                denoised = x + eps * c_out
+            else:
+                x_in = torch.cat([x] * 2)
+                t_in = torch.cat([s_i] * 2)
+                cond_in = torch.cat([unconditional_conditioning, cond])
+                c_out, c_in = [
+                    append_dims(tmp, x_in.ndim) for tmp in cvd.get_scalings(t_in)
+                ]
+                eps = self.apply_model(x_in * c_in, cvd.sigma_to_t(t_in), cond_in)
+                e_t_uncond, e_t = (x_in + eps * c_out).chunk(2)
+                denoised = e_t_uncond + unconditional_guidance_scale * (e_t - e_t_uncond)
 
             d = to_d(x, sigma_hat, denoised)
             if callback is not None:
