@@ -579,7 +579,7 @@ def pixelDetectVerbose():
     for _ in clbar(range(1), name = "Processed", position = "last", unit = "image", prefixwidth = 12, suffixwidth = 28):
         downscale = pixelDetect(init_img)
 
-        numColors = determine_best_k_verbose(downscale, 64)
+        numColors = determine_best_k(downscale, 64)
 
         for _ in clbar([downscale], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28): 
             img_indexed = downscale.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
@@ -623,36 +623,38 @@ def kDenoise(image, smoothing, strength):
 
     return Image.fromarray(denoised, mode='RGB')
 
-def determine_best_k(image, max_k):
-    # Convert the image to RGB mode
+def determine_best_k(image, max_k, n_samples=5000):
     image = image.convert("RGB")
 
-    # Prepare arrays for distortion calculation
+    # Flatten the image pixels and sample them
     pixels = np.array(image)
     pixel_indices = np.reshape(pixels, (-1, 3))
+    
+    if pixel_indices.shape[0] > n_samples:
+        pixel_indices = pixel_indices[np.random.choice(pixel_indices.shape[0], n_samples, replace=False), :]
+    
+    # Compute centroids for max_k
+    quantized_image = image.quantize(colors=max_k, method=2, kmeans=max_k, dither=0)
+    centroids_max_k = np.array(quantized_image.getpalette()[:max_k * 3]).reshape(-1, 3)
 
-    # Calculate distortion for different values of k
     distortions = []
     for k in range(1, max_k + 1):
-        quantized_image = image.quantize(colors=k, method=2, kmeans=k, dither=0)
-        centroids = np.array(quantized_image.getpalette()[:k * 3]).reshape(-1, 3)
+        subset_centroids = centroids_max_k[:k]
         
-        # Calculate distortions
-        distances = np.linalg.norm(pixel_indices[:, np.newaxis] - centroids, axis=2)
+        # Calculate distortions using SciPy
+        distances = scipy.spatial.distance.cdist(pixel_indices, subset_centroids)
         min_distances = np.min(distances, axis=1)
         distortions.append(np.sum(min_distances ** 2))
 
-    # Calculate the rate of change of distortions
-    rate_of_change = np.diff(distortions) / np.array(distortions[:-1])
+    # Calculate slope changes
+    slopes = np.diff(distortions)
+    relative_slopes = np.diff(slopes) / (np.abs(slopes[:-1]) + 1e-8)
     
-    # Find the elbow point (best k value)
-    if len(rate_of_change) == 0:
-        best_k = 2
-    else:
-        elbow_index = np.argmax(rate_of_change)
-        best_k = elbow_index + 2
-
-    return best_k
+    # Find the elbow point based on maximum relative slope change
+    if len(relative_slopes) <= 1:
+        return 2
+    elbow_point = np.argmax(np.abs(relative_slopes))
+    return elbow_point + 4
 
 def determine_best_palette_verbose(image, paletteFolder):
     # Convert the image to RGB mode
@@ -686,51 +688,15 @@ def determine_best_palette_verbose(image, paletteFolder):
         quantized_image = image.quantize(method=1, kmeans=numColors, palette=palImg, dither=0)
         centroids = np.array(quantized_image.getpalette()[:numColors * 3]).reshape(-1, 3)
         
-        # Calculate distortions
-        distances = np.linalg.norm(pixel_indices[:, np.newaxis] - centroids, axis=2)
-        min_distances = np.min(distances, axis=1)
-        distortions.append(np.sum(min_distances ** 2))
+        # Calculate distortions more memory-efficiently
+        min_distances = [np.min(np.linalg.norm(centroid - pixel_indices, axis=1)) for centroid in centroids]
+        distortions.append(np.sum(np.square(min_distances)))
     
     # Find the best match
     best_match_index = np.argmin(distortions)
     best_palette = Image.open(f"{paletteFolder}/{paletteImages[best_match_index]}").convert('RGB')
 
     return best_palette, paletteImages[best_match_index]
-
-def determine_best_k_verbose(image, max_k):
-    # Convert the image to RGB mode
-    image = image.convert("RGB")
-
-    # Prepare arrays for distortion calculation
-    pixels = np.array(image)
-    pixel_indices = np.reshape(pixels, (-1, 3))
-
-    # Calculate distortion for different values of k
-    # Divided into 'chunks' for nice progress displaying
-    distortions = []
-    count = 0
-    for k in clbar(range(4, round(max_k/8) + 2), name = "Finding K", position = "first", prefixwidth = 12, suffixwidth = 28):
-        for n in range(round(max_k/k)):
-            count += 1
-            quantized_image = image.quantize(colors=count, method=2, kmeans=count, dither=0)
-            centroids = np.array(quantized_image.getpalette()[:count * 3]).reshape(-1, 3)
-            
-            # Calculate distortions
-            distances = np.linalg.norm(pixel_indices[:, np.newaxis] - centroids, axis=2)
-            min_distances = np.min(distances, axis=1)
-            distortions.append(np.sum(min_distances ** 2))
-
-    # Calculate the rate of change of distortions
-    rate_of_change = np.diff(distortions) / np.array(distortions[:-1])
-    
-    # Find the elbow point (best k value)
-    if len(rate_of_change) == 0:
-        best_k = 1
-    else:
-        elbow_index = np.argmax(rate_of_change)
-        best_k = elbow_index + 2
-
-    return best_k
 
 def palettize(numFiles, source, colors, bestPaletteFolder, paletteFile, paletteURL, dithering, strength, denoise, smoothness, intensity):
     # Check if a palette URL is provided and try to download the palette image
@@ -785,7 +751,7 @@ def palettize(numFiles, source, colors, bestPaletteFolder, paletteFile, paletteU
         threshold = 4*strength
 
         if source == "Automatic":
-            numColors = determine_best_k_verbose(img, 64)
+            numColors = determine_best_k(img, 64)
         
         # Check if a palette file is provided
         if (paletteFile != "" and os.path.isfile(file)) or source == "Best Palette":
@@ -865,19 +831,14 @@ def palettizeOutput(numFiles):
         files.append(f"temp/temp{n+1}.png")
     
     # Process the image using pixelDetect and save the result
-    for file in clbar(files, name = "Processed", position = "last", unit = "image", prefixwidth = 12, suffixwidth = 28):
+    for file in files:
         img = Image.open(file).convert('RGB')
 
-        numColors = determine_best_k_verbose(img, 64)
+        numColors = determine_best_k(img, 64)
 
-        for _ in clbar([img], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28): 
-            img_indexed = img.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
-        
-            img_indexed.save(file)
-        if file != files[-1]:
-            play("iteration.wav")
-        else:
-            play("batch.wav")
+        img_indexed = img.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
+    
+        img_indexed.save(file)
 
 def rembg(modelpath, numFiles):
     
@@ -1212,10 +1173,8 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         del loras
 
         if post == "true":
-            play("iteration.wav")
             palettizeOutput(int(n_iter))
-        else:
-            play("batch.wav")
+        play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
 
 def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, W, H, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post):
@@ -1447,10 +1406,8 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         del loras
 
         if post == "true":
-            play("iteration.wav")
             palettizeOutput(int(n_iter))
-        else:
-            play("batch.wav")
+        play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
 
 def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, seed):
