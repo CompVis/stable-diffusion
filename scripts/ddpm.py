@@ -897,7 +897,7 @@ class UNet(DDPM):
     ):
         b, *_, device = *x.shape, x.device
 
-        if unconditional_conditioning is None or unconditional_guidance_scale == 1.0 or (index%2 > 0 and index <= total*(2/3)):
+        if unconditional_conditioning is None or unconditional_guidance_scale == 1.0 or (index % max(total/10, 4) > 0 and (index <= total*(2/3) or total-index > 20)):
             e_t = self.apply_model(x, t, c)
         else:
             x_in = torch.cat([x] * 2)
@@ -973,7 +973,7 @@ class UNet(DDPM):
 
             s_i = sigma_hat * s_in
 
-            if unconditional_conditioning is None or unconditional_guidance_scale == 1.0 or (i%2 > 0 and i >= len(sigmas)/3):
+            if unconditional_conditioning is None or unconditional_guidance_scale == 1.0 or (i % max(len(sigmas/10), 4) > 0 and (i >= len(sigmas)/3 or i > 20)):
                 c_out, c_in = [
                     append_dims(tmp, x.ndim) for tmp in cvd.get_scalings(s_i)
                 ]
