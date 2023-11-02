@@ -559,7 +559,7 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loraFiles,
         if modelLM is not None:
             try:
                 # Generate responses
-                rprint(f"\n[#48a971]Translation model [white]generating {generations} [white]enhanced prompts")
+                rprint(f"\n[#48a971]Translation model [white]generating [#48a971]{generations} [white]enhanced prompts")
 
                 upsampled_captions = []
                 for prompt in clbar(prompts, name = "Translating", position = "", unit = "prompt", prefixwidth = 12, suffixwidth = 28):
@@ -751,7 +751,7 @@ def kDenoise(image, smoothing, strength):
 
     return Image.fromarray(denoised, mode='RGB')
 
-def determine_best_k(image, max_k, n_samples=5000):
+def determine_best_k(image, max_k, n_samples=5000, smooth_window=3):
     image = image.convert("RGB")
 
     # Flatten the image pixels and sample them
@@ -777,12 +777,19 @@ def determine_best_k(image, max_k, n_samples=5000):
     # Calculate slope changes
     slopes = np.diff(distortions)
     relative_slopes = np.diff(slopes) / (np.abs(slopes[:-1]) + 1e-8)
-    
-    # Find the elbow point based on maximum relative slope change
+
+    # Find the elbow point based on the maximum relative slope change
     if len(relative_slopes) <= 1:
-        return 2
-    elbow_point = np.argmax(np.abs(relative_slopes))
-    return elbow_point + 6
+        return 2  # Return at least 2 if not enough data for slopes
+    elbow_index = np.argmax(np.abs(relative_slopes))
+
+    # Calculate the actual k value, considering the reductions due to diff and smoothing
+    actual_k = elbow_index + 1 + (smooth_window // 2) * 2  # Add the reduction from diff and smoothing
+
+    # Ensure actual_k is at least 1 and does not exceed max_k
+    actual_k = max(4, min(actual_k, max_k))
+
+    return actual_k
 
 def determine_best_palette_verbose(image, paletteFolder):
     # Convert the image to RGB mode
