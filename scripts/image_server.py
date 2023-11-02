@@ -605,7 +605,7 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loraFiles,
     if modelType == "pixel" and promptTuning == "true":
         prefix = "pixel art"
         suffix = "detailed"
-        negativeList = [negative, "mutated, noise, frame, snowglobe, deformed, stock image, watermark, text, signature, username"]
+        negativeList = [negative, "mutated, noise, frame, film reel, snowglobe, deformed, stock image, watermark, text, signature, username"]
 
         if any(f"{_}.pxlm" in loraFiles for _ in ["topdown", "isometric", "neogeo", "nes", "snes"]):
             prefix = "pixel"
