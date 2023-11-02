@@ -12,10 +12,9 @@ from itertools import islice, product
 from einops import rearrange
 from pytorch_lightning import seed_everything
 from contextlib import nullcontext
-from typing import Optional, Dict, List, Tuple
+from typing import Optional
 from safetensors.torch import load_file
 from cryptography.fernet import Fernet
-from transformers import pipeline, set_seed
 
 # Import built libraries
 from ldm.util import instantiate_from_config, max_tile
@@ -566,7 +565,7 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loraFiles,
                 rprint(f"\n[#48a971]Translation model [white]generating [#48a971]{generations} [white]enhanced prompts")
 
                 upsampled_captions = []
-                for prompt in clbar(prompts, name = "Translating", position = "", unit = "prompt", prefixwidth = 12, suffixwidth = 28):
+                for prompt in clbar(prompts, name = "Enhancing", position = "", unit = "prompt", prefixwidth = 12, suffixwidth = 28):
 
                     # Try to generate a response, if no response is identified after retrys, set upsampled prompt to initial prompt
                     upsampled_caption = None
@@ -1720,6 +1719,8 @@ async def server(websocket):
                     rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
                 elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
                     rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
+                    if modelLM is not None:
+                        rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
                 else:
                     rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                 play("error.wav")
@@ -1739,6 +1740,8 @@ async def server(websocket):
                     rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
                 elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
                     rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size. If samples are at 100%, this was caused by the VAE running out of memory, try enabling the Fast Pixel Decoder")
+                    if modelLM is not None:
+                        rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
                 elif "Expected batch_size > 0 to be true" in traceback.format_exc():
                     rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources during image encoding. Please lower the maximum batch size, or use a smaller input image")
                 elif "cannot reshape tensor of 0 elements" in traceback.format_exc():
