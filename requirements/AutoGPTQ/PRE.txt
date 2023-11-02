@@ -1,0 +1,9 @@
+accelerate==0.24.1
+tqdm==4.66.1
+rouge==1.0.1
+datasets==2.14.6
+sentencepiece==0.1.99
+gekko==1.0.6
+transformers==4.34.0
+peft==0.5.0
+optimum==1.12.0

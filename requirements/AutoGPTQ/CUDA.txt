@@ -1,0 +1,1 @@
+auto-gptq==0.4.2 -i https://huggingface.github.io/autogptq-index/whl/cu118/ --trusted-host huggingface.github.io

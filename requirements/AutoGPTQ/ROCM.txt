@@ -1,0 +1,1 @@
+auto-gptq==0.4.2 -i https://huggingface.github.io/autogptq-index/whl/rocm542/ --trusted-host huggingface.github.io
