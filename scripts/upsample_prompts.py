@@ -24,6 +24,7 @@ def get_messages_for_chat() -> Tuple[Dict, List[Dict]]:
     - You will only ever output a single image description per user request.
     - Do not respond with more than one image description per request.
     - Do not use any colors in your image descriptions.
+    - Do not use words like "realistic", "photograph", "realism" or any other words indicating the style of the image.
     - The description must be relevant to the user request.
     - Image descriptions must be between 15-60 words. Extra words will be ignored.
     """,
@@ -47,6 +48,14 @@ def get_messages_for_chat() -> Tuple[Dict, List[Dict]]:
         },
         {
             "role": "user",
+            "content": "Create an imaginative image descriptive caption or modify an earlier caption for the user input : 'a young man riding an electric dirt bike in the desert, black clothing, expensive carbon futuristic electric motorbike, battery-powered, scenic wide shot in landscape, low angle, in the style of contemporary modernist-type photography, high speed, dynamic composition, wheelie::4, motion blur::2, 8k uhd, atmospheric lighting, professionally color graded, moody, polarizing filter, dark blue sky'",
+        },
+        {
+            "role": "assistant",
+            "content": "a man riding an electric dirt bike and wearing a helmet in the desert, low angle perspective, futuristic",
+        },
+        {
+            "role": "user",
             "content": "Create an imaginative image descriptive caption or modify an earlier caption for the user input : 'In the foreground is a blond lady with her two dog in a rain suit on a shiny day. beautiful background'",
         },
         {
@@ -67,7 +76,7 @@ def get_messages_for_chat() -> Tuple[Dict, List[Dict]]:
         },
         {
             "role": "assistant",
-            "content": "a complex robot with heavy armor plating holding a large rifle, mech, sci-fi, blank background",
+            "content": "a complex robot with heavy armor plating holding a large rifle, character art, mech, sci-fi, blank background",
         },
         {
             "role": "user",
@@ -113,3 +122,29 @@ def collect_response(assistant_output):
     parts = output.rsplit("<|assistant|>", 1)
     assistant_reply = parts[1].strip() if len(parts) > 1 else None
     return assistant_reply.splitlines()[0]
+
+def enhance_prompts(pipeline, prompts, seed = 0):
+    upsampled_captions = []
+    for i, prompt in enumerate(prompts):
+        # Try to generate a response, if no response is identified after retrys, set upsampled prompt to initial prompt
+        upsampled_caption = None
+        retrys = 5
+        while upsampled_caption == None and retrys > 0:
+            outputs = upsample_caption(pipeline, prompt, seed+i)
+            upsampled_caption = collect_response(outputs)
+            retrys -= 1
+
+        if upsampled_caption == None:
+            upsampled_caption = prompt
+        
+        upsampled_captions.append(upsampled_caption)
+
+    del outputs, pipeline
+    return upsampled_captions
+
+# How to generate prompts
+'''
+pipeline = load_chat_pipeline()
+
+prompts = enhance_prompts(pipeline, ["a butterfly styled robot, no background"])
+'''
