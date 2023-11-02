@@ -56,11 +56,19 @@ def get_messages_for_chat() -> Tuple[Dict, List[Dict]]:
         },
         {
             "role": "user",
-            "content": "Create an imaginative image descriptive caption or modify an earlier caption for the user input : 'a young man riding an electric dirt bike in the desert, black clothing, expensive carbon futuristic electric motorbike, battery-powered, scenic wide shot in landscape, low angle, in the style of contemporary modernist-type photography, high speed, dynamic composition, wheelie::4, motion blur::2, 8k uhd, atmospheric lighting, professionally color graded, moody, polarizing filter, dark blue sky'",
+            "content": "Create an imaginative image descriptive caption or modify an earlier caption for the user input : 'ultra detailed photo of a detailed corgi dog in a field, detailed fur, natural grass, good composition, 8k render, hyper quality, best image, masterpiece, soft natural volumetric cinematic perfect light, trending on artstation, perfect composition'",
         },
         {
             "role": "assistant",
-            "content": "a man riding an electric dirt bike and wearing a helmet in the desert, low angle perspective, futuristic",
+            "content": "a happy corgi in a grassy field with a meadow in the background, detailed, soft lighting, nature",
+        },
+        {
+            "role": "user",
+            "content": "Create an imaginative image descriptive caption or modify an earlier caption for the user input : 'a man walking with detailed background'",
+        },
+        {
+            "role": "assistant",
+            "content": "a man wearing hiking clothing walking down a forest path with trees and a stream, mushrooms, wildlife, gravel path, nature, hiking",
         },
         {
             "role": "user",
