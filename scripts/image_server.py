@@ -9,17 +9,19 @@ from random import randint
 from omegaconf import OmegaConf
 from PIL import Image
 from itertools import islice, product
-from einops import rearrange, repeat
+from einops import rearrange
 from pytorch_lightning import seed_everything
 from contextlib import nullcontext
-from typing import Optional
+from typing import Optional, Dict, List, Tuple
 from safetensors.torch import load_file
 from cryptography.fernet import Fernet
+from transformers import pipeline, set_seed
 
 # Import built libraries
 from ldm.util import instantiate_from_config, max_tile
 from optimization.pixelvae import load_pixelvae_model
 from lora import apply_lora, assign_lora_names_to_compvis_modules, load_lora, register_lora_for_inference, remove_lora_for_inference
+from upsample_prompts import load_chat_pipeline, upsample_caption, collect_response
 import segmenter
 import hitherdither
 
@@ -32,7 +34,7 @@ from torch.nn.modules.utils import _pair
 # Import logging libraries
 import traceback, warnings
 import logging as pylog
-from transformers import logging
+from transformers.utils import logging
 
 # Import websocket tools
 import requests
@@ -63,12 +65,15 @@ if system == "Windows":
 log = pylog.getLogger("lightning_fabric")
 log.propagate = False
 log.setLevel(pylog.ERROR)
-logging.set_verbosity_error()
+logging.set_verbosity(logging.CRITICAL)
 
 global model
 global modelCS
 global modelFS
 global modelPV
+global modelLM
+modelLM = None
+global modelType
 global running
 global loadedDevice
 loadedDevice = "cpu"
@@ -98,6 +103,15 @@ if False:
 global timeout
 global loaded
 loaded = ""
+
+def clearCache():
+    global loadedDevice
+    torch.cuda.empty_cache()
+    if torch.backends.mps.is_available() and loadedDevice != "cpu":
+        try:
+            torch.mps.empty_cache()
+        except:
+            pass
 
 def audioThread(file):
     try:
@@ -425,10 +439,12 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
             rprint(f"\n[#ab333d]GPU is not responding, loading model in CPU mode")
 
     global loadedDevice
+    global modelType
     loadedDevice = device
 
     # Check the modelfile and print corresponding loading message
     print()
+    modelType = "pixel"
     if modelfile == "model.pxlm":
         print(f"Loading primary model")
     elif modelfile == "modelmicro.pxlm":
@@ -438,8 +454,10 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
     elif modelfile == "modelmega.pxlm":
         print(f"Loading mega model")
     elif modelfile == "paletteGen.pxlm":
+        modelType = "palette"
         print(f"Loading PaletteGen model")
     else:
+        modelType = "general"
         rprint(f"Loading custom model from [#48a971]{modelfile}")
 
     # Determine if turbo mode is enabled
@@ -514,6 +532,107 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
     # Print loading information
     play("iteration.wav")
     rprint(f"[#c4f129]Loaded model to [#48a971]{model.cdevice}[#c4f129] at [#48a971]{precision} precision[#c4f129] in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
+
+def managePrompts(prompt, negative, W, H, seed, upscale, generations, loraFiles, translate, promptTuning):
+    timer = time.time()
+    global modelLM
+    global loadedDevice
+    global modelType
+    global sounds
+
+    prompts = [prompt]*generations
+
+    # Load LLM for prompt upsampling
+    if translate == "true":
+        if modelLM == None:
+            print("\nLoading prompt translation language model")
+            modelLM = load_chat_pipeline()
+            play("iteration.wav")
+
+            rprint(f"[#c4f129]Loaded in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
+
+        rprint(f"\n[#48a971]Refining [#48a971]{generations} [#48a971]prompts")
+
+
+        # Generate responses
+        upsampled_captions = []
+        for prompt in clbar(prompts, name = "Translating", position = "", unit = "prompt", prefixwidth = 12, suffixwidth = 28):
+
+            # Try to generate a response, if no response is identified after retrys, set upsampled prompt to initial prompt
+            upsampled_caption = None
+            retrys = 5
+            while upsampled_caption == None and retrys > 0:
+                outputs = upsample_caption(modelLM, prompt, seed)
+                upsampled_caption = collect_response(outputs)
+                retrys -= 1
+            seed += 1
+
+            if upsampled_caption == None:
+                upsampled_caption = prompt
+            
+            upsampled_captions.append(upsampled_caption)
+            play("iteration.wav")
+
+        prompts = upsampled_captions
+        
+        cardMemory = torch.cuda.get_device_properties("cuda").total_memory / 1073741824
+        usedMemory = cardMemory - (torch.cuda.mem_get_info()[0] / 1073741824)
+
+        if cardMemory-usedMemory < 3:
+            del modelLM
+            clearCache()
+            modelLM = None
+        else:
+            clearCache()
+    else:
+        del modelLM
+        clearCache()
+        modelLM = None
+
+    # Deal with prompt modifications
+    if modelType == "pixel" and promptTuning == "true":
+        prefix = "pixel art"
+        suffix = "detailed"
+        negativeList = [negative, "mutated, noise, frame, snowglobe, deformed, stock image, watermark, text, signature, username"]
+
+        if any(f"{_}.pxlm" in loraFiles for _ in ["topdown", "isometric", "neogeo", "nes", "snes"]):
+            prefix = "pixel"
+            suffix = ""
+        elif any(f"{_}.pxlm" in loraFiles for _ in ["frontfacing", "gameicons", "flatshading"]):
+            prefix = "pixel"
+            suffix = "pixel art"
+        elif any(f"{_}.pxlm" in loraFiles for _ in ["nashorkimitems"]):
+            prefix = "pixel, item"
+            suffix = ""
+            negativeList.insert(0, "vibrant, colorful")
+        elif any(f"{_}.pxlm" in loraFiles for _ in ["gamecharacters"]):
+            prefix = "pixel"
+            suffix = "blank background"
+
+        if any(f"{_}.pxlm" in loraFiles for _ in ["1bit"]):
+            prefix = f"{prefix}, 1-bit"
+            suffix = f"{suffix}, pixel art, black and white, white background"
+            negativeList.insert(0, "color, colors")
+
+        if any(f"{_}.pxlm" in loraFiles for _ in ["tiling", "tiling16", "tiling32"]):
+            prefix = f"{prefix}, texture"
+            suffix = f"{suffix}, pixel art"
+        
+        if math.sqrt(W*H) >= 832 and upscale == "false":
+            suffix = f"{suffix}, pjpixdeuc art style"
+
+        # Combine all prompt modifications
+        negatives = [", ".join(negativeList)]*generations
+        for i, prompt in enumerate(prompts):
+            prompts[i] = f"{prefix}, {prompt}, {suffix}"
+    else:
+        if promptTuning == "true":
+            negatives = [f"{negative}, pixel art, blurry, mutated, deformed, borders, watermark, text"]*generations
+        else:
+            negatives = [f"{negative}, pixel art"]*generations
+        
+    
+    return prompts, negatives
 
 def kCentroid(image, width, height, centroids):
     image = image.convert("RGB")
@@ -654,7 +773,7 @@ def determine_best_k(image, max_k, n_samples=5000):
     if len(relative_slopes) <= 1:
         return 2
     elbow_point = np.argmax(np.abs(relative_slopes))
-    return elbow_point + 4
+    return elbow_point + 6
 
 def determine_best_palette_verbose(image, paletteFolder):
     # Convert the image to RGB mode
@@ -938,7 +1057,7 @@ def paletteGen(colors, device, precision, prompt, seed):
     width = 512+((512/base)*(colors-base))
 
     # Generate text-to-image conversion with specified parameters
-    txt2img(None, ["none"], [0], device, precision, 1, 512, prompt, "", int(width), 512, 20, 7.0, "false", int(seed), 1, "false", "false", "false", "false")
+    txt2img(None, ["none"], [0], device, precision, 1, 512, prompt, "", "false", int(width), 512, 20, 7.0, "false", int(seed), 1, "false", "false", "false", "false")
 
     # Open the generated image
     image = Image.open("temp/temp1.png").convert('RGB')
@@ -957,7 +1076,7 @@ def paletteGen(colors, device, precision, prompt, seed):
     palette.save("temp/temp1.png")
     rprint(f"[#c4f129]Image converted to color palette with [#48a971]{colors}[#c4f129] colors")
 
-def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, W, H, ddim_steps, scale, upscale, seed, n_iter, tilingX, tilingY, pixelvae, post):
+def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, translate, promptTuning, W, H, ddim_steps, scale, upscale, seed, n_iter, tilingX, tilingY, pixelvae, post):
     os.makedirs("temp", exist_ok=True)
     outpath = "temp"
 
@@ -982,7 +1101,6 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
     # Set the seed for random number generation if not provided
     if seed == None:
         seed = randint(0, 1000000)
-    seed_everything(seed)
 
     wtile = max_tile(W // 8) if W // 8 > 96 else 1
     htile = max_tile(H // 8) if H // 8 > 96 else 1
@@ -1001,6 +1119,9 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         g_ddim_steps = int(ddim_steps * 0.75)
     else:
         upscale = "false"
+
+    data, negative_data = managePrompts(prompt, negative, W, H, seed, upscale, n_iter, loraFiles, translate, promptTuning)
+    seed_everything(seed)
 
     rprint(f"\n[#48a971]Text to Image[white] generating [#48a971]{n_iter}[white] images over [#48a971]{runs}[white] batches with [#48a971]{ddim_steps}[white] steps and [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
 
@@ -1064,10 +1185,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         else:
             loras.append(None)
 
-    assert prompt is not None
     seeds = []
-    data = [prompt]
-    negative_data = [negative]
     with torch.no_grad():
         # Create conditioning values for each batch, then unload the text encoder
         uc = []
@@ -1080,8 +1198,8 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
             condCount = 0
             for n in range(runs):
                 condBatch = min(condBatch, n_iter-condCount)
-                uc.append(modelCS.get_learned_conditioning(condBatch * negative_data))
-                c.append(modelCS.get_learned_conditioning(condBatch * data))
+                uc.append(modelCS.get_learned_conditioning(negative_data[condCount:condCount+condBatch]))
+                c.append(modelCS.get_learned_conditioning(data[condCount:condCount+condBatch]))
                 shape.append([condBatch, 4, gHeight, gWidth])
                 condCount += condBatch
 
@@ -1177,7 +1295,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
 
-def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, W, H, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post):
+def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, translate, promptTuning, W, H, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post):
     timer = time.time()
 
     os.makedirs("temp", exist_ok=True)
@@ -1212,10 +1330,12 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
     # Set the seed for random number generation if not provided
     if seed == None:
         seed = randint(0, 1000000)
-    seed_everything(seed)
 
     wtile = max_tile(W // 8) if W // 8 > 96 else 1
     htile = max_tile(H // 8) if H // 8 > 96 else 1
+
+    data, negative_data = managePrompts(prompt, negative, W, H, seed, "false", n_iter, loraFiles, translate, promptTuning)
+    seed_everything(seed)
 
     rprint(f"\n[#48a971]Image to Image[white] generating [#48a971]{n_iter}[white] images over [#48a971]{runs}[white] batches with [#48a971]{ddim_steps}[white] steps and [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
 
@@ -1337,8 +1457,8 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
             condCount = 0
             for n in range(runs):
                 condBatch = min(condBatch, n_iter-condCount)
-                uc.append(modelCS.get_learned_conditioning(condBatch * negative_data))
-                c.append(modelCS.get_learned_conditioning(condBatch * data))
+                uc.append(modelCS.get_learned_conditioning(negative_data[condCount:condCount+condBatch]))
+                c.append(modelCS.get_learned_conditioning(data[condCount:condCount+condBatch]))
                 condCount += condBatch
 
             # Move modelCS to CPU if necessary to free up GPU memory
@@ -1570,10 +1690,10 @@ async def server(websocket):
             await websocket.send("running txt2img")
             try:
                 # Extract parameters from the message
-                loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, w, h, ddim_steps, scale, upscale, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafiles", "dloraweights", "ddevice", "dprecision", "dpixelsize", "dmaxbatchsize", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dupscale", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
+                loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, translate, promptTuning, w, h, ddim_steps, scale, upscale, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafiles", "dloraweights", "ddevice", "dprecision", "dpixelsize", "dmaxbatchsize", "dprompt", "dnegative", "dtranslate", "dprompttuning", "dwidth", "dheight", "dstep", "dscale", "dupscale", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
                 loraFiles = loraFiles.split('|')
                 loraWeights = [int(x) for x in loraWeights.split('|')]
-                txt2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), int(maxBatchSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), upscale, int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
+                txt2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), int(maxBatchSize), prompt, negative, translate, promptTuning, int(w), int(h), int(ddim_steps), float(scale), upscale, int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
                 await websocket.send("returning txt2img")
             except Exception as e:
                 if "SSLCertVerificationError" in traceback.format_exc():
@@ -1589,10 +1709,10 @@ async def server(websocket):
             await websocket.send("running img2img")
             try:
                 # Extract parameters from the message
-                loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, w, h, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafiles", "dloraweights", "ddevice", "dprecision", "dpixelsize", "dmaxbatchsize", "dprompt", "dnegative", "dwidth", "dheight", "dstep", "dscale", "dstrength", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
+                loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, translate, promptTuning, w, h, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafiles", "dloraweights", "ddevice", "dprecision", "dpixelsize", "dmaxbatchsize", "dprompt", "dnegative", "dtranslate", "dprompttuning", "dwidth", "dheight", "dstep", "dscale", "dstrength", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
                 loraFiles = loraFiles.split('|')
                 loraWeights = [int(x) for x in loraWeights.split('|')]
-                img2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), int(maxBatchSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), float(strength)/100, int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
+                img2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), int(maxBatchSize), prompt, negative, translate, promptTuning, int(w), int(h), int(ddim_steps), float(scale), float(strength)/100, int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
                 await websocket.send("returning img2img")
             except Exception as e: 
                 if "SSLCertVerificationError" in traceback.format_exc():
@@ -1740,13 +1860,7 @@ async def server(websocket):
                 except:
                     pass
             await websocket.send("free")
-            torch.cuda.empty_cache()
-            global loadedDevice
-            if torch.backends.mps.is_available() and loadedDevice != "cpu":
-                try:
-                    torch.mps.empty_cache()
-                except:
-                    pass
+            clearCache()
         elif message == "shutdown":
             rprint("[#ab333d]Shutting down...")
             global running
