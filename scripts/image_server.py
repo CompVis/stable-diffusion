@@ -542,52 +542,61 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loraFiles,
 
     prompts = [prompt]*generations
 
-    # Load LLM for prompt upsampling
     if translate == "true":
-        if modelLM == None:
-            print("\nLoading prompt translation language model")
-            modelLM = load_chat_pipeline()
-            play("iteration.wav")
+        try:
+            # Load LLM for prompt upsampling
+            if modelLM == None:
+                print("\nLoading prompt translation language model")
+                modelLM = load_chat_pipeline()
+                play("iteration.wav")
 
-            rprint(f"[#c4f129]Loaded in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
+                rprint(f"[#c4f129]Loaded in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
+        except Exception as e: 
+            if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
+                rprint(f"\n[#494b9b]Translation model could not be loaded due to insufficient GPU resources.")
+            else:
+                rprint(f"\n[#494b9b]Translation model could not be loaded.")
+        if modelLM is not None:
+            try:
+                # Generate responses
+                rprint(f"\n[#48a971]Translation model [white]generating {generations} [white]enhanced prompts")
 
-        rprint(f"\n[#48a971]Refining [#48a971]{generations} [#48a971]prompts")
+                upsampled_captions = []
+                for prompt in clbar(prompts, name = "Translating", position = "", unit = "prompt", prefixwidth = 12, suffixwidth = 28):
 
+                    # Try to generate a response, if no response is identified after retrys, set upsampled prompt to initial prompt
+                    upsampled_caption = None
+                    retrys = 5
+                    while upsampled_caption == None and retrys > 0:
+                        outputs = upsample_caption(modelLM, prompt, seed)
+                        upsampled_caption = collect_response(outputs)
+                        retrys -= 1
+                    seed += 1
 
-        # Generate responses
-        upsampled_captions = []
-        for prompt in clbar(prompts, name = "Translating", position = "", unit = "prompt", prefixwidth = 12, suffixwidth = 28):
+                    if upsampled_caption == None:
+                        upsampled_caption = prompt
+                    
+                    upsampled_captions.append(upsampled_caption)
+                    play("iteration.wav")
 
-            # Try to generate a response, if no response is identified after retrys, set upsampled prompt to initial prompt
-            upsampled_caption = None
-            retrys = 5
-            while upsampled_caption == None and retrys > 0:
-                outputs = upsample_caption(modelLM, prompt, seed)
-                upsampled_caption = collect_response(outputs)
-                retrys -= 1
-            seed += 1
-
-            if upsampled_caption == None:
-                upsampled_caption = prompt
+                prompts = upsampled_captions
             
-            upsampled_captions.append(upsampled_caption)
-            play("iteration.wav")
+                cardMemory = torch.cuda.get_device_properties("cuda").total_memory / 1073741824
+                usedMemory = cardMemory - (torch.cuda.mem_get_info()[0] / 1073741824)
 
-        prompts = upsampled_captions
-        
-        cardMemory = torch.cuda.get_device_properties("cuda").total_memory / 1073741824
-        usedMemory = cardMemory - (torch.cuda.mem_get_info()[0] / 1073741824)
-
-        if cardMemory-usedMemory < 3:
+                if cardMemory-usedMemory < 3:
+                    del modelLM
+                    clearCache()
+                    modelLM = None
+                else:
+                    clearCache()
+            except:
+                rprint(f"[#494b9b]Prompt enhancement failed unexpectedly. Prompts will not be edited.")
+    else:
+        if modelLM is not None:
             del modelLM
             clearCache()
             modelLM = None
-        else:
-            clearCache()
-    else:
-        del modelLM
-        clearCache()
-        modelLM = None
 
     # Deal with prompt modifications
     if modelType == "pixel" and promptTuning == "true":
