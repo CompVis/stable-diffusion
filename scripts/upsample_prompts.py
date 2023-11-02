@@ -1,12 +1,20 @@
 from pprint import pprint
 from typing import Dict, List, Tuple
 
-from transformers import pipeline, set_seed
+from transformers import pipeline, set_seed, AutoModelForCausalLM, AutoTokenizer
+from optimum.bettertransformer import BetterTransformer
 
-def load_chat_pipeline():
+def load_chat_pipeline(modelPath):
+    model = AutoModelForCausalLM.from_pretrained(modelPath, device_map="auto", trust_remote_code=False)
+
+    tokenizer = AutoTokenizer.from_pretrained(modelPath, use_fast=True)
+
+    #model = BetterTransformer.transform(model) 
+
     pipe = pipeline(
         "text-generation",
-        model="TheBloke/zephyr-7B-beta-GPTQ",
+        model=model,
+        tokenizer=tokenizer,
         device_map = "auto",
         use_fast=True
     )
@@ -76,7 +84,7 @@ def get_messages_for_chat() -> Tuple[Dict, List[Dict]]:
         },
         {
             "role": "assistant",
-            "content": "a complex robot with heavy armor plating holding a large rifle, character art, mech, sci-fi, blank background",
+            "content": "a complex robot with heavy armor plating holding a large rifle, gears exposed, mech, sci-fi, blank background",
         },
         {
             "role": "user",
@@ -144,7 +152,7 @@ def enhance_prompts(pipeline, prompts, seed = 0):
 
 # How to generate prompts
 '''
-pipeline = load_chat_pipeline()
+pipeline = load_chat_pipeline(path_to_model_folder)
 
 prompts = enhance_prompts(pipeline, ["a butterfly styled robot, no background"])
 '''

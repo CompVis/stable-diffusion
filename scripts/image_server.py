@@ -77,6 +77,7 @@ global modelType
 global running
 global loadedDevice
 loadedDevice = "cpu"
+global modelPath
 
 global sounds
 sounds = False
@@ -302,19 +303,19 @@ def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disa
 
             # Define progress bar graphic
             line1 = ["[#494b9b on #3b1725]▄[/#494b9b on #3b1725]", 
-                    "[#c4f129 on #494b9b]▄[/#c4f129 on #494b9b]" * int(int(barwidth * iteration // total) > 0), 
-                    "[#ffffff on #494b9b]▄[/#ffffff on #494b9b]" * max(0, int(barwidth * iteration // total)-2),
-                    "[#c4f129 on #494b9b]▄[/#c4f129 on #494b9b]" * int(int(barwidth * iteration // total) > 1),
-                    "[#3b1725 on #494b9b]▄[/#3b1725 on #494b9b]" * max(0, barwidth-int(barwidth * iteration // total)),
+                    "[#c4f129 on #494b9b]▄[/#c4f129 on #494b9b]" * int(int(barwidth * min(total, iteration) // total) > 0), 
+                    "[#ffffff on #494b9b]▄[/#ffffff on #494b9b]" * max(0, int(barwidth * min(total, iteration) // total)-2),
+                    "[#c4f129 on #494b9b]▄[/#c4f129 on #494b9b]" * int(int(barwidth * min(total, iteration) // total) > 1),
+                    "[#3b1725 on #494b9b]▄[/#3b1725 on #494b9b]" * max(0, barwidth-int(barwidth * min(total, iteration) // total)),
                     "[#494b9b on #3b1725]▄[/#494b9b on #3b1725]"]
             line2 = ["[#3b1725 on #494b9b]▄[/#3b1725 on #494b9b]", 
-                    "[#494b9b on #48a971]▄[/#494b9b on #48a971]" * int(int(barwidth * iteration // total) > 0), 
-                    "[#494b9b on #c4f129]▄[/#494b9b on #c4f129]" * max(0, int(barwidth * iteration // total)-2),
-                    "[#494b9b on #48a971]▄[/#494b9b on #48a971]" * int(int(barwidth * iteration // total) > 1),
-                    "[#494b9b on #3b1725]▄[/#494b9b on #3b1725]" * max(0, barwidth-int(barwidth * iteration // total)),
+                    "[#494b9b on #48a971]▄[/#494b9b on #48a971]" * int(int(barwidth * min(total, iteration) // total) > 0), 
+                    "[#494b9b on #c4f129]▄[/#494b9b on #c4f129]" * max(0, int(barwidth * min(total, iteration) // total)-2),
+                    "[#494b9b on #48a971]▄[/#494b9b on #48a971]" * int(int(barwidth * min(total, iteration) // total) > 1),
+                    "[#494b9b on #3b1725]▄[/#494b9b on #3b1725]" * max(0, barwidth-int(barwidth * min(total, iteration) // total)),
                     "[#3b1725 on #494b9b]▄[/#3b1725 on #494b9b]"]
 
-            percent = ("{0:.0f}").format(100 * (iteration / float(total)))
+            percent = ("{0:.0f}").format(100 * (min(total, iteration) / float(total)))
 
             # Avoid predicting speed until there's enough data
             if len(delay) >= 1:
@@ -345,7 +346,7 @@ def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disa
                 passed = "{:02d}:{:02d}".format(math.floor(sum(delay)/60), round(sum(delay))%60)
                 remaining = "{:02d}:{:02d}".format(math.floor((total*np.mean(delay)-sum(delay))/60), round(total*np.mean(delay)-sum(delay))%60)
 
-            speed = f" {iteration}/{total} at {measure} "
+            speed = f" {min(total, iteration)}/{total} at {measure} "
             prediction = f" {passed} < {remaining} "
 
             # Print single bar across two lines
@@ -428,7 +429,7 @@ def adjust_gamma(image, gamma=1.0):
     # Apply the gamma correction using the lookup table
     return image.point(gamma_table)
 
-def load_model(modelpath, modelfile, config, device, precision, optimized):
+def load_model(modelPathInput, modelFile, config, device, precision, optimized):
     timer = time.time()
 
     if device == "cuda" and not torch.cuda.is_available():
@@ -440,25 +441,27 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
 
     global loadedDevice
     global modelType
+    global modelPath
+    modelPath = modelPathInput
     loadedDevice = device
 
-    # Check the modelfile and print corresponding loading message
+    # Check the modelFile and print corresponding loading message
     print()
     modelType = "pixel"
-    if modelfile == "model.pxlm":
+    if modelFile == "model.pxlm":
         print(f"Loading primary model")
-    elif modelfile == "modelmicro.pxlm":
+    elif modelFile == "modelmicro.pxlm":
         print(f"Loading micro model")
-    elif modelfile == "modelmini.pxlm":
+    elif modelFile == "modelmini.pxlm":
         print(f"Loading mini model")
-    elif modelfile == "modelmega.pxlm":
+    elif modelFile == "modelmega.pxlm":
         print(f"Loading mega model")
-    elif modelfile == "paletteGen.pxlm":
+    elif modelFile == "paletteGen.pxlm":
         modelType = "palette"
         print(f"Loading PaletteGen model")
     else:
         modelType = "general"
-        rprint(f"Loading custom model from [#48a971]{modelfile}")
+        rprint(f"Loading custom model from [#48a971]{modelFile}")
 
     # Determine if turbo mode is enabled
     turbo = True
@@ -466,7 +469,7 @@ def load_model(modelpath, modelfile, config, device, precision, optimized):
         turbo = False
 
     # Load the model's state dictionary from the specified file
-    sd = load_model_from_config(f"{modelpath+modelfile}")
+    sd = load_model_from_config(f"{modelPath+modelFile}")
 
     # Separate the input and output blocks from the state dictionary
     li, lo = [], []
@@ -539,6 +542,7 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loraFiles,
     global loadedDevice
     global modelType
     global sounds
+    global modelPath
 
     prompts = [prompt]*generations
 
@@ -547,7 +551,7 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loraFiles,
             # Load LLM for prompt upsampling
             if modelLM == None:
                 print("\nLoading prompt translation language model")
-                modelLM = load_chat_pipeline()
+                modelLM = load_chat_pipeline(os.path.join(modelPath, "LLM"))
                 play("iteration.wav")
 
                 rprint(f"[#c4f129]Loaded in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
@@ -751,7 +755,7 @@ def kDenoise(image, smoothing, strength):
 
     return Image.fromarray(denoised, mode='RGB')
 
-def determine_best_k(image, max_k, n_samples=5000, smooth_window=3):
+def determine_best_k(image, max_k, n_samples=5000, smooth_window=4):
     image = image.convert("RGB")
 
     # Flatten the image pixels and sample them
@@ -784,7 +788,7 @@ def determine_best_k(image, max_k, n_samples=5000, smooth_window=3):
     elbow_index = np.argmax(np.abs(relative_slopes))
 
     # Calculate the actual k value, considering the reductions due to diff and smoothing
-    actual_k = elbow_index + 1 + (smooth_window // 2) * 2  # Add the reduction from diff and smoothing
+    actual_k = elbow_index + 3 + (smooth_window // 2) * 2  # Add the reduction from diff and smoothing
 
     # Ensure actual_k is at least 1 and does not exceed max_k
     actual_k = max(4, min(actual_k, max_k))
