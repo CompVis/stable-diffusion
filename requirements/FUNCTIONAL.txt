@@ -14,11 +14,11 @@ test-tube>=0.7.5
 streamlit>=0.73.1
 einops==0.3.0
 torch-fidelity==0.3.0
-transformers==4.32.1
+transformers==4.34.0
 torchmetrics==0.7.0
 safetensors==0.3.2
 kornia==0.6
-accelerate==0.20.3
+accelerate==0.24.1
 taming-transformers-rom1504==0.0.6
 pandas
 -e git+https://github.com/Astropulse/hitherdither#egg=hitherdither
