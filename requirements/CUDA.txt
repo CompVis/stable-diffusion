@@ -1,2 +1,0 @@
-torch==2.1.0 -i https://download.pytorch.org/whl/cu121 --trusted-host download.pytorch.org
-torchvision==0.16.0 -i https://download.pytorch.org/whl/cu121 --trusted-host download.pytorch.org

@@ -1,2 +1,0 @@
---pre torch -i https://download.pytorch.org/whl/nightly/cu121 --trusted-host download.pytorch.org
---pre torchvision -i https://download.pytorch.org/whl/nightly/cu121 --trusted-host download.pytorch.org
