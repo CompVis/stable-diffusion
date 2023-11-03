@@ -32,7 +32,7 @@ def get_messages_for_chat() -> Tuple[Dict, List[Dict]]:
     - You will only ever output a single image description per user request.
     - Do not respond with more than one image description per request.
     - Do not use any colors in your image descriptions.
-    - Do not use words like "realistic", "photograph", "realism" or any other words indicating the style of the image.
+    - Do not use words like "realistic", "photograph", "realism", "photography" or any other words indicating the style of the image.
     - The description must be relevant to the user request.
     - Image descriptions must be between 15-60 words. Extra words will be ignored.
     """,
