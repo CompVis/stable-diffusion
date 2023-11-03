@@ -1549,6 +1549,74 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
 
+def prompt2prompt(path, prompt, negative, generations, seed):
+    timer = time.time()
+    global modelLM
+    global sounds
+    global modelPath
+    modelPath = path
+
+    prompts = [prompt]*generations
+    seeds = []
+
+    try:
+        # Load LLM for prompt upsampling
+        if modelLM == None:
+            print("\nLoading prompt translation language model")
+            modelLM = load_chat_pipeline(os.path.join(modelPath, "LLM"))
+            play("iteration.wav")
+
+            rprint(f"[#c4f129]Loaded in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
+    except Exception as e: 
+        if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
+            rprint(f"\n[#494b9b]Translation model could not be loaded due to insufficient GPU resources.")
+        else:
+            rprint(f"\n[#494b9b]Translation model could not be loaded.")
+    try:
+        # Generate responses
+        rprint(f"\n[#48a971]Translation model [white]generating [#48a971]{generations} [white]enhanced prompts")
+
+        upsampled_captions = []
+        count = 0
+        for prompt in clbar(prompts, name = "Enhancing", position = "", unit = "prompt", prefixwidth = 12, suffixwidth = 28):
+
+            # Try to generate a response, if no response is identified after retrys, set upsampled prompt to initial prompt
+            upsampled_caption = None
+            retrys = 5
+            while upsampled_caption == None and retrys > 0:
+                outputs = upsample_caption(modelLM, prompt, seed)
+                upsampled_caption = collect_response(outputs)
+                retrys -= 1
+            seeds.append(str(seed))
+            seed += 1
+            count += 1
+
+            if upsampled_caption == None:
+                upsampled_caption = prompt
+            
+            upsampled_captions.append(upsampled_caption)
+            if generations > 1 and (count+1) < generations:
+                play("iteration.wav")
+
+        prompts = upsampled_captions
+    
+        cardMemory = torch.cuda.get_device_properties("cuda").total_memory / 1073741824
+        usedMemory = cardMemory - (torch.cuda.mem_get_info()[0] / 1073741824)
+
+        if cardMemory-usedMemory < 3:
+            del modelLM
+            clearCache()
+            modelLM = None
+        else:
+            clearCache()
+    except:
+        rprint(f"[#494b9b]Prompt enhancement failed unexpectedly. Prompts will not be edited.")
+
+    play("batch.wav")
+    rprint(f"[#c4f129]Prompt enhancement completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
+        
+    return "<|>".join(prompts)
+
 def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, seed):
     timer = time.time()
     
@@ -1763,6 +1831,18 @@ async def server(websocket):
                     rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
                 else:
                     rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                play("error.wav")
+                await websocket.send("returning error")
+
+        elif re.search(r"translate.+", message):
+            await websocket.send("running translate")
+            try:
+                # Extract parameters from the message
+                path, prompt, negative, n_iter, seed = searchString(message, "dpath", "dprompt", "dnegative", "diter", "dseed", "end")
+                prompts = prompt2prompt(path, prompt, negative, int(n_iter), int(seed))
+                await websocket.send(f"returning translate {prompts}")
+            except Exception as e:
+                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                 play("error.wav")
                 await websocket.send("returning error")
 
