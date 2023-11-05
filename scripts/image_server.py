@@ -1595,7 +1595,7 @@ def prompt2prompt(path, prompt, negative, generations, seed):
                 upsampled_caption = prompt
             
             upsampled_captions.append(upsampled_caption)
-            if generations > 1 and (count+1) < generations:
+            if generations > 1 and count < generations:
                 play("iteration.wav")
 
         prompts = upsampled_captions
