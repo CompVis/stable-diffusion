@@ -122,7 +122,7 @@ def upsample_caption(pipeline, message, seed):
         final_message, tokenize=False, add_generation_prompt=True
     )
     outputs = pipeline(
-        prompt,
+        f"{prompt}\n<|im_start|>assistant",
         max_new_tokens=256,
         do_sample=True,
         temperature=0.7,
@@ -135,7 +135,8 @@ def upsample_caption(pipeline, message, seed):
 def collect_response(assistant_output):
     # Collect response
     output = assistant_output[0]["generated_text"]
-    parts = output.rsplit("<|assistant|>", 1)
+    output = output.replace("<|im_end|>", "")
+    parts = output.rsplit("<|im_start|>assistant", 1)
     assistant_reply = parts[1].strip() if len(parts) > 1 else None
     return assistant_reply.splitlines()[0]
 
