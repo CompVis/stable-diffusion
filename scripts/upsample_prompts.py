@@ -1,8 +1,11 @@
 from pprint import pprint
 from typing import Dict, List, Tuple
 
-from transformers import pipeline, set_seed, AutoModelForCausalLM, AutoTokenizer
-from optimum.bettertransformer import BetterTransformer
+try:
+    from transformers import pipeline, set_seed, AutoModelForCausalLM, AutoTokenizer
+    from optimum.bettertransformer import BetterTransformer
+except:
+    pass
 
 def load_chat_pipeline(modelPath):
     model = AutoModelForCausalLM.from_pretrained(modelPath, device_map="auto", trust_remote_code=False)
