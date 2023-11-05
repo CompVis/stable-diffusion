@@ -1,4 +1,4 @@
-import os, time
+import os, time, warnings
 
 from PIL import Image
 import numpy as np
@@ -108,33 +108,35 @@ def predict(net, inputs_val, shapes_val, hypar, device):
     '''
     Given an Image, predict the mask
     '''
-    net.eval()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        net.eval()
 
-    if (hypar["model_digit"] == "full"):
-        inputs_val = inputs_val.type(torch.FloatTensor)
-    else:
-        inputs_val = inputs_val.type(torch.HalfTensor)
+        if (hypar["model_digit"] == "full"):
+            inputs_val = inputs_val.type(torch.FloatTensor)
+        else:
+            inputs_val = inputs_val.type(torch.HalfTensor)
 
-    inputs_val_v = Variable(inputs_val, requires_grad=False).to(
-        device)  # wrap inputs in Variable
+        inputs_val_v = Variable(inputs_val, requires_grad=False).to(
+            device)  # wrap inputs in Variable
 
-    ds_val = net(inputs_val_v)[0]  # list of 6 results
+        ds_val = net(inputs_val_v)[0]  # list of 6 results
 
-    # B x 1 x H x W    # we want the first one which is the most accurate prediction
-    pred_val = ds_val[0][0, :, :, :]
+        # B x 1 x H x W    # we want the first one which is the most accurate prediction
+        pred_val = ds_val[0][0, :, :, :]
 
-    # recover the prediction spatial size to the orignal image size
-    pred_val = torch.squeeze(F.interpolate(torch.unsqueeze(
-        pred_val, 0), (shapes_val[0][0], shapes_val[0][1]), mode='bilinear'))
+        # recover the prediction spatial size to the orignal image size
+        pred_val = torch.squeeze(F.interpolate(torch.unsqueeze(
+            pred_val, 0), (shapes_val[0][0], shapes_val[0][1]), mode='bilinear'))
 
-    ma = torch.max(pred_val)
-    mi = torch.min(pred_val)
-    pred_val = (pred_val-mi)/(ma-mi)  # max = 1
+        ma = torch.max(pred_val)
+        mi = torch.min(pred_val)
+        pred_val = (pred_val-mi)/(ma-mi)  # max = 1
 
-    if device == 'cuda':
-        torch.cuda.empty_cache()
-    # it is the mask we need
-    return (pred_val.detach().cpu().numpy()*255).astype(np.uint8)
+        if device == 'cuda':
+            torch.cuda.empty_cache()
+        # it is the mask we need
+        return (pred_val.detach().cpu().numpy()*255).astype(np.uint8)
 
 
 def segment(image):
