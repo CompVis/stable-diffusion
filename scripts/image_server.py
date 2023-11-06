@@ -1442,10 +1442,10 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                     latentBatch = n_iter-latentCount
 
                     # Slice latents to new batch size
-                    init_latent_base = init_latent_base[:latentBatch+1]
+                    init_latent_base = init_latent_base[:latentBatch]
 
                     if init_mask is not None:
-                        init_mask = init_mask[:latentBatch+1]
+                        init_mask = init_mask[:latentBatch]
 
                 # Encode the scaled latent
                 z_enc.append(model.stochastic_encode(
