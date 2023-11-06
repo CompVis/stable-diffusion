@@ -607,7 +607,7 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loraFiles,
         suffix = "detailed"
         negativeList = [negative, "mutated, noise, frame, film reel, snowglobe, deformed, stock image, watermark, text, signature, username"]
 
-        if any(f"{_}.pxlm" in loraFiles for _ in ["topdown", "isometric", "neogeo", "nes", "snes"]):
+        if any(f"{_}.pxlm" in loraFiles for _ in ["topdown", "isometric", "neogeo", "nes", "snes", "playstation", "gameboy", "gameboyadvance"]):
             prefix = "pixel"
             suffix = ""
         elif any(f"{_}.pxlm" in loraFiles for _ in ["frontfacing", "gameicons", "flatshading"]):
