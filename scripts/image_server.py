@@ -1360,10 +1360,6 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
 
     sampler = "ddim"
 
-    assert prompt is not None
-    data = [prompt]
-    negative_data = [negative]
-
     global model
     global modelCS
     global modelFS
@@ -1423,8 +1419,6 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
 
     # Calculate the number of steps for encoding
     t_enc = int(strength * ddim_steps)
-    data = [prompt]
-    negative_data = [negative]
     with torch.no_grad():
         # Create conditioning values for each batch, then unload the text encoder
         uc = []
@@ -1448,10 +1442,10 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                     latentBatch = n_iter-latentCount
 
                     # Slice latents to new batch size
-                    init_latent_base = init_latent_base[:latentBatch]
+                    init_latent_base = init_latent_base[:latentBatch+1]
 
                     if init_mask is not None:
-                        init_mask = init_mask[:latentBatch]
+                        init_mask = init_mask[:latentBatch+1]
 
                 # Encode the scaled latent
                 z_enc.append(model.stochastic_encode(
