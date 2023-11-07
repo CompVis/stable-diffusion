@@ -897,7 +897,7 @@ class UNet(DDPM):
     ):
         b, *_, device = *x.shape, x.device
 
-        if unconditional_conditioning is None or unconditional_guidance_scale == 1.0 or (index % min(5, max(1, round(total/10))) > 0 and (i >= min(20, max(1, total)/3))):
+        if unconditional_conditioning is None or unconditional_guidance_scale == 1.0 or (index % min(5, max(1, round(total/10))) > 0 and (index >= min(20, max(1, total)/3))):
             e_t = self.apply_model(x, t, c)
         else:
             x_in = torch.cat([x] * 2)
