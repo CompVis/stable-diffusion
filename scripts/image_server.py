@@ -1255,13 +1255,13 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                 if upscale == "true":
                     samples_ddim = torch.nn.functional.interpolate(samples_ddim, size=(H // 8, W // 8), mode="bilinear")
                     
-                    t_enc = int(ddim_steps * 0.65)
+                    t_enc = int(ddim_steps * 0.5)
                     z_enc= model.stochastic_encode(
                         samples_ddim,
                         torch.tensor([t_enc]).to(device),
                         seed,
                         0.0,
-                        ddim_steps,
+                        g_ddim_steps,
                     )
                     samples_ddim = model.sample(
                         t_enc,
