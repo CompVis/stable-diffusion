@@ -593,6 +593,14 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loraFiles,
                     modelLM = None
                 else:
                     clearCache()
+
+                seed = seed - len(prompts)
+                print()
+                for i, prompt in enumerate(prompts[:8]):
+                    rprint(f"[#48a971]Seed: [#c4f129]{seed}[#48a971] Prompt: [#494b9b]{prompt}")
+                    seed += 1
+                if len(prompts) > 8:
+                    rprint(f"[#48a971]Remaining prompts generated but not displayed.")
             except:
                 rprint(f"[#494b9b]Prompt enhancement failed unexpectedly. Prompts will not be edited.")
     else:
