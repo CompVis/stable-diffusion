@@ -1,10 +1,10 @@
-Additions by Astropulse:
+Built for Retro Diffusion:
 
-Optimizations and adjustments for running inside Aseprite.
+https://astropulse.gumroad.com/l/RetroDiffusion
+https://astropulse.itch.io/retrodiffusion
+https://www.retrodiffusion.ai/home
 
-palette.py for K-Means color quantization.
-
-
+![PixelArtModel](https://github.com/Astropulse/stable-diffusion-aseprite/assets/61034487/b2fb5772-feb8-49b5-826d-501642f07782)
 
 
 
