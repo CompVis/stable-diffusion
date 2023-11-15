@@ -1,4 +1,4 @@
-requests
+requests==2.30.0
 cryptography
 pygetwindow==0.0.9
 websockets==10.4
