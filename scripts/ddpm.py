@@ -812,6 +812,8 @@ class UNet(DDPM):
         x_dec = x_latent
         x0 = init_latent
         for i, step in enumerate(iterator):
+            # Reverse conditioning for image to image
+            index = total_steps - i - 1
             ts = torch.full(
                 (x_latent.shape[0],), step, device=x_latent.device, dtype=torch.long
             )
@@ -825,7 +827,7 @@ class UNet(DDPM):
                 x_dec,
                 cond,
                 ts,
-                index=i,
+                index=index,
                 total=len(time_range),
                 use_original_steps=use_original_steps,
                 unconditional_guidance_scale=unconditional_guidance_scale,
