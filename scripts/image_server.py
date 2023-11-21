@@ -1435,6 +1435,7 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
     seeds = []
     strength = max(0.001, min(strength, 1.0))
 
+    t_enc = int(ddim_steps * strength)
     with torch.no_grad():
         # Create conditioning values for each batch, then unload the text encoder
         uc = []
@@ -1466,10 +1467,10 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                 # Encode the scaled latent
                 z_enc.append(model.stochastic_encode(
                     init_latent_base,
-                    torch.tensor([ddim_steps]).to(device),
+                    torch.tensor([t_enc]).to(device),
                     seed+(n*latentCount),
                     0.0,
-                    max(ddim_steps+1, int(ddim_steps/strength)),
+                    max(t_enc+1, ddim_steps),
                 ))
                 latentCount += latentBatch
 
@@ -1509,7 +1510,7 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                 
                 # Generate samples using the model
                 samples_ddim = model.sample(
-                    ddim_steps,
+                    t_enc,
                     c[n],
                     z_enc[n],
                     unconditional_guidance_scale=scale,
