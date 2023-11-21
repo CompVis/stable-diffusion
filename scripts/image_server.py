@@ -81,7 +81,7 @@ global modelPath
 global sounds
 sounds = False
 
-expectedVersion = "9.5.0"
+expectedVersion = "10.0.0"
 
 global maxSize
 
@@ -1113,7 +1113,7 @@ def paletteGen(colors, device, precision, prompt, seed):
     palette.save("temp/temp1.png")
     rprint(f"[#c4f129]Image converted to color palette with [#48a971]{colors}[#c4f129] colors")
 
-def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, translate, promptTuning, W, H, ddim_steps, scale, upscale, seed, n_iter, tilingX, tilingY, pixelvae, post):
+def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, translate, promptTuning, W, H, quality, scale, upscale, seed, total_images, tilingX, tilingY, pixelvae, post):
     os.makedirs("temp", exist_ok=True)
     outpath = "temp"
 
@@ -1132,8 +1132,8 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
     if size >= maxSize or device == "cpu":
         batch = 1
     else:
-        batch = min(n_iter, math.floor((maxSize/size)**2))
-    runs = math.floor(n_iter/batch) if n_iter % batch == 0 else math.floor(n_iter/batch)+1
+        batch = min(total_images, math.floor((maxSize/size)**2))
+    runs = math.floor(total_images/batch) if total_images % batch == 0 else math.floor(total_images/batch)+1
 
     # Set the seed for random number generation if not provided
     if seed == None:
@@ -1144,7 +1144,17 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
 
     gWidth = W // 8
     gHeight = H // 8
-    g_ddim_steps = ddim_steps
+
+    # Curves defined by https://www.desmos.com/calculator/gf6znr6wbl
+    steps = round(3.4 + ((quality ** 2) / 1.5))
+    scale = max(1, scale * ((1.3 + (((quality - 0.8) ** 3) / 16)) / 6.5))
+    lcm_weight = max(0, 9.5 - (((quality + 1.2) ** 2) / 4))
+    if lcm_weight > 0:
+        loraFiles.append("quality.lcm")
+        loraWeights.append(round(lcm_weight*10))
+
+    pre_steps = steps
+    up_steps = 1
 
     if W // 8 >= 96 and H // 8 >= 96 and upscale == "true":
         lower = 50
@@ -1153,17 +1163,20 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         gy = gHeight
         gWidth = int((lower * max(1, aspect)) + ((gy/7) * aspect))
         gHeight = int((lower * max(1, 1/aspect)) + ((gx/7) * (1/aspect)))
-        g_ddim_steps = int(ddim_steps * 0.75)
+
+        # Curves defined by https://www.desmos.com/calculator/gf6znr6wbl
+        pre_steps = round(steps * ((10 - (((quality - 1.1) ** 2) / 6)) / 10))
+        up_steps = round(steps * (((((quality - 9.1) ** 2) / 3.5) - 0.2) / 10))
     else:
         upscale = "false"
 
-    data, negative_data = managePrompts(prompt, negative, W, H, seed, upscale, n_iter, loraFiles, translate, promptTuning)
+    data, negative_data = managePrompts(prompt, negative, W, H, seed, upscale, total_images, loraFiles, translate, promptTuning)
     seed_everything(seed)
 
-    rprint(f"\n[#48a971]Text to Image[white] generating [#48a971]{n_iter}[white] images over [#48a971]{runs}[white] batches with [#48a971]{ddim_steps}[white] steps and [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
+    rprint(f"\n[#48a971]Text to Image[white] generating [#48a971]{total_images}[white] images over [#48a971]{runs}[white] batches with [#48a971]{steps}[white] steps and [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
 
     if W // 8 >= 96 and H // 8 >= 96 and upscale == "true":
-        rprint(f"[#48a971]Pre-generating[white] composition image with [#48a971]{g_ddim_steps}[white] steps at [#48a971]{gWidth * 8}[white]x[#48a971]{gHeight * 8} ([#48a971]{(gWidth * 8) // pixelSize}[white]x[#48a971]{(gHeight * 8) // pixelSize}[white] pixels)")
+        rprint(f"[#48a971]Pre-generating[white] composition image with [#48a971]{pre_steps}[white] steps at [#48a971]{gWidth * 8}[white]x[#48a971]{gHeight * 8} [white]([#48a971]{(gWidth * 8) // pixelSize}[white]x[#48a971]{(gHeight * 8) // pixelSize}[white] pixels) and upscaling for [#48a971]{up_steps} [white]steps")
 
     start_code = None
     sampler = "pxlcm"
@@ -1218,25 +1231,26 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
             loras[i].multiplier = loraWeights[i]/100
             register_lora_for_inference(loras[i])
             apply_lora()
-            rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraFile)[0]} [#494b9b]LoRA with [#48a971]{loraWeights[i]}% [#494b9b]strength")
+            if os.path.splitext(loraFile)[0] != "quality":
+                rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraFile)[0]} [#494b9b]LoRA with [#48a971]{loraWeights[i]}% [#494b9b]strength")
         else:
             loras.append(None)
 
     seeds = []
     with torch.no_grad():
         # Create conditioning values for each batch, then unload the text encoder
-        uc = []
-        c = []
+        negative_conditioning = []
+        conditioning = []
         shape = []
         # Use the specified precision scope
         with precision_scope("cuda"):
             modelCS.to(device)
             condBatch = batch
             condCount = 0
-            for n in range(runs):
-                condBatch = min(condBatch, n_iter-condCount)
-                uc.append(modelCS.get_learned_conditioning(negative_data[condCount:condCount+condBatch]))
-                c.append(modelCS.get_learned_conditioning(data[condCount:condCount+condBatch]))
+            for run in range(runs):
+                condBatch = min(condBatch, total_images-condCount)
+                negative_conditioning.append(modelCS.get_learned_conditioning(negative_data[condCount:condCount+condBatch]))
+                conditioning.append(modelCS.get_learned_conditioning(data[condCount:condCount+condBatch]))
                 shape.append([condBatch, 4, gHeight, gWidth])
                 condCount += condBatch
 
@@ -1250,21 +1264,21 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
 
         base_count = 0
         # Iterate over the specified number of iterations
-        for n in clbar(range(runs), name = "Batches", position = "last", unit = "batch", prefixwidth = 12, suffixwidth = 28):
+        for run in clbar(range(runs), name = "Batches", position = "last", unit = "batch", prefixwidth = 12, suffixwidth = 28):
 
-            batch = min(batch, n_iter-base_count)
+            batch = min(batch, total_images-base_count)
 
             # Use the specified precision scope
             with precision_scope("cuda"):
                 # Generate samples using the model
                 samples_ddim = model.sample(
-                    S=g_ddim_steps,
-                    conditioning=c[n],
+                    S=pre_steps,
+                    conditioning=conditioning[run],
                     seed=seed,
-                    shape=shape[n],
+                    shape=shape[run],
                     verbose=False,
                     unconditional_guidance_scale=scale,
-                    unconditional_conditioning=uc[n],
+                    unconditional_conditioning=negative_conditioning[run],
                     eta=0.0,
                     x_T=start_code,
                     sampler = sampler,
@@ -1272,21 +1286,19 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
 
                 if upscale == "true":
                     samples_ddim = torch.nn.functional.interpolate(samples_ddim, size=(H // 8, W // 8), mode="bilinear")
-                    
-                    t_enc = int(ddim_steps * 0.5)
-                    z_enc= model.stochastic_encode(
+                    encoded_latent= model.stochastic_encode(
                         samples_ddim,
-                        torch.tensor([t_enc]).to(device),
+                        torch.tensor([up_steps]).to(device),
                         seed,
                         0.0,
-                        g_ddim_steps,
+                        int(up_steps * 1.5),
                     )
                     samples_ddim = model.sample(
-                        t_enc,
-                        c[n],
-                        z_enc,
+                        up_steps,
+                        conditioning[run],
+                        encoded_latent,
                         unconditional_guidance_scale=scale,
-                        unconditional_conditioning=uc[n],
+                        unconditional_conditioning=negative_conditioning[run],
                         sampler = "ddim"
                     )
 
@@ -1298,7 +1310,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                         os.path.join(outpath, file_name + ".png")
                     )
 
-                    if n_iter > 1 and (base_count+1) < n_iter:
+                    if total_images > 1 and (base_count+1) < total_images:
                         play("iteration.wav")
 
                     seeds.append(str(seed))
@@ -1328,11 +1340,11 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         del loras
 
         if post == "true":
-            palettizeOutput(int(n_iter))
+            palettizeOutput(int(total_images))
         play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
 
-def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, translate, promptTuning, W, H, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post):
+def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, translate, promptTuning, W, H, quality, scale, strength, seed, total_images, tilingX, tilingY, pixelvae, post):
     timer = time.time()
 
     os.makedirs("temp", exist_ok=True)
@@ -1361,8 +1373,8 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
     if size >= maxSize or device == "cpu":
         batch = 1
     else:
-        batch = min(n_iter, math.floor((maxSize/size)**2))
-    runs = math.floor(n_iter/batch) if n_iter % batch == 0 else math.floor(n_iter/batch)+1
+        batch = min(total_images, math.floor((maxSize/size)**2))
+    runs = math.floor(total_images/batch) if total_images % batch == 0 else math.floor(total_images/batch)+1
     
     # Set the seed for random number generation if not provided
     if seed == None:
@@ -1371,10 +1383,18 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
     wtile = max_tile(W // 8) if W // 8 > 96 else 1
     htile = max_tile(H // 8) if H // 8 > 96 else 1
 
-    data, negative_data = managePrompts(prompt, negative, W, H, seed, "false", n_iter, loraFiles, translate, promptTuning)
+    # Curves defined by https://www.desmos.com/calculator/gf6znr6wbl
+    steps = round(3.4 + ((quality ** 2) / 1.5))
+    scale = max(1, scale * ((1.3 + (((quality - 0.8) ** 3) / 16)) / 6.5))
+    lcm_weight = max(0, 9.5 - (((quality + 1.2) ** 2) / 4))
+    if lcm_weight > 0:
+        loraFiles.append("quality.lcm")
+        loraWeights.append(round(lcm_weight*10))
+
+    data, negative_data = managePrompts(prompt, negative, W, H, seed, "false", total_images, loraFiles, translate, promptTuning)
     seed_everything(seed)
 
-    rprint(f"\n[#48a971]Image to Image[white] generating [#48a971]{n_iter}[white] images over [#48a971]{runs}[white] batches with [#48a971]{ddim_steps}[white] steps and [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
+    rprint(f"\n[#48a971]Image to Image[white] generating [#48a971]{total_images}[white] images over [#48a971]{runs}[white] batches with [#48a971]{steps}[white] steps and [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
 
     sampler = "ddim"
 
@@ -1428,19 +1448,19 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
             loras[i].multiplier = loraWeights[i]/100
             register_lora_for_inference(loras[i])
             apply_lora()
-            rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraFile)[0]} [#494b9b]LoRA with [#48a971]{loraWeights[i]}% [#494b9b]strength")
+            if os.path.splitext(loraFile)[0] != "quality":
+                rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraFile)[0]} [#494b9b]LoRA with [#48a971]{loraWeights[i]}% [#494b9b]strength")
         else:
             loras.append(None)
 
     seeds = []
     strength = max(0.001, min(strength, 1.0))
 
-    t_enc = int(ddim_steps * strength)
     with torch.no_grad():
         # Create conditioning values for each batch, then unload the text encoder
-        uc = []
-        c = []
-        z_enc = []
+        negative_conditioning = []
+        conditioning = []
+        encoded_latent = []
 
         with precision_scope("cuda"):
             # Move the modelFS to the specified device
@@ -1454,9 +1474,9 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
             if init_latent_base.shape[0] < latentBatch:
                 init_latent_base = init_latent_base.repeat([math.ceil(latentBatch / init_latent_base.shape[0])] + [1] * (len(init_latent_base.shape) - 1))[:latentBatch]
 
-            for n in range(runs):
-                if n_iter-latentCount < latentBatch:
-                    latentBatch = n_iter-latentCount
+            for run in range(runs):
+                if total_images-latentCount < latentBatch:
+                    latentBatch = total_images-latentCount
 
                     # Slice latents to new batch size
                     init_latent_base = init_latent_base[:latentBatch]
@@ -1465,12 +1485,12 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                         init_mask = init_mask[:latentBatch]
 
                 # Encode the scaled latent
-                z_enc.append(model.stochastic_encode(
+                encoded_latent.append(model.stochastic_encode(
                     init_latent_base,
-                    torch.tensor([t_enc]).to(device),
-                    seed+(n*latentCount),
+                    torch.tensor([steps]).to(device),
+                    seed+(run*latentCount),
                     0.0,
-                    max(t_enc+1, ddim_steps),
+                    max(steps+1, int(steps/strength)),
                 ))
                 latentCount += latentBatch
 
@@ -1485,10 +1505,10 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
             modelCS.to(device)
             condBatch = batch
             condCount = 0
-            for n in range(runs):
-                condBatch = min(condBatch, n_iter-condCount)
-                uc.append(modelCS.get_learned_conditioning(negative_data[condCount:condCount+condBatch]))
-                c.append(modelCS.get_learned_conditioning(data[condCount:condCount+condBatch]))
+            for run in range(runs):
+                condBatch = min(condBatch, total_images-condCount)
+                negative_conditioning.append(modelCS.get_learned_conditioning(negative_data[condCount:condCount+condBatch]))
+                conditioning.append(modelCS.get_learned_conditioning(data[condCount:condCount+condBatch]))
                 condCount += condBatch
 
             # Move modelCS to CPU if necessary to free up GPU memory
@@ -1501,20 +1521,20 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
 
         base_count = 0
         # Iterate over the specified number of iterations
-        for n in clbar(range(runs), name = "Batches", position = "last", unit = "batch", prefixwidth = 12, suffixwidth = 28):
+        for run in clbar(range(runs), name = "Batches", position = "last", unit = "batch", prefixwidth = 12, suffixwidth = 28):
 
-            batch = min(batch, n_iter-base_count)
+            batch = min(batch, total_images-base_count)
 
             # Use the specified precision scope
             with precision_scope("cuda"):
                 
                 # Generate samples using the model
                 samples_ddim = model.sample(
-                    t_enc,
-                    c[n],
-                    z_enc[n],
+                    steps,
+                    conditioning[run],
+                    encoded_latent[run],
                     unconditional_guidance_scale=scale,
-                    unconditional_conditioning=uc[n],
+                    unconditional_conditioning=negative_conditioning[run],
                     sampler = sampler
                 )
 
@@ -1526,7 +1546,7 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                         os.path.join(outpath, file_name + ".png")
                     )
 
-                    if n_iter > 1 and (base_count+1) < n_iter:
+                    if total_images > 1 and (base_count+1) < total_images:
                         play("iteration.wav")
 
                     seeds.append(str(seed))
@@ -1556,7 +1576,7 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         del loras
 
         if post == "true":
-            palettizeOutput(int(n_iter))
+            palettizeOutput(int(total_images))
         play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
 
@@ -1643,7 +1663,7 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
     testSize = maxTestSize
     resize = testSize
 
-    ddim_steps = 1
+    steps = 1
 
     tested = []
 
@@ -1657,7 +1677,7 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
     rprint(f"\n[#48a971]Running benchmark[white] with a maximum generation size of [#48a971]{maxTestSize*8}[white]x[#48a971]{maxTestSize*8}[white] ([#48a971]{maxTestSize}[white]x[#48a971]{maxTestSize}[white] pixels) for [#48a971]{tests}[white] total tests")
 
     start_code = None
-    sampler = "euler"
+    sampler = "pxlcm"
 
     global model
     global modelCS
@@ -1703,7 +1723,7 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
 
                     # Generate samples using the model
                     samples_ddim = model.sample(
-                        S=ddim_steps,
+                        S=steps,
                         conditioning=c,
                         seed=seed,
                         shape=shape,
@@ -1788,10 +1808,10 @@ async def server(websocket):
             await websocket.send("running txt2img")
             try:
                 # Extract parameters from the message
-                loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, translate, promptTuning, w, h, ddim_steps, scale, upscale, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafiles", "dloraweights", "ddevice", "dprecision", "dpixelsize", "dmaxbatchsize", "dprompt", "dnegative", "dtranslate", "dprompttuning", "dwidth", "dheight", "dstep", "dscale", "dupscale", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
+                loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, translate, promptTuning, w, h, quality, scale, upscale, seed, total_images, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafiles", "dloraweights", "ddevice", "dprecision", "dpixelsize", "dmaxbatchsize", "dprompt", "dnegative", "dtranslate", "dprompttuning", "dwidth", "dheight", "dquality", "dscale", "dupscale", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
                 loraFiles = loraFiles.split('|')
                 loraWeights = [int(x) for x in loraWeights.split('|')]
-                txt2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), int(maxBatchSize), prompt, negative, translate, promptTuning, int(w), int(h), int(ddim_steps), float(scale), upscale, int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
+                txt2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), int(maxBatchSize), prompt, negative, translate, promptTuning, int(w), int(h), int(quality), float(scale), upscale, int(seed), int(total_images), tilingX, tilingY, pixelvae, post)
                 await websocket.send("returning txt2img")
             except Exception as e:
                 if "SSLCertVerificationError" in traceback.format_exc():
@@ -1809,10 +1829,10 @@ async def server(websocket):
             await websocket.send("running img2img")
             try:
                 # Extract parameters from the message
-                loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, translate, promptTuning, w, h, ddim_steps, scale, strength, seed, n_iter, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafiles", "dloraweights", "ddevice", "dprecision", "dpixelsize", "dmaxbatchsize", "dprompt", "dnegative", "dtranslate", "dprompttuning", "dwidth", "dheight", "dstep", "dscale", "dstrength", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
+                loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, translate, promptTuning, w, h, quality, scale, strength, seed, total_images, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafiles", "dloraweights", "ddevice", "dprecision", "dpixelsize", "dmaxbatchsize", "dprompt", "dnegative", "dtranslate", "dprompttuning", "dwidth", "dheight", "dquality", "dscale", "dstrength", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
                 loraFiles = loraFiles.split('|')
                 loraWeights = [int(x) for x in loraWeights.split('|')]
-                img2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), int(maxBatchSize), prompt, negative, translate, promptTuning, int(w), int(h), int(ddim_steps), float(scale), float(strength)/100, int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
+                img2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), int(maxBatchSize), prompt, negative, translate, promptTuning, int(w), int(h), int(quality), float(scale), float(strength)/100, int(seed), int(total_images), tilingX, tilingY, pixelvae, post)
                 await websocket.send("returning img2img")
             except Exception as e: 
                 if "SSLCertVerificationError" in traceback.format_exc():
@@ -1849,8 +1869,8 @@ async def server(websocket):
             await websocket.send("running translate")
             try:
                 # Extract parameters from the message
-                path, prompt, negative, n_iter, seed = searchString(message, "dpath", "dprompt", "dnegative", "diter", "dseed", "end")
-                prompts = prompt2prompt(path, prompt, negative, int(n_iter), int(seed))
+                path, prompt, negative, total_images, seed = searchString(message, "dpath", "dprompt", "dnegative", "diter", "dseed", "end")
+                prompts = prompt2prompt(path, prompt, negative, int(total_images), int(seed))
                 await websocket.send(f"returning translate {prompts}")
             except Exception as e:
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
