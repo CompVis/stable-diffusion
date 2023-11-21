@@ -149,6 +149,16 @@ def disabled_train(self):
     does not change anymore."""
     return self
 
+def append_zero(x):
+    return torch.cat([x, x.new_zeros([1])])
+
+def get_sigmas_karras(n, sigma_min=0.1, sigma_max=10, rho=7.0, device='cpu'):
+    """Constructs the noise schedule of Karras et al. (2022)."""
+    ramp = torch.linspace(0, 1, n, device=device)
+    min_inv_rho = sigma_min ** (1 / rho)
+    max_inv_rho = sigma_max ** (1 / rho)
+    sigmas = (max_inv_rho + ramp * (min_inv_rho - max_inv_rho)) ** rho
+    return append_zero(sigmas).to(device)
 
 class DDPM(pl.LightningModule):
     # classic DDPM with Gaussian diffusion, in image space
@@ -727,58 +737,9 @@ class UNet(DDPM):
                 use_original_steps=False,
             )
 
-        elif sampler == "euler":
+        elif sampler == "pxlcm":
             self.make_schedule(ddim_num_steps=S, ddim_eta=eta, verbose=False)
-            samples = self.euler_sampling(
-                self.alphas_cumprod,
-                x_latent,
-                S,
-                conditioning,
-                unconditional_conditioning=unconditional_conditioning,
-                unconditional_guidance_scale=unconditional_guidance_scale,
-            )
-        elif sampler == "euler_a":
-            self.make_schedule(ddim_num_steps=S, ddim_eta=eta, verbose=False)
-            samples = self.euler_ancestral_sampling(
-                self.alphas_cumprod,
-                x_latent,
-                S,
-                conditioning,
-                unconditional_conditioning=unconditional_conditioning,
-                unconditional_guidance_scale=unconditional_guidance_scale,
-            )
-
-        elif sampler == "dpm2":
-            samples = self.dpm_2_sampling(
-                self.alphas_cumprod,
-                x_latent,
-                S,
-                conditioning,
-                unconditional_conditioning=unconditional_conditioning,
-                unconditional_guidance_scale=unconditional_guidance_scale,
-            )
-        elif sampler == "heun":
-            samples = self.heun_sampling(
-                self.alphas_cumprod,
-                x_latent,
-                S,
-                conditioning,
-                unconditional_conditioning=unconditional_conditioning,
-                unconditional_guidance_scale=unconditional_guidance_scale,
-            )
-
-        elif sampler == "dpm2_a":
-            samples = self.dpm_2_ancestral_sampling(
-                self.alphas_cumprod,
-                x_latent,
-                S,
-                conditioning,
-                unconditional_conditioning=unconditional_conditioning,
-                unconditional_guidance_scale=unconditional_guidance_scale,
-            )
-
-        elif sampler == "lms":
-            samples = self.lms_sampling(
+            samples = self.pxlcm_sampling(
                 self.alphas_cumprod,
                 x_latent,
                 S,
@@ -829,7 +790,7 @@ class UNet(DDPM):
             extract_into_tensor(sqrt_alphas_cumprod, t, x0.shape) * x0
             + extract_into_tensor(self.ddim_sqrt_one_minus_alphas, t, x0.shape) * noise
         )
-
+    
     @torch.no_grad()
     def ddim_sampling(
         self,
@@ -851,7 +812,6 @@ class UNet(DDPM):
         x_dec = x_latent
         x0 = init_latent
         for i, step in enumerate(iterator):
-            index = total_steps - i - 1
             ts = torch.full(
                 (x_latent.shape[0],), step, device=x_latent.device, dtype=torch.long
             )
@@ -865,7 +825,7 @@ class UNet(DDPM):
                 x_dec,
                 cond,
                 ts,
-                index=index,
+                index=i,
                 total=len(time_range),
                 use_original_steps=use_original_steps,
                 unconditional_guidance_scale=unconditional_guidance_scale,
@@ -937,7 +897,7 @@ class UNet(DDPM):
         return x_prev
 
     @torch.no_grad()
-    def euler_sampling(
+    def pxlcm_sampling(
         self,
         ac,
         x,
@@ -953,10 +913,9 @@ class UNet(DDPM):
         s_tmax=float("inf"),
         s_noise=1.0,
     ):
-        """Implements Algorithm 2 (Euler steps) from Karras et al. (2022)."""
         extra_args = {} if extra_args is None else extra_args
         cvd = CompVisDenoiser(ac)
-        sigmas = cvd.get_sigmas(S)
+        sigmas = get_sigmas_karras(S, device=x.device)
         x = x * sigmas[0]
 
         s_in = x.new_ones([x.shape[0]]).half()
@@ -1002,6 +961,5 @@ class UNet(DDPM):
                     }
                 )
             dt = sigmas[i + 1] - sigma_hat
-            # Euler method
             x = x + d * dt
         return x

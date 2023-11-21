@@ -554,55 +554,56 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loraFiles,
                 play("iteration.wav")
 
                 rprint(f"[#c4f129]Loaded in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
+        
+            if modelLM is not None:
+                try:
+                    # Generate responses
+                    rprint(f"\n[#48a971]Translation model [white]generating [#48a971]{generations} [white]enhanced prompts")
+
+                    upsampled_captions = []
+                    for prompt in clbar(prompts, name = "Enhancing", position = "", unit = "prompt", prefixwidth = 12, suffixwidth = 28):
+
+                        # Try to generate a response, if no response is identified after retrys, set upsampled prompt to initial prompt
+                        upsampled_caption = None
+                        retrys = 5
+                        while upsampled_caption == None and retrys > 0:
+                            outputs = upsample_caption(modelLM, prompt, seed)
+                            upsampled_caption = collect_response(outputs)
+                            retrys -= 1
+                        seed += 1
+
+                        if upsampled_caption == None:
+                            upsampled_caption = prompt
+                        
+                        upsampled_captions.append(upsampled_caption)
+                        play("iteration.wav")
+
+                    prompts = upsampled_captions
+                
+                    cardMemory = torch.cuda.get_device_properties("cuda").total_memory / 1073741824
+                    usedMemory = cardMemory - (torch.cuda.mem_get_info()[0] / 1073741824)
+
+                    if cardMemory-usedMemory < 3:
+                        del modelLM
+                        clearCache()
+                        modelLM = None
+                    else:
+                        clearCache()
+
+                    seed = seed - len(prompts)
+                    print()
+                    for i, prompt in enumerate(prompts[:8]):
+                        rprint(f"[#48a971]Seed: [#c4f129]{seed}[#48a971] Prompt: [#494b9b]{prompt}")
+                        seed += 1
+                    if len(prompts) > 8:
+                        rprint(f"[#48a971]Remaining prompts generated but not displayed.")
+                except:
+                    rprint(f"[#494b9b]Prompt enhancement failed unexpectedly. Prompts will not be edited.")
         except Exception as e: 
             if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
                 rprint(f"\n[#494b9b]Translation model could not be loaded due to insufficient GPU resources.")
             else:
                 rprint(f"\n[#494b9b]Translation model could not be loaded.")
-        if modelLM is not None:
-            try:
-                # Generate responses
-                rprint(f"\n[#48a971]Translation model [white]generating [#48a971]{generations} [white]enhanced prompts")
-
-                upsampled_captions = []
-                for prompt in clbar(prompts, name = "Enhancing", position = "", unit = "prompt", prefixwidth = 12, suffixwidth = 28):
-
-                    # Try to generate a response, if no response is identified after retrys, set upsampled prompt to initial prompt
-                    upsampled_caption = None
-                    retrys = 5
-                    while upsampled_caption == None and retrys > 0:
-                        outputs = upsample_caption(modelLM, prompt, seed)
-                        upsampled_caption = collect_response(outputs)
-                        retrys -= 1
-                    seed += 1
-
-                    if upsampled_caption == None:
-                        upsampled_caption = prompt
-                    
-                    upsampled_captions.append(upsampled_caption)
-                    play("iteration.wav")
-
-                prompts = upsampled_captions
-            
-                cardMemory = torch.cuda.get_device_properties("cuda").total_memory / 1073741824
-                usedMemory = cardMemory - (torch.cuda.mem_get_info()[0] / 1073741824)
-
-                if cardMemory-usedMemory < 3:
-                    del modelLM
-                    clearCache()
-                    modelLM = None
-                else:
-                    clearCache()
-
-                seed = seed - len(prompts)
-                print()
-                for i, prompt in enumerate(prompts[:8]):
-                    rprint(f"[#48a971]Seed: [#c4f129]{seed}[#48a971] Prompt: [#494b9b]{prompt}")
-                    seed += 1
-                if len(prompts) > 8:
-                    rprint(f"[#48a971]Remaining prompts generated but not displayed.")
-            except:
-                rprint(f"[#494b9b]Prompt enhancement failed unexpectedly. Prompts will not be edited.")
     else:
         if modelLM is not None:
             del modelLM
@@ -1039,20 +1040,29 @@ def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae,
     if pixelvae == "true":
         # Pixel clustering mode, lower threshold means bigger clusters
         denoise = 0.08
-        x_sample = modelPV.run_cluster(samples_ddim[i:i+1], threshold=denoise, wrap_x=bool(tilingX == "true"), wrap_y=bool(tilingY == "true"))
-        #x_sample = modelPV.run_plain(samples_ddim)
-        # Convert to numpy format, skip downscale later
+        x_sample = modelPV.run_cluster(samples_ddim[i:i+1], threshold=denoise, select="local4", wrap_x=bool(tilingX == "true"), wrap_y=bool(tilingY == "true"))
+        #x_sample = modelPV.run_plain(samples_ddim[i:i+1])
         x_sample = x_sample[0].cpu().numpy()
     else:
-        modelFS.to(device)
-        # Decode the samples using the first stage of the model
-        x_sample = [modelFS.decode_first_stage(samples_ddim[i:i+1].to(device))[0].cpu()]
-        # Convert the list of decoded samples to a tensor and normalize the values to [0, 1]
-        x_sample = torch.stack(x_sample).float()
-        x_sample = torch.clamp((x_sample + 1.0) / 2.0, min=0.0, max=1.0)
+        try:
+            modelFS.to(device)
+            # Decode the samples using the first stage of the model
+            x_sample = [modelFS.decode_first_stage(samples_ddim[i:i+1].to(device))[0].cpu()]
+            # Convert the list of decoded samples to a tensor and normalize the values to [0, 1]
+            x_sample = torch.stack(x_sample).float()
+            x_sample = torch.clamp((x_sample + 1.0) / 2.0, min=0.0, max=1.0)
 
-        # Rearrange the dimensions of the tensor and scale the values to the range [0, 255]
-        x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
+            # Rearrange the dimensions of the tensor and scale the values to the range [0, 255]
+            x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
+        except:
+            if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
+                rprint(f"\n[#ab333d]Ran out of VRAM during decode, switching to fast pixel decoder")
+                # Pixel clustering mode, lower threshold means bigger clusters
+                denoise = 0.08
+                x_sample = modelPV.run_cluster(samples_ddim[i:i+1], threshold=denoise, select="local4", wrap_x=bool(tilingX == "true"), wrap_y=bool(tilingY == "true"))
+                x_sample = x_sample[0].cpu().numpy()
+            else:
+                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
     
     # Convert the numpy array to an image
     x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
@@ -1156,7 +1166,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         rprint(f"[#48a971]Pre-generating[white] composition image with [#48a971]{g_ddim_steps}[white] steps at [#48a971]{gWidth * 8}[white]x[#48a971]{gHeight * 8} ([#48a971]{(gWidth * 8) // pixelSize}[white]x[#48a971]{(gHeight * 8) // pixelSize}[white] pixels)")
 
     start_code = None
-    sampler = "euler"
+    sampler = "pxlcm"
 
     global model
     global modelCS
@@ -1423,10 +1433,8 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
             loras.append(None)
 
     seeds = []
-    assert 0.0 <= strength <= 1.0, "can only work with strength in [0.0, 1.0]"
+    strength = max(0.001, min(strength, 1.0))
 
-    # Calculate the number of steps for encoding
-    t_enc = int(strength * ddim_steps)
     with torch.no_grad():
         # Create conditioning values for each batch, then unload the text encoder
         uc = []
@@ -1458,10 +1466,10 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                 # Encode the scaled latent
                 z_enc.append(model.stochastic_encode(
                     init_latent_base,
-                    torch.tensor([t_enc]).to(device),
+                    torch.tensor([ddim_steps]).to(device),
                     seed+(n*latentCount),
                     0.0,
-                    ddim_steps,
+                    max(ddim_steps+1, int(ddim_steps/strength)),
                 ))
                 latentCount += latentBatch
 
@@ -1501,7 +1509,7 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                 
                 # Generate samples using the model
                 samples_ddim = model.sample(
-                    t_enc,
+                    ddim_steps,
                     c[n],
                     z_enc[n],
                     unconditional_guidance_scale=scale,
@@ -1854,7 +1862,7 @@ async def server(websocket):
                 # Extract parameters from the message
                 device, precision, timeLimit, maxTestSize, errorRange, pixelvae, seed = searchString(message, "ddevice", "dprecision", "dtimelimit", "dmaxtestsize", "derrorrange", "dpixelvae", "dseed", "end")
                 benchmark(device, precision, float(timeLimit), int(maxTestSize), int(errorRange), pixelvae, int(seed))
-                await websocket.send(f"returning benchmark {max(256, maxSize-64)}") # We subtract 64 to leave a little VRAM headroom, so it doesn't OOM if you open a youtube tab T-T
+                await websocket.send(f"returning benchmark {max(32, maxSize-8)}") # We subtract 8 to leave a little VRAM headroom, so it doesn't OOM if you open a youtube tab T-T
             except Exception as e:
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                 play("error.wav")
