@@ -1,7 +1,7 @@
 print("Importing libraries. This may take one or more minutes.")
 
 # Import core libraries
-import os, re, time, sys, asyncio, ctypes, math, threading, platform, subprocess
+import os, re, time, sys, asyncio, ctypes, math, threading, platform
 import torch
 import scipy
 import numpy as np
@@ -1145,9 +1145,9 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
     gWidth = W // 8
     gHeight = H // 8
 
-    # Curves defined by https://www.desmos.com/calculator/gf6znr6wbl
+    # Curves defined by https://www.desmos.com/calculator/weivur4n1o
     steps = round(3.4 + ((quality ** 2) / 1.5))
-    scale = max(1, scale * ((1.3 + (((quality - 0.8) ** 3) / 16)) / 6.5))
+    scale = max(1, scale * ((1.6 + (((quality - 2.1) ** 2) / 3)) / 5))
     lcm_weight = max(0, 9.5 - (((quality + 1.2) ** 2) / 4))
     if lcm_weight > 0:
         loraFiles.append("quality.lcm")
@@ -1164,7 +1164,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         gWidth = int((lower * max(1, aspect)) + ((gy/7) * aspect))
         gHeight = int((lower * max(1, 1/aspect)) + ((gx/7) * (1/aspect)))
 
-        # Curves defined by https://www.desmos.com/calculator/gf6znr6wbl
+        # Curves defined by https://www.desmos.com/calculator/weivur4n1o
         pre_steps = round(steps * ((10 - (((quality - 1.1) ** 2) / 6)) / 10))
         up_steps = round(steps * (((((quality - 9.1) ** 2) / 3.5) - 0.2) / 10))
     else:
@@ -1173,10 +1173,10 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
     data, negative_data = managePrompts(prompt, negative, W, H, seed, upscale, total_images, loraFiles, translate, promptTuning)
     seed_everything(seed)
 
-    rprint(f"\n[#48a971]Text to Image[white] generating [#48a971]{total_images}[white] images over [#48a971]{runs}[white] batches with [#48a971]{steps}[white] steps and [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
+    rprint(f"\n[#48a971]Text to Image[white] generating [#48a971]{total_images}[white] quality [#48a971]{quality}[white] images over [#48a971]{runs}[white] batches with [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
 
     if W // 8 >= 96 and H // 8 >= 96 and upscale == "true":
-        rprint(f"[#48a971]Pre-generating[white] composition image with [#48a971]{pre_steps}[white] steps at [#48a971]{gWidth * 8}[white]x[#48a971]{gHeight * 8} [white]([#48a971]{(gWidth * 8) // pixelSize}[white]x[#48a971]{(gHeight * 8) // pixelSize}[white] pixels) and upscaling for [#48a971]{up_steps} [white]steps")
+        rprint(f"[#48a971]Pre-generating[white] composition image at [#48a971]{gWidth * 8}[white]x[#48a971]{gHeight * 8} [white]([#48a971]{(gWidth * 8) // pixelSize}[white]x[#48a971]{(gHeight * 8) // pixelSize}[white] pixels)")
 
     start_code = None
     sampler = "pxlcm"
@@ -1383,9 +1383,9 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
     wtile = max_tile(W // 8) if W // 8 > 96 else 1
     htile = max_tile(H // 8) if H // 8 > 96 else 1
 
-    # Curves defined by https://www.desmos.com/calculator/gf6znr6wbl
-    steps = round(3.4 + ((quality ** 2) / 1.5))
-    scale = max(1, scale * ((1.3 + (((quality - 0.8) ** 3) / 16)) / 6.5))
+    # Curves defined by https://www.desmos.com/calculator/weivur4n1o
+    steps = round(9 + (((quality-1.85) ** 2) * 1.1))
+    scale = max(1, scale * ((1.6 + (((quality - 2.1) ** 2) / 3)) / 5))
     lcm_weight = max(0, 9.5 - (((quality + 1.2) ** 2) / 4))
     if lcm_weight > 0:
         loraFiles.append("quality.lcm")
@@ -1394,7 +1394,7 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
     data, negative_data = managePrompts(prompt, negative, W, H, seed, "false", total_images, loraFiles, translate, promptTuning)
     seed_everything(seed)
 
-    rprint(f"\n[#48a971]Image to Image[white] generating [#48a971]{total_images}[white] images over [#48a971]{runs}[white] batches with [#48a971]{steps}[white] steps and [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
+    rprint(f"\n[#48a971]Image to Image[white] generating [#48a971]{total_images}[white] quality [#48a971]{quality}[white] images over [#48a971]{runs}[white] batches with [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
 
     sampler = "ddim"
 
