@@ -1,3 +1,3 @@
 safetensors==0.3.2
-torch==2.0.1 -i https://download.pytorch.org/whl/rocm5.4.2 --trusted-host download.pytorch.org
-torchvision==0.15.2 -i https://download.pytorch.org/whl/rocm5.4.2 --trusted-host download.pytorch.org
+torch==2.1.0 -i https://download.pytorch.org/whl/rocm5.6 --trusted-host download.pytorch.org
+torchvision==0.16.0 -i https://download.pytorch.org/whl/rocm5.6 --trusted-host download.pytorch.org
