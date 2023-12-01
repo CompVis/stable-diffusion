@@ -11,6 +11,7 @@ from PIL import Image
 from itertools import islice, product
 from einops import rearrange
 from pytorch_lightning import seed_everything
+from transformers import BlipProcessor, BlipForConditionalGeneration
 from contextlib import nullcontext
 from typing import Optional
 from safetensors.torch import load_file
@@ -72,6 +73,8 @@ global modelFS
 global modelPV
 global modelLM
 modelLM = None
+global modelBLIP
+modelBLIP = None
 global modelType
 global running
 global loadedDevice
@@ -371,26 +374,6 @@ def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disa
         for i, item in enumerate(iterable):
             yield item
 
-def load_model_from_config(model, verbose=False):
-    # Load the model's state dictionary from the specified file
-    try:
-        # First try to load as a Safetensor, then as a pickletensor
-        try:
-            pl_sd = load_file(model, device="cpu")
-        except: 
-            rprint(f"[#ab333d]Model is not a Safetensor. Please consider using Safetensors format for better security.")
-            pl_sd = torch.load(model, map_location="cpu")
-
-        sd = pl_sd
-
-        # If "state_dict" is found in the loaded dictionary, assign it to sd
-        if 'state_dict' in sd:
-            sd = pl_sd["state_dict"]
-
-        return sd
-    except Exception as e: 
-                rprint(f"[#ab333d]{traceback.format_exc()}\n\nThis may indicate a model has not been downloaded fully, or is corrupted.")
-
 def load_img(path, h0, w0):
     # Open the image at the specified path and prepare it for image to image
     image = Image.open(path).convert("RGB")
@@ -412,6 +395,20 @@ def load_img(path, h0, w0):
     # Apply a normalization by scaling the values in the range [-1, 1]
     return 2.*image - 1.
 
+def caption_images(blip, images, prompt = None):
+    processor = blip["processor"]
+    model = blip["model"]
+
+    outputs = []
+    for image in images:        
+        if prompt is not None:
+            inputs = processor(image, prompt, return_tensors="pt")
+        else:
+            inputs = processor(image, return_tensors="pt")
+
+        outputs.append(processor.decode(model.generate(**inputs, max_new_tokens=30)[0], skip_special_tokens=True))
+    return outputs
+
 def flatten(el):
     # Flatten nested elements by recursively traversing through children
     flattened = [flatten(children) for children in el.children()]
@@ -427,6 +424,35 @@ def adjust_gamma(image, gamma=1.0):
 
     # Apply the gamma correction using the lookup table
     return image.point(gamma_table)
+
+def load_blip(path):
+    try:
+        processor = BlipProcessor.from_pretrained(path)
+        model = BlipForConditionalGeneration.from_pretrained(path)
+        return {"processor": processor, "model": model}
+    except Exception as e:
+        rprint(f"[#ab333d]{traceback.format_exc()}\n\nBLIP could not be loaded this may indicate a model has not been downloaded fully, or you have run out of RAM.")
+        return None
+
+def load_model_from_config(model, verbose=False):
+    # Load the model's state dictionary from the specified file
+    try:
+        # First try to load as a Safetensor, then as a pickletensor
+        try:
+            pl_sd = load_file(model, device="cpu")
+        except: 
+            rprint(f"[#ab333d]Model is not a Safetensor. Please consider using Safetensors format for better security.")
+            pl_sd = torch.load(model, map_location="cpu")
+
+        sd = pl_sd
+
+        # If "state_dict" is found in the loaded dictionary, assign it to sd
+        if 'state_dict' in sd:
+            sd = pl_sd["state_dict"]
+
+        return sd
+    except Exception as e: 
+        rprint(f"[#ab333d]{traceback.format_exc()}\n\nThis may indicate a model has not been downloaded fully, or is corrupted.")
 
 def load_model(modelPathInput, modelFile, config, device, precision, optimized):
     timer = time.time()
@@ -527,6 +553,7 @@ def load_model(modelPathInput, modelFile, config, device, precision, optimized):
     if device == "cuda" and precision == "autocast":
         model.half()
         modelCS.half()
+        modelFS.half()
         precision = "half"
 
     assign_lora_names_to_compvis_modules(model, modelCS)
@@ -603,6 +630,7 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loraFiles,
             if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
                 rprint(f"\n[#494b9b]Translation model could not be loaded due to insufficient GPU resources.")
             else:
+                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                 rprint(f"\n[#494b9b]Translation model could not be loaded.")
     else:
         if modelLM is not None:
@@ -1145,7 +1173,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
     gWidth = W // 8
     gHeight = H // 8
 
-    # Curves defined by https://www.desmos.com/calculator/weivur4n1o
+    # Curves defined by https://www.desmos.com/calculator/qneyst8drz
     steps = round(3.4 + ((quality ** 2) / 1.5))
     scale = max(1, scale * ((1.6 + (((quality - 2.1) ** 2) / 3)) / 5))
     lcm_weight = max(0, 9.5 - (((quality + 1.2) ** 2) / 4))
@@ -1164,9 +1192,9 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         gWidth = int((lower * max(1, aspect)) + ((gy/7) * aspect))
         gHeight = int((lower * max(1, 1/aspect)) + ((gx/7) * (1/aspect)))
 
-        # Curves defined by https://www.desmos.com/calculator/weivur4n1o
+        # Curves defined by https://www.desmos.com/calculator/qneyst8drz
         pre_steps = round(steps * ((10 - (((quality - 1.1) ** 2) / 6)) / 10))
-        up_steps = round(steps * (((((quality - 9.1) ** 2) / 3.5) - 0.2) / 10))
+        up_steps = round(steps * (((((quality - 6.5) ** 2) / 1.6) + 2.4) / 10))
     else:
         upscale = "false"
 
@@ -1383,7 +1411,7 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
     wtile = max_tile(W // 8) if W // 8 > 96 else 1
     htile = max_tile(H // 8) if H // 8 > 96 else 1
 
-    # Curves defined by https://www.desmos.com/calculator/weivur4n1o
+    # Curves defined by https://www.desmos.com/calculator/qneyst8drz
     steps = round(9 + (((quality-1.85) ** 2) * 1.1))
     scale = max(1, scale * ((1.6 + (((quality - 2.1) ** 2) / 3)) / 5))
     lcm_weight = max(0, 9.5 - (((quality + 1.2) ** 2) / 4))
