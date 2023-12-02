@@ -628,7 +628,7 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loraFiles,
                     if len(prompts) > 8:
                         rprint(f"[#48a971]Remaining prompts generated but not displayed.")
                 except:
-                    rprint(f"[#494b9b]Prompt enhancement failed unexpectedly. Prompts will not be edited.")
+                    rprint(f"\n[#494b9b]Prompt enhancement failed unexpectedly. Prompts will not be edited.")
         except Exception as e: 
             if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
                 rprint(f"\n[#494b9b]Translation model could not be loaded due to insufficient GPU resources.")
