@@ -426,12 +426,15 @@ def adjust_gamma(image, gamma=1.0):
     return image.point(gamma_table)
 
 def load_blip(path):
+    timer = time.time()
+    print("Loading BLIP model")
     try:
         processor = BlipProcessor.from_pretrained(path)
         model = BlipForConditionalGeneration.from_pretrained(path)
+        rprint(f"[#c4f129]Loaded in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
         return {"processor": processor, "model": model}
     except Exception as e:
-        rprint(f"[#ab333d]{traceback.format_exc()}\n\nBLIP could not be loaded this may indicate a model has not been downloaded fully, or you have run out of RAM.")
+        rprint(f"[#ab333d]{traceback.format_exc()}\n\nBLIP could not be loaded, this may indicate a model has not been downloaded fully, or you have run out of RAM.")
         return None
 
 def load_model_from_config(model, verbose=False):
@@ -629,6 +632,8 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loraFiles,
         except Exception as e: 
             if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
                 rprint(f"\n[#494b9b]Translation model could not be loaded due to insufficient GPU resources.")
+            elif "GPU is required" in traceback.format_exc():
+                rprint(f"\n[#494b9b]Translation model requires a GPU to be loaded.")
             else:
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                 rprint(f"\n[#494b9b]Translation model could not be loaded.")
