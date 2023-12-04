@@ -1,7 +1,7 @@
 print("Importing libraries. This may take one or more minutes.")
 
 # Import core libraries
-import os, re, time, sys, asyncio, ctypes, math, threading, platform
+import os, re, time, sys, asyncio, ctypes, math, threading, platform, json
 import torch
 import scipy
 import numpy as np
@@ -40,6 +40,7 @@ from transformers.utils import logging
 import requests
 from websockets import serve, connect
 from io import BytesIO
+import base64
 
 # Import console management libraries
 from rich import print as rprint
@@ -67,6 +68,8 @@ log.propagate = False
 log.setLevel(pylog.ERROR)
 logging.set_verbosity(logging.CRITICAL)
 
+global modelName
+modelName = None
 global model
 global modelCS
 global modelFS
@@ -127,7 +130,7 @@ def audioThread(file):
 
 def play(file):
     global sounds
-    if sounds == "true":
+    if sounds:
         try:
             threading.Thread(target=audioThread, args=(file,), daemon=True).start()
         except:
@@ -172,18 +175,14 @@ def __replacementConv2DConvForward(self, input: Tensor, weight: Tensor, bias: Op
     return F.conv2d(working, weight, bias, self.stride, _pair(0), self.dilation, self.groups)
 
 def patch_tiling(tilingX, tilingY, model, modelFS, modelPV):
-    # Convert tilingX and tilingY to boolean values
-    X = bool(tilingX == "true")
-    Y = bool(tilingY == "true")
-
     # Patch Conv2d layers in the given models for asymmetric padding
-    patch_conv_asymmetric(model, X, Y)
-    patch_conv_asymmetric(modelFS, X, Y)
-    patch_conv_asymmetric(modelPV.model, X, Y)
+    patch_conv_asymmetric(model, tilingX, tilingY)
+    patch_conv_asymmetric(modelFS, tilingX, tilingY)
+    patch_conv_asymmetric(modelPV.model, tilingX, tilingY)
 
-    if X or Y:
+    if tilingX or tilingY:
         # Print a message indicating the direction(s) patched for tiling
-        rprint("[#494b9b]Patched for tiling in the [#48a971]" + "X" * X + "[#494b9b] and [#48a971]" * (X and Y) + "Y" * Y + "[#494b9b] direction" + "s" * (X and Y))
+        rprint("[#494b9b]Patched for tiling in the [#48a971]" + "X" * tilingX + "[#494b9b] and [#48a971]" * (tilingX and tilingY) + "Y" * tilingY + "[#494b9b] direction" + "s" * (tilingX and tilingY))
 
     return model, modelFS, modelPV
 
@@ -457,115 +456,119 @@ def load_model_from_config(model, verbose=False):
     except Exception as e: 
         rprint(f"[#ab333d]{traceback.format_exc()}\n\nThis may indicate a model has not been downloaded fully, or is corrupted.")
 
-def load_model(modelPathInput, modelFile, config, device, precision, optimized):
-    timer = time.time()
+def load_model(modelFileString, config, device, precision, optimized):
+    global modelName
+    if modelFileString != modelName:
+        timer = time.time()
 
-    if device == "cuda" and not torch.cuda.is_available():
-        if torch.backends.mps.is_available():
-            device = "mps"
-        else:
-            device = "cpu"
-            rprint(f"\n[#ab333d]GPU is not responding, loading model in CPU mode")
-
-    global loadedDevice
-    global modelType
-    global modelPath
-    modelPath = modelPathInput
-    loadedDevice = device
-
-    # Check the modelFile and print corresponding loading message
-    print()
-    modelType = "pixel"
-    if modelFile == "model.pxlm":
-        print(f"Loading primary model")
-    elif modelFile == "modelmicro.pxlm":
-        print(f"Loading micro model")
-    elif modelFile == "modelmini.pxlm":
-        print(f"Loading mini model")
-    elif modelFile == "modelmega.pxlm":
-        print(f"Loading mega model")
-    elif modelFile == "paletteGen.pxlm":
-        modelType = "palette"
-        print(f"Loading PaletteGen model")
-    else:
-        modelType = "general"
-        rprint(f"Loading custom model from [#48a971]{modelFile}")
-
-    # Determine if turbo mode is enabled
-    turbo = True
-    if optimized == "true" and device == "cuda":
-        turbo = False
-
-    # Load the model's state dictionary from the specified file
-    sd = load_model_from_config(f"{modelPath+modelFile}")
-
-    # Separate the input and output blocks from the state dictionary
-    li, lo = [], []
-    for key, value in sd.items():
-        sp = key.split(".")
-        if (sp[0]) == "model":
-            if "input_blocks" in sp:
-                li.append(key)
-            elif "middle_block" in sp:
-                li.append(key)
-            elif "time_embed" in sp:
-                li.append(key)
+        if device == "cuda" and not torch.cuda.is_available():
+            if torch.backends.mps.is_available():
+                device = "mps"
             else:
-                lo.append(key)
+                device = "cpu"
+                rprint(f"\n[#ab333d]GPU is not responding, loading model in CPU mode")
 
-    # Reorganize the state dictionary keys to match the model structure
-    for key in li:
-        sd["model1." + key[6:]] = sd.pop(key)
-    for key in lo:
-        sd["model2." + key[6:]] = sd.pop(key)
+        global loadedDevice
+        global modelType
+        global modelPath
+        modelPath, modelFile = os.path.split(modelFileString)
+        loadedDevice = device
 
-    # Load the model configuration
-    config = OmegaConf.load(f"{config}")
+        # Check the modelFile and print corresponding loading message
+        print()
+        modelType = "pixel"
+        if modelFile == "model.pxlm":
+            print(f"Loading primary model")
+        elif modelFile == "modelmicro.pxlm":
+            print(f"Loading micro model")
+        elif modelFile == "modelmini.pxlm":
+            print(f"Loading mini model")
+        elif modelFile == "modelmega.pxlm":
+            print(f"Loading mega model")
+        elif modelFile == "paletteGen.pxlm":
+            modelType = "palette"
+            print(f"Loading PaletteGen model")
+        else:
+            modelType = "general"
+            rprint(f"Loading custom model from [#48a971]{modelFile}")
 
-    global modelPV
-    # Ignore an annoying userwaring
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        # Load the pixelvae
-        decoder_path = os.path.abspath("models/decoder/decoder.px")
-        modelPV = load_pixelvae_model(decoder_path, device, "eVWtlIBjTRr0-gyZB0smWSwxCiF8l4PVJcNJOIFLFqE=")
+        # Determine if turbo mode is enabled
+        turbo = True
+        if optimized and device == "cuda":
+            turbo = False
 
-    # Instantiate and load the main model
-    global model
-    model = instantiate_from_config(config.model_unet)
-    _, _ = model.load_state_dict(sd, strict=False)
-    model.eval()
-    model.unet_bs = 1
-    model.cdevice = device
-    model.turbo = turbo
+        # Load the model's state dictionary from the specified file
+        sd = load_model_from_config(f"{os.path.join(modelPath, modelFile)}")
 
-    # Instantiate and load the conditional stage model
-    global modelCS
-    modelCS = instantiate_from_config(config.model_cond_stage)
-    _, _ = modelCS.load_state_dict(sd, strict=False)
-    modelCS.eval()
-    modelCS.cond_stage_model.device = device
+        # Separate the input and output blocks from the state dictionary
+        li, lo = [], []
+        for key, value in sd.items():
+            sp = key.split(".")
+            if (sp[0]) == "model":
+                if "input_blocks" in sp:
+                    li.append(key)
+                elif "middle_block" in sp:
+                    li.append(key)
+                elif "time_embed" in sp:
+                    li.append(key)
+                else:
+                    lo.append(key)
 
-    # Instantiate and load the first stage model
-    global modelFS
-    modelFS = instantiate_from_config(config.model_first_stage)
-    _, _ = modelFS.load_state_dict(sd, strict=False)
-    modelFS.eval()
+        # Reorganize the state dictionary keys to match the model structure
+        for key in li:
+            sd["model1." + key[6:]] = sd.pop(key)
+        for key in lo:
+            sd["model2." + key[6:]] = sd.pop(key)
 
-    # Set precision and device settings
-    if device == "cuda" and precision == "autocast":
-        model.half()
-        modelCS.half()
-        modelFS.half()
-        precision = "half"
+        # Load the model configuration
+        config = OmegaConf.load(f"{config}")
 
-    assign_lora_names_to_compvis_modules(model, modelCS)
+        global modelPV
+        # Ignore an annoying userwaring
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            # Load the pixelvae
+            decoder_path = os.path.abspath("models/decoder/decoder.px")
+            modelPV = load_pixelvae_model(decoder_path, device, "eVWtlIBjTRr0-gyZB0smWSwxCiF8l4PVJcNJOIFLFqE=")
 
-    # Print loading information
-    play("iteration.wav")
-    rprint(f"[#c4f129]Loaded model to [#48a971]{model.cdevice}[#c4f129] at [#48a971]{precision} precision[#c4f129] in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
+        # Instantiate and load the main model
+        global model
+        model = instantiate_from_config(config.model_unet)
+        _, _ = model.load_state_dict(sd, strict=False)
+        model.eval()
+        model.unet_bs = 1
+        model.cdevice = device
+        model.turbo = turbo
 
-def managePrompts(prompt, negative, W, H, seed, upscale, generations, loraFiles, translate, promptTuning):
+        # Instantiate and load the conditional stage model
+        global modelCS
+        modelCS = instantiate_from_config(config.model_cond_stage)
+        _, _ = modelCS.load_state_dict(sd, strict=False)
+        modelCS.eval()
+        modelCS.cond_stage_model.device = device
+
+        # Instantiate and load the first stage model
+        global modelFS
+        modelFS = instantiate_from_config(config.model_first_stage)
+        _, _ = modelFS.load_state_dict(sd, strict=False)
+        modelFS.eval()
+
+        # Set precision and device settings
+        if device == "cuda" and precision == "autocast":
+            model.half()
+            modelCS.half()
+            modelFS.half()
+            precision = "half"
+
+        assign_lora_names_to_compvis_modules(model, modelCS)
+
+        modelName = modelFileString
+
+        # Print loading information
+        play("iteration.wav")
+        rprint(f"[#c4f129]Loaded model to [#48a971]{model.cdevice}[#c4f129] at [#48a971]{precision} precision[#c4f129] in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
+
+def managePrompts(prompt, negative, W, H, seed, upscale, generations, loras, translate, promptTuning):
     timer = time.time()
     global modelLM
     global loadedDevice
@@ -575,7 +578,7 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loraFiles,
 
     prompts = [prompt]*generations
 
-    if translate == "true":
+    if translate:
         try:
             # Load LLM for prompt upsampling
             if modelLM == None:
@@ -643,36 +646,37 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loraFiles,
             clearCache()
             modelLM = None
 
+    loraNames = [os.path.split(d["file"])[1] for d in loras if "file" in d]
     # Deal with prompt modifications
-    if modelType == "pixel" and promptTuning == "true":
+    if modelType == "pixel" and promptTuning:
         prefix = "pixel art"
         suffix = "detailed"
         negativeList = [negative, "mutated, noise, frame, film reel, snowglobe, deformed, stock image, watermark, text, signature, username"]
 
-        if any(f"{_}.pxlm" in loraFiles for _ in ["topdown", "isometric", "neogeo", "nes", "snes", "playstation", "gameboy", "gameboyadvance"]):
+        if any(f"{_}.pxlm" in loraNames for _ in ["topdown", "isometric", "neogeo", "nes", "snes", "playstation", "gameboy", "gameboyadvance"]):
             prefix = "pixel"
             suffix = ""
-        elif any(f"{_}.pxlm" in loraFiles for _ in ["frontfacing", "gameicons", "flatshading"]):
+        elif any(f"{_}.pxlm" in loraNames for _ in ["frontfacing", "gameicons", "flatshading"]):
             prefix = "pixel"
             suffix = "pixel art"
-        elif any(f"{_}.pxlm" in loraFiles for _ in ["nashorkimitems"]):
+        elif any(f"{_}.pxlm" in loraNames for _ in ["nashorkimitems"]):
             prefix = "pixel, item"
             suffix = ""
             negativeList.insert(0, "vibrant, colorful")
-        elif any(f"{_}.pxlm" in loraFiles for _ in ["gamecharacters"]):
+        elif any(f"{_}.pxlm" in loraNames for _ in ["gamecharacters"]):
             prefix = "pixel"
             suffix = "blank background"
 
-        if any(f"{_}.pxlm" in loraFiles for _ in ["1bit"]):
+        if any(f"{_}.pxlm" in loraNames for _ in ["1bit"]):
             prefix = f"{prefix}, 1-bit"
             suffix = f"{suffix}, pixel art, black and white, white background"
             negativeList.insert(0, "color, colors")
 
-        if any(f"{_}.pxlm" in loraFiles for _ in ["tiling", "tiling16", "tiling32"]):
+        if any(f"{_}.pxlm" in loraNames for _ in ["tiling", "tiling16", "tiling32"]):
             prefix = f"{prefix}, texture"
             suffix = f"{suffix}, pixel art"
         
-        if math.sqrt(W*H) >= 832 and upscale == "false":
+        if math.sqrt(W*H) >= 832 and not upscale:
             suffix = f"{suffix}, pjpixdeuc art style"
 
         # Combine all prompt modifications
@@ -680,7 +684,7 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loraFiles,
         for i, prompt in enumerate(prompts):
             prompts[i] = f"{prefix}, {prompt}, {suffix}"
     else:
-        if promptTuning == "true":
+        if promptTuning:
             negatives = [f"{negative}, pixel art, blurry, mutated, deformed, borders, watermark, text"]*generations
         else:
             negatives = [f"{negative}, pixel art"]*generations
@@ -741,23 +745,22 @@ def pixelDetect(image: Image):
     # Resize input image using kCentroid with the calculated horizontal and vertical factors
     return kCentroid(image, round(image.width/np.median(hspacing)), round(image.height/np.median(vspacing)), 2)
 
-def pixelDetectVerbose():
+def pixelDetectVerbose(image):
     # Check if input file exists and open it
-    assert os.path.isfile("temp/input.png")
-    init_img = Image.open("temp/input.png")
+    image = Image.open(BytesIO(base64.b64decode(image)))
 
     rprint(f"\n[#48a971]Finding pixel ratio for current cel")
 
     # Process the image using pixelDetect and save the result
     for _ in clbar(range(1), name = "Processed", position = "last", unit = "image", prefixwidth = 12, suffixwidth = 28):
-        downscale = pixelDetect(init_img)
+        downscale = pixelDetect(image)
 
-        numColors = determine_best_k(downscale, 64)
+        numColors = determine_best_k(downscale, 128)
 
         for _ in clbar([downscale], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28): 
-            img_indexed = downscale.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
+            image_indexed = downscale.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
         
-        img_indexed.save("temp/temp.png")
+        image_indexed.save("temp/temp.png")
     play("batch.wav")
 
 def kDenoise(image, smoothing, strength):
@@ -836,12 +839,27 @@ def determine_best_k(image, max_k, n_samples=5000, smooth_window=4):
 
     return actual_k
 
-def determine_best_palette_verbose(image, paletteFolder):
+def filterList(data, m=0.7):
+    mean = sum(data) / len(data)
+    standard_deviation = (sum((x - mean) ** 2 for x in data) / len(data)) ** 0.5
+    filtered = []
+    for x in data:
+        if abs(x - mean) < m * standard_deviation:
+            filtered.append(x)
+        else:
+            filtered.append(9999999)
+    return filtered
+
+def determine_best_palette_verbose(image, palettes):
     # Convert the image to RGB mode
     image = image.convert("RGB")
 
     paletteImages = []
-    paletteImages.extend(os.listdir(paletteFolder))
+    for palette in palettes:
+        try:
+            paletteImages.append(Image.open(BytesIO(base64.b64decode(palette["palette"]))).convert('RGB'))
+        except:
+            pass
 
     # Prepare arrays for distortion calculation
     pixels = np.array(image)
@@ -849,23 +867,19 @@ def determine_best_palette_verbose(image, paletteFolder):
 
     # Calculate distortion for different palettes
     distortions = []
-    for palImg in clbar(paletteImages, name = "Searching", position = "first", prefixwidth = 12, suffixwidth = 28):
-        try:
-            palImg = Image.open(f"{paletteFolder}/{palImg}").convert('RGB')
-        except:
-            continue
+    for paletteImage in clbar(paletteImages, name = "Searching", position = "first", prefixwidth = 12, suffixwidth = 28):
         palette = []
 
         # Extract palette colors
-        palColors = palImg.getcolors(16777216)
+        palColors = paletteImage.getcolors(16777216)
         numColors = len(palColors)
         palette = np.concatenate([x[1] for x in palColors]).tolist()
         
         # Create a new palette image
-        palImg = Image.new('P', (256, 1))
-        palImg.putpalette(palette)
+        paletteImage = Image.new('P', (256, 1))
+        paletteImage.putpalette(palette)
 
-        quantized_image = image.quantize(method=1, kmeans=numColors, palette=palImg, dither=0)
+        quantized_image = image.quantize(method=1, kmeans=numColors, palette=paletteImage, dither=0)
         centroids = np.array(quantized_image.getpalette()[:numColors * 3]).reshape(-1, 3)
         
         # Calculate distortions more memory-efficiently
@@ -873,32 +887,37 @@ def determine_best_palette_verbose(image, paletteFolder):
         distortions.append(np.sum(np.square(min_distances)))
     
     # Find the best match
-    best_match_index = np.argmin(distortions)
-    best_palette = Image.open(f"{paletteFolder}/{paletteImages[best_match_index]}").convert('RGB')
+    best_match_index = np.argmin(filterList(distortions))
+    return paletteImages[best_match_index], palettes[best_match_index]["name"]
 
-    return best_palette, paletteImages[best_match_index]
-
-def palettize(numFiles, source, colors, bestPaletteFolder, paletteFile, paletteURL, dithering, strength, denoise, smoothness, intensity):
+def palettize(images, source, paletteURL, palettes, colors, dithering, strength, denoise, smoothness, intensity):
     # Check if a palette URL is provided and try to download the palette image
+    paletteImage = None
     if source == "URL":
         try:
-            paletteFile = BytesIO(requests.get(paletteURL).content)
-            testImg = Image.open(paletteFile).convert('RGB')
+            paletteImage = Image.open(BytesIO(requests.get(paletteURL).content)).convert('RGB')
         except:
             rprint(f"\n[#ab333d]ERROR: URL {paletteURL} cannot be reached or is not an image\nReverting to Adaptive palette")
-            paletteFile = ""
+            paletteImage = None
+    elif palettes != []:
+        try:
+            paletteImage = Image.open(BytesIO(base64.b64decode(palettes[0]["palette"]))).convert('RGB')
+        except:
+            pass
 
     timer = time.time()
 
     # Create a list to store file paths
-    files = []
-    for n in range(numFiles):
-        files.append(f"temp/input{n+1}.png")
+    for i, image in enumerate(images):
+        try:
+            images[i] = Image.open(BytesIO(base64.b64decode(image["image"]))).convert('RGB')
+        except:
+            rprint(f"\n[#ab333d]ERROR: Image {i} cannot be decoded from bytes. It may have been corrupted.")
+            pass
 
     # Determine the number of colors based on the palette or user input
-    if paletteFile != "":
-        palImg = Image.open(paletteFile).convert('RGB')
-        numColors = len(palImg.getcolors(16777216))
+    if paletteImage is not None:
+        numColors = len(paletteImage.getcolors(16777216))
     else:
         numColors = colors
 
@@ -918,89 +937,87 @@ def palettize(numFiles, source, colors, bestPaletteFolder, paletteFile, paletteU
     rprint(string)
 
     palFiles = []
+    count = 0
     # Process each file in the list
-    for file in clbar(files, name = "Processed", position = "last", unit = "image", prefixwidth = 12, suffixwidth = 28):
-
-        img = Image.open(file).convert('RGB')
+    for image in clbar(images, name = "Processed", position = "last", unit = "image", prefixwidth = 12, suffixwidth = 28):
 
         # Apply denoising if enabled
-        if denoise == "true":
-            img = kDenoise(img, smoothness, intensity)
+        if denoise:
+            image = kDenoise(image, smoothness, intensity)
 
         # Calculate the threshold for dithering
         threshold = 4*strength
 
         if source == "Automatic":
-            numColors = determine_best_k(img, 64)
+            numColors = determine_best_k(image, 128)
         
         # Check if a palette file is provided
-        if (paletteFile != "" and os.path.isfile(file)) or source == "Best Palette":
+        if paletteImage is not None or source == "Best Palette":
             # Open the palette image and calculate the number of colors
             if source == "Best Palette":
-                palImg, palFile = determine_best_palette_verbose(img, bestPaletteFolder)
+                paletteImage, palFile = determine_best_palette_verbose(image, palettes)
                 palFiles.append(str(palFile))
-            else:
-                palImg = Image.open(paletteFile).convert('RGB')
             
-            numColors = len(palImg.getcolors(16777216))
+            numColors = len(paletteImage.getcolors(16777216))
 
             if strength > 0 and dithering > 0:
-                for _ in clbar([img], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28):
+                for _ in clbar([image], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28):
                     # Adjust the image gamma
-                    img = adjust_gamma(img, 1.0-(0.02*strength))
+                    image = adjust_gamma(image, 1.0-(0.02*strength))
 
                     # Extract palette colors
-                    palette = [x[1] for x in palImg.getcolors(16777216)]
+                    palette = [x[1] for x in paletteImage.getcolors(16777216)]
 
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore")
                         # Perform ordered dithering using Bayer matrix
                         palette = hitherdither.palette.Palette(palette)
-                        img_indexed = hitherdither.ordered.bayer.bayer_dithering(img, palette, [threshold, threshold, threshold], order=dithering).convert('RGB')
+                        image_indexed = hitherdither.ordered.bayer.bayer_dithering(image, palette, [threshold, threshold, threshold], order=dithering).convert('RGB')
             else:
                 # Extract palette colors
-                palette = np.concatenate([x[1] for x in palImg.getcolors(16777216)]).tolist()
+                palette = np.concatenate([x[1] for x in paletteImage.getcolors(16777216)]).tolist()
                 
                 # Create a new palette image
-                palImg = Image.new('P', (256, 1))
-                palImg.putpalette(palette)
+                tempPaletteImage = Image.new('P', (256, 1))
+                tempPaletteImage.putpalette(palette)
 
                 # Perform quantization without dithering
-                for _ in clbar([img], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28):
-                    img_indexed = img.quantize(method=1, kmeans=numColors, palette=palImg, dither=0).convert('RGB')
+                for _ in clbar([image], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28):
+                    image_indexed = image.quantize(method=1, kmeans=numColors, palette=tempPaletteImage, dither=0).convert('RGB')
 
-        elif numColors > 0 and os.path.isfile(file):
+        elif numColors > 0:
             if strength > 0 and dithering > 0:
 
                 # Perform quantization with ordered dithering
-                for _ in clbar([img], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28):
-                    img_indexed = img.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
+                for _ in clbar([image], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28):
+                    image_indexed = image.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
 
                     # Adjust the image gamma
-                    img = adjust_gamma(img, 1.0-(0.03*strength))
+                    image = adjust_gamma(image, 1.0-(0.03*strength))
 
                     # Extract palette colors
-                    palette = [x[1] for x in img_indexed.getcolors(16777216)]
+                    palette = [x[1] for x in image_indexed.getcolors(16777216)]
 
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore")
                         # Perform ordered dithering using Bayer matrix
                         palette = hitherdither.palette.Palette(palette)
-                        img_indexed = hitherdither.ordered.bayer.bayer_dithering(img, palette, [threshold, threshold, threshold], order=dithering).convert('RGB')
+                        image_indexed = hitherdither.ordered.bayer.bayer_dithering(image, palette, [threshold, threshold, threshold], order=dithering).convert('RGB')
 
             else:
                 # Perform quantization without dithering
-                for _ in clbar([img], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28): 
-                    img_indexed = img.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
+                for _ in clbar([image], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28): 
+                    image_indexed = image.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
 
-        img_indexed.save(file)
+        count += 1
+        image_indexed.save(f"temp/input{count}.png")
 
-        if file != files[-1]:
+        if image != images[-1]:
             play("iteration.wav")
         else:
             play("batch.wav")
 
-    rprint(f"[#c4f129]Palettized [#48a971]{len(files)}[#c4f129] images in [#48a971]{round(time.time()-timer, 2)}[#c4f129] seconds")
+    rprint(f"[#c4f129]Palettized [#48a971]{len(images)}[#c4f129] images in [#48a971]{round(time.time()-timer, 2)}[#c4f129] seconds")
     if source == "Best Palette":
         rprint(f"[#c4f129]Palettes used: [#494b9b]{', '.join(palFiles)}")
 
@@ -1012,79 +1029,80 @@ def palettizeOutput(numFiles):
     
     # Process the image using pixelDetect and save the result
     for file in files:
-        img = Image.open(file).convert('RGB')
+        image = Image.open(file).convert('RGB')
 
-        numColors = determine_best_k(img, 64)
+        numColors = determine_best_k(image, 128)
 
-        img_indexed = img.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
+        image_indexed = image.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
     
-        img_indexed.save(file)
+        image_indexed.save(file)
 
-def rembg(modelpath, numFiles):
+def rembg(images, modelpath):
     
     timer = time.time()
-    files = []
 
-    rprint(f"\n[#48a971]Removing [#48a971]{numFiles}[white] backgrounds")
+    rprint(f"\n[#48a971]Removing [#48a971]{len(images)}[white] backgrounds")
     
-    # Create a list of file paths
-    for n in range(numFiles):
-        files.append(f"temp/input{n+1}.png")
+    for i, image in enumerate(images):
+        try:
+            images[i] = Image.open(BytesIO(base64.b64decode(image["image"]))).convert('RGB')
+        except:
+            rprint(f"\n[#ab333d]ERROR: Image {i} cannot be decoded from bytes. It may have been corrupted.")
+            pass
 
     # Process each file in the list
-    for file in clbar(files, name = "Processed", position = "", unit = "image", prefixwidth = 12, suffixwidth = 28):
+    count = 0
+    for image in clbar(images, name = "Processed", position = "", unit = "image", prefixwidth = 12, suffixwidth = 28):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            
-            img = Image.open(file).convert('RGB')
-            size = math.sqrt(img.width*img.height)
+            size = math.sqrt(image.width*image.height)
 
             upscale = max(1, int(1024/size))
-            resize = img.resize((img.width*upscale, img.height*upscale), resample=Image.Resampling.NEAREST)
+            resize = image.resize((image.width*upscale, image.height*upscale), resample=Image.Resampling.NEAREST)
 
             segmenter.init(modelpath, resize.width, resize.height)
             
-            # Check if the file exists
-            if os.path.isfile(file):
-                [image, mask] = segmenter.segment(resize)
+            [masked_image, mask] = segmenter.segment(resize)
 
-                image.resize((img.width, img.height), resample=Image.Resampling.NEAREST).save(file)
+            count += 1
+            masked_image.resize((image.width, image.height), resample=Image.Resampling.NEAREST).save(f"temp/input{count}.png")
 
-                if file != files[-1]:
-                    play("iteration.wav")
-                else:
-                    play("batch.wav")
-    rprint(f"[#c4f129]Removed [#48a971]{len(files)}[#c4f129] backgrounds in [#48a971]{round(time.time()-timer, 2)}[#c4f129] seconds")
+            if image != images[-1]:
+                play("iteration.wav")
+            else:
+                play("batch.wav")
+    rprint(f"[#c4f129]Removed [#48a971]{len(images)}[#c4f129] backgrounds in [#48a971]{round(time.time()-timer, 2)}[#c4f129] seconds")
 
-def kCentroidVerbose(width, height, centroids, numFiles):
+def kCentroidVerbose(images, width, height, centroids):
     timer = time.time()
-    init_img = Image.open("temp/input1.png")
-    files = []
+    for i, image in enumerate(images):
+        try:
+            images[i] = Image.open(BytesIO(base64.b64decode(image["image"]))).convert('RGB')
+        except:
+            rprint(f"\n[#ab333d]ERROR: Image {i} cannot be decoded from bytes. It may have been corrupted.")
+            pass
 
-    rprint(f"\n[#48a971]K-Centroid downscaling[white] from [#48a971]{init_img.width}[white]x[#48a971]{init_img.height}[white] to [#48a971]{width}[white]x[#48a971]{height}[white] with [#48a971]{centroids}[white] centroids")
+    rprint(f"\n[#48a971]K-Centroid downscaling[white] from [#48a971]{images[0].width}[white]x[#48a971]{images[0].height}[white] to [#48a971]{width}[white]x[#48a971]{height}[white] with [#48a971]{centroids}[white] centroids")
 
     # Perform k-centroid downscaling and save the image
-    # Create a list of file paths
-    for n in range(numFiles):
-        files.append(f"temp/input{n+1}.png")
+    count = 0
+    for image in clbar(images, name = "Processed", unit = "image", prefixwidth = 12, suffixwidth = 28):
+        count += 1
+        kCentroid(image, int(width), int(height), int(centroids)).save(f"temp/input{count}.png")
 
-    for file in clbar(files, name = "Processed", unit = "image", prefixwidth = 12, suffixwidth = 28):
-        img = Image.open(file).convert('RGB')
-        kCentroid(img, int(width), int(height), int(centroids)).save(file)
-
-        if file != files[-1]:
+        if image != images[-1]:
             play("iteration.wav")
         else:
             play("batch.wav")
 
     rprint(f"\n[#c4f129]Resized in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
 
-def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loraFiles, post):
-    if pixelvae == "true":
+def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post):
+    if pixelvae:
         # Pixel clustering mode, lower threshold means bigger clusters
         denoise = 0.08
-        x_sample = modelPV.run_cluster(samples_ddim[i:i+1], threshold=denoise, select="local4", wrap_x=bool(tilingX == "true"), wrap_y=bool(tilingY == "true"))
+        x_sample = modelPV.run_cluster(samples_ddim[i:i+1], threshold=denoise, select="local4", wrap_x=tilingX, wrap_y=tilingY)
         #x_sample = modelPV.run_plain(samples_ddim[i:i+1])
         x_sample = x_sample[0].cpu().numpy()
     else:
@@ -1103,7 +1121,7 @@ def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae,
                 rprint(f"\n[#ab333d]Ran out of VRAM during decode, switching to fast pixel decoder")
                 # Pixel clustering mode, lower threshold means bigger clusters
                 denoise = 0.08
-                x_sample = modelPV.run_cluster(samples_ddim[i:i+1], threshold=denoise, select="local4", wrap_x=bool(tilingX == "true"), wrap_y=bool(tilingY == "true"))
+                x_sample = modelPV.run_cluster(samples_ddim[i:i+1], threshold=denoise, select="local4", wrap_x=tilingX, wrap_y=tilingY)
                 x_sample = x_sample[0].cpu().numpy()
             else:
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
@@ -1117,8 +1135,9 @@ def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae,
     elif x_sample_image.width < W // pixelSize and x_sample_image.height < H // pixelSize:
         x_sample_image = x_sample_image.resize((W, H), resample=Image.Resampling.NEAREST)
 
-    if "1bit.pxlm" in loraFiles:
-        post = "false"
+    loraNames = [os.path.split(d["file"])[1] for d in loras if "file" in d]
+    if "1bit.pxlm" in loraNames:
+        post = False
         x_sample_image = x_sample_image.quantize(colors=4, method=1, kmeans=4, dither=0).convert('RGB')
         x_sample_image = x_sample_image.quantize(colors=2, method=1, kmeans=2, dither=0).convert('RGB')
         pixels = list(x_sample_image.getdata())
@@ -1130,7 +1149,7 @@ def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae,
 
     return x_sample_image, post
 
-def paletteGen(colors, device, precision, prompt, seed):
+def paletteGen(prompt, colors, seed, device, precision):
     # Calculate the base for palette generation
     base = 2**round(math.log2(colors))
 
@@ -1138,7 +1157,7 @@ def paletteGen(colors, device, precision, prompt, seed):
     width = 512+((512/base)*(colors-base))
 
     # Generate text-to-image conversion with specified parameters
-    txt2img(None, ["none"], [0], device, precision, 1, 512, prompt, "", "false", int(width), 512, 20, 7.0, "false", int(seed), 1, "false", "false", "false", "false")
+    txt2img(prompt, "", False, False, int(width), 512, 1, False, 5, 7.0, seed, 1, 512, device, precision, [{"file": "some/path/none", "weight": 0}], False, False, False, False)
 
     # Open the generated image
     image = Image.open("temp/temp1.png").convert('RGB')
@@ -1157,7 +1176,7 @@ def paletteGen(colors, device, precision, prompt, seed):
     palette.save("temp/temp1.png")
     rprint(f"[#c4f129]Image converted to color palette with [#48a971]{colors}[#c4f129] colors")
 
-def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, translate, promptTuning, W, H, quality, scale, upscale, seed, total_images, tilingX, tilingY, pixelvae, post):
+def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale, quality, scale, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, pixelvae, post):
     os.makedirs("temp", exist_ok=True)
     outpath = "temp"
 
@@ -1189,18 +1208,18 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
     gWidth = W // 8
     gHeight = H // 8
 
+    global modelPath
     # Curves defined by https://www.desmos.com/calculator/qneyst8drz
     steps = round(3.4 + ((quality ** 2) / 1.5))
     scale = max(1, scale * ((1.6 + (((quality - 2.1) ** 2) / 3)) / 5))
     lcm_weight = max(0, 9.5 - (((quality + 1.2) ** 2) / 4))
     if lcm_weight > 0:
-        loraFiles.append("quality.lcm")
-        loraWeights.append(round(lcm_weight*10))
+        loras.append({"file": os.path.join(modelPath, "quality.lcm"), "weight": round(lcm_weight*10)})
 
     pre_steps = steps
     up_steps = 1
 
-    if W // 8 >= 96 and H // 8 >= 96 and upscale == "true":
+    if W // 8 >= 96 and H // 8 >= 96 and upscale:
         lower = 50
         aspect = gWidth/gHeight
         gx = gWidth
@@ -1212,14 +1231,14 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         pre_steps = round(steps * ((10 - (((quality - 1.1) ** 2) / 6)) / 10))
         up_steps = round(steps * (((((quality - 6.5) ** 2) / 1.6) + 2.4) / 10))
     else:
-        upscale = "false"
+        upscale = False
 
-    data, negative_data = managePrompts(prompt, negative, W, H, seed, upscale, total_images, loraFiles, translate, promptTuning)
+    data, negative_data = managePrompts(prompt, negative, W, H, seed, upscale, total_images, loras, translate, promptTuning)
     seed_everything(seed)
 
     rprint(f"\n[#48a971]Text to Image[white] generating [#48a971]{total_images}[white] quality [#48a971]{quality}[white] images over [#48a971]{runs}[white] batches with [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
 
-    if W // 8 >= 96 and H // 8 >= 96 and upscale == "true":
+    if W // 8 >= 96 and H // 8 >= 96 and upscale:
         rprint(f"[#48a971]Pre-generating[white] composition image at [#48a971]{gWidth * 8}[white]x[#48a971]{gHeight * 8} [white]([#48a971]{(gWidth * 8) // pixelSize}[white]x[#48a971]{(gHeight * 8) // pixelSize}[white] pixels)")
 
     start_code = None
@@ -1240,15 +1259,15 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         precision_scope = nullcontext
 
     # !!! REMEMBER: ALL MODEL FILES ARE BOUND UNDER THE LICENSE AGREEMENTS OUTLINED HERE: https://astropulse.co/#retrodiffusioneula https://astropulse.co/#retrodiffusionmodeleula !!!
-    loras = []
+    loadedLoras = []
     decryptedFiles = []
     fernet = Fernet("I47jl1hqUPug4KbVYd60_zeXhn_IH_ECT3QRGiBxdxo=")
-    for i, loraFile in enumerate(loraFiles):
+    for i, loraPair in enumerate(loras):
         decryptedFiles.append("none")
-        if loraFile != "none":
-            lora_filename = os.path.join(loraPath, loraFile)
-            if os.path.splitext(loraFile)[1] == ".pxlm":
-                with open(lora_filename, 'rb') as enc_file:
+        _, loraName = os.path.split(loraPair["file"])
+        if loraName != "none":
+            if os.path.splitext(loraName)[1] == ".pxlm":
+                with open(loraPair["file"], 'rb') as enc_file:
                     encrypted = enc_file.read()
                     try:
                         # Assume file is encrypted, decrypt it
@@ -1257,28 +1276,28 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                         # Decryption failed, assume not encrypted
                         decryptedFiles[i] = encrypted
 
-                    with open(lora_filename, 'wb') as dec_file:
+                    with open(loraPair["file"], 'wb') as dec_file:
                         # Write attempted decrypted file
                         dec_file.write(decryptedFiles[i])
                         try:
                             # Load decrypted file
-                            loras.append(load_lora(lora_filename, model))
+                            loadedLoras.append(load_lora(loraPair["file"], model))
                         except:
                             # Decrypted file could not be read, revert to unchanged, and return an error
                             decryptedFiles[i] = "none"
                             dec_file.write(encrypted)
-                            loras.append(None)
-                            rprint(f"[#ab333d]Modifier {os.path.splitext(loraFile)[0]} could not be loaded, the file may be corrupted")
+                            loadedLoras.append(None)
+                            rprint(f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted")
                             continue
             else:
-                loras.append(load_lora(lora_filename, model))
-            loras[i].multiplier = loraWeights[i]/100
-            register_lora_for_inference(loras[i])
+                loadedLoras.append(load_lora(loraPair["file"], model))
+            loadedLoras[i].multiplier = loraPair["weight"]/100
+            register_lora_for_inference(loadedLoras[i])
             apply_lora()
-            if os.path.splitext(loraFile)[0] != "quality":
-                rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraFile)[0]} [#494b9b]LoRA with [#48a971]{loraWeights[i]}% [#494b9b]strength")
+            if os.path.splitext(loraName)[0] != "quality":
+                rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraName)[0]} [#494b9b]LoRA with [#48a971]{loraPair['weight']}% [#494b9b]strength")
         else:
-            loras.append(None)
+            loadedLoras.append(None)
 
     seeds = []
     with torch.no_grad():
@@ -1328,7 +1347,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                     sampler = sampler,
                 )
 
-                if upscale == "true":
+                if upscale:
                     samples_ddim = torch.nn.functional.interpolate(samples_ddim, size=(H // 8, W // 8), mode="bilinear")
                     encoded_latent= model.stochastic_encode(
                         samples_ddim,
@@ -1347,7 +1366,7 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                     )
 
                 for i in range(batch):
-                    x_sample_image, post = render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loraFiles, post)
+                    x_sample_image, post = render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
                     
                     file_name = "temp" + f"{base_count+1}"
                     x_sample_image.save(
@@ -1372,23 +1391,23 @@ def txt2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                 # Delete the samples to free up memory
                 del samples_ddim
 
-        for i, lora in enumerate(loras):
+        for i, lora in enumerate(loadedLoras):
             if lora is not None:
                 # Release lora
                 remove_lora_for_inference(lora)
-            if os.path.splitext(loraFiles[i])[1] == ".pxlm":
+            if os.path.splitext(loras[i]["file"])[1] == ".pxlm":
                 if decryptedFiles[i] != "none":
                     encrypted = fernet.encrypt(decryptedFiles[i])
-                    with open(os.path.join(loraPath, loraFiles[i]), 'wb') as dec_file:
+                    with open(loras[i]["file"], 'wb') as dec_file:
                         dec_file.write(encrypted)
-        del loras
+        del loadedLoras
 
-        if post == "true":
+        if post:
             palettizeOutput(int(total_images))
         play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
 
-def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, translate, promptTuning, W, H, quality, scale, strength, seed, total_images, tilingX, tilingY, pixelvae, post):
+def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality, scale, strength, seed, total_images, maxBatchSize, device, precision, loras, image, tilingX, tilingY, pixelvae, post):
     timer = time.time()
 
     os.makedirs("temp", exist_ok=True)
@@ -1402,8 +1421,9 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
             rprint(f"\n[#ab333d]GPU is not responding, loading model in CPU mode")
                                        
     # Load initial image and move it to the specified device
-    init_img = "temp/input.png"
-    assert os.path.isfile(init_img)
+    #init_img = "temp/input.png"
+    init_img = BytesIO(base64.b64decode(image))
+    #assert os.path.isfile(init_img)
     init_image = load_img(init_img, H, W).to(device)
 
     # Load mask
@@ -1427,15 +1447,17 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
     wtile = max_tile(W // 8) if W // 8 > 96 else 1
     htile = max_tile(H // 8) if H // 8 > 96 else 1
 
+    strength = strength/100
+
+    global modelPath
     # Curves defined by https://www.desmos.com/calculator/qneyst8drz
     steps = round(9 + (((quality-1.85) ** 2) * 1.1))
     scale = max(1, scale * ((1.6 + (((quality - 2.1) ** 2) / 3)) / 5))
     lcm_weight = max(0, 9.5 - (((quality + 1.2) ** 2) / 4))
     if lcm_weight > 0:
-        loraFiles.append("quality.lcm")
-        loraWeights.append(round(lcm_weight*10))
+        loras.append({"file": os.path.join(modelPath, "quality.lcm"), "weight": round(lcm_weight*10)})
 
-    data, negative_data = managePrompts(prompt, negative, W, H, seed, "false", total_images, loraFiles, translate, promptTuning)
+    data, negative_data = managePrompts(prompt, negative, W, H, seed, False, total_images, loras, translate, promptTuning)
     seed_everything(seed)
 
     rprint(f"\n[#48a971]Image to Image[white] generating [#48a971]{total_images}[white] quality [#48a971]{quality}[white] images over [#48a971]{runs}[white] batches with [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
@@ -1457,15 +1479,15 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
         precision_scope = nullcontext
 
     # !!! REMEMBER: ALL MODEL FILES ARE BOUND UNDER THE LICENSE AGREEMENTS OUTLINED HERE: https://astropulse.co/#retrodiffusioneula https://astropulse.co/#retrodiffusionmodeleula !!!
-    loras = []
+    loadedLoras = []
     decryptedFiles = []
     fernet = Fernet("I47jl1hqUPug4KbVYd60_zeXhn_IH_ECT3QRGiBxdxo=")
-    for i, loraFile in enumerate(loraFiles):
+    for i, loraPair in enumerate(loras):
         decryptedFiles.append("none")
-        if loraFile != "none":
-            lora_filename = os.path.join(loraPath, loraFile)
-            if os.path.splitext(loraFile)[1] == ".pxlm":
-                with open(lora_filename, 'rb') as enc_file:
+        _, loraName = os.path.split(loraPair["file"])
+        if loraName != "none":
+            if os.path.splitext(loraName)[1] == ".pxlm":
+                with open(loraPair["file"], 'rb') as enc_file:
                     encrypted = enc_file.read()
                     try:
                         # Assume file is encrypted, decrypt it
@@ -1474,28 +1496,28 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                         # Decryption failed, assume not encrypted
                         decryptedFiles[i] = encrypted
 
-                    with open(lora_filename, 'wb') as dec_file:
+                    with open(loraPair["file"], 'wb') as dec_file:
                         # Write attempted decrypted file
                         dec_file.write(decryptedFiles[i])
                         try:
                             # Load decrypted file
-                            loras.append(load_lora(lora_filename, model))
+                            loadedLoras.append(load_lora(loraPair["file"], model))
                         except:
                             # Decrypted file could not be read, revert to unchanged, and return an error
                             decryptedFiles[i] = "none"
                             dec_file.write(encrypted)
-                            loras.append(None)
-                            rprint(f"[#ab333d]Modifier {os.path.splitext(loraFile)[0]} could not be loaded, the file may be corrupted")
+                            loadedLoras.append(None)
+                            rprint(f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted")
                             continue
             else:
-                loras.append(load_lora(lora_filename, model))
-            loras[i].multiplier = loraWeights[i]/100
-            register_lora_for_inference(loras[i])
+                loadedLoras.append(load_lora(loraPair["file"], model))
+            loadedLoras[i].multiplier = loraPair["weight"]/100
+            register_lora_for_inference(loadedLoras[i])
             apply_lora()
-            if os.path.splitext(loraFile)[0] != "quality":
-                rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraFile)[0]} [#494b9b]LoRA with [#48a971]{loraWeights[i]}% [#494b9b]strength")
+            if os.path.splitext(loraName)[0] != "quality":
+                rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraName)[0]} [#494b9b]LoRA with [#48a971]{loraPair['weight']}% [#494b9b]strength")
         else:
-            loras.append(None)
+            loadedLoras.append(None)
 
     seeds = []
     strength = max(0.001, min(strength, 1.0))
@@ -1583,7 +1605,7 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                 )
 
                 for i in range(batch):
-                    x_sample_image, post = render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loraFiles, post)
+                    x_sample_image, post = render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
                     
                     file_name = "temp" + f"{base_count+1}"
                     x_sample_image.save(
@@ -1608,18 +1630,18 @@ def img2img(loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxB
                 # Delete the samples to free up memory
                 del samples_ddim
 
-        for i, lora in enumerate(loras):
+        for i, lora in enumerate(loadedLoras):
             if lora is not None:
                 # Release lora
                 remove_lora_for_inference(lora)
-            if os.path.splitext(loraFiles[i])[1] == ".pxlm":
+            if os.path.splitext(loras[i]["file"])[1] == ".pxlm":
                 if decryptedFiles[i] != "none":
                     encrypted = fernet.encrypt(decryptedFiles[i])
-                    with open(os.path.join(loraPath, loraFiles[i]), 'wb') as dec_file:
+                    with open(loras[i]["file"], 'wb') as dec_file:
                         dec_file.write(encrypted)
-        del loras
+        del loadedLoras
 
-        if post == "true":
+        if post:
             palettizeOutput(int(total_images))
         play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
@@ -1690,7 +1712,7 @@ def prompt2prompt(path, prompt, negative, generations, seed):
     play("batch.wav")
     rprint(f"[#c4f129]Prompt enhancement completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
         
-    return "<|>".join(prompts)
+    return prompts
 
 def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, seed):
     timer = time.time()
@@ -1781,7 +1803,7 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
 
                     timerPerStep = round(time.time()-benchTimer, 2)
 
-                    if pixelvae == "true":
+                    if pixelvae:
                         # Pixel clustering mode, lower threshold means bigger clusters
                         denoise = 0.08
                         x_sample = modelPV.run_cluster(samples_ddim, threshold=denoise, wrap_x=False, wrap_y=False)
@@ -1848,204 +1870,298 @@ async def server(websocket):
     background = False
 
     async for message in websocket:
-        if re.search(r"txt2img.+", message):
-            await websocket.send("running txt2img")
-            try:
-                # Extract parameters from the message
-                loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, translate, promptTuning, w, h, quality, scale, upscale, seed, total_images, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafiles", "dloraweights", "ddevice", "dprecision", "dpixelsize", "dmaxbatchsize", "dprompt", "dnegative", "dtranslate", "dprompttuning", "dwidth", "dheight", "dquality", "dscale", "dupscale", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
-                loraFiles = loraFiles.split('|')
-                loraWeights = [int(x) for x in loraWeights.split('|')]
-                txt2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), int(maxBatchSize), prompt, negative, translate, promptTuning, int(w), int(h), int(quality), float(scale), upscale, int(seed), int(total_images), tilingX, tilingY, pixelvae, post)
-                await websocket.send("returning txt2img")
-            except Exception as e:
-                if "SSLCertVerificationError" in traceback.format_exc():
-                    rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
-                elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
-                    rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
-                    if modelLM is not None:
-                        rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
-                else:
-                    rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                play("error.wav")
-                await websocket.send("returning error")
+        # For debugging
+        print(message)
+        try:
+            message = json.loads(message)
+            match message["action"]:
+                case "txt2img":
+                    try:
+                        # Extract parameters from the message
+                        values = message["value"]
 
-        elif re.search(r"img2img.+", message):
-            await websocket.send("running img2img")
-            try:
-                # Extract parameters from the message
-                loraPath, loraFiles, loraWeights, device, precision, pixelSize, maxBatchSize, prompt, negative, translate, promptTuning, w, h, quality, scale, strength, seed, total_images, tilingX, tilingY, pixelvae, post = searchString(message, "dlorapath", "dlorafiles", "dloraweights", "ddevice", "dprecision", "dpixelsize", "dmaxbatchsize", "dprompt", "dnegative", "dtranslate", "dprompttuning", "dwidth", "dheight", "dquality", "dscale", "dstrength", "dseed", "diter", "dtilingx", "dtilingy", "dpixelvae", "dpalettize", "end")
-                loraFiles = loraFiles.split('|')
-                loraWeights = [int(x) for x in loraWeights.split('|')]
-                img2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), int(maxBatchSize), prompt, negative, translate, promptTuning, int(w), int(h), int(quality), float(scale), float(strength)/100, int(seed), int(total_images), tilingX, tilingY, pixelvae, post)
-                await websocket.send("returning img2img")
-            except Exception as e: 
-                if "SSLCertVerificationError" in traceback.format_exc():
-                    rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
-                elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
-                    rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size. If samples are at 100%, this was caused by the VAE running out of memory, try enabling the Fast Pixel Decoder")
-                    if modelLM is not None:
-                        rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
-                elif "Expected batch_size > 0 to be true" in traceback.format_exc():
-                    rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources during image encoding. Please lower the maximum batch size, or use a smaller input image")
-                elif "cannot reshape tensor of 0 elements" in traceback.format_exc():
-                    rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources during image encoding. Please lower the maximum batch size, or use a smaller input image")
-                else:
-                    rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                play("error.wav")
-                await websocket.send("returning error")
+                        modelData = values["model"]
+                        load_model(
+                            modelData["file"], 
+                            "scripts/v1-inference.yaml", 
+                            modelData["device"], 
+                            modelData["precision"], 
+                            modelData["optimized"])
+                        
+                        txt2img(
+                            values["prompt"],
+                            values["negative"],
+                            values["translate"],
+                            values["prompt_tuning"],
+                            values["width"],
+                            values["height"],
+                            values["pixel_size"],
+                            values["enhance_composition"],
+                            values["quality"],
+                            values["scale"],
+                            values["seed"],
+                            values["generations"],
+                            values["max_batch_size"],
+                            modelData["device"],
+                            modelData["precision"],
+                            values["loras"],
+                            values["tile_x"],
+                            values["tile_y"],
+                            values["use_pixelvae"],
+                            values["post_process"]
+                        )
+                        
+                        await websocket.send(json.dumps({"action": "returning", "type": "txt2img"}))
+                    except Exception as e:
+                        if "SSLCertVerificationError" in traceback.format_exc():
+                            rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
+                        elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
+                            rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
+                            if modelLM is not None:
+                                rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
+                        else:
+                            rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                        play("error.wav")
+                        await websocket.send(json.dumps({"action": "error"}))
+                case "img2img":
+                    try:
+                        # Extract parameters from the message
+                        values = message["value"]
 
-        elif re.search(r"txt2pal.+", message):
-            await websocket.send("running txt2pal")
-            try:
-                # Extract parameters from the message
-                device, precision, prompt, seed, colors = searchString(message, "ddevice", "dprecision", "dprompt", "dseed", "dcolors", "end")
-                paletteGen(int(colors), device, precision, prompt, int(seed))
-                await websocket.send("returning txt2pal")
-            except Exception as e:
-                if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
-                    rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
-                else:
-                    rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                play("error.wav")
-                await websocket.send("returning error")
+                        modelData = values["model"]
+                        load_model(
+                            modelData["file"], 
+                            "scripts/v1-inference.yaml", 
+                            modelData["device"], 
+                            modelData["precision"], 
+                            modelData["optimized"])
+                        
+                        img2img(
+                            values["prompt"],
+                            values["negative"],
+                            values["translate"],
+                            values["prompt_tuning"],
+                            values["width"],
+                            values["height"],
+                            values["pixel_size"],
+                            values["quality"],
+                            values["scale"],
+                            values["strength"],
+                            values["seed"],
+                            values["generations"],
+                            values["max_batch_size"],
+                            modelData["device"],
+                            modelData["precision"],
+                            values["loras"],
+                            values["image"],
+                            values["tile_x"],
+                            values["tile_y"],
+                            values["use_pixelvae"],
+                            values["post_process"]
+                        )
+                        
+                        await websocket.send(json.dumps({"action": "returning", "type": "img2img"}))
+                    except Exception as e: 
+                        if "SSLCertVerificationError" in traceback.format_exc():
+                            rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
+                        elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
+                            rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size. If samples are at 100%, this was caused by the VAE running out of memory, try enabling the Fast Pixel Decoder")
+                            if modelLM is not None:
+                                rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
+                        elif "Expected batch_size > 0 to be true" in traceback.format_exc():
+                            rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources during image encoding. Please lower the maximum batch size, or use a smaller input image")
+                        elif "cannot reshape tensor of 0 elements" in traceback.format_exc():
+                            rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources during image encoding. Please lower the maximum batch size, or use a smaller input image")
+                        else:
+                            rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                        play("error.wav")
+                        await websocket.send(json.dumps({"action": "error"}))
+                case "txt2pal":
+                    try:
+                        # Extract parameters from the message
+                        values = message["value"]
 
-        elif re.search(r"translate.+", message):
-            await websocket.send("running translate")
-            try:
-                # Extract parameters from the message
-                path, prompt, negative, total_images, seed = searchString(message, "dpath", "dprompt", "dnegative", "diter", "dseed", "end")
-                prompts = prompt2prompt(path, prompt, negative, int(total_images), int(seed))
-                await websocket.send(f"returning translate {prompts}")
-            except Exception as e:
-                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                play("error.wav")
-                await websocket.send("returning error")
-
-        elif re.search(r"benchmark.+", message):
-            await websocket.send("running txt2pal")
-            try:
-                # Extract parameters from the message
-                device, precision, timeLimit, maxTestSize, errorRange, pixelvae, seed = searchString(message, "ddevice", "dprecision", "dtimelimit", "dmaxtestsize", "derrorrange", "dpixelvae", "dseed", "end")
-                benchmark(device, precision, float(timeLimit), int(maxTestSize), int(errorRange), pixelvae, int(seed))
-                await websocket.send(f"returning benchmark {max(32, maxSize-8)}") # We subtract 8 to leave a little VRAM headroom, so it doesn't OOM if you open a youtube tab T-T
-            except Exception as e:
-                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                play("error.wav")
-                await websocket.send("returning error")
-
-        elif re.search(r"palettize.+", message):
-            await websocket.send("running palettize")
-            try:
-                # Extract parameters from the message
-                numFiles, source, colors, bestPaletteFolder, paletteFile, paletteURL, dithering, strength, denoise, smoothness, intensity = searchString(message, "dnumfiles", "dsource", "dcolors", "dbestpalettefolder", "dpalettefile", "dpaletteURL", "ddithering", "dstrength", "ddenoise", "dsmoothness", "dintensity", "end")
-                palettize(int(numFiles), source,  int(colors), bestPaletteFolder, paletteFile, paletteURL, int(dithering), int(strength), denoise, int(smoothness), int(intensity))
-                await websocket.send("returning palettize")
-            except Exception as e: 
-                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                play("error.wav")
-                await websocket.send("returning error")
-
-        elif re.search(r"rembg.+", message):
-            await websocket.send("running rembg")
-            try:
-                # Extract parameters from the message
-                modelPath, numFiles = searchString(message, "dmodelpath", "dnumfiles", "end")
-                rembg(modelPath, int(numFiles))
-                await websocket.send("returning rembg")
-            except Exception as e: 
-                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                play("error.wav")
-                await websocket.send("returning error")
-
-        elif re.search(r"pixelDetect.+", message):
-            await websocket.send("running pixelDetect")
-            try:
-                pixelDetectVerbose()
-                await websocket.send("returning pixelDetect")
-            except Exception as e: 
-                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                play("error.wav")
-                await websocket.send("returning error")
-
-        elif re.search(r"kcentroid.+", message):
-            await websocket.send("running kcentroid")
-            try:
-                # Extract parameters from the message
-                width, height, centroids, numFiles = searchString(message, "dwidth", "dheight", "dcentroids", "dnumfiles", "end")
-                kCentroidVerbose(int(width), int(height), int(centroids), int(numFiles))
-                await websocket.send("returning kcentroid")
-            except Exception as e: 
-                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                play("error.wav")
-                await websocket.send("returning error")
-
-        elif re.search(r"load.+", message):
-            await websocket.send("loading model")
-            global loaded
-            if loaded != message:
-                try:
-                    # Extract parameters from the message
-                    device, optimized, precision, path, model = searchString(message, "ddevice", "doptimized", "dprecision", "dpath", "dmodel", "end")
-                    load_model(path, model, "scripts/v1-inference.yaml", device, precision, optimized)
-                    loaded = message
-                except Exception as e:
-                    if "SSLCertVerificationError" in traceback.format_exc():
-                        rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
-                    else:
+                        modelData = values["model"]
+                        load_model(
+                            modelData["file"], 
+                            "scripts/v1-inference.yaml", 
+                            modelData["device"], 
+                            modelData["precision"], 
+                            modelData["optimized"])
+                        
+                        paletteGen(
+                            values["prompt"],
+                            values["colors"],
+                            values["seed"],
+                            modelData["device"],
+                            modelData["precision"]
+                        )
+                        
+                        await websocket.send(json.dumps({"action": "returning", "type": "txt2pal"}))
+                    except Exception as e:
+                        if "SSLCertVerificationError" in traceback.format_exc():
+                            rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
+                        elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
+                            rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
+                            if modelLM is not None:
+                                rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
+                        else:
+                            rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                        play("error.wav")
+                        await websocket.send(json.dumps({"action": "error"}))
+                case "translate":
+                    try:
+                        # Extract parameters from the message
+                        values = message["value"]
+                        
+                        prompts = prompt2prompt(
+                            values["model_folder"],
+                            values["prompt"],
+                            values["negative"],
+                            values["generations"],
+                            values["seed"]
+                        )
+                        await websocket.send(json.dumps({"action": "returning", "type": "translate", "value": prompts}))
+                    except Exception as e:
                         rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                    play("error.wav")
-                    await websocket.send("returning error")
-                
-            await websocket.send("loaded model")
-
-        elif re.search(r"connected.+", message):
-            global sounds
-            try:
-                background, sounds, extensionVersion = searchString(message, "dbackground", "dsound", "dversion", "end")
-                rd = gw.getWindowsWithTitle("Retro Diffusion Image Generator")[0]
-                if background == "false":
+                        play("error.wav")
+                        await websocket.send(json.dumps({"action": "error"}))
+                case "benchmark":
                     try:
-                        # Restore and activate the window
-                        rd.restore()
-                        rd.activate()
+                        # Extract parameters from the message
+                        values = message["value"]
+
+                        modelData = values["model"]
+                        load_model(
+                            modelData["file"], 
+                            "scripts/v1-inference.yaml", 
+                            modelData["device"], 
+                            modelData["precision"], 
+                            modelData["optimized"])
+                        
+                        prompts = benchmark(
+                            modelData["device"],
+                            modelData["precision"],
+                            values["time_limit"],
+                            values["max_test_size"],
+                            values["error_range"],
+                            values["use_pixelvae"],
+                            values["seed"]
+                        )
+
+                        await websocket.send(json.dumps({"action": "returning", "type": "benchmark", "value": max(32, maxSize-8)})) # We subtract 8 to leave a little VRAM headroom, so it doesn't OOM if you open a youtube tab T-T
+                    except Exception as e:
+                        rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                        play("error.wav")
+                        await websocket.send(json.dumps({"action": "error"}))
+                case "palettize":
+                    try:
+                        # Extract parameters from the message
+                        values = message["value"]
+                        palettize(
+                            values["images"],
+                            values["source"],
+                            values["url"],
+                            values["palettes"],
+                            values["colors"],
+                            values["dithering"],
+                            values["dither_strength"],
+                            values["denoise"],
+                            values["smoothness"],
+                            values["intensity"]
+                        )
+                        await websocket.send(json.dumps({"action": "returning", "type": "palettize"}))
+                    except Exception as e: 
+                        rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                        play("error.wav")
+                        await websocket.send(json.dumps({"action": "error"}))
+                case "rembg":
+                    try:
+                        # Extract parameters from the message
+                        values = message["value"]
+                        rembg(
+                            values["images"],
+                            values["model_folder"]
+                        )
+                        await websocket.send(json.dumps({"action": "returning", "type": "rembg"}))
+                    except Exception as e: 
+                        rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                        play("error.wav")
+                        await websocket.send(json.dumps({"action": "error"}))
+                case "pixelDetect":
+                    try:
+                        # Extract parameters from the message
+                        values = message["value"]
+                        pixelDetectVerbose(
+                            values["image"]
+                        )
+                        await websocket.send(json.dumps({"action": "returning", "type": "pixelDetect"}))
+                    except Exception as e: 
+                        rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                        play("error.wav")
+                        await websocket.send(json.dumps({"action": "error"}))
+                case "kcentroid":
+                    try:
+                        # Extract parameters from the message
+                        values = message["value"]
+                        kCentroidVerbose(
+                            values["images"],
+                            values["width"],
+                            values["height"],
+                            values["centroids"]
+                        )
+                        await websocket.send(json.dumps({"action": "returning", "type": "kcentroid"}))
+                    except Exception as e: 
+                        rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                        play("error.wav")
+                        await websocket.send(json.dumps({"action": "error"}))
+                case "connected":
+                    global sounds
+                    try:
+                        background, sounds, extensionVersion = message["value"]["background"], message["value"]["play_sound"], message["value"]["version"]
+                        rd = gw.getWindowsWithTitle("Retro Diffusion Image Generator")[0]
+                        if not background:
+                            try:
+                                # Restore and activate the window
+                                rd.restore()
+                                rd.activate()
+                            except:
+                                pass
+                        else:
+                            try:
+                                # Minimize the window
+                                rd.minimize()
+                            except:
+                                pass
                     except:
                         pass
-                else:
-                    try:
-                        # Minimize the window
-                        rd.minimize()
-                    except:
-                        pass
-            except:
-                pass
 
-            if extensionVersion == expectedVersion:
-                play("click.wav")
-                await websocket.send("connected")
-            else:
-                rprint(f"\n[#ab333d]The current client is on a version that is incompatible with the image generator version. Please update the extension.")
-                
-        elif message == "no model":
-            await websocket.send("loaded model")
-        elif message == "recieved":
-            if background == "false":
-                try:
-                    rd = gw.getWindowsWithTitle("Retro Diffusion Image Generator")[0]
-                    if gw.getActiveWindow() is not None:
-                        if gw.getActiveWindow().title == "Retro Diffusion Image Generator":
-                            # Minimize the window
-                            rd.minimize()
-                except:
-                    pass
-            await websocket.send("free")
-            clearCache()
-        elif message == "shutdown":
-            rprint("[#ab333d]Shutting down...")
-            global running
-            global timeout
-            running = False
-            await websocket.close()
-            asyncio.get_event_loop().call_soon_threadsafe(asyncio.get_event_loop().stop)
+                    if extensionVersion == expectedVersion:
+                        play("click.wav")
+                        await websocket.send(json.dumps({"action": "connected"}))
+                    else:
+                        rprint(f"\n[#ab333d]The current client is on a version that is incompatible with the image generator version. Please update the extension.")
+                case "recieved":
+                    if not background:
+                        try:
+                            rd = gw.getWindowsWithTitle("Retro Diffusion Image Generator")[0]
+                            if gw.getActiveWindow() is not None:
+                                if gw.getActiveWindow().title == "Retro Diffusion Image Generator":
+                                    # Minimize the window
+                                    rd.minimize()
+                        except:
+                            pass
+                    await websocket.send(json.dumps({"action": "free_websocket"}))
+                    clearCache()
+                case "shutdown":
+                    rprint("[#ab333d]Shutting down...")
+                    global running
+                    global timeout
+                    running = False
+                    await websocket.close()
+                    asyncio.get_event_loop().call_soon_threadsafe(asyncio.get_event_loop().stop)
+        except:
+            pass
 
 async def connectSend(uri, message):
     async with connect(uri) as websocket:
@@ -2056,16 +2172,7 @@ if system == "Windows":
     os.system("title Retro Diffusion Image Generator")
 elif system == "Darwin":
     os.system("printf '\\033]0;Retro Diffusion Image Generator\\007'")
-#else:
-#    os.system("echo '\\033]0;Retro Diffusion Image Generator\\007'")
-'''
-try:
-    subprocess.run(['git', 'switch', '-f', expectedVersion], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    subprocess.run(['git', 'checkout', '.'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    print("Updated local files")
-except:
-    print("Local files could not be updated, this is safe to ignore")
-'''
+
 rprint("\n" + climage(Image.open("logo.png"), "centered") + "\n\n")
 
 rprint("[#48a971]Starting Image Generator...")
