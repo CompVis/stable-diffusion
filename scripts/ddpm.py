@@ -674,7 +674,7 @@ class UNet(DDPM):
         quantize_x0=False,
         eta=0.0,
         mask=None,
-        sampler="plms",
+        sampler="ddim",
         temperature=1.0,
         noise_dropout=0.0,
         score_corrector=None,
@@ -704,29 +704,8 @@ class UNet(DDPM):
         x_latent = noise if x0 is None else x0
         # sampling
 
-        if sampler == "plms":
-            self.make_schedule(ddim_num_steps=S, ddim_eta=eta, verbose=False)
-            samples = self.plms_sampling(
-                conditioning,
-                batch_size,
-                x_latent,
-                callback=callback,
-                img_callback=img_callback,
-                quantize_denoised=quantize_x0,
-                mask=mask,
-                x0=x0,
-                ddim_use_original_steps=False,
-                noise_dropout=noise_dropout,
-                temperature=temperature,
-                score_corrector=score_corrector,
-                corrector_kwargs=corrector_kwargs,
-                log_every_t=log_every_t,
-                unconditional_guidance_scale=unconditional_guidance_scale,
-                unconditional_conditioning=unconditional_conditioning,
-            )
-
-        elif sampler == "ddim":
-            samples = self.ddim_sampling(
+        if sampler == "ddim":
+            for samples in self.ddim_sampling(
                 x_latent,
                 conditioning,
                 S,
@@ -735,24 +714,27 @@ class UNet(DDPM):
                 mask=mask,
                 init_latent=x_T,
                 use_original_steps=False,
-            )
+            ):
+                yield samples
 
         elif sampler == "pxlcm":
             self.make_schedule(ddim_num_steps=S, ddim_eta=eta, verbose=False)
-            samples = self.pxlcm_sampling(
+            for samples in self.pxlcm_sampling(
                 self.alphas_cumprod,
                 x_latent,
                 S,
                 conditioning,
                 unconditional_conditioning=unconditional_conditioning,
                 unconditional_guidance_scale=unconditional_guidance_scale,
-            )
+            ):
+                yield samples
 
         if self.turbo:
             self.model1.to("cpu")
             self.model2.to("cpu")
 
-        return samples
+        yield samples
+        
 
     @torch.no_grad()
     def stochastic_encode(
@@ -833,11 +815,7 @@ class UNet(DDPM):
                 unconditional_guidance_scale=unconditional_guidance_scale,
                 unconditional_conditioning=unconditional_conditioning,
             )
-
-        if mask is not None:
-            return x0 * mask + (1.0 - mask) * x_dec
-
-        return x_dec
+            yield x_dec
 
     @torch.no_grad()
     def p_sample_ddim(
@@ -964,4 +942,4 @@ class UNet(DDPM):
                 )
             dt = sigmas[i + 1] - sigma_hat
             x = x + d * dt
-        return x
+            yield x

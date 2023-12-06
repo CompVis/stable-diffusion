@@ -373,6 +373,9 @@ def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disa
         for i, item in enumerate(iterable):
             yield item
 
+def encodeImage(image):
+    return base64.b64encode(image.convert("RGBA").tobytes()).decode('utf-8')
+
 def load_img(path, h0, w0):
     # Open the image at the specified path and prepare it for image to image
     image = Image.open(path).convert("RGB")
@@ -651,7 +654,7 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loras, tra
     if modelType == "pixel" and promptTuning:
         prefix = "pixel art"
         suffix = "detailed"
-        negativeList = [negative, "mutated, noise, frame, film reel, snowglobe, deformed, stock image, watermark, text, signature, username"]
+        negativeList = [negative, "mutated, noise, sexy, nsfw, nude, frame, film reel, snowglobe, deformed, stock image, watermark, text, signature, username"]
 
         if any(f"{_}.pxlm" in loraNames for _ in ["topdown", "isometric", "neogeo", "nes", "snes", "playstation", "gameboy", "gameboyadvance"]):
             prefix = "pixel"
@@ -937,6 +940,7 @@ def palettize(images, source, paletteURL, palettes, colors, dithering, strength,
     rprint(string)
 
     palFiles = []
+    output = []
     count = 0
     # Process each file in the list
     for image in clbar(images, name = "Processed", position = "last", unit = "image", prefixwidth = 12, suffixwidth = 28):
@@ -1010,7 +1014,8 @@ def palettize(images, source, paletteURL, palettes, colors, dithering, strength,
                     image_indexed = image.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
 
         count += 1
-        image_indexed.save(f"temp/input{count}.png")
+
+        output.append({"name": count, "image": encodeImage(image_indexed), "width": image_indexed.width, "height": image_indexed.height})
 
         if image != images[-1]:
             play("iteration.wav")
@@ -1021,21 +1026,20 @@ def palettize(images, source, paletteURL, palettes, colors, dithering, strength,
     if source == "Best Palette":
         rprint(f"[#c4f129]Palettes used: [#494b9b]{', '.join(palFiles)}")
 
-def palettizeOutput(numFiles):
-    # Create a list to store file paths
-    files = []
-    for n in range(numFiles):
-        files.append(f"temp/temp{n+1}.png")
-    
+    return output
+
+def palettizeOutput(images):
+    output = []
     # Process the image using pixelDetect and save the result
-    for file in files:
-        image = Image.open(file).convert('RGB')
+    for image in images:
+        tempImage = image["image"]
 
-        numColors = determine_best_k(image, 128)
+        numColors = determine_best_k(tempImage, 128)
 
-        image_indexed = image.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
+        image_indexed = tempImage.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
     
-        image_indexed.save(file)
+        output.append({"name": image["name"], "image": image_indexed, "width": image["width"], "height": image["height"]})
+    return output
 
 def rembg(images, modelpath):
     
@@ -1149,6 +1153,14 @@ def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae,
 
     return x_sample_image, post
 
+def fastRender(modelPV, samples_ddim, pixelSize, W, H, i):
+    x_sample = modelPV.run_plain(samples_ddim[i:i+1])
+    x_sample = x_sample[0].cpu().numpy()
+    x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
+    if pixelSize > 8:
+        x_sample_image = x_sample_image.resize((W // pixelSize, H // pixelSize), resample=Image.Resampling.NEAREST)
+    return x_sample_image
+
 def paletteGen(prompt, colors, seed, device, precision):
     # Calculate the base for palette generation
     base = 2**round(math.log2(colors))
@@ -1157,12 +1169,11 @@ def paletteGen(prompt, colors, seed, device, precision):
     width = 512+((512/base)*(colors-base))
 
     # Generate text-to-image conversion with specified parameters
-    txt2img(prompt, "", False, False, int(width), 512, 1, False, 5, 7.0, seed, 1, 512, device, precision, [{"file": "some/path/none", "weight": 0}], False, False, False, False)
-
-    # Open the generated image
-    image = Image.open("temp/temp1.png").convert('RGB')
+    for _ in txt2img(prompt, "", False, False, int(width), 512, 1, False, 5, 7.0, seed, 1, 512, device, precision, [{"file": "some/path/none", "weight": 0}], False, False, False, False):
+        image = _
 
     # Perform k-centroid downscaling on the image
+    image = image["value"]["images"][0]["image"]
     image = kCentroid(image, int(image.width/(512/base)), 1, 2)
 
     # Iterate over the pixels in the image and set corresponding palette colors
@@ -1173,13 +1184,10 @@ def paletteGen(prompt, colors, seed, device, precision):
 
             palette.putpixel((x, y), (r, g, b))
 
-    palette.save("temp/temp1.png")
     rprint(f"[#c4f129]Image converted to color palette with [#48a971]{colors}[#c4f129] colors")
+    return {"name": "palette", "image": encodeImage(palette), "width": palette.width, "height": palette.height}
 
-def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale, quality, scale, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, pixelvae, post):
-    os.makedirs("temp", exist_ok=True)
-    outpath = "temp"
-
+def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale, quality, scale, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, preview, pixelvae, post):
     timer = time.time()
     
     if device == "cuda" and not torch.cuda.is_available():
@@ -1326,6 +1334,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
                     time.sleep(1)
 
         base_count = 0
+        output = []
         # Iterate over the specified number of iterations
         for run in clbar(range(runs), name = "Batches", position = "last", unit = "batch", prefixwidth = 12, suffixwidth = 28):
 
@@ -1334,7 +1343,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
             # Use the specified precision scope
             with precision_scope("cuda"):
                 # Generate samples using the model
-                samples_ddim = model.sample(
+                for step, samples_ddim in enumerate(model.sample(
                     S=pre_steps,
                     conditioning=conditioning[run],
                     seed=seed,
@@ -1345,38 +1354,50 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
                     eta=0.0,
                     x_T=start_code,
                     sampler = sampler,
-                )
+                )):
+                    if preview:
+                        displayOut = []
+                        for i in range(batch):
+                            x_sample_image = fastRender(modelPV, samples_ddim, pixelSize, W, H, i)
+                            displayOut.append({"name": seed+i+1, "image": encodeImage(x_sample_image), "width": x_sample_image.width, "height": x_sample_image.height})
+                        yield {"action": "display_title", "type": "txt2img", "value": {"text": f"Generating... {step}/{pre_steps} steps in batch {run+1}/{runs}"}}
+                        yield {"action": "display_image", "type": "txt2img", "value": {"images": displayOut}}
 
                 if upscale:
                     samples_ddim = torch.nn.functional.interpolate(samples_ddim, size=(H // 8, W // 8), mode="bilinear")
-                    encoded_latent= model.stochastic_encode(
+                    encoded_latent = model.stochastic_encode(
                         samples_ddim,
                         torch.tensor([up_steps]).to(device),
                         seed,
                         0.0,
                         int(up_steps * 1.5),
                     )
-                    samples_ddim = model.sample(
+                    for step, samples_ddim in enumerate(model.sample(
                         up_steps,
                         conditioning[run],
                         encoded_latent,
                         unconditional_guidance_scale=scale,
                         unconditional_conditioning=negative_conditioning[run],
                         sampler = "ddim"
-                    )
-
+                    )):
+                        if preview:
+                            displayOut = []
+                            for i in range(batch):
+                                x_sample_image = fastRender(modelPV, samples_ddim, pixelSize, W, H, i)
+                                displayOut.append({"name": seed+i+1, "image": encodeImage(x_sample_image), "width": x_sample_image.width, "height": x_sample_image.height})
+                            yield {"action": "display_title", "type": "txt2img", "value": {"text": f"Generating... {step}/{up_steps} steps in batch {run+1}/{runs}"}}
+                            yield {"action": "display_image", "type": "txt2img", "value": {"images": displayOut}}
+                
                 for i in range(batch):
                     x_sample_image, post = render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
-                    
-                    file_name = "temp" + f"{base_count+1}"
-                    x_sample_image.save(
-                        os.path.join(outpath, file_name + ".png")
-                    )
 
                     if total_images > 1 and (base_count+1) < total_images:
                         play("iteration.wav")
 
                     seeds.append(str(seed))
+
+                    output.append({"name": seed, "image": x_sample_image, "width": x_sample_image.width, "height": x_sample_image.height})
+
                     seed += 1
                     base_count += 1
 
@@ -1403,11 +1424,16 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
         del loadedLoras
 
         if post:
-            palettizeOutput(int(total_images))
+            output = palettizeOutput(output)
+
+        final = []
+        for image in output:
+            final.append({"name": image["name"], "image": encodeImage(image["image"]), "width": image["width"], "height": image["height"]})
         play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
+        yield {"action": "display_image", "type": "txt2img", "value": {"images": final}}
 
-def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality, scale, strength, seed, total_images, maxBatchSize, device, precision, loras, image, tilingX, tilingY, pixelvae, post):
+def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality, scale, strength, seed, total_images, maxBatchSize, device, precision, loras, image, tilingX, tilingY, preview, pixelvae, post):
     timer = time.time()
 
     os.makedirs("temp", exist_ok=True)
@@ -1586,6 +1612,7 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
                     time.sleep(1)
 
         base_count = 0
+        output = []
         # Iterate over the specified number of iterations
         for run in clbar(range(runs), name = "Batches", position = "last", unit = "batch", prefixwidth = 12, suffixwidth = 28):
 
@@ -1595,14 +1622,21 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
             with precision_scope("cuda"):
                 
                 # Generate samples using the model
-                samples_ddim = model.sample(
+                for step, samples_ddim in enumerate(model.sample(
                     steps,
                     conditioning[run],
                     encoded_latent[run],
                     unconditional_guidance_scale=scale,
                     unconditional_conditioning=negative_conditioning[run],
                     sampler = sampler
-                )
+                )):
+                    if preview:
+                        displayOut = []
+                        for i in range(batch):
+                            x_sample_image = fastRender(modelPV, samples_ddim, pixelSize, W, H, i)
+                            displayOut.append({"name": seed+i+1, "image": encodeImage(x_sample_image), "width": x_sample_image.width, "height": x_sample_image.height})
+                        yield {"action": "display_title", "type": "img2img", "value": {"text": f"Generating... {step}/{steps} steps in batch {run+1}/{runs}"}}
+                        yield {"action": "display_image", "type": "img2img", "value": {"images": displayOut}}
 
                 for i in range(batch):
                     x_sample_image, post = render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
@@ -1616,6 +1650,8 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
                         play("iteration.wav")
 
                     seeds.append(str(seed))
+                    output.append({"name": seed, "image": x_sample_image, "width": x_sample_image.width, "height": x_sample_image.height})
+
                     seed += 1
                     base_count += 1
 
@@ -1642,9 +1678,14 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
         del loadedLoras
 
         if post:
-            palettizeOutput(int(total_images))
+            output = palettizeOutput(output)
+
+        final = []
+        for image in output:
+            final.append({"name": image["name"], "image": encodeImage(image["image"]), "width": image["width"], "height": image["height"]})
         play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
+        yield {"action": "display_image", "type": "img2img", "value": {"images": final}}
 
 def prompt2prompt(path, prompt, negative, generations, seed):
     timer = time.time()
@@ -1871,7 +1912,7 @@ async def server(websocket):
 
     async for message in websocket:
         # For debugging
-        print(message)
+        #print(message)
         try:
             message = json.loads(message)
             match message["action"]:
@@ -1879,16 +1920,20 @@ async def server(websocket):
                     try:
                         # Extract parameters from the message
                         values = message["value"]
-
                         modelData = values["model"]
+
+                        if values["send_progress"]:
+                            await websocket.send(json.dumps({"action": "display_title", "type": "txt2img", "value": {"text": "Loading model"}}))
                         load_model(
                             modelData["file"], 
                             "scripts/v1-inference.yaml", 
                             modelData["device"], 
                             modelData["precision"], 
                             modelData["optimized"])
-                        
-                        txt2img(
+
+                        if values["send_progress"]:
+                            await websocket.send(json.dumps({"action": "display_title", "type": "txt2img", "value": {"text": "Generating..."}}))
+                        for result in txt2img(
                             values["prompt"],
                             values["negative"],
                             values["translate"],
@@ -1907,11 +1952,16 @@ async def server(websocket):
                             values["loras"],
                             values["tile_x"],
                             values["tile_y"],
+                            values["send_progress"],
                             values["use_pixelvae"],
                             values["post_process"]
-                        )
+                        ):
+                            if values["send_progress"]:
+                                await websocket.send(json.dumps(result))
                         
-                        await websocket.send(json.dumps({"action": "returning", "type": "txt2img"}))
+                        if values["send_progress"]:
+                            await websocket.send(json.dumps({"action": "display_title", "type": "txt2img", "value": {"text": "Generation complete"}}))
+                        await websocket.send(json.dumps({"action": "returning", "type": "txt2img", "value": {"images": result["value"]["images"]}}))
                     except Exception as e:
                         if "SSLCertVerificationError" in traceback.format_exc():
                             rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
@@ -1927,8 +1977,10 @@ async def server(websocket):
                     try:
                         # Extract parameters from the message
                         values = message["value"]
-
                         modelData = values["model"]
+
+                        if values["send_progress"]:
+                            await websocket.send(json.dumps({"action": "display_title", "type": "img2img", "value": {"text": "Loading model"}}))
                         load_model(
                             modelData["file"], 
                             "scripts/v1-inference.yaml", 
@@ -1936,7 +1988,9 @@ async def server(websocket):
                             modelData["precision"], 
                             modelData["optimized"])
                         
-                        img2img(
+                        if values["send_progress"]:
+                            await websocket.send(json.dumps({"action": "display_title", "type": "img2img", "value": {"text": "Generating..."}}))
+                        for result in img2img(
                             values["prompt"],
                             values["negative"],
                             values["translate"],
@@ -1956,11 +2010,16 @@ async def server(websocket):
                             values["image"],
                             values["tile_x"],
                             values["tile_y"],
+                            values["send_progress"],
                             values["use_pixelvae"],
                             values["post_process"]
-                        )
+                        ):
+                            if values["send_progress"]:
+                                await websocket.send(json.dumps(result))
                         
-                        await websocket.send(json.dumps({"action": "returning", "type": "img2img"}))
+                        if values["send_progress"]:
+                            await websocket.send(json.dumps({"action": "display_title", "type": "img2img", "value": {"text": "Generation complete"}}))
+                        await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": images["value"]["images"]}}))
                     except Exception as e: 
                         if "SSLCertVerificationError" in traceback.format_exc():
                             rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
@@ -1989,7 +2048,7 @@ async def server(websocket):
                             modelData["precision"], 
                             modelData["optimized"])
                         
-                        paletteGen(
+                        images = paletteGen(
                             values["prompt"],
                             values["colors"],
                             values["seed"],
@@ -1997,7 +2056,7 @@ async def server(websocket):
                             modelData["precision"]
                         )
                         
-                        await websocket.send(json.dumps({"action": "returning", "type": "txt2pal"}))
+                        await websocket.send(json.dumps({"action": "returning", "type": "txt2pal", "value": {"images": images}}))
                     except Exception as e:
                         if "SSLCertVerificationError" in traceback.format_exc():
                             rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
@@ -2058,7 +2117,7 @@ async def server(websocket):
                     try:
                         # Extract parameters from the message
                         values = message["value"]
-                        palettize(
+                        images = palettize(
                             values["images"],
                             values["source"],
                             values["url"],
@@ -2070,7 +2129,7 @@ async def server(websocket):
                             values["smoothness"],
                             values["intensity"]
                         )
-                        await websocket.send(json.dumps({"action": "returning", "type": "palettize"}))
+                        await websocket.send(json.dumps({"action": "returning", "type": "palettize", "value": {"images": images}}))
                     except Exception as e: 
                         rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                         play("error.wav")
