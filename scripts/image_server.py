@@ -7,7 +7,7 @@ import scipy
 import numpy as np
 from random import randint
 from omegaconf import OmegaConf
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageFilter
 from itertools import islice, product
 from einops import rearrange
 from pytorch_lightning import seed_everything
@@ -20,6 +20,7 @@ from cryptography.fernet import Fernet
 # Import built libraries
 from ldm.util import instantiate_from_config, max_tile
 from optimization.pixelvae import load_pixelvae_model
+from optimization.taesd import TAESD
 from lora import apply_lora, assign_lora_names_to_compvis_modules, load_lora, register_lora_for_inference, remove_lora_for_inference
 from upsample_prompts import load_chat_pipeline, upsample_caption, collect_response
 import segmenter
@@ -73,6 +74,7 @@ modelName = None
 global model
 global modelCS
 global modelFS
+global modelTA
 global modelPV
 global modelLM
 modelLM = None
@@ -376,6 +378,9 @@ def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disa
 def encodeImage(image):
     return base64.b64encode(image.convert("RGBA").tobytes()).decode('utf-8')
 
+def decodeImage(imageString, width, height, format="RGBA"):
+    return Image.frombytes(format, (width, height), base64.b64decode(imageString)).convert("RGB")
+
 def load_img(path, h0, w0):
     # Open the image at the specified path and prepare it for image to image
     image = Image.open(path).convert("RGB")
@@ -389,13 +394,19 @@ def load_img(path, h0, w0):
     w, h = map(lambda x: x - x % 8, (w, h))
     image = image.resize((w, h), resample=Image.Resampling.BICUBIC)
 
+    # Color adjustments to account for Tiny Autoencoder
+    contrast= ImageEnhance.Contrast(image)
+    image_contrast = contrast.enhance(0.833)
+    saturation = ImageEnhance.Color(image_contrast)
+    image_saturation = saturation.enhance(0.833)
+
     # Convert the image to a numpy array of float32 values in the range [0, 1], transpose it, and convert it to a PyTorch tensor
-    image = np.array(image).astype(np.float32) / 255.0
-    image = image[None].transpose(0, 3, 1, 2)
-    image = torch.from_numpy(image)
+    image = np.array(image_saturation).astype(np.float32) / 255
+    image = rearrange(image, "h w c -> c h w")
+    image = torch.from_numpy(image).unsqueeze(0)
 
     # Apply a normalization by scaling the values in the range [-1, 1]
-    return 2.*image - 1.
+    return image
 
 def caption_images(blip, images, prompt = None):
     processor = blip["processor"]
@@ -552,9 +563,7 @@ def load_model(modelFileString, config, device, precision, optimized):
 
         # Instantiate and load the first stage model
         global modelFS
-        modelFS = instantiate_from_config(config.model_first_stage)
-        _, _ = modelFS.load_state_dict(sd, strict=False)
-        modelFS.eval()
+        modelFS = TAESD().to(device)
 
         # Set precision and device settings
         if device == "cuda" and precision == "autocast":
@@ -1034,7 +1043,7 @@ def palettizeOutput(images):
     for image in images:
         tempImage = image["image"]
 
-        numColors = determine_best_k(tempImage, 128)
+        numColors = determine_best_k(tempImage, 64)
 
         image_indexed = tempImage.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
     
@@ -1111,15 +1120,18 @@ def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae,
         x_sample = x_sample[0].cpu().numpy()
     else:
         try:
-            modelFS.to(device)
-            # Decode the samples using the first stage of the model
-            x_sample = [modelFS.decode_first_stage(samples_ddim[i:i+1].to(device))[0].cpu()]
-            # Convert the list of decoded samples to a tensor and normalize the values to [0, 1]
-            x_sample = torch.stack(x_sample).float()
-            x_sample = torch.clamp((x_sample + 1.0) / 2.0, min=0.0, max=1.0)
-
-            # Rearrange the dimensions of the tensor and scale the values to the range [0, 255]
+            x_sample = modelFS.decoder(samples_ddim[i:i+1].to(device)).clamp(0, 1)
             x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
+            x_sample = Image.fromarray(x_sample.astype(np.uint8))
+
+            # Color adjustments to account for Tiny Autoencoder
+            contrast= ImageEnhance.Contrast(x_sample)
+            x_sample_contrast = contrast.enhance(1.2)
+            saturation = ImageEnhance.Color(x_sample_contrast)
+            x_sample_saturation = saturation.enhance(1.2)
+
+            # Convert back to NumPy array if necessary
+            x_sample = np.array(x_sample_saturation)
         except:
             if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
                 rprint(f"\n[#ab333d]Ran out of VRAM during decode, switching to fast pixel decoder")
@@ -1154,11 +1166,12 @@ def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae,
     return x_sample_image, post
 
 def fastRender(modelPV, samples_ddim, pixelSize, W, H, i):
-    x_sample = modelPV.run_plain(samples_ddim[i:i+1])
+    sample = samples_ddim[i:i+1]
+    if pixelSize > 8:
+        sample = torch.nn.functional.interpolate(sample, size=(W // pixelSize, H // pixelSize), mode="nearest-exact")
+    x_sample = modelPV.run_plain(sample)
     x_sample = x_sample[0].cpu().numpy()
     x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
-    if pixelSize > 8:
-        x_sample_image = x_sample_image.resize((W // pixelSize, H // pixelSize), resample=Image.Resampling.NEAREST)
     return x_sample_image
 
 def paletteGen(prompt, colors, seed, device, precision):
@@ -1173,7 +1186,7 @@ def paletteGen(prompt, colors, seed, device, precision):
         image = _
 
     # Perform k-centroid downscaling on the image
-    image = Image.frombytes("RGBA", (image["value"]["images"][0]["width"], image["value"]["images"][0]["height"]), base64.b64decode(image["value"]["images"][0]["image"])).convert("RGB")
+    image = decodeImage(image["value"]["images"][0]["image"], image["value"]["images"][0]["width"], image["value"]["images"][0]["height"])
     image = kCentroid(image, int(image.width/(512/base)), 1, 2)
 
     # Iterate over the pixels in the image and set corresponding palette colors
@@ -1388,6 +1401,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
                             yield {"action": "display_title", "type": "txt2img", "value": {"text": f"Generating... {step}/{up_steps} steps in batch {run+1}/{runs}"}}
                             yield {"action": "display_image", "type": "txt2img", "value": {"images": displayOut}}
                 
+                timer2 = time.time()
                 for i in range(batch):
                     x_sample_image, post = render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
 
@@ -1400,17 +1414,10 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
 
                     seed += 1
                     base_count += 1
-
-                    # Move modelFS to CPU if necessary to free up GPU memory
-                    if device == "cuda" and modelFS.device != torch.device("cpu"):
-                        mem = torch.cuda.memory_allocated() / 1e6
-                        modelFS.to("cpu")
-                        # Wait until memory usage decreases
-                        while torch.cuda.memory_allocated() / 1e6 >= mem:
-                            time.sleep(1)
-                    
                 # Delete the samples to free up memory
                 del samples_ddim
+        
+        rprint(f"[#c4f129]Decode completed in [#48a971]{round(time.time()-timer2, 2)} [#c4f129]seconds")
 
         for i, lora in enumerate(loadedLoras):
             if lora is not None:
@@ -1451,11 +1458,6 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
     init_img = BytesIO(base64.b64decode(image))
     #assert os.path.isfile(init_img)
     init_image = load_img(init_img, H, W).to(device)
-
-    # Load mask
-    init_mask = None
-    if os.path.isfile("temp/mask.png"):
-        init_mask = load_img("temp/mask.png", H, W).to(device)
 
     global maxSize
     maxSize = maxBatchSize
@@ -1556,12 +1558,12 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
 
         with precision_scope("cuda"):
             # Move the modelFS to the specified device
-            modelFS.to(device)
+            #modelFS.to(device)
             latentBatch = batch
             latentCount = 0
 
             # Move the initial image to latent space and resize it
-            init_latent_base = (modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image)))
+            init_latent_base = (modelFS.encoder(init_image))
             init_latent_base = torch.nn.functional.interpolate(init_latent_base, size=(H // 8, W // 8), mode="bilinear")
             if init_latent_base.shape[0] < latentBatch:
                 init_latent_base = init_latent_base.repeat([math.ceil(latentBatch / init_latent_base.shape[0])] + [1] * (len(init_latent_base.shape) - 1))[:latentBatch]
@@ -1573,9 +1575,6 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
                     # Slice latents to new batch size
                     init_latent_base = init_latent_base[:latentBatch]
 
-                    if init_mask is not None:
-                        init_mask = init_mask[:latentBatch]
-
                 # Encode the scaled latent
                 encoded_latent.append(model.stochastic_encode(
                     init_latent_base,
@@ -1585,14 +1584,6 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
                     max(steps+1, int(steps/strength)),
                 ))
                 latentCount += latentBatch
-
-            # Move modelFS to CPU if necessary to free up GPU memory
-            if device == "cuda":
-                mem = torch.cuda.memory_allocated(device=device) / 1e6
-                modelFS.to("cpu")
-                # Wait until memory usage decreases
-                while torch.cuda.memory_allocated(device=device) / 1e6 >= mem:
-                    time.sleep(1)
 
             modelCS.to(device)
             condBatch = batch
@@ -1654,15 +1645,6 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
 
                     seed += 1
                     base_count += 1
-
-                    # Move modelFS to CPU if necessary to free up GPU memory
-                    if device == "cuda" and modelFS.device != torch.device("cpu"):
-                        mem = torch.cuda.memory_allocated() / 1e6
-                        modelFS.to("cpu")
-                        # Wait until memory usage decreases
-                        while torch.cuda.memory_allocated() / 1e6 >= mem:
-                            time.sleep(1)
-                    
                 # Delete the samples to free up memory
                 del samples_ddim
 
@@ -1849,17 +1831,7 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
                         denoise = 0.08
                         x_sample = modelPV.run_cluster(samples_ddim, threshold=denoise, wrap_x=False, wrap_y=False)
                     else:
-                        modelFS.to(device)
-                        # Decode the samples using the first stage of the model
-                        x_sample = [modelFS.decode_first_stage(samples_ddim.to(device))[0].cpu()]
-
-                        # Move modelFS to CPU if necessary to free up GPU memory
-                        if device == "cuda" and modelFS.device != torch.device("cpu"):
-                            mem = torch.cuda.memory_allocated() / 1e6
-                            modelFS.to("cpu")
-                            # Wait until memory usage decreases
-                            while torch.cuda.memory_allocated() / 1e6 >= mem:
-                                time.sleep(1)
+                        x_sample = modelFS.decoder(samples_ddim.to(device)).clamp(0, 1)
                         
                     # Delete the samples to free up memory
                     del samples_ddim
@@ -1867,13 +1839,6 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
                     
                     passedTest = True
                 except:
-                    if device == "cuda" and modelFS.device != torch.device("cpu"):
-                        mem = torch.cuda.memory_allocated() / 1e6
-                        modelFS.to("cpu")
-                        # Wait until memory usage decreases
-                        while torch.cuda.memory_allocated() / 1e6 >= mem:
-                            time.sleep(1)
-                    
                     passedTest = False
 
                 if tests > 1 and (base_count+1) < tests:

@@ -8,6 +8,8 @@
 import torch, io
 from torch import nn
 from cryptography.fernet import Fernet
+import random
+import numpy as np
 
 def conv(n_in, n_out, **kwargs):
     return nn.Conv2d(n_in, n_out, 3, padding=1, **kwargs)
@@ -175,8 +177,6 @@ class PixelVAE:
         return result
 
     def run_cluster(self, samples, threshold=0.001, rand_seed=1, select='local8', wrap_x=False, wrap_y=False):
-        import random
-        import numpy as np
         predicts = self.model.forward(samples.to(self.device))
 
         # compute softmax per channel, split channels
