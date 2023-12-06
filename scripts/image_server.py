@@ -1169,11 +1169,11 @@ def paletteGen(prompt, colors, seed, device, precision):
     width = 512+((512/base)*(colors-base))
 
     # Generate text-to-image conversion with specified parameters
-    for _ in txt2img(prompt, "", False, False, int(width), 512, 1, False, 5, 7.0, seed, 1, 512, device, precision, [{"file": "some/path/none", "weight": 0}], False, False, False, False):
+    for _ in txt2img(prompt, "", False, False, int(width), 512, 1, False, 5, 7.0, seed, 1, 512, device, precision, [{"file": "some/path/none", "weight": 0}], False, False, False, False, False):
         image = _
 
     # Perform k-centroid downscaling on the image
-    image = image["value"]["images"][0]["image"]
+    image = Image.frombytes("RGBA", (image["value"]["images"][0]["width"], image["value"]["images"][0]["height"]), base64.b64decode(image["value"]["images"][0]["image"])).convert("RGB")
     image = kCentroid(image, int(image.width/(512/base)), 1, 2)
 
     # Iterate over the pixels in the image and set corresponding palette colors
@@ -1185,7 +1185,7 @@ def paletteGen(prompt, colors, seed, device, precision):
             palette.putpixel((x, y), (r, g, b))
 
     rprint(f"[#c4f129]Image converted to color palette with [#48a971]{colors}[#c4f129] colors")
-    return {"name": "palette", "image": encodeImage(palette), "width": palette.width, "height": palette.height}
+    return [{"name": "palette", "image": encodeImage(palette), "width": colors, "height": 1}]
 
 def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale, quality, scale, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, preview, pixelvae, post):
     timer = time.time()
@@ -2019,7 +2019,7 @@ async def server(websocket):
                         
                         if values["send_progress"]:
                             await websocket.send(json.dumps({"action": "display_title", "type": "img2img", "value": {"text": "Generation complete"}}))
-                        await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": images["value"]["images"]}}))
+                        await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": result["value"]["images"]}}))
                     except Exception as e: 
                         if "SSLCertVerificationError" in traceback.format_exc():
                             rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
