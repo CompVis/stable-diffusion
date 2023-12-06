@@ -8,6 +8,7 @@ import numpy as np
 from random import randint
 from omegaconf import OmegaConf
 from PIL import Image, ImageEnhance, ImageFilter
+import cv2
 from itertools import islice, product
 from einops import rearrange
 from pytorch_lightning import seed_everything
@@ -1132,6 +1133,9 @@ def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae,
 
             # Convert back to NumPy array if necessary
             x_sample = np.array(x_sample_saturation)
+
+            # Denoise the generated image
+            x_sample = cv2.fastNlMeansDenoisingColored(x_sample, None, 6, 6, 3, 21)
         except:
             if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
                 rprint(f"\n[#ab333d]Ran out of VRAM during decode, switching to fast pixel decoder")
@@ -1150,6 +1154,13 @@ def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae,
         x_sample_image = kCentroid(x_sample_image, W // pixelSize, H // pixelSize, 2)
     elif x_sample_image.width < W // pixelSize and x_sample_image.height < H // pixelSize:
         x_sample_image = x_sample_image.resize((W, H), resample=Image.Resampling.NEAREST)
+
+    if not pixelvae:
+        # Sharpen to enhance details lost by decoding
+        x_sample_image_sharp = x_sample_image.filter(ImageFilter.SHARPEN)
+        alpha = 0.3
+        x_sample_image = Image.blend(x_sample_image, x_sample_image_sharp, alpha)
+
 
     loraNames = [os.path.split(d["file"])[1] for d in loras if "file" in d]
     if "1bit.pxlm" in loraNames:
