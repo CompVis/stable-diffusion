@@ -396,7 +396,7 @@ def load_img(path, h0, w0):
 
     # Color adjustments to account for Tiny Autoencoder
     contrast= ImageEnhance.Contrast(image)
-    image_contrast = contrast.enhance(0.833)
+    image_contrast = contrast.enhance(0.78)
     saturation = ImageEnhance.Color(image_contrast)
     image_saturation = saturation.enhance(0.833)
 
@@ -1126,7 +1126,7 @@ def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae,
 
             # Color adjustments to account for Tiny Autoencoder
             contrast= ImageEnhance.Contrast(x_sample)
-            x_sample_contrast = contrast.enhance(1.2)
+            x_sample_contrast = contrast.enhance(1.3)
             saturation = ImageEnhance.Color(x_sample_contrast)
             x_sample_saturation = saturation.enhance(1.2)
 
@@ -1166,12 +1166,16 @@ def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae,
     return x_sample_image, post
 
 def fastRender(modelPV, samples_ddim, pixelSize, W, H, i):
-    sample = samples_ddim[i:i+1]
-    if pixelSize > 8:
-        sample = torch.nn.functional.interpolate(sample, size=(W // pixelSize, H // pixelSize), mode="nearest-exact")
-    x_sample = modelPV.run_plain(sample)
+    x_sample = modelPV.run_plain(samples_ddim[i:i+1])
     x_sample = x_sample[0].cpu().numpy()
     x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
+    if pixelSize > 8:
+        x_sample_image = x_sample_image.resize((W // pixelSize, H // pixelSize), resample=Image.Resampling.NEAREST)
+
+    # Upscale to prevent weird Aseprite specific decode slowness for smaller images ???
+    if math.sqrt(x_sample_image.width * x_sample_image.height) < 48:
+        factor = math.ceil(48 / math.sqrt(x_sample_image.width * x_sample_image.height))
+        x_sample_image = x_sample_image.resize((x_sample_image.width * factor, x_sample_image.height * factor), resample=Image.Resampling.NEAREST)
     return x_sample_image
 
 def paletteGen(prompt, colors, seed, device, precision):
