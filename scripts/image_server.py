@@ -376,15 +376,29 @@ def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disa
         for i, item in enumerate(iterable):
             yield item
 
-def encodeImage(image):
-    return base64.b64encode(image.convert("RGBA").tobytes()).decode('utf-8')
+def encodeImage(image, format):
+    if format == "png":
+        buffer = BytesIO()
+        image.save(buffer, format="PNG")
+        image_bytes = buffer.getvalue()
+        return base64.b64encode(image_bytes).decode('utf-8')
+    else:
+        return base64.b64encode(image.convert("RGBA").tobytes()).decode('utf-8')
 
-def decodeImage(imageString, width, height, format="RGBA"):
-    return Image.frombytes(format, (width, height), base64.b64decode(imageString)).convert("RGB")
+def decodeImage(imageString):
+    try:
+        if imageString["format"] == "png":
+            return Image.open(BytesIO(base64.b64decode(imageString["image"]))).convert("RGB")
+        else:
+            return Image.frombytes(format, (imageString["width"], imageString["height"]), base64.b64decode(imageString["image"])).convert("RGB")
+    except:
+        rprint(f"\n[#ab333d]ERROR: Image cannot be decoded from bytes. It may have been corrupted.")
+        print(imageString)
+        return None
 
-def load_img(path, h0, w0):
-    # Open the image at the specified path and prepare it for image to image
-    image = Image.open(path).convert("RGB")
+def load_img(image, h0, w0):
+    # Open the image and prepare it for image to image
+    image.convert("RGB")
     w, h = image.size
 
     # Override the image size if h0 and w0 are provided
@@ -760,7 +774,7 @@ def pixelDetect(image: Image):
 
 def pixelDetectVerbose(image):
     # Check if input file exists and open it
-    image = Image.open(BytesIO(base64.b64decode(image)))
+    image = decodeImage(image[0]).convert("RGB")
 
     rprint(f"\n[#48a971]Finding pixel ratio for current cel")
 
@@ -773,8 +787,8 @@ def pixelDetectVerbose(image):
         for _ in clbar([downscale], name = "Palettizing", position = "first", prefixwidth = 12, suffixwidth = 28): 
             image_indexed = downscale.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
         
-        image_indexed.save("temp/temp.png")
     play("batch.wav")
+    return [{"name": 1, "format": "png", "image": encodeImage(image_indexed, "png")}]
 
 def kDenoise(image, smoothing, strength):
     image = image.convert("RGB")
@@ -812,7 +826,7 @@ def kDenoise(image, smoothing, strength):
 
     return Image.fromarray(denoised, mode='RGB')
 
-def determine_best_k(image, max_k, n_samples=5000, smooth_window=4):
+def determine_best_k(image, max_k, n_samples=10000, smooth_window=7):
     image = image.convert("RGB")
 
     # Flatten the image pixels and sample them
@@ -870,7 +884,7 @@ def determine_best_palette_verbose(image, palettes):
     paletteImages = []
     for palette in palettes:
         try:
-            paletteImages.append(Image.open(BytesIO(base64.b64decode(palette["palette"]))).convert('RGB'))
+            paletteImages.append(decodeImage(palette))
         except:
             pass
 
@@ -914,7 +928,7 @@ def palettize(images, source, paletteURL, palettes, colors, dithering, strength,
             paletteImage = None
     elif palettes != []:
         try:
-            paletteImage = Image.open(BytesIO(base64.b64decode(palettes[0]["palette"]))).convert('RGB')
+            paletteImage = decodeImage(palettes[0])
         except:
             pass
 
@@ -922,11 +936,7 @@ def palettize(images, source, paletteURL, palettes, colors, dithering, strength,
 
     # Create a list to store file paths
     for i, image in enumerate(images):
-        try:
-            images[i] = Image.open(BytesIO(base64.b64decode(image["image"]))).convert('RGB')
-        except:
-            rprint(f"\n[#ab333d]ERROR: Image {i} cannot be decoded from bytes. It may have been corrupted.")
-            pass
+        images[i] = decodeImage(image)
 
     # Determine the number of colors based on the palette or user input
     if paletteImage is not None:
@@ -1025,7 +1035,7 @@ def palettize(images, source, paletteURL, palettes, colors, dithering, strength,
 
         count += 1
 
-        output.append({"name": count, "image": encodeImage(image_indexed), "width": image_indexed.width, "height": image_indexed.height})
+        output.append({"name": count, "format": "png", "image": encodeImage(image_indexed, "png")})
 
         if image != images[-1]:
             play("iteration.wav")
@@ -1048,7 +1058,7 @@ def palettizeOutput(images):
 
         image_indexed = tempImage.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
     
-        output.append({"name": image["name"], "image": image_indexed, "width": image["width"], "height": image["height"]})
+        output.append({"name": image["name"], "format": image["format"], "image": image_indexed, "width": image["width"], "height": image["height"]})
     return output
 
 def rembg(images, modelpath):
@@ -1058,14 +1068,11 @@ def rembg(images, modelpath):
     rprint(f"\n[#48a971]Removing [#48a971]{len(images)}[white] backgrounds")
     
     for i, image in enumerate(images):
-        try:
-            images[i] = Image.open(BytesIO(base64.b64decode(image["image"]))).convert('RGB')
-        except:
-            rprint(f"\n[#ab333d]ERROR: Image {i} cannot be decoded from bytes. It may have been corrupted.")
-            pass
+        images[i] = decodeImage(image)
 
     # Process each file in the list
     count = 0
+    output = []
     for image in clbar(images, name = "Processed", position = "", unit = "image", prefixwidth = 12, suffixwidth = 28):
 
         with warnings.catch_warnings():
@@ -1080,30 +1087,32 @@ def rembg(images, modelpath):
             [masked_image, mask] = segmenter.segment(resize)
 
             count += 1
-            masked_image.resize((image.width, image.height), resample=Image.Resampling.NEAREST).save(f"temp/input{count}.png")
+            masked_image = masked_image.resize((image.width, image.height), resample=Image.Resampling.NEAREST)
+
+            output.append({"name": count, "format": "png", "image": encodeImage(masked_image, "png")})
 
             if image != images[-1]:
                 play("iteration.wav")
             else:
                 play("batch.wav")
     rprint(f"[#c4f129]Removed [#48a971]{len(images)}[#c4f129] backgrounds in [#48a971]{round(time.time()-timer, 2)}[#c4f129] seconds")
+    return output
 
 def kCentroidVerbose(images, width, height, centroids):
     timer = time.time()
     for i, image in enumerate(images):
-        try:
-            images[i] = Image.open(BytesIO(base64.b64decode(image["image"]))).convert('RGB')
-        except:
-            rprint(f"\n[#ab333d]ERROR: Image {i} cannot be decoded from bytes. It may have been corrupted.")
-            pass
+        images[i] = decodeImage(image)
 
     rprint(f"\n[#48a971]K-Centroid downscaling[white] from [#48a971]{images[0].width}[white]x[#48a971]{images[0].height}[white] to [#48a971]{width}[white]x[#48a971]{height}[white] with [#48a971]{centroids}[white] centroids")
 
     # Perform k-centroid downscaling and save the image
     count = 0
+    output = []
     for image in clbar(images, name = "Processed", unit = "image", prefixwidth = 12, suffixwidth = 28):
         count += 1
-        kCentroid(image, int(width), int(height), int(centroids)).save(f"temp/input{count}.png")
+        resized_image = kCentroid(image, int(width), int(height), int(centroids))
+
+        output.append({"name": count, "format": "png", "image": encodeImage(resized_image, "png")})
 
         if image != images[-1]:
             play("iteration.wav")
@@ -1111,6 +1120,7 @@ def kCentroidVerbose(images, width, height, centroids):
             play("batch.wav")
 
     rprint(f"\n[#c4f129]Resized in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
+    return output
 
 def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post):
     if pixelvae:
@@ -1158,7 +1168,7 @@ def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae,
     if not pixelvae:
         # Sharpen to enhance details lost by decoding
         x_sample_image_sharp = x_sample_image.filter(ImageFilter.SHARPEN)
-        alpha = 0.3
+        alpha = 0.2
         x_sample_image = Image.blend(x_sample_image, x_sample_image_sharp, alpha)
 
 
@@ -1201,8 +1211,8 @@ def paletteGen(prompt, colors, seed, device, precision):
         image = _
 
     # Perform k-centroid downscaling on the image
-    image = decodeImage(image["value"]["images"][0]["image"], image["value"]["images"][0]["width"], image["value"]["images"][0]["height"])
-    image = kCentroid(image, int(image.width/(512/base)), 1, 2)
+    image = decodeImage(image["value"]["images"][0])
+    image = image.resize((int(image.width/(512/base)), 1), resample=Image.Resampling.BILINEAR)
 
     # Iterate over the pixels in the image and set corresponding palette colors
     palette = Image.new('P', (colors, 1))
@@ -1213,7 +1223,7 @@ def paletteGen(prompt, colors, seed, device, precision):
             palette.putpixel((x, y), (r, g, b))
 
     rprint(f"[#c4f129]Image converted to color palette with [#48a971]{colors}[#c4f129] colors")
-    return [{"name": "palette", "image": encodeImage(palette), "width": colors, "height": 1}]
+    return [{"name": "palette", "format": "png", "image": encodeImage(palette, "png")}]
 
 def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale, quality, scale, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, preview, pixelvae, post):
     timer = time.time()
@@ -1387,7 +1397,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
                         displayOut = []
                         for i in range(batch):
                             x_sample_image = fastRender(modelPV, samples_ddim, pixelSize, W, H, i)
-                            displayOut.append({"name": seed+i+1, "image": encodeImage(x_sample_image), "width": x_sample_image.width, "height": x_sample_image.height})
+                            displayOut.append({"name": seed+i+1, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                         yield {"action": "display_title", "type": "txt2img", "value": {"text": f"Generating... {step}/{pre_steps} steps in batch {run+1}/{runs}"}}
                         yield {"action": "display_image", "type": "txt2img", "value": {"images": displayOut}}
 
@@ -1412,11 +1422,10 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
                             displayOut = []
                             for i in range(batch):
                                 x_sample_image = fastRender(modelPV, samples_ddim, pixelSize, W, H, i)
-                                displayOut.append({"name": seed+i+1, "image": encodeImage(x_sample_image), "width": x_sample_image.width, "height": x_sample_image.height})
+                                displayOut.append({"name": seed+i+1, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                             yield {"action": "display_title", "type": "txt2img", "value": {"text": f"Generating... {step}/{up_steps} steps in batch {run+1}/{runs}"}}
                             yield {"action": "display_image", "type": "txt2img", "value": {"images": displayOut}}
                 
-                timer2 = time.time()
                 for i in range(batch):
                     x_sample_image, post = render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
 
@@ -1425,14 +1434,12 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
 
                     seeds.append(str(seed))
 
-                    output.append({"name": seed, "image": x_sample_image, "width": x_sample_image.width, "height": x_sample_image.height})
+                    output.append({"name": seed, "format": "png", "image": x_sample_image, "width": x_sample_image.width, "height": x_sample_image.height})
 
                     seed += 1
                     base_count += 1
                 # Delete the samples to free up memory
                 del samples_ddim
-        
-        rprint(f"[#c4f129]Decode completed in [#48a971]{round(time.time()-timer2, 2)} [#c4f129]seconds")
 
         for i, lora in enumerate(loadedLoras):
             if lora is not None:
@@ -1450,12 +1457,12 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
 
         final = []
         for image in output:
-            final.append({"name": image["name"], "image": encodeImage(image["image"]), "width": image["width"], "height": image["height"]})
+            final.append({"name": image["name"], "format": image["format"], "image": encodeImage(image["image"], "png"), "width": image["width"], "height": image["height"]})
         play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
         yield {"action": "display_image", "type": "txt2img", "value": {"images": final}}
 
-def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality, scale, strength, seed, total_images, maxBatchSize, device, precision, loras, image, tilingX, tilingY, preview, pixelvae, post):
+def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality, scale, strength, seed, total_images, maxBatchSize, device, precision, loras, images, tilingX, tilingY, preview, pixelvae, post):
     timer = time.time()
 
     os.makedirs("temp", exist_ok=True)
@@ -1470,7 +1477,7 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
                                        
     # Load initial image and move it to the specified device
     #init_img = "temp/input.png"
-    init_img = BytesIO(base64.b64decode(image))
+    init_img = decodeImage(images[0])
     #assert os.path.isfile(init_img)
     init_image = load_img(init_img, H, W).to(device)
 
@@ -1640,7 +1647,7 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
                         displayOut = []
                         for i in range(batch):
                             x_sample_image = fastRender(modelPV, samples_ddim, pixelSize, W, H, i)
-                            displayOut.append({"name": seed+i+1, "image": encodeImage(x_sample_image), "width": x_sample_image.width, "height": x_sample_image.height})
+                            displayOut.append({"name": seed+i+1, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                         yield {"action": "display_title", "type": "img2img", "value": {"text": f"Generating... {step}/{steps} steps in batch {run+1}/{runs}"}}
                         yield {"action": "display_image", "type": "img2img", "value": {"images": displayOut}}
 
@@ -1656,7 +1663,7 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
                         play("iteration.wav")
 
                     seeds.append(str(seed))
-                    output.append({"name": seed, "image": x_sample_image, "width": x_sample_image.width, "height": x_sample_image.height})
+                    output.append({"name": seed, "format": "png", "image": x_sample_image, "width": x_sample_image.width, "height": x_sample_image.height})
 
                     seed += 1
                     base_count += 1
@@ -1679,7 +1686,7 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
 
         final = []
         for image in output:
-            final.append({"name": image["name"], "image": encodeImage(image["image"]), "width": image["width"], "height": image["height"]})
+            final.append({"name": image["name"], "format": image["format"], "image": encodeImage(image["image"], "png"), "width": image["width"], "height": image["height"]})
         play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
         yield {"action": "display_image", "type": "img2img", "value": {"images": final}}
@@ -1889,323 +1896,329 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
 
 async def server(websocket):
     background = False
-
-    async for message in websocket:
-        # For debugging
-        #print(message)
-        try:
-            message = json.loads(message)
-            match message["action"]:
-                case "txt2img":
-                    try:
-                        # Extract parameters from the message
-                        values = message["value"]
-                        modelData = values["model"]
-
-                        if values["send_progress"]:
-                            await websocket.send(json.dumps({"action": "display_title", "type": "txt2img", "value": {"text": "Loading model"}}))
-                        load_model(
-                            modelData["file"], 
-                            "scripts/v1-inference.yaml", 
-                            modelData["device"], 
-                            modelData["precision"], 
-                            modelData["optimized"])
-
-                        if values["send_progress"]:
-                            await websocket.send(json.dumps({"action": "display_title", "type": "txt2img", "value": {"text": "Generating..."}}))
-                        for result in txt2img(
-                            values["prompt"],
-                            values["negative"],
-                            values["translate"],
-                            values["prompt_tuning"],
-                            values["width"],
-                            values["height"],
-                            values["pixel_size"],
-                            values["enhance_composition"],
-                            values["quality"],
-                            values["scale"],
-                            values["seed"],
-                            values["generations"],
-                            values["max_batch_size"],
-                            modelData["device"],
-                            modelData["precision"],
-                            values["loras"],
-                            values["tile_x"],
-                            values["tile_y"],
-                            values["send_progress"],
-                            values["use_pixelvae"],
-                            values["post_process"]
-                        ):
-                            if values["send_progress"]:
-                                await websocket.send(json.dumps(result))
-                        
-                        if values["send_progress"]:
-                            await websocket.send(json.dumps({"action": "display_title", "type": "txt2img", "value": {"text": "Generation complete"}}))
-                        await websocket.send(json.dumps({"action": "returning", "type": "txt2img", "value": {"images": result["value"]["images"]}}))
-                    except Exception as e:
-                        if "SSLCertVerificationError" in traceback.format_exc():
-                            rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
-                        elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
-                            rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
-                            if modelLM is not None:
-                                rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
-                        else:
-                            rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                        play("error.wav")
-                        await websocket.send(json.dumps({"action": "error"}))
-                case "img2img":
-                    try:
-                        # Extract parameters from the message
-                        values = message["value"]
-                        modelData = values["model"]
-
-                        if values["send_progress"]:
-                            await websocket.send(json.dumps({"action": "display_title", "type": "img2img", "value": {"text": "Loading model"}}))
-                        load_model(
-                            modelData["file"], 
-                            "scripts/v1-inference.yaml", 
-                            modelData["device"], 
-                            modelData["precision"], 
-                            modelData["optimized"])
-                        
-                        if values["send_progress"]:
-                            await websocket.send(json.dumps({"action": "display_title", "type": "img2img", "value": {"text": "Generating..."}}))
-                        for result in img2img(
-                            values["prompt"],
-                            values["negative"],
-                            values["translate"],
-                            values["prompt_tuning"],
-                            values["width"],
-                            values["height"],
-                            values["pixel_size"],
-                            values["quality"],
-                            values["scale"],
-                            values["strength"],
-                            values["seed"],
-                            values["generations"],
-                            values["max_batch_size"],
-                            modelData["device"],
-                            modelData["precision"],
-                            values["loras"],
-                            values["image"],
-                            values["tile_x"],
-                            values["tile_y"],
-                            values["send_progress"],
-                            values["use_pixelvae"],
-                            values["post_process"]
-                        ):
-                            if values["send_progress"]:
-                                await websocket.send(json.dumps(result))
-                        
-                        if values["send_progress"]:
-                            await websocket.send(json.dumps({"action": "display_title", "type": "img2img", "value": {"text": "Generation complete"}}))
-                        await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": result["value"]["images"]}}))
-                    except Exception as e: 
-                        if "SSLCertVerificationError" in traceback.format_exc():
-                            rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
-                        elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
-                            rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size. If samples are at 100%, this was caused by the VAE running out of memory, try enabling the Fast Pixel Decoder")
-                            if modelLM is not None:
-                                rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
-                        elif "Expected batch_size > 0 to be true" in traceback.format_exc():
-                            rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources during image encoding. Please lower the maximum batch size, or use a smaller input image")
-                        elif "cannot reshape tensor of 0 elements" in traceback.format_exc():
-                            rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources during image encoding. Please lower the maximum batch size, or use a smaller input image")
-                        else:
-                            rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                        play("error.wav")
-                        await websocket.send(json.dumps({"action": "error"}))
-                case "txt2pal":
-                    try:
-                        # Extract parameters from the message
-                        values = message["value"]
-
-                        modelData = values["model"]
-                        load_model(
-                            modelData["file"], 
-                            "scripts/v1-inference.yaml", 
-                            modelData["device"], 
-                            modelData["precision"], 
-                            modelData["optimized"])
-                        
-                        images = paletteGen(
-                            values["prompt"],
-                            values["colors"],
-                            values["seed"],
-                            modelData["device"],
-                            modelData["precision"]
-                        )
-                        
-                        await websocket.send(json.dumps({"action": "returning", "type": "txt2pal", "value": {"images": images}}))
-                    except Exception as e:
-                        if "SSLCertVerificationError" in traceback.format_exc():
-                            rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
-                        elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
-                            rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
-                            if modelLM is not None:
-                                rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
-                        else:
-                            rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                        play("error.wav")
-                        await websocket.send(json.dumps({"action": "error"}))
-                case "translate":
-                    try:
-                        # Extract parameters from the message
-                        values = message["value"]
-                        
-                        prompts = prompt2prompt(
-                            values["model_folder"],
-                            values["prompt"],
-                            values["negative"],
-                            values["generations"],
-                            values["seed"]
-                        )
-                        await websocket.send(json.dumps({"action": "returning", "type": "translate", "value": prompts}))
-                    except Exception as e:
-                        rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                        play("error.wav")
-                        await websocket.send(json.dumps({"action": "error"}))
-                case "benchmark":
-                    try:
-                        # Extract parameters from the message
-                        values = message["value"]
-
-                        modelData = values["model"]
-                        load_model(
-                            modelData["file"], 
-                            "scripts/v1-inference.yaml", 
-                            modelData["device"], 
-                            modelData["precision"], 
-                            modelData["optimized"])
-                        
-                        prompts = benchmark(
-                            modelData["device"],
-                            modelData["precision"],
-                            values["time_limit"],
-                            values["max_test_size"],
-                            values["error_range"],
-                            values["use_pixelvae"],
-                            values["seed"]
-                        )
-
-                        await websocket.send(json.dumps({"action": "returning", "type": "benchmark", "value": max(32, maxSize-8)})) # We subtract 8 to leave a little VRAM headroom, so it doesn't OOM if you open a youtube tab T-T
-                    except Exception as e:
-                        rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                        play("error.wav")
-                        await websocket.send(json.dumps({"action": "error"}))
-                case "palettize":
-                    try:
-                        # Extract parameters from the message
-                        values = message["value"]
-                        images = palettize(
-                            values["images"],
-                            values["source"],
-                            values["url"],
-                            values["palettes"],
-                            values["colors"],
-                            values["dithering"],
-                            values["dither_strength"],
-                            values["denoise"],
-                            values["smoothness"],
-                            values["intensity"]
-                        )
-                        await websocket.send(json.dumps({"action": "returning", "type": "palettize", "value": {"images": images}}))
-                    except Exception as e: 
-                        rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                        play("error.wav")
-                        await websocket.send(json.dumps({"action": "error"}))
-                case "rembg":
-                    try:
-                        # Extract parameters from the message
-                        values = message["value"]
-                        rembg(
-                            values["images"],
-                            values["model_folder"]
-                        )
-                        await websocket.send(json.dumps({"action": "returning", "type": "rembg"}))
-                    except Exception as e: 
-                        rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                        play("error.wav")
-                        await websocket.send(json.dumps({"action": "error"}))
-                case "pixelDetect":
-                    try:
-                        # Extract parameters from the message
-                        values = message["value"]
-                        pixelDetectVerbose(
-                            values["image"]
-                        )
-                        await websocket.send(json.dumps({"action": "returning", "type": "pixelDetect"}))
-                    except Exception as e: 
-                        rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                        play("error.wav")
-                        await websocket.send(json.dumps({"action": "error"}))
-                case "kcentroid":
-                    try:
-                        # Extract parameters from the message
-                        values = message["value"]
-                        kCentroidVerbose(
-                            values["images"],
-                            values["width"],
-                            values["height"],
-                            values["centroids"]
-                        )
-                        await websocket.send(json.dumps({"action": "returning", "type": "kcentroid"}))
-                    except Exception as e: 
-                        rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                        play("error.wav")
-                        await websocket.send(json.dumps({"action": "error"}))
-                case "connected":
-                    global sounds
-                    try:
-                        background, sounds, extensionVersion = message["value"]["background"], message["value"]["play_sound"], message["value"]["version"]
-                        rd = gw.getWindowsWithTitle("Retro Diffusion Image Generator")[0]
-                        if not background:
-                            try:
-                                # Restore and activate the window
-                                rd.restore()
-                                rd.activate()
-                            except:
-                                pass
-                        else:
-                            try:
-                                # Minimize the window
-                                rd.minimize()
-                            except:
-                                pass
-                    except:
-                        pass
-
-                    if extensionVersion == expectedVersion:
-                        play("click.wav")
-                        await websocket.send(json.dumps({"action": "connected"}))
-                    else:
-                        rprint(f"\n[#ab333d]The current client is on a version that is incompatible with the image generator version. Please update the extension.")
-                case "recieved":
-                    if not background:
+    try:
+        async for message in websocket:
+            # For debugging
+            #print(message)
+            try:
+                message = json.loads(message)
+                match message["action"]:
+                    case "txt2img":
                         try:
+                            # Extract parameters from the message
+                            values = message["value"]
+                            modelData = values["model"]
+
+                            if values["send_progress"]:
+                                await websocket.send(json.dumps({"action": "display_title", "type": "txt2img", "value": {"text": "Loading model"}}))
+                            load_model(
+                                modelData["file"], 
+                                "scripts/v1-inference.yaml", 
+                                modelData["device"], 
+                                modelData["precision"], 
+                                modelData["optimized"])
+
+                            if values["send_progress"]:
+                                await websocket.send(json.dumps({"action": "display_title", "type": "txt2img", "value": {"text": "Generating..."}}))
+                            for result in txt2img(
+                                values["prompt"],
+                                values["negative"],
+                                values["translate"],
+                                values["prompt_tuning"],
+                                values["width"],
+                                values["height"],
+                                values["pixel_size"],
+                                values["enhance_composition"],
+                                values["quality"],
+                                values["scale"],
+                                values["seed"],
+                                values["generations"],
+                                values["max_batch_size"],
+                                modelData["device"],
+                                modelData["precision"],
+                                values["loras"],
+                                values["tile_x"],
+                                values["tile_y"],
+                                values["send_progress"],
+                                values["use_pixelvae"],
+                                values["post_process"]
+                            ):
+                                if values["send_progress"]:
+                                    await websocket.send(json.dumps(result))
+                            
+                            if values["send_progress"]:
+                                await websocket.send(json.dumps({"action": "display_title", "type": "txt2img", "value": {"text": "Generation complete"}}))
+                            await websocket.send(json.dumps({"action": "returning", "type": "txt2img", "value": {"images": result["value"]["images"]}}))
+                        except Exception as e:
+                            if "SSLCertVerificationError" in traceback.format_exc():
+                                rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
+                            elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
+                                rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
+                                if modelLM is not None:
+                                    rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
+                            else:
+                                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                            play("error.wav")
+                            await websocket.send(json.dumps({"action": "error"}))
+                    case "img2img":
+                        try:
+                            # Extract parameters from the message
+                            values = message["value"]
+                            modelData = values["model"]
+
+                            if values["send_progress"]:
+                                await websocket.send(json.dumps({"action": "display_title", "type": "img2img", "value": {"text": "Loading model"}}))
+                            load_model(
+                                modelData["file"], 
+                                "scripts/v1-inference.yaml", 
+                                modelData["device"], 
+                                modelData["precision"], 
+                                modelData["optimized"])
+                            
+                            if values["send_progress"]:
+                                await websocket.send(json.dumps({"action": "display_title", "type": "img2img", "value": {"text": "Generating..."}}))
+                            for result in img2img(
+                                values["prompt"],
+                                values["negative"],
+                                values["translate"],
+                                values["prompt_tuning"],
+                                values["width"],
+                                values["height"],
+                                values["pixel_size"],
+                                values["quality"],
+                                values["scale"],
+                                values["strength"],
+                                values["seed"],
+                                values["generations"],
+                                values["max_batch_size"],
+                                modelData["device"],
+                                modelData["precision"],
+                                values["loras"],
+                                values["images"],
+                                values["tile_x"],
+                                values["tile_y"],
+                                values["send_progress"],
+                                values["use_pixelvae"],
+                                values["post_process"]
+                            ):
+                                if values["send_progress"]:
+                                    await websocket.send(json.dumps(result))
+                            
+                            if values["send_progress"]:
+                                await websocket.send(json.dumps({"action": "display_title", "type": "img2img", "value": {"text": "Generation complete"}}))
+                            await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": result["value"]["images"]}}))
+                        except Exception as e: 
+                            if "SSLCertVerificationError" in traceback.format_exc():
+                                rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
+                            elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
+                                rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size. If samples are at 100%, this was caused by the VAE running out of memory, try enabling the Fast Pixel Decoder")
+                                if modelLM is not None:
+                                    rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
+                            elif "Expected batch_size > 0 to be true" in traceback.format_exc():
+                                rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources during image encoding. Please lower the maximum batch size, or use a smaller input image")
+                            elif "cannot reshape tensor of 0 elements" in traceback.format_exc():
+                                rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources during image encoding. Please lower the maximum batch size, or use a smaller input image")
+                            else:
+                                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                            play("error.wav")
+                            await websocket.send(json.dumps({"action": "error"}))
+                    case "txt2pal":
+                        try:
+                            # Extract parameters from the message
+                            values = message["value"]
+
+                            modelData = values["model"]
+                            load_model(
+                                modelData["file"], 
+                                "scripts/v1-inference.yaml", 
+                                modelData["device"], 
+                                modelData["precision"], 
+                                modelData["optimized"])
+                            
+                            images = paletteGen(
+                                values["prompt"],
+                                values["colors"],
+                                values["seed"],
+                                modelData["device"],
+                                modelData["precision"]
+                            )
+                            
+                            await websocket.send(json.dumps({"action": "returning", "type": "txt2pal", "value": {"images": images}}))
+                        except Exception as e:
+                            if "SSLCertVerificationError" in traceback.format_exc():
+                                rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
+                            elif "torch.cuda.OutOfMemoryError" in traceback.format_exc():
+                                rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
+                                if modelLM is not None:
+                                    rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
+                            else:
+                                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                            play("error.wav")
+                            await websocket.send(json.dumps({"action": "error"}))
+                    case "translate":
+                        try:
+                            # Extract parameters from the message
+                            values = message["value"]
+                            
+                            prompts = prompt2prompt(
+                                values["model_folder"],
+                                values["prompt"],
+                                values["negative"],
+                                values["generations"],
+                                values["seed"]
+                            )
+                            await websocket.send(json.dumps({"action": "returning", "type": "translate", "value": prompts}))
+                        except Exception as e:
+                            rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                            play("error.wav")
+                            await websocket.send(json.dumps({"action": "error"}))
+                    case "benchmark":
+                        try:
+                            # Extract parameters from the message
+                            values = message["value"]
+
+                            modelData = values["model"]
+                            load_model(
+                                modelData["file"], 
+                                "scripts/v1-inference.yaml", 
+                                modelData["device"], 
+                                modelData["precision"], 
+                                modelData["optimized"])
+                            
+                            prompts = benchmark(
+                                modelData["device"],
+                                modelData["precision"],
+                                values["time_limit"],
+                                values["max_test_size"],
+                                values["error_range"],
+                                values["use_pixelvae"],
+                                values["seed"]
+                            )
+
+                            await websocket.send(json.dumps({"action": "returning", "type": "benchmark", "value": max(32, maxSize-8)})) # We subtract 8 to leave a little VRAM headroom, so it doesn't OOM if you open a youtube tab T-T
+                        except Exception as e:
+                            rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                            play("error.wav")
+                            await websocket.send(json.dumps({"action": "error"}))
+                    case "palettize":
+                        try:
+                            # Extract parameters from the message
+                            values = message["value"]
+                            images = palettize(
+                                values["images"],
+                                values["source"],
+                                values["url"],
+                                values["palettes"],
+                                values["colors"],
+                                values["dithering"],
+                                values["dither_strength"],
+                                values["denoise"],
+                                values["smoothness"],
+                                values["intensity"]
+                            )
+                            await websocket.send(json.dumps({"action": "returning", "type": "palettize", "value": {"images": images}}))
+                        except Exception as e: 
+                            rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                            play("error.wav")
+                            await websocket.send(json.dumps({"action": "error"}))
+                    case "rembg":
+                        try:
+                            # Extract parameters from the message
+                            values = message["value"]
+                            images = rembg(
+                                values["images"],
+                                values["model_folder"]
+                            )
+                            await websocket.send(json.dumps({"action": "returning", "type": "rembg", "value": {"images": images}}))
+                        except Exception as e: 
+                            rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                            play("error.wav")
+                            await websocket.send(json.dumps({"action": "error"}))
+                    case "pixelDetect":
+                        try:
+                            # Extract parameters from the message
+                            values = message["value"]
+                            images = pixelDetectVerbose(
+                                values["images"]
+                            )
+                            print(images)
+                            await websocket.send(json.dumps({"action": "returning", "type": "pixelDetect", "value": {"images": images}}))
+                        except Exception as e: 
+                            rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                            play("error.wav")
+                            await websocket.send(json.dumps({"action": "error"}))
+                    case "kcentroid":
+                        try:
+                            # Extract parameters from the message
+                            values = message["value"]
+                            images = kCentroidVerbose(
+                                values["images"],
+                                values["width"],
+                                values["height"],
+                                values["centroids"]
+                            )
+                            await websocket.send(json.dumps({"action": "returning", "type": "kcentroid", "value": {"images": images}}))
+                        except Exception as e: 
+                            rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                            play("error.wav")
+                            await websocket.send(json.dumps({"action": "error"}))
+                    case "connected":
+                        global sounds
+                        try:
+                            background, sounds, extensionVersion = message["value"]["background"], message["value"]["play_sound"], message["value"]["version"]
                             rd = gw.getWindowsWithTitle("Retro Diffusion Image Generator")[0]
-                            if gw.getActiveWindow() is not None:
-                                if gw.getActiveWindow().title == "Retro Diffusion Image Generator":
+                            if not background:
+                                try:
+                                    # Restore and activate the window
+                                    rd.restore()
+                                    rd.activate()
+                                except:
+                                    pass
+                            else:
+                                try:
                                     # Minimize the window
                                     rd.minimize()
+                                except:
+                                    pass
                         except:
                             pass
-                    await websocket.send(json.dumps({"action": "free_websocket"}))
-                    clearCache()
-                case "shutdown":
-                    rprint("[#ab333d]Shutting down...")
-                    global running
-                    global timeout
-                    running = False
-                    await websocket.close()
-                    asyncio.get_event_loop().call_soon_threadsafe(asyncio.get_event_loop().stop)
-        except:
-            pass
 
-async def connectSend(uri, message):
-    async with connect(uri) as websocket:
-        # Send a message over the WebSocket connection
-        await websocket.send(message)
+                        if extensionVersion == expectedVersion:
+                            play("click.wav")
+                            await websocket.send(json.dumps({"action": "connected"}))
+                        else:
+                            rprint(f"\n[#ab333d]The current client is on a version that is incompatible with the image generator version. Please update the extension.")
+                    case "recieved":
+                        if not background:
+                            try:
+                                rd = gw.getWindowsWithTitle("Retro Diffusion Image Generator")[0]
+                                if gw.getActiveWindow() is not None:
+                                    if gw.getActiveWindow().title == "Retro Diffusion Image Generator":
+                                        # Minimize the window
+                                        rd.minimize()
+                            except:
+                                pass
+                        await websocket.send(json.dumps({"action": "free_websocket"}))
+                        clearCache()
+                    case "shutdown":
+                        rprint("[#ab333d]Shutting down...")
+                        global running
+                        global timeout
+                        running = False
+                        await websocket.close()
+                        asyncio.get_event_loop().call_soon_threadsafe(asyncio.get_event_loop().stop)
+            except:
+                pass
+    except Exception as e:
+        if "PayloadTooBig" or "message too big" in traceback.format_exc():
+            rprint(f"\n[#ab333d]The message websockets recieved was too large, please reduce the size or number of images being processed")
+        else:
+            rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+        play("error.wav")
+        await websocket.close()
+        rprint(f"\n[#ab333d]The image generator AND ASEPRITE must be restarted")
+        input("Press any key to close")
+        asyncio.get_event_loop().call_soon_threadsafe(asyncio.get_event_loop().stop)
 
 if system == "Windows":
     os.system("title Retro Diffusion Image Generator")
@@ -2216,7 +2229,7 @@ rprint("\n" + climage(Image.open("logo.png"), "centered") + "\n\n")
 
 rprint("[#48a971]Starting Image Generator...")
 
-start_server = serve(server, "localhost", 8765)
+start_server = serve(server, "localhost", 8765, max_size=50*1024*1024)
 
 rprint("[#c4f129]Connected")
 
