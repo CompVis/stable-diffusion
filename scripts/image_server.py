@@ -826,7 +826,7 @@ def kDenoise(image, smoothing, strength):
 
     return Image.fromarray(denoised, mode='RGB')
 
-def determine_best_k(image, max_k, n_samples=10000, smooth_window=7):
+def determine_best_k(image, max_k, n_samples=10000, smooth_window=5):
     image = image.convert("RGB")
 
     # Flatten the image pixels and sample them
@@ -1054,7 +1054,7 @@ def palettizeOutput(images):
     for image in images:
         tempImage = image["image"]
 
-        numColors = determine_best_k(tempImage, 64)
+        numColors = determine_best_k(tempImage, 96)
 
         image_indexed = tempImage.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert('RGB')
     
@@ -1397,9 +1397,9 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
                         displayOut = []
                         for i in range(batch):
                             x_sample_image = fastRender(modelPV, samples_ddim, pixelSize, W, H, i)
-                            displayOut.append({"name": seed+i+1, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
+                            displayOut.append({"name": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                         yield {"action": "display_title", "type": "txt2img", "value": {"text": f"Generating... {step}/{pre_steps} steps in batch {run+1}/{runs}"}}
-                        yield {"action": "display_image", "type": "txt2img", "value": {"images": displayOut}}
+                        yield {"action": "display_image", "type": "txt2img", "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}
 
                 if upscale:
                     samples_ddim = torch.nn.functional.interpolate(samples_ddim, size=(H // 8, W // 8), mode="bilinear")
@@ -1422,9 +1422,9 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
                             displayOut = []
                             for i in range(batch):
                                 x_sample_image = fastRender(modelPV, samples_ddim, pixelSize, W, H, i)
-                                displayOut.append({"name": seed+i+1, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
+                                displayOut.append({"name": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                             yield {"action": "display_title", "type": "txt2img", "value": {"text": f"Generating... {step}/{up_steps} steps in batch {run+1}/{runs}"}}
-                            yield {"action": "display_image", "type": "txt2img", "value": {"images": displayOut}}
+                            yield {"action": "display_image", "type": "txt2img", "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}
                 
                 for i in range(batch):
                     x_sample_image, post = render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
@@ -1460,13 +1460,10 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
             final.append({"name": image["name"], "format": image["format"], "image": encodeImage(image["image"], "png"), "width": image["width"], "height": image["height"]})
         play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
-        yield {"action": "display_image", "type": "txt2img", "value": {"images": final}}
+        yield {"action": "display_image", "type": "txt2img", "value": {"images": final, "prompts": data, "negatives": negative_data}}
 
 def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality, scale, strength, seed, total_images, maxBatchSize, device, precision, loras, images, tilingX, tilingY, preview, pixelvae, post):
     timer = time.time()
-
-    os.makedirs("temp", exist_ok=True)
-    outpath = "temp"
 
     if device == "cuda" and not torch.cuda.is_available():
         if torch.backends.mps.is_available():
@@ -1476,9 +1473,7 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
             rprint(f"\n[#ab333d]GPU is not responding, loading model in CPU mode")
                                        
     # Load initial image and move it to the specified device
-    #init_img = "temp/input.png"
     init_img = decodeImage(images[0])
-    #assert os.path.isfile(init_img)
     init_image = load_img(init_img, H, W).to(device)
 
     global maxSize
@@ -1649,15 +1644,10 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
                             x_sample_image = fastRender(modelPV, samples_ddim, pixelSize, W, H, i)
                             displayOut.append({"name": seed+i+1, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                         yield {"action": "display_title", "type": "img2img", "value": {"text": f"Generating... {step}/{steps} steps in batch {run+1}/{runs}"}}
-                        yield {"action": "display_image", "type": "img2img", "value": {"images": displayOut}}
+                        yield {"action": "display_image", "type": "img2img", "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}
 
                 for i in range(batch):
                     x_sample_image, post = render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
-                    
-                    file_name = "temp" + f"{base_count+1}"
-                    x_sample_image.save(
-                        os.path.join(outpath, file_name + ".png")
-                    )
 
                     if total_images > 1 and (base_count+1) < total_images:
                         play("iteration.wav")
@@ -1689,7 +1679,7 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
             final.append({"name": image["name"], "format": image["format"], "image": encodeImage(image["image"], "png"), "width": image["width"], "height": image["height"]})
         play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
-        yield {"action": "display_image", "type": "img2img", "value": {"images": final}}
+        yield {"action": "display_image", "type": "img2img", "value": {"images": final, "prompts": data, "negatives": negative_data}}
 
 def prompt2prompt(path, prompt, negative, generations, seed):
     timer = time.time()
@@ -2211,14 +2201,10 @@ async def server(websocket):
                 pass
     except Exception as e:
         if "PayloadTooBig" or "message too big" in traceback.format_exc():
-            rprint(f"\n[#ab333d]The message websockets recieved was too large, please reduce the size or number of images being processed")
+            rprint(f"\n[#ab333d]Websockets received a message that was too large")
         else:
             rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
         play("error.wav")
-        await websocket.close()
-        rprint(f"\n[#ab333d]The image generator AND ASEPRITE must be restarted")
-        input("Press any key to close")
-        asyncio.get_event_loop().call_soon_threadsafe(asyncio.get_event_loop().stop)
 
 if system == "Windows":
     os.system("title Retro Diffusion Image Generator")
