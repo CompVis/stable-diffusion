@@ -2131,7 +2131,6 @@ async def server(websocket):
                             images = pixelDetectVerbose(
                                 values["images"]
                             )
-                            print(images)
                             await websocket.send(json.dumps({"action": "returning", "type": "pixelDetect", "value": {"images": images}}))
                         except Exception as e: 
                             rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
