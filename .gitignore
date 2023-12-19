@@ -45,3 +45,6 @@ models/base/modelmicro.pxlm
 *.safetensors
 *.ckpt
 models/loras/LICENSE
+temp/RD_decode_temp.png
+temp/RD_encode_temp.png
+temp/RD_mask.png
