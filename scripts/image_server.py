@@ -1,74 +1,81 @@
 print("Importing libraries. This may take one or more minutes.")
 
-# Import core libraries
-import os, re, time, sys, asyncio, ctypes, math, threading, platform, json
-import torch
-import scipy
-import numpy as np
-from random import randint
-from omegaconf import OmegaConf
-from PIL import Image, ImageEnhance, ImageFilter
-import cv2
-from itertools import islice, product
-from einops import rearrange
-from pytorch_lightning import seed_everything
-from transformers import BlipProcessor, BlipForConditionalGeneration
-from contextlib import nullcontext
-from typing import Optional
-from safetensors.torch import load_file
-from cryptography.fernet import Fernet
+try:
+    # Import core libraries
+    import os, re, time, sys, asyncio, ctypes, math, threading, platform, json
+    import torch
+    import scipy
+    import numpy as np
+    from random import randint
+    from omegaconf import OmegaConf
+    from PIL import Image, ImageEnhance, ImageFilter
+    import cv2
+    from itertools import islice, product
+    from einops import rearrange
+    from pytorch_lightning import seed_everything
+    from transformers import BlipProcessor, BlipForConditionalGeneration
+    from contextlib import nullcontext
+    from typing import Optional
+    from safetensors.torch import load_file
+    from cryptography.fernet import Fernet
 
-# Import built libraries
-from ldm.util import instantiate_from_config, max_tile
-from optimization.pixelvae import load_pixelvae_model
-from optimization.taesd import TAESD
-from lora import apply_lora, assign_lora_names_to_compvis_modules, load_lora, register_lora_for_inference, remove_lora_for_inference
-from upsample_prompts import load_chat_pipeline, upsample_caption, collect_response
-import segmenter
-import hitherdither
+    # Import built libraries
+    from ldm.util import instantiate_from_config, max_tile
+    from optimization.pixelvae import load_pixelvae_model
+    from optimization.taesd import TAESD
+    from lora import apply_lora, assign_lora_names_to_compvis_modules, load_lora, register_lora_for_inference, remove_lora_for_inference
+    from upsample_prompts import load_chat_pipeline, upsample_caption, collect_response
+    import segmenter
+    import hitherdither
 
-# Import PyTorch functions
-from torch import autocast
-from torch import Tensor
-from torch.nn import functional as F
-from torch.nn.modules.utils import _pair
+    # Import PyTorch functions
+    from torch import autocast
+    from torch import Tensor
+    from torch.nn import functional as F
+    from torch.nn.modules.utils import _pair
 
-# Import logging libraries
-import traceback, warnings
-import logging as pylog
-from transformers.utils import logging
+    # Import logging libraries
+    import traceback, warnings
+    import logging as pylog
+    from transformers.utils import logging
 
-# Import websocket tools
-import requests
-from websockets import serve, connect
-from io import BytesIO
-import base64
+    # Import websocket tools
+    import requests
+    from websockets import serve, connect
+    from io import BytesIO
+    import base64
 
-# Import console management libraries
-from rich import print as rprint
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    try:
-        import pygetwindow as gw
-    except:
-        pass
-from colorama import just_fix_windows_console
-import playsound
+    # Import console management libraries
+    from rich import print as rprint
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        try:
+            import pygetwindow as gw
+        except:
+            pass
+    from colorama import just_fix_windows_console
+    import playsound
 
-system = platform.system()
+    system = platform.system()
 
-if system == "Windows":
-    # Fix windows console for color codes
-    just_fix_windows_console()
+    if system == "Windows":
+        # Fix windows console for color codes
+        just_fix_windows_console()
 
-    # Patch existing console to remove interactivity
-    kernel32 = ctypes.windll.kernel32
-    kernel32.SetConsoleMode(kernel32.GetStdHandle(-10), 128)
+        # Patch existing console to remove interactivity
+        kernel32 = ctypes.windll.kernel32
+        kernel32.SetConsoleMode(kernel32.GetStdHandle(-10), 128)
 
-log = pylog.getLogger("lightning_fabric")
-log.propagate = False
-log.setLevel(pylog.ERROR)
-logging.set_verbosity(logging.CRITICAL)
+    log = pylog.getLogger("lightning_fabric")
+    log.propagate = False
+    log.setLevel(pylog.ERROR)
+    logging.set_verbosity(logging.CRITICAL)
+
+except:
+    import traceback
+    print(f"ERROR:\n{traceback.format_exc()}")
+    input("Catastrophic failure, send this error to the developer.\nPress any key to exit.")
+    exit()
 
 global modelName
 modelName = None
@@ -678,7 +685,7 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loras, tra
     if modelType == "pixel" and promptTuning:
         prefix = "pixel art"
         suffix = "detailed"
-        negativeList = [negative, "mutated, noise, sexy, nsfw, nude, frame, film reel, snowglobe, deformed, stock image, watermark, text, signature, username"]
+        negativeList = [negative, "mutated, noise, nsfw, nude, frame, film reel, snowglobe, deformed, stock image, watermark, text, signature, username"]
 
         if any(f"{_}.pxlm" in loraNames for _ in ["topdown", "isometric", "neogeo", "nes", "snes", "playstation", "gameboy", "gameboyadvance"]):
             prefix = "pixel"
@@ -826,7 +833,7 @@ def kDenoise(image, smoothing, strength):
 
     return Image.fromarray(denoised, mode='RGB')
 
-def determine_best_k(image, max_k, n_samples=10000, smooth_window=5):
+def determine_best_k(image, max_k, n_samples=10000, smooth_window=7):
     image = image.convert("RGB")
 
     # Flatten the image pixels and sample them
@@ -973,7 +980,7 @@ def palettize(images, source, paletteURL, palettes, colors, dithering, strength,
         threshold = 4*strength
 
         if source == "Automatic":
-            numColors = determine_best_k(image, 128)
+            numColors = determine_best_k(image, 96)
         
         # Check if a palette file is provided
         if paletteImage is not None or source == "Best Palette":
