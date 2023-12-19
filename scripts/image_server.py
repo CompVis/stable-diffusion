@@ -912,7 +912,7 @@ def determine_best_palette_verbose(image, palettes):
         # Calculate distortions more memory-efficiently
         min_distances = [np.min(np.linalg.norm(centroid - pixel_indices, axis=1)) for centroid in centroids]
         distortions.append(np.sum(np.square(min_distances)))
-    
+
     # Find the best match
     best_match_index = np.argmin(filterList(distortions))
     return paletteImages[best_match_index], palettes[best_match_index]["name"]
@@ -979,8 +979,13 @@ def palettize(images, source, paletteURL, palettes, colors, dithering, strength,
         if paletteImage is not None or source == "Best Palette":
             # Open the palette image and calculate the number of colors
             if source == "Best Palette":
-                paletteImage, palFile = determine_best_palette_verbose(image, palettes)
-                palFiles.append(str(palFile))
+                if len(palettes) > 0:
+                    paletteImage, palFile = determine_best_palette_verbose(image, palettes)
+                    palFiles.append(str(palFile))
+                else:
+                    rprint(f"\n[#ab333d]ERROR:\nNo palettes were found in the selected folder\n\n\n\n")
+                    play("error.wav")
+                    paletteImage = image
             
             numColors = len(paletteImage.getcolors(16777216))
 
