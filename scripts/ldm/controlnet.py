@@ -3,10 +3,11 @@ import math
 import os
 import contextlib
 import ldm.utils
-import scripts.ldm.model_management
-import scripts.ldm.model_detection
+import ldm.model_management
+import ldm.model_detection
 import ldm.model_patcher
-import scripts.ldm.ops
+import ldm.ops
+import ldm.t2i_adapter
 
 import ldm.comfy_cldm
 
@@ -420,3 +421,128 @@ def load_controlnet(ckpt_path, model=None):
     controlnet_data = ldm.utils.load_torch_file(ckpt_path, safe_load=True)
     if "lora_controlnet" in controlnet_data:
         return ControlLora(controlnet_data)
+
+
+class T2IAdapter(ControlBase):
+    def __init__(self, t2i_model, channels_in, device=None):
+        super().__init__(device)
+        self.t2i_model = t2i_model
+        self.channels_in = channels_in
+        self.control_input = None
+
+    def scale_image_to(self, width, height):
+        unshuffle_amount = self.t2i_model.unshuffle_amount
+        width = math.ceil(width / unshuffle_amount) * unshuffle_amount
+        height = math.ceil(height / unshuffle_amount) * unshuffle_amount
+        return width, height
+
+    def get_control(self, x_noisy, t, cond, batched_number):
+        control_prev = None
+        if self.previous_controlnet is not None:
+            control_prev = self.previous_controlnet.get_control(
+                x_noisy, t, cond, batched_number
+            )
+
+        if self.timestep_range is not None:
+            if t[0] > self.timestep_range[0] or t[0] < self.timestep_range[1]:
+                if control_prev is not None:
+                    return control_prev
+                else:
+                    return None
+
+        if (
+            self.cond_hint is None
+            or x_noisy.shape[2] * 8 != self.cond_hint.shape[2]
+            or x_noisy.shape[3] * 8 != self.cond_hint.shape[3]
+        ):
+            if self.cond_hint is not None:
+                del self.cond_hint
+            self.control_input = None
+            self.cond_hint = None
+            width, height = self.scale_image_to(
+                x_noisy.shape[3] * 8, x_noisy.shape[2] * 8
+            )
+            self.cond_hint = (
+                ldm.utils.common_upscale(
+                    self.cond_hint_original, width, height, "nearest-exact", "center"
+                )
+                .float()
+                .to(self.device)
+            )
+            if self.channels_in == 1 and self.cond_hint.shape[1] > 1:
+                self.cond_hint = torch.mean(self.cond_hint, 1, keepdim=True)
+        if x_noisy.shape[0] != self.cond_hint.shape[0]:
+            self.cond_hint = broadcast_image_to(
+                self.cond_hint, x_noisy.shape[0], batched_number
+            )
+        if self.control_input is None:
+            self.t2i_model.to(x_noisy.dtype)
+            self.t2i_model.to(self.device)
+            self.control_input = self.t2i_model(self.cond_hint.to(x_noisy.dtype))
+            self.t2i_model.cpu()
+
+        control_input = list(
+            map(lambda a: None if a is None else a.clone(), self.control_input)
+        )
+        mid = None
+        if self.t2i_model.xl == True:
+            mid = control_input[-1:]
+            control_input = control_input[:-1]
+        return self.control_merge(control_input, mid, control_prev, x_noisy.dtype)
+
+    def copy(self):
+        c = T2IAdapter(self.t2i_model, self.channels_in)
+        self.copy_to(c)
+        return c
+
+
+def load_t2i_adapter(t2i_data):
+    if "adapter" in t2i_data:
+        t2i_data = t2i_data["adapter"]
+    if "adapter.body.0.resnets.0.block1.weight" in t2i_data:  # diffusers format
+        prefix_replace = {}
+        for i in range(4):
+            for j in range(2):
+                prefix_replace[
+                    "adapter.body.{}.resnets.{}.".format(i, j)
+                ] = "body.{}.".format(i * 2 + j)
+            prefix_replace["adapter.body.{}.".format(i, j)] = "body.{}.".format(i * 2)
+        prefix_replace["adapter."] = ""
+        t2i_data = ldm.utils.state_dict_prefix_replace(t2i_data, prefix_replace)
+    keys = t2i_data.keys()
+
+    if "body.0.in_conv.weight" in keys:
+        cin = t2i_data["body.0.in_conv.weight"].shape[1]
+        model_ad = ldm.t2i_adapter.Adapter_light(
+            cin=cin, channels=[320, 640, 1280, 1280], nums_rb=4
+        )
+    elif "conv_in.weight" in keys:
+        cin = t2i_data["conv_in.weight"].shape[1]
+        channel = t2i_data["conv_in.weight"].shape[0]
+        ksize = t2i_data["body.0.block2.weight"].shape[2]
+        use_conv = False
+        down_opts = list(filter(lambda a: a.endswith("down_opt.op.weight"), keys))
+        if len(down_opts) > 0:
+            use_conv = True
+        xl = False
+        if cin == 256 or cin == 768:
+            xl = True
+        model_ad = ldm.t2i_adapter.Adapter(
+            cin=cin,
+            channels=[channel, channel * 2, channel * 4, channel * 4][:4],
+            nums_rb=2,
+            ksize=ksize,
+            sk=True,
+            use_conv=use_conv,
+            xl=xl,
+        )
+    else:
+        return None
+    missing, unexpected = model_ad.load_state_dict(t2i_data)
+    if len(missing) > 0:
+        print("t2i missing", missing)
+
+    if len(unexpected) > 0:
+        print("t2i unexpected", unexpected)
+
+    return T2IAdapter(model_ad, model_ad.input_channels)

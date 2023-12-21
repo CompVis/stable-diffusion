@@ -1627,6 +1627,7 @@ def txt2img(
     # CLDM Test
     from ldm.controlnet import load_controlnet
     from ldm.apply_controlnet import load_image, apply_controlnet
+    from ldm.controlnet import load_t2i_adapter
 
     print("Loading CLDM model...")
     control_strength = 1.0
@@ -1640,6 +1641,11 @@ def txt2img(
     print("Loading ControlNet...")
     controlnet = load_controlnet("./models/controllora/sketch.safetensors")
     print(controlnet)
+    
+    # print("Loading IPAdapter...")
+    adapter = load_t2i_adapter("./models/controllora/sketch.safetensors")
+    print(adapter)
+    # apply the same as controlnet
 
     # load controlnet conditioning image
     image, mask = load_image("beach.png")
