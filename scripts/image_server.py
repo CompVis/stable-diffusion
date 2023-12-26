@@ -1235,7 +1235,7 @@ def paletteGen(prompt, colors, seed, device, precision):
             palette.putpixel((x, y), (r, g, b))
 
     rprint(f"[#c4f129]Image converted to color palette with [#48a971]{colors}[#c4f129] colors")
-    return [{"name": "palette", "format": "png", "image": encodeImage(palette, "png")}]
+    return [{"name": "palette", "format": "png", "image": encodeImage(palette.convert("RGB"), "png")}]
 
 def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale, quality, scale, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, preview, pixelvae, post):
     timer = time.time()
