@@ -1948,8 +1948,6 @@ async def server(websocket):
                                 if values["send_progress"]:
                                     await websocket.send(json.dumps(result))
                             
-                            if values["send_progress"]:
-                                await websocket.send(json.dumps({"action": "display_title", "type": "txt2img", "value": {"text": "Generation complete"}}))
                             await websocket.send(json.dumps({"action": "returning", "type": "txt2img", "value": {"images": result["value"]["images"]}}))
                         except Exception as e:
                             if "SSLCertVerificationError" in traceback.format_exc():
@@ -2006,8 +2004,6 @@ async def server(websocket):
                                 if values["send_progress"]:
                                     await websocket.send(json.dumps(result))
                             
-                            if values["send_progress"]:
-                                await websocket.send(json.dumps({"action": "display_title", "type": "img2img", "value": {"text": "Generation complete"}}))
                             await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": result["value"]["images"]}}))
                         except Exception as e: 
                             if "SSLCertVerificationError" in traceback.format_exc():
@@ -2211,8 +2207,8 @@ async def server(websocket):
             except:
                 pass
     except Exception as e:
-        if "PayloadTooBig" or "message too big" in traceback.format_exc():
-            rprint(f"\n[#ab333d]Websockets received a message that was too large")
+        if "PayloadTooBig" in traceback.format_exc() or "message too big" in traceback.format_exc():
+            rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}\n\n\n[#ab333d]Websockets received a message that was too large")
         else:
             rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
         play("error.wav")
@@ -2226,7 +2222,7 @@ rprint("\n" + climage(Image.open("logo.png"), "centered") + "\n\n")
 
 rprint("[#48a971]Starting Image Generator...")
 
-start_server = serve(server, "localhost", 8765, max_size=50*1024*1024)
+start_server = serve(server, "localhost", 8765, max_size=100*1024*1024)
 
 rprint("[#c4f129]Connected")
 
