@@ -285,24 +285,9 @@ def from_tile(x, nh, nw, original_shape):
 
 def max_tile(row):
 
-    max_value = 1
-
-    if row > 128:
-        # max_value = 2
-        max_value += 1
-    if row > 150:
-        # max_value = 3
-        max_value += 1
-    if row > 164:
-        # max_value = 4
-        max_value += 1
-    if row > 180:
-        # max_value = 5
-        max_value += 1
-    if row > 228:
-        # max_value = 6
-        max_value += 1
+    max_value = round(1 + (9 / (1 + (1.5 ** -((row / 10) - 20)))))
 
     for n in reversed(range(1, max_value+1)):
         if row % n == 0:
             return n
+    return 1
