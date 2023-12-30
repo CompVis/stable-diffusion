@@ -285,8 +285,11 @@ def from_tile(x, nh, nw, original_shape):
 
 def max_tile(row):
 
-    max_value = 2
+    max_value = 1
 
+    if row > 128:
+        # max_value = 2
+        max_value += 1
     if row > 150:
         # max_value = 3
         max_value += 1

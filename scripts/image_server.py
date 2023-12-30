@@ -1260,8 +1260,8 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
     if seed == None:
         seed = randint(0, 1000000)
 
-    wtile = max_tile(W // 8) if W // 8 > 96 else 1
-    htile = max_tile(H // 8) if H // 8 > 96 else 1
+    wtile = max_tile(W // 8)
+    htile = max_tile(H // 8)
 
     gWidth = W // 8
     gHeight = H // 8
@@ -1501,8 +1501,8 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
     if seed == None:
         seed = randint(0, 1000000)
 
-    wtile = max_tile(W // 8) if W // 8 > 96 else 1
-    htile = max_tile(H // 8) if H // 8 > 96 else 1
+    wtile = max_tile(W // 8)
+    htile = max_tile(H // 8)
 
     strength = strength/100
 
