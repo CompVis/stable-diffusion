@@ -1267,10 +1267,10 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
     gHeight = H // 8
 
     global modelPath
-    # Curves defined by https://www.desmos.com/calculator/qneyst8drz
+    # Curves defined by https://www.desmos.com/calculator/aazom0lzyz
     steps = round(3.4 + ((quality ** 2) / 1.5))
-    scale = max(1, scale * ((1.6 + (((quality - 2.1) ** 2) / 3)) / 5))
-    lcm_weight = max(0, 9.5 - (((quality + 1.2) ** 2) / 4))
+    scale = max(1, scale * ((1.6 + (((quality - 1.6) ** 2) / 4)) / 5))
+    lcm_weight = max(1.5, 10 - (quality * 1.5))
     if lcm_weight > 0:
         loras.append({"file": os.path.join(modelPath, "quality.lcm"), "weight": round(lcm_weight*10)})
 
@@ -1285,7 +1285,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
         gWidth = int((lower * max(1, aspect)) + ((gy/7) * aspect))
         gHeight = int((lower * max(1, 1/aspect)) + ((gx/7) * (1/aspect)))
 
-        # Curves defined by https://www.desmos.com/calculator/qneyst8drz
+        # Curves defined by https://www.desmos.com/calculator/aazom0lzyz
         pre_steps = round(steps * ((10 - (((quality - 1.1) ** 2) / 6)) / 10))
         up_steps = round(steps * (((((quality - 6.5) ** 2) / 1.6) + 2.4) / 10))
     else:
@@ -1507,10 +1507,10 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
     strength = strength/100
 
     global modelPath
-    # Curves defined by https://www.desmos.com/calculator/qneyst8drz
+    # Curves defined by https://www.desmos.com/calculator/aazom0lzyz
     steps = round(9 + (((quality-1.85) ** 2) * 1.1))
-    scale = max(1, scale * ((1.6 + (((quality - 2.1) ** 2) / 3)) / 5))
-    lcm_weight = max(0, 9.5 - (((quality + 1.2) ** 2) / 4))
+    scale = max(1, scale * ((1.6 + (((quality - 1.6) ** 2) / 4)) / 5))
+    lcm_weight = max(1.5, 10 - (quality * 1.5))
     if lcm_weight > 0:
         loras.append({"file": os.path.join(modelPath, "quality.lcm"), "weight": round(lcm_weight*10)})
 
@@ -2207,11 +2207,14 @@ async def server(websocket):
             except:
                 pass
     except Exception as e:
-        if "PayloadTooBig" in traceback.format_exc() or "message too big" in traceback.format_exc():
-            rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}\n\n\n[#ab333d]Websockets received a message that was too large")
+        if not "asyncio.exceptions.IncompleteReadError" in traceback.format_exc():
+            rprint(f"\n[#ab333d]Bytes read error (resolved automatically)")
         else:
-            rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-        play("error.wav")
+            if "PayloadTooBig" in traceback.format_exc() or "message too big" in traceback.format_exc():
+                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}\n\n\n[#ab333d]Websockets received a message that was too large")
+            else:
+                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+            play("error.wav")
 
 if system == "Windows":
     os.system("title Retro Diffusion Image Generator")
