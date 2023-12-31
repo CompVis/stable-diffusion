@@ -97,7 +97,7 @@ global modelPath
 global sounds
 sounds = False
 
-expectedVersion = "9.9.0"
+expectedVersion = "10.0.0"
 
 global maxSize
 
