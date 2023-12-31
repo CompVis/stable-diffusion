@@ -1274,10 +1274,15 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
     if lcm_weight > 0:
         loras.append({"file": os.path.join(modelPath, "quality.lcm"), "weight": round(lcm_weight*10)})
 
+
+    # High resolution adjustments for consistency
+        
+    if gWidth >= 96 or gHeight >= 96:
+        loras.append({"file": os.path.join(modelPath, "resfix.lcm"), "weight": 40})
+
     pre_steps = steps
     up_steps = 1
-
-    if W // 8 >= 96 and H // 8 >= 96 and upscale:
+    if gWidth >= 96 and gHeight >= 96 and upscale:
         lower = 50
         aspect = gWidth/gHeight
         gx = gWidth
@@ -1352,7 +1357,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
             loadedLoras[i].multiplier = loraPair["weight"]/100
             register_lora_for_inference(loadedLoras[i])
             apply_lora()
-            if os.path.splitext(loraName)[0] != "quality":
+            if not any(name in os.path.splitext(loraName)[0] for name in ["quality", "resfix"]):
                 rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraName)[0]} [#494b9b]LoRA with [#48a971]{loraPair['weight']}% [#494b9b]strength")
         else:
             loadedLoras.append(None)
@@ -1514,6 +1519,11 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
     if lcm_weight > 0:
         loras.append({"file": os.path.join(modelPath, "quality.lcm"), "weight": round(lcm_weight*10)})
 
+    # High resolution adjustments for consistency
+        
+    if W // 8 >= 96 or H // 8 >= 96:
+        loras.append({"file": os.path.join(modelPath, "resfix.lcm"), "weight": 40})
+
     data, negative_data = managePrompts(prompt, negative, W, H, seed, False, total_images, loras, translate, promptTuning)
     seed_everything(seed)
 
@@ -1571,7 +1581,7 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
             loadedLoras[i].multiplier = loraPair["weight"]/100
             register_lora_for_inference(loadedLoras[i])
             apply_lora()
-            if os.path.splitext(loraName)[0] != "quality":
+            if not any(name in os.path.splitext(loraName)[0] for name in ["quality", "resfix"]):
                 rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraName)[0]} [#494b9b]LoRA with [#48a971]{loraPair['weight']}% [#494b9b]strength")
         else:
             loadedLoras.append(None)
