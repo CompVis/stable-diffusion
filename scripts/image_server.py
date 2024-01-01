@@ -16,6 +16,7 @@ try:
     from transformers import BlipProcessor, BlipForConditionalGeneration
     from contextlib import nullcontext
     from typing import Optional
+    import psutil
     from safetensors.torch import load_file
     from cryptography.fernet import Fernet
 
@@ -66,6 +67,7 @@ try:
         kernel32 = ctypes.windll.kernel32
         kernel32.SetConsoleMode(kernel32.GetStdHandle(-10), 128)
 
+    # Disable all logging for pytorch lightning
     log = pylog.getLogger("lightning_fabric")
     log.propagate = False
     log.setLevel(pylog.ERROR)
@@ -77,15 +79,23 @@ except:
     input("Catastrophic failure, send this error to the developer.\nPress any key to exit.")
     exit()
 
+# Global variables
 global modelName
 modelName = None
+# Unet
 global model
+# Conditioning (clip)
 global modelCS
+# VAE (Unused, replaced by TAE)
 global modelFS
+# TAE
 global modelTA
+# Pixel VAE
 global modelPV
+# Language model
 global modelLM
 modelLM = None
+# Image classifier
 global modelBLIP
 modelBLIP = None
 global modelType
@@ -120,6 +130,7 @@ global timeout
 global loaded
 loaded = ""
 
+# Clears pytorch and mps cache
 def clearCache():
     global loadedDevice
     torch.cuda.empty_cache()
@@ -129,6 +140,7 @@ def clearCache():
         except:
             pass
 
+# Play sound file
 def audioThread(file):
     try:
         absoluteFile = os.path.abspath(f"../sounds/{file}")
@@ -138,6 +150,7 @@ def audioThread(file):
     except:
         pass
 
+# Async audio manager
 def play(file):
     global sounds
     if sounds:
@@ -146,8 +159,8 @@ def play(file):
         except:
             pass
 
+# Patch the Conv2d class with a custom __init__ method
 def patch_conv(**patch):
-    # Patch the Conv2d class with a custom __init__ method
     cls = torch.nn.Conv2d
     init = cls.__init__
 
@@ -157,8 +170,8 @@ def patch_conv(**patch):
     
     cls.__init__ = __init__
 
+# Patch Conv2d layers in the given model for asymmetric padding
 def patch_conv_asymmetric(model, x, y):
-    # Patch Conv2d layers in the given model for asymmetric padding
     for layer in flatten(model):
         if type(layer) == torch.nn.Conv2d:
             # Set padding mode based on x and y arguments
@@ -172,52 +185,32 @@ def patch_conv_asymmetric(model, x, y):
             # Patch the _conv_forward method with a replacement function
             layer._conv_forward = __replacementConv2DConvForward.__get__(layer, torch.nn.Conv2d)
 
+# Restore original _conv_forward method for Conv2d layers in the model
 def restoreConv2DMethods(model):
-        # Restore original _conv_forward method for Conv2d layers in the model
         for layer in flatten(model):
             if type(layer) == torch.nn.Conv2d:
                 layer._conv_forward = torch.nn.Conv2d._conv_forward.__get__(layer, torch.nn.Conv2d)
 
+# Replacement function for Conv2d's _conv_forward method
 def __replacementConv2DConvForward(self, input: Tensor, weight: Tensor, bias: Optional[Tensor]):
-    # Replacement function for Conv2d's _conv_forward method
     working = F.pad(input, self.paddingX, mode=self.padding_modeX)
     working = F.pad(working, self.paddingY, mode=self.padding_modeY)
     return F.conv2d(working, weight, bias, self.stride, _pair(0), self.dilation, self.groups)
 
-def patch_tiling(tilingX, tilingY, model, modelFS, modelPV):
-    # Patch Conv2d layers in the given models for asymmetric padding
+# Patch Conv2d layers in the given models for asymmetric padding
+def patch_tiling(tilingX, tilingY, model, modelTA, modelPV):
+    # Patch for relevant models
     patch_conv_asymmetric(model, tilingX, tilingY)
-    patch_conv_asymmetric(modelFS, tilingX, tilingY)
+    patch_conv_asymmetric(modelTA, tilingX, tilingY)
     patch_conv_asymmetric(modelPV.model, tilingX, tilingY)
 
     if tilingX or tilingY:
         # Print a message indicating the direction(s) patched for tiling
         rprint("[#494b9b]Patched for tiling in the [#48a971]" + "X" * tilingX + "[#494b9b] and [#48a971]" * (tilingX and tilingY) + "Y" * tilingY + "[#494b9b] direction" + "s" * (tilingX and tilingY))
 
-    return model, modelFS, modelPV
+    return model, modelTA, modelPV
 
-def chunk(it, size):
-    # Create an iterator from the input iterable
-    it = iter(it)
-
-    # Return an iterator that yields tuples of the specified size
-    return iter(lambda: tuple(islice(it, size)), ())
-
-def searchString(string, *args):
-    out = []
-
-    # Iterate over the range of arguments, excluding the last one
-    for x in range(len(args)-1):
-        # Perform a regex search in the string using the current and next argument as lookaround patterns
-        # Append the matched substring to the output list
-        try:
-            out.append(re.search(f"(?<={{{args[x]}}}).*(?={{{args[x+1]}}})", string).group())
-        except:
-            if args[x] not in string:
-                rprint(f"\n[#ab333d]Could not find: {args[x]}")
-
-    return out
-
+# Print image in console
 def climage(image, alignment, *args):
 
     # Get console bounds with a small margin - better safe than sorry
@@ -277,6 +270,7 @@ def climage(image, alignment, *args):
         lines.append("".join(line) + "\u202F")
     return " \n".join(lines)
 
+# Print progress bar in console
 def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disable = False, prefixwidth = 1, suffixwidth = 1, total = 0):
 
     # Console manipulation stuff
@@ -383,6 +377,7 @@ def clbar(iterable, name = "", printEnd = "\r", position = "", unit = "it", disa
         for i, item in enumerate(iterable):
             yield item
 
+# Encode pil image bytes as base64 string
 def encodeImage(image, format):
     if format == "png":
         buffer = BytesIO()
@@ -392,6 +387,7 @@ def encodeImage(image, format):
     else:
         return base64.b64encode(image.convert("RGBA").tobytes()).decode('utf-8')
 
+# Decode base64 string to pil image
 def decodeImage(imageString):
     try:
         if imageString["format"] == "png":
@@ -403,8 +399,8 @@ def decodeImage(imageString):
         print(imageString)
         return None
 
+# Open the image and convert it to a tensor with values with range -1, 1
 def load_img(image, h0, w0):
-    # Open the image and prepare it for image to image
     image.convert("RGB")
     w, h = image.size
 
@@ -430,6 +426,7 @@ def load_img(image, h0, w0):
     # Apply a normalization by scaling the values in the range [-1, 1]
     return image
 
+# Run blip captioning for each image in a set with optional starting prompts
 def caption_images(blip, images, prompt = None):
     processor = blip["processor"]
     model = blip["model"]
@@ -444,6 +441,7 @@ def caption_images(blip, images, prompt = None):
         outputs.append(processor.decode(model.generate(**inputs, max_new_tokens=30)[0], skip_special_tokens=True))
     return outputs
 
+# Flatten a model into its layers
 def flatten(el):
     # Flatten nested elements by recursively traversing through children
     flattened = [flatten(children) for children in el.children()]
@@ -452,6 +450,7 @@ def flatten(el):
         res += c
     return res
 
+# Gamma adjustment
 def adjust_gamma(image, gamma=1.0):
     # Create a lookup table for the gamma function
     gamma_map = [255 * ((i / 255.0) ** (1.0 / gamma)) for i in range(256)]
@@ -460,6 +459,7 @@ def adjust_gamma(image, gamma=1.0):
     # Apply the gamma correction using the lookup table
     return image.point(gamma_table)
 
+# Load blip image captioning model
 def load_blip(path):
     timer = time.time()
     print("Loading BLIP model")
@@ -472,6 +472,7 @@ def load_blip(path):
         rprint(f"[#ab333d]{traceback.format_exc()}\n\nBLIP could not be loaded, this may indicate a model has not been downloaded fully, or you have run out of RAM.")
         return None
 
+# Helper for loading model files
 def load_model_from_config(model, verbose=False):
     # Load the model's state dictionary from the specified file
     try:
@@ -492,6 +493,7 @@ def load_model_from_config(model, verbose=False):
     except Exception as e: 
         rprint(f"[#ab333d]{traceback.format_exc()}\n\nThis may indicate a model has not been downloaded fully, or is corrupted.")
 
+# Load stable diffusion 1.5 format model
 def load_model(modelFileString, config, device, precision, optimized):
     global modelName
     if modelFileString != modelName:
@@ -584,14 +586,14 @@ def load_model(modelFileString, config, device, precision, optimized):
         modelCS.cond_stage_model.device = device
 
         # Instantiate and load the first stage model
-        global modelFS
-        modelFS = TAESD().to(device)
+        global modelTA
+        modelTA = TAESD().to(device)
 
         # Set precision and device settings
         if device == "cuda" and precision == "autocast":
             model.half()
             modelCS.half()
-            modelFS.half()
+            modelTA.half()
             precision = "half"
 
         assign_lora_names_to_compvis_modules(model, modelCS)
@@ -602,6 +604,7 @@ def load_model(modelFileString, config, device, precision, optimized):
         play("iteration.wav")
         rprint(f"[#c4f129]Loaded model to [#48a971]{model.cdevice}[#c4f129] at [#48a971]{precision} precision[#c4f129] in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
 
+# Apply prompt enhancements, defaults, and language model management
 def managePrompts(prompt, negative, W, H, seed, upscale, generations, loras, translate, promptTuning):
     timer = time.time()
     global modelLM
@@ -650,7 +653,8 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loras, tra
                     cardMemory = torch.cuda.get_device_properties("cuda").total_memory / 1073741824
                     usedMemory = cardMemory - (torch.cuda.mem_get_info()[0] / 1073741824)
 
-                    if cardMemory-usedMemory < 3:
+                    # If the remaining vram is less than 4, unload the LLM
+                    if cardMemory-usedMemory < 4:
                         del modelLM
                         clearCache()
                         modelLM = None
@@ -680,13 +684,17 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loras, tra
             clearCache()
             modelLM = None
 
+    # Load lora names
     loraNames = [os.path.split(d["file"])[1] for d in loras if "file" in d]
+
     # Deal with prompt modifications
     if modelType == "pixel" and promptTuning:
+        # Defaults
         prefix = "pixel art"
         suffix = "detailed"
         negativeList = [negative, "mutated, noise, nsfw, nude, frame, film reel, snowglobe, deformed, stock image, watermark, text, signature, username"]
 
+        # Lora specific modifications
         if any(f"{_}.pxlm" in loraNames for _ in ["topdown", "isometric", "neogeo", "nes", "snes", "playstation", "gameboy", "gameboyadvance"]):
             prefix = "pixel"
             suffix = ""
@@ -710,6 +718,7 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loras, tra
             prefix = f"{prefix}, texture"
             suffix = f"{suffix}, pixel art"
         
+        # Model specific modifications
         if math.sqrt(W*H) >= 832 and not upscale:
             suffix = f"{suffix}, pjpixdeuc art style"
 
@@ -726,6 +735,7 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loras, tra
     
     return prompts, negatives
 
+# K-centroid downscaling alg
 def kCentroid(image, width, height, centroids):
     image = image.convert("RGB")
 
@@ -753,6 +763,32 @@ def kCentroid(image, width, height, centroids):
 
     return Image.fromarray(downscaled, mode='RGB')
 
+# Displays graphics for k-centroid
+def kCentroidVerbose(images, width, height, centroids):
+    timer = time.time()
+    for i, image in enumerate(images):
+        images[i] = decodeImage(image)
+
+    rprint(f"\n[#48a971]K-Centroid downscaling[white] from [#48a971]{images[0].width}[white]x[#48a971]{images[0].height}[white] to [#48a971]{width}[white]x[#48a971]{height}[white] with [#48a971]{centroids}[white] centroids")
+
+    # Perform k-centroid downscaling and save the image
+    count = 0
+    output = []
+    for image in clbar(images, name = "Processed", unit = "image", prefixwidth = 12, suffixwidth = 28):
+        count += 1
+        resized_image = kCentroid(image, int(width), int(height), int(centroids))
+
+        output.append({"name": count, "format": "png", "image": encodeImage(resized_image, "png")})
+
+        if image != images[-1]:
+            play("iteration.wav")
+        else:
+            play("batch.wav")
+
+    rprint(f"\n[#c4f129]Resized in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
+    return output
+
+# Attempts to detect the ideal pixel resolution of a given image 
 def pixelDetect(image: Image):
     # Thanks to https://github.com/paultron for optimizing my garbage code 
     # I swapped the axis so they accurately reflect the horizontal and vertical scaling factor for images with uneven ratios
@@ -779,6 +815,7 @@ def pixelDetect(image: Image):
     # Resize input image using kCentroid with the calculated horizontal and vertical factors
     return kCentroid(image, round(image.width/np.median(hspacing)), round(image.height/np.median(vspacing)), 2)
 
+# Displays graphics for pixelDetect
 def pixelDetectVerbose(image):
     # Check if input file exists and open it
     image = decodeImage(image[0]).convert("RGB")
@@ -797,6 +834,7 @@ def pixelDetectVerbose(image):
     play("batch.wav")
     return [{"name": 1, "format": "png", "image": encodeImage(image_indexed, "png")}]
 
+# Denoises an image using quantization
 def kDenoise(image, smoothing, strength):
     image = image.convert("RGB")
 
@@ -833,6 +871,7 @@ def kDenoise(image, smoothing, strength):
 
     return Image.fromarray(denoised, mode='RGB')
 
+# Uses curve fitting to find the optimal number of colors to reduce an image to
 def determine_best_k(image, max_k, n_samples=10000, smooth_window=7):
     image = image.convert("RGB")
 
@@ -873,17 +912,24 @@ def determine_best_k(image, max_k, n_samples=10000, smooth_window=7):
 
     return actual_k
 
+# Filters a list of data to remove outliers
 def filterList(data, m=0.7):
+    # Calculate mean of the data
     mean = sum(data) / len(data)
+
+    # Calculate standard deviation of the data
     standard_deviation = (sum((x - mean) ** 2 for x in data) / len(data)) ** 0.5
+
     filtered = []
     for x in data:
+        # Keep elements close to mean, replace others with a placeholder
         if abs(x - mean) < m * standard_deviation:
             filtered.append(x)
         else:
             filtered.append(9999999)
     return filtered
 
+# Used color distances to determine the best palette to fit an image
 def determine_best_palette_verbose(image, palettes):
     # Convert the image to RGB mode
     image = image.convert("RGB")
@@ -924,6 +970,7 @@ def determine_best_palette_verbose(image, palettes):
     best_match_index = np.argmin(filterList(distortions))
     return paletteImages[best_match_index], palettes[best_match_index]["name"]
 
+# Restricts an image to a set of colors determined by the input
 def palettize(images, source, paletteURL, palettes, colors, dithering, strength, denoise, smoothness, intensity):
     # Check if a palette URL is provided and try to download the palette image
     paletteImage = None
@@ -1060,6 +1107,7 @@ def palettize(images, source, paletteURL, palettes, colors, dithering, strength,
 
     return output
 
+# Helper function for automatic color quantization
 def palettizeOutput(images):
     output = []
     # Process the image using pixelDetect and save the result
@@ -1073,6 +1121,7 @@ def palettizeOutput(images):
         output.append({"name": image["name"], "format": image["format"], "image": image_indexed, "width": image["width"], "height": image["height"]})
     return output
 
+# Loads and applies background segmentation model
 def rembg(images, modelpath):
     
     timer = time.time()
@@ -1091,13 +1140,15 @@ def rembg(images, modelpath):
             warnings.simplefilter("ignore")
             size = math.sqrt(image.width*image.height)
 
+            # Upscale and resize the image for segmentation
             upscale = max(1, int(1024/size))
             resize = image.resize((image.width*upscale, image.height*upscale), resample=Image.Resampling.NEAREST)
 
+            # Initialize and apply segmentation model
             segmenter.init(modelpath, resize.width, resize.height)
-            
             [masked_image, mask] = segmenter.segment(resize)
 
+            # Resize segmented image to original size and add to output
             count += 1
             masked_image = masked_image.resize((image.width, image.height), resample=Image.Resampling.NEAREST)
 
@@ -1110,31 +1161,8 @@ def rembg(images, modelpath):
     rprint(f"[#c4f129]Removed [#48a971]{len(images)}[#c4f129] backgrounds in [#48a971]{round(time.time()-timer, 2)}[#c4f129] seconds")
     return output
 
-def kCentroidVerbose(images, width, height, centroids):
-    timer = time.time()
-    for i, image in enumerate(images):
-        images[i] = decodeImage(image)
-
-    rprint(f"\n[#48a971]K-Centroid downscaling[white] from [#48a971]{images[0].width}[white]x[#48a971]{images[0].height}[white] to [#48a971]{width}[white]x[#48a971]{height}[white] with [#48a971]{centroids}[white] centroids")
-
-    # Perform k-centroid downscaling and save the image
-    count = 0
-    output = []
-    for image in clbar(images, name = "Processed", unit = "image", prefixwidth = 12, suffixwidth = 28):
-        count += 1
-        resized_image = kCentroid(image, int(width), int(height), int(centroids))
-
-        output.append({"name": count, "format": "png", "image": encodeImage(resized_image, "png")})
-
-        if image != images[-1]:
-            play("iteration.wav")
-        else:
-            play("batch.wav")
-
-    rprint(f"\n[#c4f129]Resized in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
-    return output
-
-def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post):
+# Render image from latent usinf Tiny Autoencoder or clustered Pixel VAE
+def render(modelTA, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post):
     if pixelvae:
         # Pixel clustering mode, lower threshold means bigger clusters
         denoise = 0.08
@@ -1143,7 +1171,7 @@ def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae,
         x_sample = x_sample[0].cpu().numpy()
     else:
         try:
-            x_sample = modelFS.decoder(samples_ddim[i:i+1].to(device)).clamp(0, 1)
+            x_sample = modelTA.decoder(samples_ddim[i:i+1].to(device)).clamp(0, 1)
             x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
             x_sample = Image.fromarray(x_sample.astype(np.uint8))
 
@@ -1187,17 +1215,23 @@ def render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae,
     loraNames = [os.path.split(d["file"])[1] for d in loras if "file" in d]
     if "1bit.pxlm" in loraNames:
         post = False
+        # Quantize images to 4 colors
         x_sample_image = x_sample_image.quantize(colors=4, method=1, kmeans=4, dither=0).convert('RGB')
+        # Quantize images to 2 colors
         x_sample_image = x_sample_image.quantize(colors=2, method=1, kmeans=2, dither=0).convert('RGB')
+
+        # Find the brightest color and darkest color, convert them to white and black
         pixels = list(x_sample_image.getdata())
         darkest, brightest = min(pixels), max(pixels)
         new_pixels = [0 if pixel == darkest else 255 if pixel == brightest else pixel for pixel in pixels]
         new_image = Image.new("L", x_sample_image.size)
         new_image.putdata(new_pixels)
+
         x_sample_image = new_image.convert('RGB')
 
     return x_sample_image, post
 
+# Render image from latent using direct Pixel VAE conversion
 def fastRender(modelPV, samples_ddim, pixelSize, W, H, i):
     x_sample = modelPV.run_plain(samples_ddim[i:i+1])
     x_sample = x_sample[0].cpu().numpy()
@@ -1211,6 +1245,7 @@ def fastRender(modelPV, samples_ddim, pixelSize, W, H, i):
         x_sample_image = x_sample_image.resize((x_sample_image.width * factor, x_sample_image.height * factor), resample=Image.Resampling.NEAREST)
     return x_sample_image
 
+# Palette generation wrapper for text to image
 def paletteGen(prompt, colors, seed, device, precision):
     # Calculate the base for palette generation
     base = 2**round(math.log2(colors))
@@ -1237,9 +1272,11 @@ def paletteGen(prompt, colors, seed, device, precision):
     rprint(f"[#c4f129]Image converted to color palette with [#48a971]{colors}[#c4f129] colors")
     return [{"name": "palette", "format": "png", "image": encodeImage(palette.convert("RGB"), "png")}]
 
+# Generate image from text prompt
 def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale, quality, scale, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, preview, pixelvae, post):
     timer = time.time()
     
+    # Check gpu availability
     if device == "cuda" and not torch.cuda.is_available():
         if torch.backends.mps.is_available():
             device = "mps"
@@ -1247,6 +1284,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
             device = "cpu"
             rprint(f"\n[#ab333d]GPU is not responding, loading model in CPU mode")
 
+    # Calculate maximum batch size
     global maxSize
     maxSize = maxBatchSize
     size = math.sqrt(W*H)
@@ -1260,12 +1298,11 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
     if seed == None:
         seed = randint(0, 1000000)
 
+    # Set attention map tile values
     wtile = max_tile(W // 8)
     htile = max_tile(H // 8)
 
-    gWidth = W // 8
-    gHeight = H // 8
-
+    # Derive steps, cfg, lcm weight from quality setting
     global modelPath
     # Curves defined by https://www.desmos.com/calculator/aazom0lzyz
     steps = round(3.4 + ((quality ** 2) / 1.5))
@@ -1276,10 +1313,13 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
 
 
     # High resolution adjustments for consistency
-        
+    gWidth = W // 8
+    gHeight = H // 8
+
     if gWidth >= 96 or gHeight >= 96:
         loras.append({"file": os.path.join(modelPath, "resfix.lcm"), "weight": 40})
 
+    # Composition enhancement settings (high res fix)
     pre_steps = steps
     up_steps = 1
     if gWidth >= 96 and gHeight >= 96 and upscale:
@@ -1287,6 +1327,9 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
         aspect = gWidth/gHeight
         gx = gWidth
         gy = gHeight
+        # Calculate initial image size from given large image
+        # Targets resolutions between 64x64 and 96x96 while respecting aspect ratios
+        # Interactive example here: https://editor.p5js.org/Astropulse/full/Co7CGTAnm
         gWidth = int((lower * max(1, aspect)) + ((gy/7) * aspect))
         gHeight = int((lower * max(1, 1/aspect)) + ((gx/7) * (1/aspect)))
 
@@ -1296,6 +1339,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
     else:
         upscale = False
 
+    # Apply modifications to raw prompts
     data, negative_data = managePrompts(prompt, negative, W, H, seed, upscale, total_images, loras, translate, promptTuning)
     seed_everything(seed)
 
@@ -1309,11 +1353,11 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
 
     global model
     global modelCS
-    global modelFS
+    global modelTA
     global modelPV
 
-    # Patch tiling for model and modelFS
-    model, modelFS, modelPV = patch_tiling(tilingX, tilingY, model, modelFS, modelPV)
+    # Patch tiling for model and modelTA
+    model, modelTA, modelPV = patch_tiling(tilingX, tilingY, model, modelTA, modelPV)
 
     # Set the precision scope based on device and precision
     if device == "cuda" and precision == "autocast":
@@ -1329,6 +1373,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
         decryptedFiles.append("none")
         _, loraName = os.path.split(loraPair["file"])
         if loraName != "none":
+            # Handle proprietary models
             if os.path.splitext(loraName)[1] == ".pxlm":
                 with open(loraPair["file"], 'rb') as enc_file:
                     encrypted = enc_file.read()
@@ -1353,8 +1398,10 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
                             rprint(f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted")
                             continue
             else:
+                # Add lora to unet
                 loadedLoras.append(load_lora(loraPair["file"], model))
             loadedLoras[i].multiplier = loraPair["weight"]/100
+            # Prepare for inference
             register_lora_for_inference(loadedLoras[i])
             apply_lora()
             if not any(name in os.path.splitext(loraName)[0] for name in ["quality", "resfix"]):
@@ -1374,6 +1421,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
             condBatch = batch
             condCount = 0
             for run in range(runs):
+                # Compute conditioning tokens using prompt and negative
                 condBatch = min(condBatch, total_images-condCount)
                 negative_conditioning.append(modelCS.get_learned_conditioning(negative_data[condCount:condCount+condBatch]))
                 conditioning.append(modelCS.get_learned_conditioning(data[condCount:condCount+condBatch]))
@@ -1411,6 +1459,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
                     sampler = sampler,
                 )):
                     if preview:
+                        # Render and send image previews
                         displayOut = []
                         for i in range(batch):
                             x_sample_image = fastRender(modelPV, samples_ddim, pixelSize, W, H, i)
@@ -1419,7 +1468,9 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
                         yield {"action": "display_image", "type": "txt2img", "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}
 
                 if upscale:
+                    # Upscale latents using bilinear interpolation
                     samples_ddim = torch.nn.functional.interpolate(samples_ddim, size=(H // 8, W // 8), mode="bilinear")
+                    # Encode latents
                     encoded_latent = model.stochastic_encode(
                         samples_ddim,
                         torch.tensor([up_steps]).to(device),
@@ -1427,6 +1478,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
                         0.0,
                         int(up_steps * 1.5),
                     )
+                    # Sample for up_steps
                     for step, samples_ddim in enumerate(model.sample(
                         up_steps,
                         conditioning[run],
@@ -1436,6 +1488,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
                         sampler = "ddim"
                     )):
                         if preview:
+                            # Render and send image previews
                             displayOut = []
                             for i in range(batch):
                                 x_sample_image = fastRender(modelPV, samples_ddim, pixelSize, W, H, i)
@@ -1443,8 +1496,9 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
                             yield {"action": "display_title", "type": "txt2img", "value": {"text": f"Generating... {step}/{up_steps} steps in batch {run+1}/{runs}"}}
                             yield {"action": "display_image", "type": "txt2img", "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}
                 
+                # Render final images in batch
                 for i in range(batch):
-                    x_sample_image, post = render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
+                    x_sample_image, post = render(modelTA, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
 
                     if total_images > 1 and (base_count+1) < total_images:
                         play("iteration.wav")
@@ -1479,9 +1533,11 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
         yield {"action": "display_image", "type": "txt2img", "value": {"images": final, "prompts": data, "negatives": negative_data}}
 
+# Generate image from image+text prompt
 def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality, scale, strength, seed, total_images, maxBatchSize, device, precision, loras, images, tilingX, tilingY, preview, pixelvae, post):
     timer = time.time()
 
+    # Check gpu availability
     if device == "cuda" and not torch.cuda.is_available():
         if torch.backends.mps.is_available():
             device = "mps"
@@ -1493,6 +1549,7 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
     init_img = decodeImage(images[0])
     init_image = load_img(init_img, H, W).to(device)
 
+    # Calculate maximum batch size
     global maxSize
     maxSize = maxBatchSize
     size = math.sqrt(W*H)
@@ -1506,11 +1563,13 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
     if seed == None:
         seed = randint(0, 1000000)
 
+    # Set attention map tile values
     wtile = max_tile(W // 8)
     htile = max_tile(H // 8)
 
     strength = strength/100
 
+    # Derive steps, cfg, lcm weight from quality setting
     global modelPath
     # Curves defined by https://www.desmos.com/calculator/aazom0lzyz
     steps = round(9 + (((quality-1.85) ** 2) * 1.1))
@@ -1524,6 +1583,7 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
     if W // 8 >= 96 or H // 8 >= 96:
         loras.append({"file": os.path.join(modelPath, "resfix.lcm"), "weight": 40})
 
+    # Apply modifications to raw prompts
     data, negative_data = managePrompts(prompt, negative, W, H, seed, False, total_images, loras, translate, promptTuning)
     seed_everything(seed)
 
@@ -1533,11 +1593,11 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
 
     global model
     global modelCS
-    global modelFS
+    global modelTA
     global modelPV
 
-    # Patch tiling for model and modelFS
-    model, modelFS, modelPV = patch_tiling(tilingX, tilingY, model, modelFS, modelPV)
+    # Patch tiling for model and modelTA
+    model, modelTA, modelPV = patch_tiling(tilingX, tilingY, model, modelTA, modelPV)
 
     # Set the precision scope based on device and precision
     if device == "cuda" and precision == "autocast":
@@ -1553,6 +1613,7 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
         decryptedFiles.append("none")
         _, loraName = os.path.split(loraPair["file"])
         if loraName != "none":
+            # Handle proprietary models
             if os.path.splitext(loraName)[1] == ".pxlm":
                 with open(loraPair["file"], 'rb') as enc_file:
                     encrypted = enc_file.read()
@@ -1577,8 +1638,10 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
                             rprint(f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted")
                             continue
             else:
+                # Add lora to unet
                 loadedLoras.append(load_lora(loraPair["file"], model))
             loadedLoras[i].multiplier = loraPair["weight"]/100
+            # Prepare for inference
             register_lora_for_inference(loadedLoras[i])
             apply_lora()
             if not any(name in os.path.splitext(loraName)[0] for name in ["quality", "resfix"]):
@@ -1596,15 +1659,16 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
         encoded_latent = []
 
         with precision_scope("cuda"):
-            # Move the modelFS to the specified device
-            #modelFS.to(device)
+            # Move the modelTA to the specified device
+            #modelTA.to(device)
             latentBatch = batch
             latentCount = 0
 
             # Move the initial image to latent space and resize it
-            init_latent_base = (modelFS.encoder(init_image))
+            init_latent_base = (modelTA.encoder(init_image))
             init_latent_base = torch.nn.functional.interpolate(init_latent_base, size=(H // 8, W // 8), mode="bilinear")
             if init_latent_base.shape[0] < latentBatch:
+                # Create tiles of inputs to match batch arrangement
                 init_latent_base = init_latent_base.repeat([math.ceil(latentBatch / init_latent_base.shape[0])] + [1] * (len(init_latent_base.shape) - 1))[:latentBatch]
 
             for run in range(runs):
@@ -1628,6 +1692,7 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
             condBatch = batch
             condCount = 0
             for run in range(runs):
+                # Compute conditioning tokens using prompt and negative
                 condBatch = min(condBatch, total_images-condCount)
                 negative_conditioning.append(modelCS.get_learned_conditioning(negative_data[condCount:condCount+condBatch]))
                 conditioning.append(modelCS.get_learned_conditioning(data[condCount:condCount+condBatch]))
@@ -1661,6 +1726,7 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
                     sampler = sampler
                 )):
                     if preview:
+                        # Render and send image previews
                         displayOut = []
                         for i in range(batch):
                             x_sample_image = fastRender(modelPV, samples_ddim, pixelSize, W, H, i)
@@ -1668,8 +1734,9 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
                         yield {"action": "display_title", "type": "img2img", "value": {"text": f"Generating... {step}/{steps} steps in batch {run+1}/{runs}"}}
                         yield {"action": "display_image", "type": "img2img", "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}
 
+                # Render final images in batch
                 for i in range(batch):
-                    x_sample_image, post = render(modelFS, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
+                    x_sample_image, post = render(modelTA, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
 
                     if total_images > 1 and (base_count+1) < total_images:
                         play("iteration.wav")
@@ -1703,6 +1770,7 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
         yield {"action": "display_image", "type": "img2img", "value": {"images": final, "prompts": data, "negatives": negative_data}}
 
+# Wrapper for prompt manager
 def prompt2prompt(path, prompt, negative, generations, seed):
     timer = time.time()
     global modelLM
@@ -1757,7 +1825,7 @@ def prompt2prompt(path, prompt, negative, generations, seed):
         cardMemory = torch.cuda.get_device_properties("cuda").total_memory / 1073741824
         usedMemory = cardMemory - (torch.cuda.mem_get_info()[0] / 1073741824)
 
-        if cardMemory-usedMemory < 3:
+        if cardMemory-usedMemory < 4:
             del modelLM
             clearCache()
             modelLM = None
@@ -1771,6 +1839,7 @@ def prompt2prompt(path, prompt, negative, generations, seed):
         
     return prompts
 
+# Test largest image generation possible
 def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, seed):
     timer = time.time()
     
@@ -1804,7 +1873,7 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
 
     global model
     global modelCS
-    global modelFS
+    global modelTA
     global modelPV
 
     # Set the precision scope based on device and precision
@@ -1845,7 +1914,7 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
                     shape = [1, 4, testSize, testSize]
 
                     # Generate samples using the model
-                    samples_ddim = model.sample(
+                    for step, samples_ddim in enumerate(model.sample(
                         S=steps,
                         conditioning=c,
                         seed=seed,
@@ -1856,20 +1925,15 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
                         eta=0.0,
                         x_T=start_code,
                         sampler = sampler,
-                    )
+                    )):
+                        pass
 
-                    timerPerStep = round(time.time()-benchTimer, 2)
+                    render(modelTA, modelPV, samples_ddim, 0, device, testSize, testSize, 8, pixelvae, False, False, ["None"], False)
 
-                    if pixelvae:
-                        # Pixel clustering mode, lower threshold means bigger clusters
-                        denoise = 0.08
-                        x_sample = modelPV.run_cluster(samples_ddim, threshold=denoise, wrap_x=False, wrap_y=False)
-                    else:
-                        x_sample = modelFS.decoder(samples_ddim.to(device)).clamp(0, 1)
-                        
                     # Delete the samples to free up memory
                     del samples_ddim
-                    del x_sample
+
+                    timerPerStep = round(time.time()-benchTimer, 2)
                     
                     passedTest = True
                 except:
