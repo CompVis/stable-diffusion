@@ -104,6 +104,9 @@ global loadedDevice
 loadedDevice = "cpu"
 global modelPath
 
+global system_models
+system_models = ["quality", "resfix", "confix"]
+
 global sounds
 sounds = False
 
@@ -1254,7 +1257,7 @@ def paletteGen(prompt, colors, seed, device, precision):
     width = 512+((512/base)*(colors-base))
 
     # Generate text-to-image conversion with specified parameters
-    for _ in txt2img(prompt, "", False, False, int(width), 512, 1, False, 5, 7.0, seed, 1, 512, device, precision, [{"file": "some/path/none", "weight": 0}], False, False, False, False, False):
+    for _ in txt2img(prompt, "", False, False, int(width), 512, 1, False, 5, 7, 7.0, seed, 1, 512, device, precision, [{"file": "some/path/none", "weight": 0}], False, False, False, False, False):
         image = _
 
     # Perform k-centroid downscaling on the image
@@ -1273,7 +1276,7 @@ def paletteGen(prompt, colors, seed, device, precision):
     return [{"name": "palette", "format": "png", "image": encodeImage(palette.convert("RGB"), "png")}]
 
 # Generate image from text prompt
-def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale, quality, scale, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, preview, pixelvae, post):
+def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale, quality, brightness, scale, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, preview, pixelvae, post):
     timer = time.time()
     
     # Check gpu availability
@@ -1311,6 +1314,11 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
     if lcm_weight > 0:
         loras.append({"file": os.path.join(modelPath, "quality.lcm"), "weight": round(lcm_weight*10)})
 
+    # Brightness control
+    brightness = sorted((0, brightness, 10))[1]
+    if brightness != 7:
+        # Curve defined by https://www.desmos.com/calculator/qksu9umqae
+        loras.append({"file": os.path.join(modelPath, "confix.lcm"), "weight": round((((brightness - 13.7) ** 2) * 0.8) - 40)})
 
     # High resolution adjustments for consistency
     gWidth = W // 8
@@ -1404,7 +1412,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
             # Prepare for inference
             register_lora_for_inference(loadedLoras[i])
             apply_lora()
-            if not any(name in os.path.splitext(loraName)[0] for name in ["quality", "resfix"]):
+            if not any(name in os.path.splitext(loraName)[0] for name in system_models):
                 rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraName)[0]} [#494b9b]LoRA with [#48a971]{loraPair['weight']}% [#494b9b]strength")
         else:
             loadedLoras.append(None)
@@ -1534,7 +1542,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
         yield {"action": "display_image", "type": "txt2img", "value": {"images": final, "prompts": data, "negatives": negative_data}}
 
 # Generate image from image+text prompt
-def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality, scale, strength, seed, total_images, maxBatchSize, device, precision, loras, images, tilingX, tilingY, preview, pixelvae, post):
+def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality, brightness, scale, strength, seed, total_images, maxBatchSize, device, precision, loras, images, tilingX, tilingY, preview, pixelvae, post):
     timer = time.time()
 
     # Check gpu availability
@@ -1578,8 +1586,13 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
     if lcm_weight > 0:
         loras.append({"file": os.path.join(modelPath, "quality.lcm"), "weight": round(lcm_weight*10)})
 
+    # Brightness control
+    brightness = sorted((0, brightness, 10))[1]
+    if brightness != 7:
+        # Curve defined by https://www.desmos.com/calculator/qksu9umqae
+        loras.append({"file": os.path.join(modelPath, "confix.lcm"), "weight": round((((brightness - 13.7) ** 2) * 0.8) - 40)})
+
     # High resolution adjustments for consistency
-        
     if W // 8 >= 96 or H // 8 >= 96:
         loras.append({"file": os.path.join(modelPath, "resfix.lcm"), "weight": 40})
 
@@ -1644,7 +1657,7 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
             # Prepare for inference
             register_lora_for_inference(loadedLoras[i])
             apply_lora()
-            if not any(name in os.path.splitext(loraName)[0] for name in ["quality", "resfix"]):
+            if not any(name in os.path.splitext(loraName)[0] for name in system_models):
                 rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraName)[0]} [#494b9b]LoRA with [#48a971]{loraPair['weight']}% [#494b9b]strength")
         else:
             loadedLoras.append(None)
@@ -2006,6 +2019,7 @@ async def server(websocket):
                                 values["pixel_size"],
                                 values["enhance_composition"],
                                 values["quality"],
+                                values["brightness"],
                                 values["scale"],
                                 values["seed"],
                                 values["generations"],
@@ -2060,6 +2074,7 @@ async def server(websocket):
                                 values["height"],
                                 values["pixel_size"],
                                 values["quality"],
+                                values["brightness"],
                                 values["scale"],
                                 values["strength"],
                                 values["seed"],
