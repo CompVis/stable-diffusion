@@ -1,0 +1,10 @@
+def modelFloatDownloadUrl = "https://github.com/isl-org/MiDaS/releases/download/v2_1/model_opt.tflite"
+def modelFloatFile = "model_opt.tflite"
+
+task downloadModelFloat(type: Download) {
+    src "${modelFloatDownloadUrl}"
+    dest project.ext.ASSET_DIR + "/${modelFloatFile}"
+    overwrite false
+}
+
+preBuild.dependsOn downloadModelFloat

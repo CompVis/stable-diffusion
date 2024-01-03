@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners
+        android:topLeftRadius="@dimen/tfe_bottom_sheet_corner_radius"
+        android:topRightRadius="@dimen/tfe_bottom_sheet_corner_radius" />
+    <padding android:top="@dimen/tfe_bottom_sheet_top_padding" />
+    <solid android:color="@android:color/white" />
+</shape>

@@ -1,0 +1,3 @@
+red_fox 0.85
+kit_fox 0.13
+grey_fox 0.02

@@ -77,10 +77,7 @@ class ControlNetHED_Apache2(torch.nn.Module):
         return projection1, projection2, projection3, projection4, projection5
 
 
-def safe_step(x, step=2):
-    y = x.astype(np.float32) * float(step + 1)
-    y = y.astype(np.int32).astype(np.float32) / float(step)
-    return y
+
 
 
 class HEDdetector:

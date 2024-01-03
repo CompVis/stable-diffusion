@@ -1,0 +1,538 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0CDA8C85042ADF65D0787629 /* Pods_Midas.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1CE41C09920CCEC31985547 /* Pods_Midas.framework */; };
+		8402440123D9834600704ABD /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 8402440023D9834600704ABD /* README.md */; };
+		840ECB20238BAA2300C7D88A /* InfoCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 840ECB1F238BAA2300C7D88A /* InfoCell.swift */; };
+		840EDCFD2341DDD30017ED42 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 840EDCFB2341DDD30017ED42 /* Launch Screen.storyboard */; };
+		840EDD022341DE380017ED42 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 840EDD002341DE380017ED42 /* Main.storyboard */; };
+		842DDB6E2372A82000F6BB94 /* OverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 842DDB6D2372A82000F6BB94 /* OverlayView.swift */; };
+		846499C2235DAB0D009CBBC7 /* ModelDataHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 846499C1235DAB0D009CBBC7 /* ModelDataHandler.swift */; };
+		846BAF7623E7FE13006FC136 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 846BAF7523E7FE13006FC136 /* Constants.swift */; };
+		8474FEC92341D36E00377D34 /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8474FEC82341D36E00377D34 /* PreviewView.swift */; };
+		8474FECB2341D39800377D34 /* CameraFeedManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8474FECA2341D39800377D34 /* CameraFeedManager.swift */; };
+		84952CB5236186BE0052C104 /* CVPixelBufferExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84952CB4236186BE0052C104 /* CVPixelBufferExtension.swift */; };
+		84952CB92361874A0052C104 /* TFLiteExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84952CB82361874A0052C104 /* TFLiteExtension.swift */; };
+		84B67CEF2326338300A11A08 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84B67CEE2326338300A11A08 /* AppDelegate.swift */; };
+		84B67CF12326338300A11A08 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84B67CF02326338300A11A08 /* ViewController.swift */; };
+		84B67CF62326338400A11A08 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 84B67CF52326338400A11A08 /* Assets.xcassets */; };
+		84D6576D2387BB7E0048171E /* CGSizeExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84D6576C2387BB7E0048171E /* CGSizeExtension.swift */; };
+		84F232D5254C831E0011862E /* model_opt.tflite in Resources */ = {isa = PBXBuildFile; fileRef = 84F232D4254C831E0011862E /* model_opt.tflite */; };
+		84FCF5922387BD7900663812 /* tfl_logo.png in Resources */ = {isa = PBXBuildFile; fileRef = 84FCF5912387BD7900663812 /* tfl_logo.png */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		8402440023D9834600704ABD /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		840ECB1F238BAA2300C7D88A /* InfoCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoCell.swift; sourceTree = "<group>"; };
+		840EDCFC2341DDD30017ED42 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = "Base.lproj/Launch Screen.storyboard"; sourceTree = "<group>"; };
+		840EDD012341DE380017ED42 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		842DDB6D2372A82000F6BB94 /* OverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayView.swift; sourceTree = "<group>"; };
+		846499C1235DAB0D009CBBC7 /* ModelDataHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelDataHandler.swift; sourceTree = "<group>"; };
+		846BAF7523E7FE13006FC136 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		8474FEC82341D36E00377D34 /* PreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewView.swift; sourceTree = "<group>"; };
+		8474FECA2341D39800377D34 /* CameraFeedManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraFeedManager.swift; sourceTree = "<group>"; };
+		84884291236FF0A30043FC4C /* download_models.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = download_models.sh; sourceTree = "<group>"; };
+		84952CB4236186BE0052C104 /* CVPixelBufferExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CVPixelBufferExtension.swift; sourceTree = "<group>"; };
+		84952CB82361874A0052C104 /* TFLiteExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TFLiteExtension.swift; sourceTree = "<group>"; };
+		84B67CEB2326338300A11A08 /* Midas.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Midas.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		84B67CEE2326338300A11A08 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		84B67CF02326338300A11A08 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		84B67CF52326338400A11A08 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		84B67CFA2326338400A11A08 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		84D6576C2387BB7E0048171E /* CGSizeExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CGSizeExtension.swift; sourceTree = "<group>"; };
+		84F232D4254C831E0011862E /* model_opt.tflite */ = {isa = PBXFileReference; lastKnownFileType = file; path = model_opt.tflite; sourceTree = "<group>"; };
+		84FCF5912387BD7900663812 /* tfl_logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = tfl_logo.png; path = Assets.xcassets/tfl_logo.png; sourceTree = "<group>"; };
+		A1CE41C09920CCEC31985547 /* Pods_Midas.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Midas.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D2BFF06D0AE9137D332447F3 /* Pods-Midas.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Midas.release.xcconfig"; path = "Target Support Files/Pods-Midas/Pods-Midas.release.xcconfig"; sourceTree = "<group>"; };
+		FCA88463911267B1001A596F /* Pods-Midas.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Midas.debug.xcconfig"; path = "Target Support Files/Pods-Midas/Pods-Midas.debug.xcconfig"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		84B67CE82326338300A11A08 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0CDA8C85042ADF65D0787629 /* Pods_Midas.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		840ECB1E238BAA0D00C7D88A /* Cells */ = {
+			isa = PBXGroup;
+			children = (
+				840ECB1F238BAA2300C7D88A /* InfoCell.swift */,
+			);
+			path = Cells;
+			sourceTree = "<group>";
+		};
+		842DDB6C2372A80E00F6BB94 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				842DDB6D2372A82000F6BB94 /* OverlayView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		846499C0235DAAE7009CBBC7 /* ModelDataHandler */ = {
+			isa = PBXGroup;
+			children = (
+				846499C1235DAB0D009CBBC7 /* ModelDataHandler.swift */,
+			);
+			path = ModelDataHandler;
+			sourceTree = "<group>";
+		};
+		8474FEC62341D2BE00377D34 /* ViewControllers */ = {
+			isa = PBXGroup;
+			children = (
+				84B67CF02326338300A11A08 /* ViewController.swift */,
+			);
+			path = ViewControllers;
+			sourceTree = "<group>";
+		};
+		8474FEC72341D35800377D34 /* Camera Feed */ = {
+			isa = PBXGroup;
+			children = (
+				8474FEC82341D36E00377D34 /* PreviewView.swift */,
+				8474FECA2341D39800377D34 /* CameraFeedManager.swift */,
+			);
+			path = "Camera Feed";
+			sourceTree = "<group>";
+		};
+		84884290236FF07F0043FC4C /* RunScripts */ = {
+			isa = PBXGroup;
+			children = (
+				84884291236FF0A30043FC4C /* download_models.sh */,
+			);
+			path = RunScripts;
+			sourceTree = "<group>";
+		};
+		848842A22370180C0043FC4C /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				84F232D4254C831E0011862E /* model_opt.tflite */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+		84952CB3236186A20052C104 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				84952CB4236186BE0052C104 /* CVPixelBufferExtension.swift */,
+				84952CB82361874A0052C104 /* TFLiteExtension.swift */,
+				84D6576C2387BB7E0048171E /* CGSizeExtension.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		84B67CE22326338300A11A08 = {
+			isa = PBXGroup;
+			children = (
+				8402440023D9834600704ABD /* README.md */,
+				84884290236FF07F0043FC4C /* RunScripts */,
+				84B67CED2326338300A11A08 /* Midas */,
+				84B67CEC2326338300A11A08 /* Products */,
+				B4DFDCC28443B641BC36251D /* Pods */,
+				A3DA804B8D3F6891E3A02852 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		84B67CEC2326338300A11A08 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				84B67CEB2326338300A11A08 /* Midas.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		84B67CED2326338300A11A08 /* Midas */ = {
+			isa = PBXGroup;
+			children = (
+				840ECB1E238BAA0D00C7D88A /* Cells */,
+				842DDB6C2372A80E00F6BB94 /* Views */,
+				848842A22370180C0043FC4C /* Model */,
+				84952CB3236186A20052C104 /* Extensions */,
+				846499C0235DAAE7009CBBC7 /* ModelDataHandler */,
+				8474FEC72341D35800377D34 /* Camera Feed */,
+				8474FEC62341D2BE00377D34 /* ViewControllers */,
+				84B67D002326339000A11A08 /* Storyboards */,
+				84B67CEE2326338300A11A08 /* AppDelegate.swift */,
+				846BAF7523E7FE13006FC136 /* Constants.swift */,
+				84B67CF52326338400A11A08 /* Assets.xcassets */,
+				84FCF5912387BD7900663812 /* tfl_logo.png */,
+				84B67CFA2326338400A11A08 /* Info.plist */,
+			);
+			path = Midas;
+			sourceTree = "<group>";
+		};
+		84B67D002326339000A11A08 /* Storyboards */ = {
+			isa = PBXGroup;
+			children = (
+				840EDCFB2341DDD30017ED42 /* Launch Screen.storyboard */,
+				840EDD002341DE380017ED42 /* Main.storyboard */,
+			);
+			path = Storyboards;
+			sourceTree = "<group>";
+		};
+		A3DA804B8D3F6891E3A02852 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A1CE41C09920CCEC31985547 /* Pods_Midas.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		B4DFDCC28443B641BC36251D /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				FCA88463911267B1001A596F /* Pods-Midas.debug.xcconfig */,
+				D2BFF06D0AE9137D332447F3 /* Pods-Midas.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		84B67CEA2326338300A11A08 /* Midas */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 84B67CFD2326338400A11A08 /* Build configuration list for PBXNativeTarget "Midas" */;
+			buildPhases = (
+				14067F3CF309C9DB723C9F6F /* [CP] Check Pods Manifest.lock */,
+				84884298237010B90043FC4C /* Download TensorFlow Lite model */,
+				84B67CE72326338300A11A08 /* Sources */,
+				84B67CE82326338300A11A08 /* Frameworks */,
+				84B67CE92326338300A11A08 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Midas;
+			productName = Midas;
+			productReference = 84B67CEB2326338300A11A08 /* Midas.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		84B67CE32326338300A11A08 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 1030;
+				LastUpgradeCheck = 1030;
+				ORGANIZATIONNAME = tensorflow;
+				TargetAttributes = {
+					84B67CEA2326338300A11A08 = {
+						CreatedOnToolsVersion = 10.3;
+					};
+				};
+			};
+			buildConfigurationList = 84B67CE62326338300A11A08 /* Build configuration list for PBXProject "Midas" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 84B67CE22326338300A11A08;
+			productRefGroup = 84B67CEC2326338300A11A08 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				84B67CEA2326338300A11A08 /* Midas */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		84B67CE92326338300A11A08 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8402440123D9834600704ABD /* README.md in Resources */,
+				84F232D5254C831E0011862E /* model_opt.tflite in Resources */,
+				840EDD022341DE380017ED42 /* Main.storyboard in Resources */,
+				840EDCFD2341DDD30017ED42 /* Launch Screen.storyboard in Resources */,
+				84FCF5922387BD7900663812 /* tfl_logo.png in Resources */,
+				84B67CF62326338400A11A08 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		14067F3CF309C9DB723C9F6F /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-Midas-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		84884298237010B90043FC4C /* Download TensorFlow Lite model */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Download TensorFlow Lite model";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"$SRCROOT/RunScripts/download_models.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		84B67CE72326338300A11A08 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				842DDB6E2372A82000F6BB94 /* OverlayView.swift in Sources */,
+				846BAF7623E7FE13006FC136 /* Constants.swift in Sources */,
+				84952CB92361874A0052C104 /* TFLiteExtension.swift in Sources */,
+				84D6576D2387BB7E0048171E /* CGSizeExtension.swift in Sources */,
+				84B67CF12326338300A11A08 /* ViewController.swift in Sources */,
+				84B67CEF2326338300A11A08 /* AppDelegate.swift in Sources */,
+				8474FECB2341D39800377D34 /* CameraFeedManager.swift in Sources */,
+				846499C2235DAB0D009CBBC7 /* ModelDataHandler.swift in Sources */,
+				8474FEC92341D36E00377D34 /* PreviewView.swift in Sources */,
+				84952CB5236186BE0052C104 /* CVPixelBufferExtension.swift in Sources */,
+				840ECB20238BAA2300C7D88A /* InfoCell.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		840EDCFB2341DDD30017ED42 /* Launch Screen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				840EDCFC2341DDD30017ED42 /* Base */,
+			);
+			name = "Launch Screen.storyboard";
+			sourceTree = "<group>";
+		};
+		840EDD002341DE380017ED42 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				840EDD012341DE380017ED42 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		84B67CFB2326338400A11A08 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.4;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		84B67CFC2326338400A11A08 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.4;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		84B67CFE2326338400A11A08 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = FCA88463911267B1001A596F /* Pods-Midas.debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = BV6M48J3RX;
+				INFOPLIST_FILE = Midas/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.midas.midas-tflite-npu";
+				PRODUCT_NAME = Midas;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		84B67CFF2326338400A11A08 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D2BFF06D0AE9137D332447F3 /* Pods-Midas.release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = BV6M48J3RX;
+				INFOPLIST_FILE = Midas/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.midas.midas-tflite-npu";
+				PRODUCT_NAME = Midas;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		84B67CE62326338300A11A08 /* Build configuration list for PBXProject "Midas" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				84B67CFB2326338400A11A08 /* Debug */,
+				84B67CFC2326338400A11A08 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		84B67CFD2326338400A11A08 /* Build configuration list for PBXNativeTarget "Midas" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				84B67CFE2326338400A11A08 /* Debug */,
+				84B67CFF2326338400A11A08 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 84B67CE32326338300A11A08 /* Project object */;
+}
