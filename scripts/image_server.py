@@ -87,7 +87,6 @@ loadedDevice = "cpu"
 global modelPath
 
 global wholeSD
-global wholeSD_config
 
 global sounds
 sounds = False
@@ -595,9 +594,6 @@ def load_model(modelPathInput, modelFile, config, device, precision, optimized):
 
     # Load the model configuration
     config = OmegaConf.load(f"{config}")
-
-    global wholeSD_config
-    wholeSD_config = copy.deepcopy(config)
 
     global modelPV
     # Ignore an annoying userwaring
@@ -1633,10 +1629,6 @@ def txt2img(
     control_strength = 1.0
 
     global wholeSD
-    global wholeSD_config
-
-    unet_config = wholeSD_config.model_unet.params
-    # controlnet_config = {**unet_config, **unet_config.unet_encode_config.params}
 
     print("Loading ControlNet...")
     controlnet = load_controlnet("./models/controllora/sketch.safetensors")
