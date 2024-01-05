@@ -2,7 +2,7 @@ print("Importing libraries. This may take one or more minutes.")
 
 try:
     # Import core libraries
-    import os, re, time, sys, asyncio, ctypes, math, threading, platform, json
+    import os, re, time, sys, asyncio, ctypes, math, threading, platform, json, sys
     import torch
     import scipy
     import numpy as np
@@ -1986,6 +1986,7 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
 async def server(websocket):
     background = False
     try:
+        assert sys.version_info >= (3, 10)
         async for message in websocket:
             # For debugging
             #print(message)
