@@ -1446,6 +1446,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
 
         base_count = 0
         output = []
+
         # Iterate over the specified number of iterations
         for run in clbar(range(runs), name = "Batches", position = "last", unit = "batch", prefixwidth = 12, suffixwidth = 28):
 
@@ -2297,7 +2298,7 @@ async def server(websocket):
             except:
                 pass
     except Exception as e:
-        if not "asyncio.exceptions.IncompleteReadError" in traceback.format_exc():
+        if "asyncio.exceptions.IncompleteReadError" in traceback.format_exc():
             rprint(f"\n[#ab333d]Bytes read error (resolved automatically)")
         else:
             if "PayloadTooBig" in traceback.format_exc() or "message too big" in traceback.format_exc():
