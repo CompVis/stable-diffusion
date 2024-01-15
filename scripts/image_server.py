@@ -105,7 +105,7 @@ loadedDevice = "cpu"
 global modelPath
 
 global system_models
-system_models = ["quality", "resfix", "confix"]
+system_models = ["quality", "resfix", "brightness", "contrast", "saturation", "outline", "color_cr", "color_mg", "color_yb", "light_bf", "light_du", "light_lr"]
 
 global sounds
 sounds = False
@@ -619,68 +619,73 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loras, tra
     prompts = [prompt]*generations
 
     if translate:
-        try:
-            # Load LLM for prompt upsampling
-            if modelLM == None:
-                print("\nLoading prompt translation language model")
-                modelLM = load_chat_pipeline(os.path.join(modelPath, "LLM"))
-                play("iteration.wav")
 
-                rprint(f"[#c4f129]Loaded in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
-        
-            if modelLM is not None:
-                try:
-                    # Generate responses
-                    rprint(f"\n[#48a971]Translation model [white]generating [#48a971]{generations} [white]enhanced prompts")
+        # Check GPU VRAM to ensure LLM compatibility because users can't be trusted to select settings properly T-T
+        cardMemory = torch.cuda.get_device_properties("cuda").total_memory / 1073741824
+        if cardMemory >= 10:
+            try:
+                # Load LLM for prompt upsampling
+                if modelLM == None:
+                    print("\nLoading prompt translation language model")
+                    modelLM = load_chat_pipeline(os.path.join(modelPath, "LLM"))
+                    play("iteration.wav")
 
-                    upsampled_captions = []
-                    for prompt in clbar(prompts, name = "Enhancing", position = "", unit = "prompt", prefixwidth = 12, suffixwidth = 28):
+                    rprint(f"[#c4f129]Loaded in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
+            
+                if modelLM is not None:
+                    try:
+                        # Generate responses
+                        rprint(f"\n[#48a971]Translation model [white]generating [#48a971]{generations} [white]enhanced prompts")
 
-                        # Try to generate a response, if no response is identified after retrys, set upsampled prompt to initial prompt
-                        upsampled_caption = None
-                        retrys = 5
-                        while upsampled_caption == None and retrys > 0:
-                            outputs = upsample_caption(modelLM, prompt, seed)
-                            upsampled_caption = collect_response(outputs)
-                            retrys -= 1
-                        seed += 1
+                        upsampled_captions = []
+                        for prompt in clbar(prompts, name = "Enhancing", position = "", unit = "prompt", prefixwidth = 12, suffixwidth = 28):
 
-                        if upsampled_caption == None:
-                            upsampled_caption = prompt
-                        
-                        upsampled_captions.append(upsampled_caption)
-                        play("iteration.wav")
+                            # Try to generate a response, if no response is identified after retrys, set upsampled prompt to initial prompt
+                            upsampled_caption = None
+                            retrys = 5
+                            while upsampled_caption == None and retrys > 0:
+                                outputs = upsample_caption(modelLM, prompt, seed)
+                                upsampled_caption = collect_response(outputs)
+                                retrys -= 1
+                            seed += 1
 
-                    prompts = upsampled_captions
-                
-                    cardMemory = torch.cuda.get_device_properties("cuda").total_memory / 1073741824
-                    usedMemory = cardMemory - (torch.cuda.mem_get_info()[0] / 1073741824)
+                            if upsampled_caption == None:
+                                upsampled_caption = prompt
+                            
+                            upsampled_captions.append(upsampled_caption)
+                            play("iteration.wav")
 
-                    # If the remaining vram is less than 4, unload the LLM
-                    if cardMemory-usedMemory < 4:
-                        del modelLM
-                        clearCache()
-                        modelLM = None
-                    else:
-                        clearCache()
+                        prompts = upsampled_captions
+                    
+                        usedMemory = cardMemory - (torch.cuda.mem_get_info()[0] / 1073741824)
 
-                    seed = seed - len(prompts)
-                    print()
-                    for i, prompt in enumerate(prompts[:8]):
-                        rprint(f"[#48a971]Seed: [#c4f129]{seed}[#48a971] Prompt: [#494b9b]{prompt}")
-                        seed += 1
-                    if len(prompts) > 8:
-                        rprint(f"[#48a971]Remaining prompts generated but not displayed.")
-                except:
-                    rprint(f"\n[#494b9b]Prompt enhancement failed unexpectedly. Prompts will not be edited.")
-        except Exception as e: 
-            if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
-                rprint(f"\n[#494b9b]Translation model could not be loaded due to insufficient GPU resources.")
-            elif "GPU is required" in traceback.format_exc():
-                rprint(f"\n[#494b9b]Translation model requires a GPU to be loaded.")
-            else:
-                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
-                rprint(f"\n[#494b9b]Translation model could not be loaded.")
+                        # If the remaining vram is less than 4, unload the LLM
+                        if cardMemory-usedMemory < 4:
+                            del modelLM
+                            clearCache()
+                            modelLM = None
+                        else:
+                            clearCache()
+
+                        seed = seed - len(prompts)
+                        print()
+                        for i, prompt in enumerate(prompts[:8]):
+                            rprint(f"[#48a971]Seed: [#c4f129]{seed}[#48a971] Prompt: [#494b9b]{prompt}")
+                            seed += 1
+                        if len(prompts) > 8:
+                            rprint(f"[#48a971]Remaining prompts generated but not displayed.")
+                    except:
+                        rprint(f"\n[#494b9b]Prompt enhancement failed unexpectedly. Prompts will not be edited.")
+            except Exception as e: 
+                if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
+                    rprint(f"\n[#494b9b]Translation model could not be loaded due to insufficient GPU resources.")
+                elif "GPU is required" in traceback.format_exc():
+                    rprint(f"\n[#494b9b]Translation model requires a GPU to be loaded.")
+                else:
+                    rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                    rprint(f"\n[#494b9b]Translation model could not be loaded.")
+        else:
+            rprint(f"\n[#494b9b]Translation model requires a GPU with at least 10GB of VRAM. You only have {round(cardMemory)}GB.")
     else:
         if modelLM is not None:
             del modelLM
@@ -1275,8 +1280,79 @@ def paletteGen(prompt, colors, seed, device, precision):
     rprint(f"[#c4f129]Image converted to color palette with [#48a971]{colors}[#c4f129] colors")
     return [{"name": "palette", "format": "png", "image": encodeImage(palette.convert("RGB"), "png")}]
 
+def continuous_pattern_wave(x):
+    """
+    Continuous function that matches the given pattern:
+    https://www.desmos.com/calculator/2bsi4t5gzi
+    """
+    # Define the pattern points and their corresponding x values
+    pattern = [1, 0.5, 0, 0, 0, -0.5, -1, -0.5, 0, 0, 0, 0.5, 1]
+    x_points = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    
+    # Normalize x to the range of 0 to 12
+    x = x % 12
+
+    # Find the segment of the pattern that x is in
+    for i in range(len(x_points) - 1):
+        if x_points[i] <= x < x_points[i + 1]:
+            # Perform linear interpolation
+            y1, y2 = pattern[i], pattern[i + 1]
+            x1, x2 = x_points[i], x_points[i + 1]
+            return y1 + (y2 - y1) * (x - x1) / (x2 - x1)
+
+    # Handle the case where x is exactly 12
+    return pattern[0]
+
+def manageComposition(lighting, composition, loras):
+    lecoPath = os.path.join(modelPath, "LECO")
+
+    left_right = (lighting["x"]-25)*8
+    down_up = lighting["y"]*-6
+    back_front = max(0, lighting["z"])*-3
+    if lighting["apply"]:
+        if down_up != 0:
+            loras.append({"file": os.path.join(lecoPath, "light_du.leco"), "weight": down_up})
+        if left_right != 0:
+            loras.append({"file": os.path.join(lecoPath, "light_lr.leco"), "weight": left_right})
+        if back_front != 0:
+            loras.append({"file": os.path.join(lecoPath, "light_bf.leco"), "weight": back_front})
+
+    hue = composition["hue"]
+    tint = composition["tint"]
+    cyan_red = round(continuous_pattern_wave((hue)*(12/360))*(tint*4))
+    magenta_green = round(continuous_pattern_wave((hue-120)*(12/360))*(tint*4))
+    yellow_blue = round(continuous_pattern_wave((hue+120)*(12/360))*(tint*4))
+
+    if cyan_red != 0:
+        loras.append({"file": os.path.join(lecoPath, "color_cr.leco"), "weight": cyan_red})
+    if magenta_green != 0:
+        loras.append({"file": os.path.join(lecoPath, "color_mg.leco"), "weight": magenta_green})
+    if yellow_blue != 0:
+        loras.append({"file": os.path.join(lecoPath, "color_yb.leco"), "weight": yellow_blue})
+
+
+    # Brightness control
+    brightness = sorted((0, round(composition["brightness"]), 100))[1]/10
+    if brightness != 7:
+        # Curve defined by https://www.desmos.com/calculator/qksu9umqae
+        loras.append({"file": os.path.join(lecoPath, "brightness.leco"), "weight": round((((brightness - 13.7) ** 2) * 0.8) - 40)})
+
+    saturation = round(composition["saturation"]-50)*8
+    if saturation != 0:
+        loras.append({"file": os.path.join(lecoPath, "saturation.leco"), "weight": saturation})
+
+    contrast = round(composition["contrast"]-50)*12
+    if contrast != 0:
+        loras.append({"file": os.path.join(lecoPath, "contrast.leco"), "weight": contrast})
+
+    outline = round(composition["outline"]-50)*4
+    if outline != 0:
+        loras.append({"file": os.path.join(lecoPath, "outline.leco"), "weight": outline})
+
+    return loras
+
 # Generate image from text prompt
-def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale, quality, brightness, scale, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, preview, pixelvae, post):
+def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale, quality, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, preview, pixelvae, post):
     timer = time.time()
     
     # Check gpu availability
@@ -1314,18 +1390,15 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
     if lcm_weight > 0:
         loras.append({"file": os.path.join(modelPath, "quality.lcm"), "weight": round(lcm_weight*10)})
 
-    # Brightness control
-    brightness = sorted((0, brightness, 10))[1]
-    if brightness != 7:
-        # Curve defined by https://www.desmos.com/calculator/qksu9umqae
-        loras.append({"file": os.path.join(modelPath, "confix.lcm"), "weight": round((((brightness - 13.7) ** 2) * 0.8) - 40)})
-
     # High resolution adjustments for consistency
     gWidth = W // 8
     gHeight = H // 8
 
     if gWidth >= 96 or gHeight >= 96:
         loras.append({"file": os.path.join(modelPath, "resfix.lcm"), "weight": 40})
+
+    # Composition and lighting modifications
+    loras = manageComposition(lighting, composition, loras)
 
     # Composition enhancement settings (high res fix)
     pre_steps = steps
@@ -1543,7 +1616,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
         yield {"action": "display_image", "type": "txt2img", "value": {"images": final, "prompts": data, "negatives": negative_data}}
 
 # Generate image from image+text prompt
-def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality, brightness, scale, strength, seed, total_images, maxBatchSize, device, precision, loras, images, tilingX, tilingY, preview, pixelvae, post):
+def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality, scale, strength, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, images, tilingX, tilingY, preview, pixelvae, post):
     timer = time.time()
 
     # Check gpu availability
@@ -1587,11 +1660,8 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
     if lcm_weight > 0:
         loras.append({"file": os.path.join(modelPath, "quality.lcm"), "weight": round(lcm_weight*10)})
 
-    # Brightness control
-    brightness = sorted((0, brightness, 10))[1]
-    if brightness != 7:
-        # Curve defined by https://www.desmos.com/calculator/qksu9umqae
-        loras.append({"file": os.path.join(modelPath, "confix.lcm"), "weight": round((((brightness - 13.7) ** 2) * 0.8) - 40)})
+    # Composition and lighting modifications
+    loras = manageComposition(lighting, composition, loras)
 
     # High resolution adjustments for consistency
     if W // 8 >= 96 or H // 8 >= 96:
@@ -2021,8 +2091,9 @@ async def server(websocket):
                                 values["pixel_size"],
                                 values["enhance_composition"],
                                 values["quality"],
-                                values["brightness"],
                                 values["scale"],
+                                values["lighting"],
+                                values["composition"],
                                 values["seed"],
                                 values["generations"],
                                 values["max_batch_size"],
@@ -2076,9 +2147,10 @@ async def server(websocket):
                                 values["height"],
                                 values["pixel_size"],
                                 values["quality"],
-                                values["brightness"],
                                 values["scale"],
                                 values["strength"],
+                                values["lighting"],
+                                values["composition"],
                                 values["seed"],
                                 values["generations"],
                                 values["max_batch_size"],
