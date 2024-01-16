@@ -2374,7 +2374,7 @@ async def server(websocket):
             rprint(f"\n[#ab333d]Bytes read error (resolved automatically)")
         else:
             if "PayloadTooBig" in traceback.format_exc() or "message too big" in traceback.format_exc():
-                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}\n\n\n[#ab333d]Websockets received a message that was too large")
+                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}\n\n\n[#ab333d]Websockets received a message that was too large, unless accompanied by other errors this is safe to ignore.")
             else:
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
             play("error.wav")
