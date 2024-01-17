@@ -1216,7 +1216,7 @@ def render(modelTA, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae,
     if not pixelvae:
         # Sharpen to enhance details lost by decoding
         x_sample_image_sharp = x_sample_image.filter(ImageFilter.SHARPEN)
-        alpha = 0.2
+        alpha = 0.13
         x_sample_image = Image.blend(x_sample_image, x_sample_image_sharp, alpha)
 
 
@@ -1262,12 +1262,12 @@ def paletteGen(prompt, colors, seed, device, precision):
     width = 512+((512/base)*(colors-base))
 
     # Generate text-to-image conversion with specified parameters
-    for _ in txt2img(prompt, "", False, False, int(width), 512, 1, False, 5, 7, 7.0, seed, 1, 512, device, precision, [{"file": "some/path/none", "weight": 0}], False, False, False, False, False):
+    for _ in txt2img(prompt, "", False, False, int(width), 512, 1, False, 6, 7.0, {"apply":False}, {"hue":0, "tint":0, "saturation":50, "brightness":70, "contrast":50, "outline":50}, seed, 1, 512, device, precision, [{"file": "some/path/none", "weight": 0}], False, False, False, False, False):
         image = _
 
     # Perform k-centroid downscaling on the image
     image = decodeImage(image["value"]["images"][0])
-    image = image.resize((int(image.width/(512/base)), 1), resample=Image.Resampling.BILINEAR)
+    image = kCentroid(image, int(image.width/(512/base)), 1, 2)
 
     # Iterate over the pixels in the image and set corresponding palette colors
     palette = Image.new('P', (colors, 1))
@@ -1306,10 +1306,11 @@ def continuous_pattern_wave(x):
 def manageComposition(lighting, composition, loras):
     lecoPath = os.path.join(modelPath, "LECO")
 
-    left_right = (lighting["x"]-25)*8
-    down_up = lighting["y"]*-6
-    back_front = max(0, lighting["z"])*-3
     if lighting["apply"]:
+        left_right = (lighting["x"]-25)*8
+        down_up = lighting["y"]*-6
+        back_front = max(0, lighting["z"])*-3
+
         if down_up != 0:
             loras.append({"file": os.path.join(lecoPath, "light_du.leco"), "weight": down_up})
         if left_right != 0:
