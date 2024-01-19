@@ -25,6 +25,7 @@ A suitable [conda](https://conda.io/) environment named `ldm` can be created
 and activated with:
 
 ```
+curl -sO https://raw.githubusercontent.com/CompVis/stable-diffusion/main/environment.yaml
 conda env create -f environment.yaml
 conda activate ldm
 ```
