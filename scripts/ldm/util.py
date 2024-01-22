@@ -15,6 +15,42 @@ import numpy as np
 import torch
 import torch.nn as nn
 from einops import repeat, rearrange
+from PIL import Image, ImageDraw, ImageFont
+
+def log_txt_as_img(wh, xc, size=10):
+    # wh a tuple of (width, height)
+    # xc a list of captions to plot
+    b = len(xc)
+    txts = list()
+    for bi in range(b):
+        txt = Image.new("RGB", wh, color="white")
+        draw = ImageDraw.Draw(txt)
+        font = ImageFont.truetype('data/DejaVuSans.ttf', size=size)
+        nc = int(40 * (wh[0] / 256))
+        lines = "\n".join(xc[bi][start:start + nc] for start in range(0, len(xc[bi]), nc))
+
+        try:
+            draw.text((0, 0), lines, fill="black", font=font)
+        except UnicodeEncodeError:
+            print("Cant encode string for logging. Skipping.")
+
+        txt = np.array(txt).transpose(2, 0, 1) / 127.5 - 1.0
+        txts.append(txt)
+    txts = np.stack(txts)
+    txts = torch.tensor(txts)
+    return txts
+
+def ismap(x):
+    if not isinstance(x, torch.Tensor):
+        return False
+    return (len(x.shape) == 4) and (x.shape[1] > 3)
+
+
+def count_params(model, verbose=False):
+    total_params = sum(p.numel() for p in model.parameters())
+    if verbose:
+        print(f"{model.__class__.__name__} has {total_params*1.e-6:.2f} M params.")
+    return total_params
 
 
 def avg_pool_nd(dims, *args, **kwargs):
@@ -268,26 +304,30 @@ def get_obj_from_str(string, reload=False):
         importlib.reload(module_imp)
     return getattr(importlib.import_module(module, package=None), cls)
 
+
 def to_tile(x, nh, nw, original_shape):
     _, _, h, w = original_shape
     assert h % nh == 0, "Height must be divisible by nh"
     assert w % nw == 0, "Width must be divisible by nw"
-    x = rearrange(x, "b (nh h nw w) c -> (b nh nw) (h w) c", h=h // nh, w=w // nw, nh=nh, nw=nw)
+    x = rearrange(
+        x, "b (nh h nw w) c -> (b nh nw) (h w) c", h=h // nh, w=w // nw, nh=nh, nw=nw
+    )
 
     return x
+
 
 def from_tile(x, nh, nw, original_shape):
     _, _, h, w = original_shape
     x = rearrange(x, "(b nh nw) hw c -> b nh nw hw c", nh=nh, nw=nw)
     x = rearrange(x, "b nh nw (h w) c -> b (nh h nw w) c", h=h // nh, w=w // nw)
-    
+
     return x
 
-def max_tile(row):
 
+def max_tile(row):
     max_value = round(1 + (9 / (1 + (1.5 ** -((row / 10) - 20)))))
 
-    for n in reversed(range(1, max_value+1)):
+    for n in reversed(range(1, max_value + 1)):
         if row % n == 0:
             return n
     return 1

@@ -45,6 +45,9 @@ try:
     from websockets import serve, connect
     from io import BytesIO
     import base64
+    
+    # Import CLDM requirements
+    import copy
 
     # Import console management libraries
     from rich import print as rprint
@@ -113,6 +116,9 @@ sounds = False
 expectedVersion = "10.0.0"
 
 global maxSize
+
+# cldm globals
+global wholeSD
 
 # For testing only, limits memory usage to "maxMemory"
 maxSize = 512
@@ -539,7 +545,9 @@ def load_model(modelFileString, config, device, precision, optimized):
             turbo = False
 
         # Load the model's state dictionary from the specified file
+        global wholeSD
         sd = load_model_from_config(f"{os.path.join(modelPath, modelFile)}")
+        wholeSD = copy.deepcopy(sd) # keep a whole copy for CLDM, temporary, we need to remove this when we migrate to our model loader
 
         # Separate the input and output blocks from the state dictionary
         li, lo = [], []
@@ -1304,6 +1312,7 @@ def continuous_pattern_wave(x):
     return pattern[0]
 
 def manageComposition(lighting, composition, loras):
+    return loras # remove, only for testing CLDM
     lecoPath = os.path.join(modelPath, "LECO")
 
     if lighting["apply"]:
@@ -1491,6 +1500,48 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
         else:
             loadedLoras.append(None)
 
+    
+    # CLDM Test
+    from ldm.controlnet import load_controlnet
+    from ldm.apply_controlnet import load_image, apply_controlnet
+    from ldm.controlnet import load_t2i_adapter
+    
+    # params
+    enable_controlnet = True
+    controlnet_model = "./models/controllora/Composition.safetensors"
+
+    print("Loading CLDM model...")
+    control_strength = 1.0
+
+    global wholeSD
+
+    print("Loading ControlNet...")
+    controlnet = load_controlnet(controlnet_model)
+    print(controlnet)
+
+    # load controlnet conditioning image
+    image, mask = load_image("beach.png")
+    print("Loaded controlnet conditioning image", image.shape)
+
+    # TODO: Move this SD model to our own
+    from ldm.model_detection import model_config_from_unet
+    from ldm.model_patcher import ModelPatcher
+    from ldm.model_management import load_model_gpu
+
+    unet_dtype = torch.float16
+    device = torch.device(torch.cuda.current_device())
+    
+    model_config = model_config_from_unet(wholeSD, "model.diffusion_model.", unet_dtype)
+    sd_model = model_config.get_model(
+        wholeSD,
+        "model.diffusion_model.",
+        device=device,
+    )
+    sd_model.load_model_weights(wholeSD, "model.diffusion_model.")
+    
+    model_patcher = ModelPatcher(sd_model, load_device=device, current_device=device, offload_device=torch.device("cpu"))
+    load_model_gpu(model_patcher)
+    
     seeds = []
     with torch.no_grad():
         # Create conditioning values for each batch, then unload the text encoder
