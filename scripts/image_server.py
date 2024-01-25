@@ -1504,10 +1504,8 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
     # CLDM Test
     from ldm.controlnet import load_controlnet
     from ldm.apply_controlnet import load_image, apply_controlnet
-    from ldm.controlnet import load_t2i_adapter
     
     # params
-    enable_controlnet = True
     controlnet_model = "./models/controllora/Composition.safetensors"
 
     print("Loading CLDM model...")
@@ -1520,7 +1518,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
     print(controlnet)
 
     # load controlnet conditioning image
-    image, mask = load_image("beach.png")
+    image, mask = load_image("vangogh.png")
     print("Loaded controlnet conditioning image", image.shape)
 
     # TODO: Move this SD model to our own
@@ -1571,6 +1569,44 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
 
         base_count = 0
         output = []
+        
+        # compute controlnet conditioning
+        print("Computing controlnet conditioning...")
+        cldm_conditioning = [[conditioning[0], {"pooled_output": None}]]
+        cldm_uncontrolled_conditioning = [[negative_conditioning[0], {"pooled_output": None}]]
+
+        # apply controlnet
+        print("Applying controlnet...")
+        (controlled_conditioning,) = apply_controlnet(
+            cldm_conditioning, controlnet, image, control_strength
+        )
+        print("controlled conditioning:", len(controlled_conditioning), controlled_conditioning)
+
+        # generate empty latents
+        latent = torch.zeros([batch, 4, H // 8, W // 8])
+
+        # sampling
+        from ldm.sample import prepare_noise, sample
+
+        noise = prepare_noise(latent, seed, None)
+
+        samples_cldm = sample(
+            model_patcher,
+            noise,
+            20,
+            7.0,
+            "ddim",
+            "normal",
+            controlled_conditioning,
+            cldm_uncontrolled_conditioning,
+            latent,
+            seed=seed,
+        )
+        print("samples", samples_cldm.shape)
+        
+        # cldm_sample_image = render(modelTA, modelPV, samples_cldm, 0, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
+        # cldm_sample_image.show()
+        # cldm_sample_image.save("cldm_sample.png")
 
         # Iterate over the specified number of iterations
         for run in clbar(range(runs), name = "Batches", position = "last", unit = "batch", prefixwidth = 12, suffixwidth = 28):
@@ -1632,7 +1668,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
                 
                 # Render final images in batch
                 for i in range(batch):
-                    x_sample_image, post = render(modelTA, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
+                    x_sample_image, post = render(modelTA, modelPV, samples_cldm, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
 
                     if total_images > 1 and (base_count+1) < total_images:
                         play("iteration.wav")
