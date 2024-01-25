@@ -143,6 +143,8 @@ def assign_lora_names_to_compvis_modules(model, modelCS):
     model.lora_layer_mapping = lora_layer_mapping
     print("Added LoRA layers")
 
+def load_lora_raw(filename):
+    return load_file(filename)
 
 def load_lora(filename, model):
     lora_tensors = load_file(filename)
