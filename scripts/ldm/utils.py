@@ -9,7 +9,7 @@ from PIL import Image
 def load_torch_file(ckpt, safe_load=False, device=None):
     if device is None:
         device = torch.device("cpu")
-    if ckpt.lower().endswith(".safetensors"):
+    if ckpt.lower().endswith(".safetensors") or ckpt.lower().endswith(".pxlm"):
         sd = safetensors.torch.load_file(ckpt, device=device.type)
     return sd
 

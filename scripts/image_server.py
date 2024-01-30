@@ -1557,9 +1557,11 @@ def render(
         x_sample = x_sample[0].cpu().numpy()
     else:
         try:
-            x_sample = modelTA.decoder(samples_ddim[i : i + 1].to(device)).clamp(0, 1)
-            x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
-            x_sample = Image.fromarray(x_sample.astype(np.uint8))
+            x_sample = modelTA.decoder(samples_ddim[i:i+1].to(device))
+            x_sample = torch.clamp((x_sample.cpu().float()), min = 0.0, max = 1.0)
+            x_sample = x_sample.cpu().movedim(1, -1)
+            x_sample = 255.0 * x_sample[0].cpu().numpy()
+            x_sample = Image.fromarray(np.clip(x_sample, 0, 255).astype(np.uint8))
 
             # Color adjustments to account for Tiny Autoencoder
             contrast = ImageEnhance.Contrast(x_sample)
@@ -1989,9 +1991,9 @@ def txt2img(
                         # Write attempted decrypted file
                         dec_file.write(decryptedFiles[i])
                         try:
-                            # Load decrypted 
+                            # Load decrypted
                             loadedLoras.append(load_lora(loraPair["file"], model))
-                            raw_loras.append(load_lora_raw(loraPair["file"]))
+                            raw_loras.append({ "sd": load_lora_raw(loraPair["file"]), "weight": loraPair["weight"] })
                         except:
                             # Decrypted file could not be read, revert to unchanged, and return an error
                             decryptedFiles[i] = "none"
@@ -2016,55 +2018,8 @@ def txt2img(
             loadedLoras.append(None)
 
     # CLDM Test
-    from ldm.controlnet import load_controlnet
-    from ldm.apply_controlnet import load_image, apply_controlnet
-
-    # params
-    controlnet_model = "./models/controllora/Composition.safetensors"
-
-    print("Loading CLDM model...")
-    control_strength = 1
-
     global wholeSD
-
-    print("Loading ControlNet...")
-    controlnet = load_controlnet(controlnet_model)
-    print(controlnet)
-
-    # load controlnet conditioning image
-    image, mask = load_image("vangogh.png")
-    print("Loaded controlnet conditioning image", image.shape)
-
-    # TODO: Move this SD model to our own
-    from ldm.model_detection import model_config_from_unet
-    from ldm.model_patcher import ModelPatcher
-    from ldm.model_management import load_model_gpu
-
-    unet_dtype = torch.float16
     device = torch.device(torch.cuda.current_device())
-
-    model_config = model_config_from_unet(wholeSD, "model.diffusion_model.", unet_dtype)
-    sd_model = model_config.get_model(
-        wholeSD,
-        "model.diffusion_model.",
-        device=device,
-    )
-    sd_model.load_model_weights(wholeSD, "model.diffusion_model.")
-
-    model_patcher = ModelPatcher(
-        sd_model,
-        load_device=device,
-        current_device=device,
-        offload_device=torch.device("cpu"),
-    )
-    load_model_gpu(model_patcher)
-
-    # test for apply loras
-    from ldm.lora import load_lora_for_models
-
-    cldm_lora = raw_loras[0]
-    print(cldm_lora)
-    lora_model_patcher, _clip = load_lora_for_models(model_patcher, None, cldm_lora, 1.0, 0)
 
     seeds = []
     with torch.no_grad():
@@ -2103,50 +2058,6 @@ def txt2img(
 
         base_count = 0
         output = []
-
-        # compute controlnet conditioning
-        print("Computing controlnet conditioning...")
-        cldm_conditioning = [[conditioning[0], {"pooled_output": None}]]
-        cldm_uncontrolled_conditioning = [
-            [negative_conditioning[0], {"pooled_output": None}]
-        ]
-
-        # apply controlnet
-        print("Applying controlnet...")
-        (controlled_conditioning,) = apply_controlnet(
-            cldm_conditioning, controlnet, image, control_strength
-        )
-        print(
-            "controlled conditioning:",
-            len(controlled_conditioning),
-            controlled_conditioning,
-        )
-
-        # generate empty latents
-        latent = torch.zeros([batch, 4, H // 8, W // 8])
-
-        # sampling
-        from ldm.sample import prepare_noise, sample
-
-        noise = prepare_noise(latent, seed, None)
-
-        samples_cldm = sample(
-            lora_model_patcher,
-            noise,
-            20,
-            3.0,
-            "ddim",
-            "normal",
-            controlled_conditioning,
-            cldm_uncontrolled_conditioning,
-            latent,
-            seed=seed,
-        )
-        print("samples", samples_cldm.shape)
-
-        # cldm_sample_image = render(modelTA, modelPV, samples_cldm, 0, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
-        # cldm_sample_image.show()
-        # cldm_sample_image.save("cldm_sample.png")
 
         # Iterate over the specified number of iterations
         for run in clbar(
@@ -2209,6 +2120,7 @@ def txt2img(
                             },
                         }
 
+                torch.save(samples_ddim, "rd.pt")
                 if upscale:
                     # Upscale latents using bilinear interpolation
                     samples_ddim = torch.nn.functional.interpolate(
@@ -2271,7 +2183,7 @@ def txt2img(
                     x_sample_image, post = render(
                         modelTA,
                         modelPV,
-                        samples_cldm,
+                        samples_ddim,
                         i,
                         device,
                         H,

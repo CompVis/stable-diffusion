@@ -378,6 +378,7 @@ class SDTokenizer:
     def __init__(self, tokenizer_path=None, max_length=77, pad_with_end=True, embedding_directory=None, embedding_size=768, embedding_key='clip_l', tokenizer_class=CLIPTokenizer, has_start_token=True, pad_to_max_length=True):
         if tokenizer_path is None:
             tokenizer_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "sd1_tokenizer")
+        print("loading tokenizer from", tokenizer_path)
         self.tokenizer = tokenizer_class.from_pretrained(tokenizer_path)
         self.max_length = max_length
 
