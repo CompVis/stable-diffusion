@@ -53,11 +53,11 @@ def load_controlnet(
     load_model_gpu(model_patcher)
 
     # Apply loras
-    lora_model_patcher = None
+    lora_model_patcher = model_patcher
 
     for lora in raw_loras:
         lora_model_patcher, _clip = load_lora_for_models(
-            model_patcher, None, lora["sd"], lora["weight"] / 100, 0
+            lora_model_patcher, None, lora["sd"], lora["weight"] / 100, 0
         )
 
     # Compute conditioning
