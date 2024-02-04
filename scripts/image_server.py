@@ -141,8 +141,9 @@ expectedVersion = "10.0.0"
 
 global maxSize
 
-# cldm globals
-global wholeSD
+# model loading globals
+global split_loaded
+split_loaded = False
 
 # For testing only, limits memory usage to "maxMemory"
 maxSize = 512
@@ -633,7 +634,7 @@ def load_model_from_config(model, verbose=False):
 
 
 # Load stable diffusion 1.5 format model
-def load_model(modelFileString, config, device, precision, optimized):
+def load_model(modelFileString, config, device, precision, optimized, split = True):
     global modelName
     if modelFileString != modelName:
         timer = time.time()
@@ -675,11 +676,13 @@ def load_model(modelFileString, config, device, precision, optimized):
             turbo = False
 
         # Load the model's state dictionary from the specified file
-        global wholeSD
         sd = load_model_from_config(f"{os.path.join(modelPath, modelFile)}")
-        wholeSD = copy.deepcopy(
-            sd
-        )  # keep a whole copy for CLDM, temporary, we need to remove this when we migrate to our model loader
+        
+        global split_loaded
+        
+        if split == False:
+            split_loaded = False
+            return sd
 
         # Separate the input and output blocks from the state dictionary
         li, lo = [], []
@@ -744,6 +747,7 @@ def load_model(modelFileString, config, device, precision, optimized):
         assign_lora_names_to_compvis_modules(model, modelCS)
 
         modelName = modelFileString
+        split_loaded = True # Set split_loaded to True to indicate that the split model has been loaded
 
         # Print loading information
         play("iteration.wav")
@@ -2017,10 +2021,6 @@ def txt2img(
         else:
             loadedLoras.append(None)
 
-    # CLDM Test
-    global wholeSD
-    device = torch.device(torch.cuda.current_device())
-
     seeds = []
     with torch.no_grad():
         # Create conditioning values for each batch, then unload the text encoder
@@ -2880,6 +2880,30 @@ async def server(websocket):
             try:
                 message = json.loads(message)
                 match message["action"]:
+                    case "controlnet_txt2img":
+                        # Extract parameters from the message
+                        values = message["value"]
+                        modelData = values["model"]
+
+                        if values["send_progress"]:
+                            await websocket.send(
+                                json.dumps(
+                                    {
+                                        "action": "display_title",
+                                        "type": "txt2img",
+                                        "value": {"text": "Loading model"},
+                                    }
+                                )
+                            )
+                        
+                        state_dict = load_model(
+                            modelData["file"],
+                            "scripts/v1-inference.yaml",
+                            modelData["device"],
+                            modelData["precision"],
+                            modelData["optimized"],
+                            False
+                        )
                     case "txt2img":
                         try:
                             # Extract parameters from the message
