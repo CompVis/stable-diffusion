@@ -152,6 +152,8 @@ def prepare_cldm(
     managePrompts,
     seed_everything,
     modelPath,
+    modelCS,
+    system_models,
 ):
     timer = time.time()
 
@@ -291,11 +293,47 @@ def prepare_cldm(
                                 f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted"
                             )
                             continue
-                        
+
             # Prepare for inference
             if not any(name == os.path.splitext(loraName)[0] for name in system_models):
                 rprint(
                     f"[#494b9b]Using [#48a971]{os.path.splitext(loraName)[0]} [#494b9b]LoRA with [#48a971]{loraPair['weight']}% [#494b9b]strength"
                 )
-    
-    
+
+    seeds = []
+
+    with torch.no_grad():
+        # Create conditioning values for each batch, then unload the text encoder
+        negative_conditioning = []
+        conditioning = []
+        shape = []
+        # Use the specified precision scope
+        with precision_scope("cuda"):
+            modelCS.to(device)
+            condBatch = batch
+            condCount = 0
+            for run in range(runs):
+                # Compute conditioning tokens using prompt and negative
+                condBatch = min(condBatch, total_images - condCount)
+                negative_conditioning.append(
+                    modelCS.get_learned_conditioning(
+                        negative_data[condCount : condCount + condBatch]
+                    )
+                )
+                conditioning.append(
+                    modelCS.get_learned_conditioning(
+                        data[condCount : condCount + condBatch]
+                    )
+                )
+                shape.append([condBatch, 4, gHeight, gWidth])
+                condCount += condBatch
+
+            # Move modelCS to CPU if necessary to free up GPU memory
+            if device == "cuda":
+                mem = torch.cuda.memory_allocated() / 1e6
+                modelCS.to("cpu")
+                # Wait until memory usage decreases
+                while torch.cuda.memory_allocated() / 1e6 >= mem:
+                    time.sleep(1)
+        
+        return conditioning, negative_conditioning

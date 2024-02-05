@@ -55,6 +55,7 @@ try:
 
     # Import CLDM requirements
     import copy
+    from cldm_inference import prepare_cldm
 
     # Import console management libraries
     from rich import print as rprint
@@ -2880,7 +2881,7 @@ async def server(websocket):
             try:
                 message = json.loads(message)
                 match message["action"]:
-                    case "controlnet_txt2img":
+                    case "txt2img":
                         # Extract parameters from the message
                         values = message["value"]
                         modelData = values["model"]
@@ -2904,7 +2905,48 @@ async def server(websocket):
                             modelData["optimized"],
                             False
                         )
-                    case "txt2img":
+                        
+                        print("cldm: State Dict loaded")
+                        
+                        conditioning, negative_conditioning = prepare_cldm(
+                            values["prompt"],
+                            values["negative"],
+                            values["translate"],
+                            values["prompt_tuning"],
+                            values["width"],
+                            values["height"],
+                            values["pixel_size"],
+                            values["enhance_composition"],
+                            values["quality"],
+                            values["scale"],
+                            values["lighting"],
+                            values["composition"],
+                            values["seed"],
+                            values["generations"],
+                            values["max_batch_size"],
+                            modelData["device"],
+                            modelData["precision"],
+                            values["loras"],
+                            values["tile_x"],
+                            values["tile_y"],
+                            values["send_progress"],
+                            values["use_pixelvae"],
+                            values["post_process"],
+                            
+                            rprint,
+                            manageComposition,
+                            managePrompts,
+                            seed_everything,
+                            modelPath,
+                            modelCS,
+                            system_models
+                        )
+                        
+                        print("cldm: Conditioning prepared")
+                        print(conditioning)
+                        print(negative_conditioning)
+                        
+                    case "_txt2img":
                         try:
                             # Extract parameters from the message
                             values = message["value"]
