@@ -2956,12 +2956,31 @@ async def server(websocket):
                             "./vangogh.png",
                             1.0,
                             state_dict,
-                            modelData["device"],
+                            0, # might need to point to the physical device, in this case defaults to first GPU available
                             conditioning,
                             negative_conditioning
                         )
                         
                         print("cldm: ControlNet loaded", model_patcher, cldm_cond, cldm_uncond)
+                        
+                        samples = sample_cldm(
+                            model_patcher,
+                            cldm_cond,
+                            cldm_uncond,
+                            values["seed"],
+                            20, # steps,
+                            5.0, # cfg,
+                            "euler", # sampler,
+                            1, # batch size
+                            values["width"],
+                            values["height"],
+                            None, # initial latent for img2img,
+                            "normal" # scheduler
+                        )
+                        
+                        print("cldm samples", samples)
+                        
+                        # samples can be decoded with our regular pipelines
                         
                     case "_txt2img":
                         try:

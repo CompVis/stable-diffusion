@@ -36,7 +36,7 @@ def load_controlnet(
     controlnet = load_controlnet_cldm(controlnet_model)
 
     # Load conditioning image
-    (image,) = load_image(conditioning_img)
+    (image, _mask) = load_image(conditioning_img)
 
     # Create controlnet model
     model_config = model_config_from_unet(

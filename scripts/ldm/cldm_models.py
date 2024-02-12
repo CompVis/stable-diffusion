@@ -1204,9 +1204,11 @@ class DDPM(pl.LightningModule):
             f"Restored from {path} with {len(missing)} missing and {len(unexpected)} unexpected keys"
         )
         if len(missing) > 0:
-            print(f"Missing Keys:\n {missing}")
+            # print(f"Missing Keys:\n {missing}")
+            pass
         if len(unexpected) > 0:
-            print(f"\nUnexpected Keys:\n {unexpected}")
+            # print(f"\nUnexpected Keys:\n {unexpected}")
+            pass
 
     def q_mean_variance(self, x_start, t):
         """

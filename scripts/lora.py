@@ -120,7 +120,7 @@ def transform_checkpoint_dict_key(k):
 
 def assign_lora_names_to_compvis_modules(model, modelCS):
     if not hasattr(modelCS, 'cond_stage_model'):
-        print("No cond_stage_model found in modelCS, skipping Lora")
+        # print("No cond_stage_model found in modelCS, skipping Lora")
         return
     
     lora_layer_mapping = {}
@@ -141,7 +141,7 @@ def assign_lora_names_to_compvis_modules(model, modelCS):
         module.lora_layer_name = lora_name
 
     model.lora_layer_mapping = lora_layer_mapping
-    print("Added LoRA layers")
+    # print("Added LoRA layers")
 
 def load_lora_raw(filename):
     return load_file(filename)
@@ -190,7 +190,7 @@ def load_lora(filename, model):
         elif type(sd_module) == torch.nn.Conv2d and weight.shape[2:] == (3, 3):
             module = torch.nn.Conv2d(weight.shape[1], weight.shape[0], (3, 3), bias=False)
         else:
-            print(f'Lora layer {key_diffusers} matched a layer with unsupported type: {type(sd_module).__name__}')
+            # print(f'Lora layer {key_diffusers} matched a layer with unsupported type: {type(sd_module).__name__}')
             continue
 
         with torch.no_grad():
@@ -206,7 +206,8 @@ def load_lora(filename, model):
             raise AssertionError(f"Bad Lora layer name: {key_diffusers} - must end in lora_up.weight, lora_down.weight or alpha")
 
     if len(keys_failed_to_match) > 0:
-        print(f"Failed to match keys when loading Lora {filename}: {keys_failed_to_match}")
+        # print(f"Failed to match keys when loading Lora {filename}: {keys_failed_to_match}")
+        pass
 
     return lora
 
@@ -260,7 +261,7 @@ def lora_apply_weights(self: Union[torch.nn.Conv2d, torch.nn.Linear, torch.nn.Mu
             if module is None:
                 continue
 
-            print(f'failed to calculate lora weights for layer {lora_layer_name}')
+            # print(f'failed to calculate lora weights for layer {lora_layer_name}')
 
         self.lora_current_names = wanted_names
 
