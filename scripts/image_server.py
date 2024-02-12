@@ -54,7 +54,7 @@ try:
     import base64
 
     # Import CLDM requirements
-    from cldm_inference import prepare_cldm
+    from cldm_inference import prepare_cldm, load_controlnet, sample_cldm
 
     # Import console management libraries
     from rich import print as rprint
@@ -2910,7 +2910,7 @@ async def server(websocket):
                             False
                         )
                         
-                        print("cldm: State Dict loaded", state_dict)
+                        print("cldm: State Dict loaded")
                         
                         global modelCS
                         
@@ -2938,7 +2938,6 @@ async def server(websocket):
                             values["send_progress"],
                             values["use_pixelvae"],
                             values["post_process"],
-                            
                             rprint,
                             manageComposition,
                             managePrompts,
@@ -2951,6 +2950,18 @@ async def server(websocket):
                         print("cldm: Conditioning prepared")
                         print(conditioning)
                         print(negative_conditioning)
+                        
+                        model_patcher, cldm_cond, cldm_uncond = load_controlnet(
+                            "./models/controllora/Composition.safetensors",
+                            "./vangogh.png",
+                            1.0,
+                            state_dict,
+                            modelData["device"],
+                            conditioning,
+                            negative_conditioning
+                        )
+                        
+                        print("cldm: ControlNet loaded", model_patcher, cldm_cond, cldm_uncond)
                         
                     case "_txt2img":
                         try:

@@ -10,7 +10,7 @@ from contextlib import nullcontext
 from cryptography.fernet import Fernet
 from lora import load_lora_raw
 
-from ldm.controlnet import load_controlnet
+from ldm.controlnet import load_controlnet as load_controlnet_cldm
 from ldm.apply_controlnet import load_image, apply_controlnet
 from ldm.sample import prepare_noise, sample
 
@@ -33,7 +33,7 @@ def load_controlnet(
     unet_dtype=torch.float16,
 ):
     # Load controlnet model
-    controlnet = load_controlnet(controlnet_model)
+    controlnet = load_controlnet_cldm(controlnet_model)
 
     # Load conditioning image
     (image,) = load_image(conditioning_img)
