@@ -54,7 +54,6 @@ try:
     import base64
 
     # Import CLDM requirements
-    import copy
     from cldm_inference import prepare_cldm
 
     # Import console management libraries
@@ -678,32 +677,27 @@ def load_model(modelFileString, config, device, precision, optimized, split = Tr
 
         # Load the model's state dictionary from the specified file
         sd = load_model_from_config(f"{os.path.join(modelPath, modelFile)}")
-        
-        global split_loaded
-        
-        if split == False:
-            split_loaded = False
-            return sd
 
         # Separate the input and output blocks from the state dictionary
-        li, lo = [], []
-        for key, value in sd.items():
-            sp = key.split(".")
-            if (sp[0]) == "model":
-                if "input_blocks" in sp:
-                    li.append(key)
-                elif "middle_block" in sp:
-                    li.append(key)
-                elif "time_embed" in sp:
-                    li.append(key)
-                else:
-                    lo.append(key)
+        if split:
+            li, lo = [], []
+            for key, value in sd.items():
+                sp = key.split(".")
+                if (sp[0]) == "model":
+                    if "input_blocks" in sp:
+                        li.append(key)
+                    elif "middle_block" in sp:
+                        li.append(key)
+                    elif "time_embed" in sp:
+                        li.append(key)
+                    else:
+                        lo.append(key)
 
-        # Reorganize the state dictionary keys to match the model structure
-        for key in li:
-            sd["model1." + key[6:]] = sd.pop(key)
-        for key in lo:
-            sd["model2." + key[6:]] = sd.pop(key)
+            # Reorganize the state dictionary keys to match the model structure
+            for key in li:
+                sd["model1." + key[6:]] = sd.pop(key)
+            for key in lo:
+                sd["model2." + key[6:]] = sd.pop(key)
 
         # Load the model configuration
         config = OmegaConf.load(f"{config}")
@@ -719,13 +713,14 @@ def load_model(modelFileString, config, device, precision, optimized, split = Tr
             )
 
         # Instantiate and load the main model
-        global model
-        model = instantiate_from_config(config.model_unet)
-        _, _ = model.load_state_dict(sd, strict=False)
-        model.eval()
-        model.unet_bs = 1
-        model.cdevice = device
-        model.turbo = turbo
+        if split:
+            global model
+            model = instantiate_from_config(config.model_unet)
+            _, _ = model.load_state_dict(sd, strict=False)
+            model.eval()
+            model.unet_bs = 1
+            model.cdevice = device
+            model.turbo = turbo
 
         # Instantiate and load the conditional stage model
         global modelCS
@@ -740,21 +735,30 @@ def load_model(modelFileString, config, device, precision, optimized, split = Tr
 
         # Set precision and device settings
         if device == "cuda" and precision == "autocast":
-            model.half()
+            if split:
+                model.half()
             modelCS.half()
             modelTA.half()
             precision = "half"
 
-        assign_lora_names_to_compvis_modules(model, modelCS)
+        if split:
+            assign_lora_names_to_compvis_modules(model, modelCS)
 
         modelName = modelFileString
-        split_loaded = True # Set split_loaded to True to indicate that the split model has been loaded
 
         # Print loading information
         play("iteration.wav")
-        rprint(
-            f"[#c4f129]Loaded model to [#48a971]{model.cdevice}[#c4f129] at [#48a971]{precision} precision[#c4f129] in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds"
-        )
+        
+        global split_loaded
+        if split:
+            rprint(
+                f"[#c4f129]Loaded model to [#48a971]{model.cdevice}[#c4f129] at [#48a971]{precision} precision[#c4f129] in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds"
+            )
+            split_loaded = True
+        else:
+            split_loaded = False
+            return sd
+            
 
 
 # Apply prompt enhancements, defaults, and language model management
@@ -2906,7 +2910,9 @@ async def server(websocket):
                             False
                         )
                         
-                        print("cldm: State Dict loaded")
+                        print("cldm: State Dict loaded", state_dict)
+                        
+                        global modelCS
                         
                         conditioning, negative_conditioning = prepare_cldm(
                             values["prompt"],
@@ -3401,7 +3407,8 @@ async def server(websocket):
                         asyncio.get_event_loop().call_soon_threadsafe(
                             asyncio.get_event_loop().stop
                         )
-            except:
+            except Exception as e:
+                print(traceback.format_exc())
                 pass
     except Exception as e:
         if "asyncio.exceptions.IncompleteReadError" in traceback.format_exc():

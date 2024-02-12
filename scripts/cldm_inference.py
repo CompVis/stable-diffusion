@@ -151,6 +151,7 @@ def prepare_cldm(
     manageComposition,
     managePrompts,
     seed_everything,
+    
     modelPath,
     modelCS,
     system_models,
@@ -336,4 +337,4 @@ def prepare_cldm(
                 while torch.cuda.memory_allocated() / 1e6 >= mem:
                     time.sleep(1)
         
-        return conditioning, negative_conditioning
+    return conditioning, negative_conditioning
