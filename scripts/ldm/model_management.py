@@ -4,6 +4,8 @@ import ldm.utils
 import torch
 import sys
 
+import ldm.model_management
+
 # Options, we might want to move it to CLI args
 disable_xformers = True
 use_pytorch_cross_attention = False
@@ -504,6 +506,7 @@ def unet_offload_device():
 
 def unet_inital_load_device(parameters, dtype):
     torch_dev = get_torch_device()
+    return torch_dev
     if vram_state == VRAMState.HIGH_VRAM:
         return torch_dev
 
@@ -519,6 +522,22 @@ def unet_inital_load_device(parameters, dtype):
         return torch_dev
     else:
         return cpu_dev
+
+
+def unet_manual_cast(weight_dtype, inference_device):
+    if weight_dtype == torch.float32:
+        return None
+
+    fp16_supported = ldm.model_management.should_use_fp16(
+        inference_device, prioritize_performance=False
+    )
+    if fp16_supported and weight_dtype == torch.float16:
+        return None
+
+    if fp16_supported:
+        return torch.float16
+    else:
+        return torch.float32
 
 
 def unet_dtype(device=None, model_params=0):

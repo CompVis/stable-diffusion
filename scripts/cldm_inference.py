@@ -19,13 +19,14 @@ from ldm.model_detection import model_config_from_unet
 from ldm.model_patcher import ModelPatcher
 from ldm.model_management import load_model_gpu
 from ldm.lora import load_lora_for_models
+from ldm.sd import load_checkpoint_guess_config
 
 
 def load_controlnet(
     controlnet_model,
     conditioning_img,
     strength,
-    state_dict,
+    # state_dict,
     device,
     conditioning,
     negative_conditioning,
@@ -38,34 +39,44 @@ def load_controlnet(
     # Load conditioning image
     (image, _mask) = load_image(conditioning_img)
 
-    # Create controlnet model
-    model_config = model_config_from_unet(
-        state_dict, "model.diffusion_model.", unet_dtype
+    # Load base model
+    out = load_checkpoint_guess_config(
+        "./models/base/model.safetensors",
+        output_vae=False,
+        output_clip=False,
+        output_clipvision=False,
     )
+    
+    model_patcher = out[0]
+    
+    # model_config = model_config_from_unet(
+    #     state_dict, "model.diffusion_model.", unet_dtype
+    # )
 
-    # Set the weights
-    sd_model = model_config.get_model(
-        state_dict,
-        "model.diffusion_model.",
-        device=device,
-    )
-    sd_model.load_model_weights(state_dict, "model.diffusion_model.")
+    # # Set the weights
+    # sd_model = model_config.get_model(
+    #     state_dict,
+    #     "model.diffusion_model.",
+    #     device=device,
+    # )
+    # sd_model.load_model_weights(state_dict, "model.diffusion_model.")
 
-    # Create the comfy model
-    model_patcher = ModelPatcher(
-        sd_model,
-        load_device=device,
-        current_device=device,
-        offload_device=torch.device("cpu"),
-    )
+    # # Create the comfy model
+    # model_patcher = ModelPatcher(
+    #     sd_model,
+    #     load_device=device,
+    #     current_device=device,
+    #     offload_device=torch.device("cpu"),
+    # )
 
-    # Move model to GPU
-    load_model_gpu(model_patcher)
+    # # Move model to GPU
+    # load_model_gpu(model_patcher)
 
     # Apply loras
     lora_model_patcher = model_patcher
 
     for lora in raw_loras:
+        print(lora)
         lora_model_patcher, _clip = load_lora_for_models(
             lora_model_patcher, None, lora["sd"], lora["weight"] / 100, 0
         )

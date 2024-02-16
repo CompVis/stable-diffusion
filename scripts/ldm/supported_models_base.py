@@ -71,3 +71,5 @@ class BASE:
         replace_prefix = {"": "first_stage_model."}
         return utils.state_dict_prefix_replace(state_dict, replace_prefix)
 
+    def set_manual_cast(self, manual_cast_dtype):
+        self.manual_cast_dtype = manual_cast_dtype

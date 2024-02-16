@@ -2911,8 +2911,6 @@ async def server(websocket):
                             False
                         )
                         
-                        print("cldm: State Dict loaded")
-                        
                         global modelCS
                         
                         conditioning, negative_conditioning = prepare_cldm(
@@ -2948,21 +2946,15 @@ async def server(websocket):
                             system_models
                         )
                         
-                        print("cldm: Conditioning prepared")
-                        print(conditioning)
-                        print(negative_conditioning)
-                        
                         model_patcher, cldm_cond, cldm_uncond = load_controlnet(
                             "./models/controllora/Composition.safetensors",
                             "./vangogh.png",
                             1.0,
-                            state_dict,
+                            # state_dict,
                             0, # might need to point to the physical device, in this case defaults to first GPU available
                             conditioning,
                             negative_conditioning
                         )
-                        
-                        print("cldm: ControlNet loaded", model_patcher, cldm_cond, cldm_uncond)
                         
                         samples = sample_cldm(
                             model_patcher,
@@ -2978,8 +2970,6 @@ async def server(websocket):
                             None, # initial latent for img2img,
                             "normal" # scheduler
                         )
-                        
-                        print("cldm samples", samples)
                         
                         samples = samples.to(torch.float16)
                         
