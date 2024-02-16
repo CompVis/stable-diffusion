@@ -2871,3 +2871,583 @@ Modifiers:
 Top-down | 35%
 Front-facing | 50%
 
+2024/02/15 21:29:36
+Text to Image
+Model: Pixel art
+Prompt: a cute corgi
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 47627443
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 21:30:10
+Text to Image
+Model: Pixel art
+Prompt: a cute corgi
+Negative: 
+Width: 64
+Height: 68
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 26935674
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 21:30:22
+Text to Image
+Model: Pixel art
+Prompt: a cute corgi
+Negative: 
+Width: 64
+Height: 68
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 7699357
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 21:30:46
+Text to Image
+Model: Pixel art
+Prompt: a cute corgi
+Negative: 
+Width: 128
+Height: 128
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 19100585
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 21:32:20
+Text to Image
+Model: Pixel art
+Prompt: a cute corgi
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 74915385
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 21:32:58
+Text to Image
+Model: Pixel art
+Prompt: a cute corgi
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 38829120
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 21:35:24
+Text to Image
+Model: Pixel art
+Prompt: pixel art, starry night
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 97867357
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 21:36:26
+Text to Image
+Model: Pixel art
+Prompt: pixel art, starry night
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 68649054
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+
+2024/02/15 21:39:45
+Text to Image
+Model: Pixel art
+Prompt: a raven perched on a branch with dramatic mountains in the background, clouds, mountains, beautiful landscape
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 99590371
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 21:40:53
+Text to Image
+Model: Pixel art
+Prompt: pixel art, starry night
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 38696752
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 21:43:15
+Text to Image
+Model: Pixel art
+Prompt: pixel art, starry night
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 42822558
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+
+2024/02/15 21:45:28
+Text to Image
+Model: Pixel art
+Prompt: pixel art, starry night
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 67651101
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+
+2024/02/15 21:47:05
+Text to Image
+Model: Pixel art
+Prompt: pixel art, starry night
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 57368748
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 21:52:26
+Text to Image
+Model: Pixel art
+Prompt: pixel art, starry night
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 75651641
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 21:54:30
+Text to Image
+Model: Pixel art
+Prompt: pixel art, starry night
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 52973033
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 21:58:02
+Text to Image
+Model: Pixel art
+Prompt: pixel art, starry night
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 5629262
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 22:14:32
+Text to Image
+Model: Pixel art
+Prompt: a raven perched on a branch with dramatic mountains in the background, clouds, mountains, beautiful landscape
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 33501964
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 22:23:28
+Text to Image
+Model: Pixel art
+Prompt: pixel art, starry night
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 43833440
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 22:26:54
+Text to Image
+Model: Pixel art
+Prompt: a raven perched on a branch with dramatic mountains in the background, clouds, mountains, beautiful landscape
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 42633732
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 22:29:20
+Text to Image
+Model: Pixel art
+Prompt: pixel art, starry night
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 64863987
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 22:32:17
+Text to Image
+Model: Pixel art
+Prompt: pixel art, starry night
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 52693644
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+

@@ -1567,7 +1567,7 @@ def render(
     else:
         try:
             x_sample = modelTA.decoder(samples_ddim[i:i+1].to(device))
-            x_sample = torch.clamp((x_sample.cpu().float()), min = 0.0, max = 1.0)
+            x_sample = torch.clamp((x_sample.cpu().detach().float()), min = 0.0, max = 1.0)
             x_sample = x_sample.cpu().movedim(1, -1)
             x_sample = 255.0 * x_sample[0].cpu().numpy()
             x_sample = Image.fromarray(np.clip(x_sample, 0, 255).astype(np.uint8))
@@ -1603,6 +1603,7 @@ def render(
 
     # Convert the numpy array to an image
     x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
+    x_sample_image.save("render_before_downscale.png")
 
     if x_sample_image.width > W // pixelSize and x_sample_image.height > H // pixelSize:
         # Resize the image if pixel is true
@@ -1652,6 +1653,8 @@ def fastRender(modelPV, samples_ddim, pixelSize, W, H, i):
     x_sample = modelPV.run_plain(samples_ddim[i : i + 1])
     x_sample = x_sample[0].cpu().numpy()
     x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
+    x_sample_image.save("fast_render_before_downscale.png")
+    
     if pixelSize > 8:
         x_sample_image = x_sample_image.resize(
             (W // pixelSize, H // pixelSize), resample=Image.Resampling.NEAREST
@@ -2883,7 +2886,7 @@ async def server(websocket):
             try:
                 message = json.loads(message)
                 match message["action"]:
-                    case "_txt2img":
+                    case "txt2img":
                         # Extract parameters from the message
                         values = message["value"]
                         modelData = values["model"]
@@ -2978,9 +2981,28 @@ async def server(websocket):
                         
                         print("cldm samples", samples)
                         
-                        # samples can be decoded with our regular pipelines
+                        samples = samples.to(torch.float16)
                         
-                    case "txt2img":
+                        # samples can be decoded with our regular pipelines
+                        img, post = render(
+                            modelTA,
+                            modelPV,
+                            samples,
+                            0,
+                            modelData["device"],
+                            values["height"],
+                            values["width"],
+                            values["pixel_size"],
+                            values["use_pixelvae"],
+                            values["tile_x"],
+                            values["tile_y"],
+                            values["loras"],
+                            values["post_process"],
+                        )
+                        img.show()
+                        img.save("cldm_sample.png")
+                        
+                    case "_txt2img":
                         try:
                             # Extract parameters from the message
                             values = message["value"]

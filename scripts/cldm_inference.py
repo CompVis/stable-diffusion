@@ -117,7 +117,7 @@ def sample_cldm(
     )
     
     # Scale the latents to make them compatible with RD decoding
-    samples_cldm /= 10.0
+    samples_cldm /= 6.0
     
     return samples_cldm
 
