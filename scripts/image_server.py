@@ -1978,7 +1978,6 @@ def txt2img(
 
     # !!! REMEMBER: ALL MODEL FILES ARE BOUND UNDER THE LICENSE AGREEMENTS OUTLINED HERE: https://astropulse.co/#retrodiffusioneula https://astropulse.co/#retrodiffusionmodeleula !!!
     loadedLoras = []
-    raw_loras = []
     decryptedFiles = []
     fernet = Fernet("I47jl1hqUPug4KbVYd60_zeXhn_IH_ECT3QRGiBxdxo=")
     for i, loraPair in enumerate(loras):
@@ -2002,7 +2001,6 @@ def txt2img(
                         try:
                             # Load decrypted
                             loadedLoras.append(load_lora(loraPair["file"], model))
-                            raw_loras.append({ "sd": load_lora_raw(loraPair["file"]), "weight": loraPair["weight"] })
                         except:
                             # Decrypted file could not be read, revert to unchanged, and return an error
                             decryptedFiles[i] = "none"
@@ -2221,16 +2219,16 @@ def txt2img(
                 # Delete the samples to free up memory
                 del samples_ddim
 
-        # for i, lora in enumerate(loadedLoras):
-        #     if lora is not None:
-        #         # Release lora
-        #         remove_lora_for_inference(lora)
-        #     if os.path.splitext(loras[i]["file"])[1] == ".pxlm":
-        #         if decryptedFiles[i] != "none":
-        #             encrypted = fernet.encrypt(decryptedFiles[i])
-        #             with open(loras[i]["file"], "wb") as dec_file:
-        #                 dec_file.write(encrypted)
-        # del loadedLoras
+        for i, lora in enumerate(loadedLoras):
+            if lora is not None:
+                # Release lora
+                remove_lora_for_inference(lora)
+            if os.path.splitext(loras[i]["file"])[1] == ".pxlm":
+                if decryptedFiles[i] != "none":
+                    encrypted = fernet.encrypt(decryptedFiles[i])
+                    with open(loras[i]["file"], "wb") as dec_file:
+                        dec_file.write(encrypted)
+        del loadedLoras
 
         if post:
             output = palettizeOutput(output)

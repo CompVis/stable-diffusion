@@ -259,7 +259,7 @@ def lora_apply_weights(self: Union[torch.nn.Conv2d, torch.nn.Linear, torch.nn.Mu
             if module is None:
                 continue
 
-            # print(f'failed to calculate lora weights for layer {lora_layer_name}')
+            print(f'failed to calculate lora weights for layer {lora_layer_name}')
 
         self.lora_current_names = wanted_names
 
