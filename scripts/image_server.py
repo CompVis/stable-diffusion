@@ -2885,7 +2885,7 @@ async def server(websocket):
             try:
                 message = json.loads(message)
                 match message["action"]:
-                    case "txt2img":
+                    case "_txt2img":
                         # Extract parameters from the message
                         values = message["value"]
                         modelData = values["model"]
@@ -2982,7 +2982,7 @@ async def server(websocket):
                         
                         # samples can be decoded with our regular pipelines
                         
-                    case "_txt2img":
+                    case "txt2img":
                         try:
                             # Extract parameters from the message
                             values = message["value"]

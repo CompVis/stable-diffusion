@@ -190,8 +190,7 @@ def load_lora(filename, model):
         elif type(sd_module) == torch.nn.Conv2d and weight.shape[2:] == (3, 3):
             module = torch.nn.Conv2d(weight.shape[1], weight.shape[0], (3, 3), bias=False)
         else:
-            # print(f'Lora layer {key_diffusers} matched a layer with unsupported type: {type(sd_module).__name__}')
-            continue
+            print(f'Lora layer {key_diffusers} matched a layer with unsupported type: {type(sd_module).__name__}')
 
         with torch.no_grad():
             module.weight.copy_(weight)
@@ -206,8 +205,7 @@ def load_lora(filename, model):
             raise AssertionError(f"Bad Lora layer name: {key_diffusers} - must end in lora_up.weight, lora_down.weight or alpha")
 
     if len(keys_failed_to_match) > 0:
-        # print(f"Failed to match keys when loading Lora {filename}: {keys_failed_to_match}")
-        pass
+        print(f"Failed to match keys when loading Lora {filename}: {keys_failed_to_match}")
 
     return lora
 

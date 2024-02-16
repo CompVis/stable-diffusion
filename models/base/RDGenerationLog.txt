@@ -2395,3 +2395,311 @@ Modifiers:
 Top-down | 35%
 Front-facing | 50%
 
+2024/02/15 20:50:23
+Text to Image
+Model: Pixel art
+Prompt: a raven perched on a branch with dramatic mountains in the background, clouds, mountains, beautiful landscape
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 91604872
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 20:51:06
+Text to Image
+Model: Pixel art
+Prompt: a raven perched on a branch with dramatic mountains in the background, clouds, mountains, beautiful landscape
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 77603457
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 20:51:19
+Text to Image
+Model: Pixel art
+Prompt: a raven perched on a branch with dramatic mountains in the background, clouds, mountains, beautiful landscape
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 43670725
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 20:51:29
+Text to Image
+Model: Pixel art
+Prompt: a raven perched on a branch with dramatic mountains in the background, clouds, mountains, beautiful landscape
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 52735278
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 20:51:40
+Text to Image
+Model: Pixel art
+Prompt: a cute corgi
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 63379060
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 20:52:09
+Text to Image
+Model: Pixel art
+Prompt: a cute corgi
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 5354028
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 20:52:47
+Text to Image
+Model: Pixel art
+Prompt: a cute corgi
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 78636440
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 20:53:06
+Text to Image
+Model: Pixel art
+Prompt: a cute corgi
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 31031828
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 20:53:53
+Text to Image
+Model: Pixel art
+Prompt: a cute corgi
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 64930766
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 20:56:05
+Text to Image
+Model: Pixel art
+Prompt: a cute corgi
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 63107942
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
+2024/02/15 20:56:27
+Text to Image
+Model: Pixel art
+Prompt: a cute corgi
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 51943060
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+
