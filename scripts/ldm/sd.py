@@ -165,7 +165,8 @@ def load_checkpoint_guess_config(
 
     left_over = sd.keys()
     if len(left_over) > 0:
-        print("left over keys:", left_over)
+        # print("left over keys:", left_over)
+        pass
 
     if output_model:
         model_patcher = ldm.model_patcher.ModelPatcher(

@@ -3921,3 +3921,57 @@ Tiling X: false
 Tiling Y: false
 Modifiers:
 
+2024/02/16 21:23:33
+Text to Image
+Model: Pixel art
+Prompt: pixel art, starry night
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 9781547
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+
+2024/02/16 21:27:03
+Text to Image
+Model: Pixel art
+Prompt: pixel art, starry night
+Negative: 
+Width: 64
+Height: 64
+Quality: 5
+Scale: 5.0
+Lighting applied: false
+Lighting X rotation: 0
+Lighting Y rotation: 0
+Lighting Z rotation: 0
+Hue: 0
+Tint: 0
+Saturation: 50
+Brightness: 50
+Contrast: 50
+Outline: 50
+Seed: 60730482
+Generations: 1
+LLM Enhanced: false
+Tiling X: false
+Tiling Y: false
+Modifiers:
+Top-down | 35%
+Front-facing | 50%
+

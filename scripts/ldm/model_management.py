@@ -17,7 +17,7 @@ highvram = False
 normalvram = False
 gpu_only = False
 force_fp32 = False
-force_fp16 = False
+force_fp16 = True
 disable_smart_memory = False
 disable_ipex_optimize = False
 bf16_vae = False
@@ -214,7 +214,7 @@ elif highvram or gpu_only:
     vram_state = VRAMState.HIGH_VRAM
 
 FORCE_FP32 = False
-FORCE_FP16 = False
+FORCE_FP16 = True
 if force_fp32:
     print("Forcing FP32, if this improves things please report it.")
     FORCE_FP32 = True
