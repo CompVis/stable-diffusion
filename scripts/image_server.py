@@ -1783,10 +1783,8 @@ def prepare_inference(
                 # Prepare for inference
                 register_lora_for_inference(loadedLoras[i])
                 apply_lora()
-                if not any(name == os.path.splitext(loraName)[0] for name in system_models):
-                    rprint(
-                        f"[#494b9b]Using [#48a971]{os.path.splitext(loraName)[0]} [#494b9b]LoRA with [#48a971]{loraPair['weight']}% [#494b9b]strength"
-                    )
+            if not any(name == os.path.splitext(loraName)[0] for name in system_models):
+                rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraName)[0]} [#494b9b]LoRA with [#48a971]{loraPair['weight']}% [#494b9b]strength")
         else:
             if load_raw_loras == False:
                 loadedLoras.append(None)
