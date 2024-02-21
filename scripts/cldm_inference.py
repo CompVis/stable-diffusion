@@ -1,17 +1,54 @@
 import torch
 
 from ldm.controlnet import load_controlnet as load_controlnet_cldm
-from ldm.apply_controlnet import load_image, apply_controlnet
 from ldm.sample import prepare_noise, sample
 
 from ldm.model_management import unload_all_models
 from ldm.lora import load_lora_for_models
 from ldm.sd import load_checkpoint_guess_config
 
+import copy
+from PIL import Image, ImageOps
+import numpy as np
+import torch
+
+
+# returns a conditioning with a controlnet applied to it, ready to pass it to a KSampler
+def apply_controlnet(conditioning, control_net, image, strength):
+    if strength == 0:
+        return (conditioning,)
+
+    c = []
+    control_hint = image.movedim(-1, 1)
+    for t in conditioning:
+        n = [t[0], t[1].copy()]
+        c_net = control_net.copy().set_cond_hint(control_hint, strength)
+        if "control" in t[1]:
+            c_net.set_previous_controlnet(t[1]["control"])
+        n[1]["control"] = c_net
+        n[1]["control_apply_to_uncond"] = True
+        c.append(n)
+    return (c,)
+
+
+def load_image(image):
+    i = ImageOps.exif_transpose(image)
+    image = i.convert("RGB")
+    image = np.array(image).astype(np.float32) / 255.0
+    image = torch.from_numpy(image)[None,]
+    if "A" in i.getbands():
+        mask = np.array(i.getchannel("A")).astype(np.float32) / 255.0
+        mask = 1.0 - torch.from_numpy(mask)
+    else:
+        mask = torch.zeros((64, 64), dtype=torch.float32, device="cpu")
+    return (image, mask.unsqueeze(0))
+
 
 def load_controlnet(
     controlnet_model,
     conditioning_img,
+    width,
+    height,
     strength,
     model_file,
     device,
@@ -24,7 +61,7 @@ def load_controlnet(
     controlnet = load_controlnet_cldm(controlnet_model)
 
     # Load conditioning image
-    (image, _mask) = load_image(conditioning_img)
+    (image, _mask) = load_image(Image.open(conditioning_img).resize((width, height), resample=Image.Resampling.BILINEAR))
 
     # Load base model
     out = load_checkpoint_guess_config(
