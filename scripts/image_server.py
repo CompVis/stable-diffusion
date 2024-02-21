@@ -2336,6 +2336,9 @@ def cltxt2img(modelFileString, prompt, negative, translate, promptTuning, W, H, 
         negative_conditioning,
         raw_loras = raw_loras
     )
+
+    _, fp16_mode, _ = get_precision(device, precision)
+
     with torch.no_grad():
         base_count = 0
         output = []
@@ -2344,7 +2347,7 @@ def cltxt2img(modelFileString, prompt, negative, translate, promptTuning, W, H, 
         for run in clbar(range(runs), name="Batches", position="last", unit="batch", prefixwidth=12, suffixwidth=28):
             batch = min(batch, total_images - base_count)
 
-            samples_ddim = sample_cldm(
+            for step, samples_ddim in enumerate(sample_cldm(
                 model_patcher,
                 cldm_cond,
                 cldm_uncond,
@@ -2357,11 +2360,33 @@ def cltxt2img(modelFileString, prompt, negative, translate, promptTuning, W, H, 
                 H,
                 None, # initial latent for img2img,
                 "normal" # scheduler
-            )
-
-            _, fp16_mode, _ = get_precision(device, precision)
-            
-            samples_ddim = samples_ddim.to(fp16_mode)
+            )):
+                samples_ddim = samples_ddim.to(fp16_mode)
+                if preview:
+                    # Render and send image previews
+                    displayOut = []
+                    for i in range(batch):
+                        x_sample_image = fastRender(
+                            modelPV, samples_ddim, pixelSize, W, H, i
+                        )
+                        name = str(hash(str([data[i], negative_data[i], translate, promptTuning, W, H, upscale, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
+                        displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
+                    yield {
+                        "action": "display_title",
+                        "type": "txt2img",
+                        "value": {
+                            "text": f"Generating... {step}/{pre_steps} steps in batch {run+1}/{runs}"
+                        },
+                    }
+                    yield {
+                        "action": "display_image",
+                        "type": "txt2img",
+                        "value": {
+                            "images": displayOut,
+                            "prompts": data,
+                            "negatives": negative_data,
+                        },
+                    }
             
             for i in range(batch):
                 x_sample_image, post = render(

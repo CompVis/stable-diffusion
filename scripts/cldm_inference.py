@@ -101,7 +101,7 @@ def sample_cldm(
     # Prepare noise
     noise = prepare_noise(latent, seed, None)
     
-    samples_cldm = sample(
+    for samples_cldm in sample(
         model_patcher,
         noise,
         steps,
@@ -112,12 +112,8 @@ def sample_cldm(
         negative_conditioning,
         latent,
         seed=seed,
-    )
-    
-    # Scale the latents to make them compatible with RD decoding
-    samples_cldm /= 6.0
-    
-    return samples_cldm
+    ):
+        yield samples_cldm / 6.0
 
 def unload_cldm():
     # Unload the model
