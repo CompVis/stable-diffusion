@@ -49,8 +49,6 @@ class BaseModel(torch.nn.Module):
         if self.adm_channels is None:
             self.adm_channels = 0
         self.inpaint_model = False
-        print("model_type", model_type.name)
-        print("adm", self.adm_channels)
 
     def apply_model(self, x, t, c_concat=None, c_crossattn=None, control=None, transformer_options={}, **kwargs):
         sigma = t

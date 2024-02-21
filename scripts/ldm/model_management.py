@@ -391,8 +391,6 @@ def load_models_gpu(models, memory_required=0):
             current_loaded_models.insert(0, current_loaded_models.pop(index))
             models_already_loaded.append(loaded_model)
         else:
-            if hasattr(x, "model"):
-                print(f"Requested to load {x.model.__class__.__name__}")
             models_to_load.append(loaded_model)
 
     if len(models_to_load) == 0:
@@ -401,10 +399,6 @@ def load_models_gpu(models, memory_required=0):
             if d != torch.device("cpu"):
                 free_memory(extra_mem, d, models_already_loaded)
         return
-
-    print(
-        f"Loading {len(models_to_load)} new model{'s' if len(models_to_load) > 1 else ''}"
-    )
 
     total_memory_required = {}
     for loaded_model in models_to_load:
