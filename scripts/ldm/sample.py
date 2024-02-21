@@ -156,8 +156,7 @@ def sample(
         model_options=model.model_options,
     )
 
-    count = 0
-    for samples in sampler.sample(
+    for step, samples in enumerate(sampler.sample(
         noise,
         positive_copy,
         negative_copy,
@@ -171,14 +170,14 @@ def sample(
         callback=callback,
         disable_pbar=disable_pbar,
         seed=seed,
-    ):
-        count += 1
+    )):
         samples = samples.cpu()
 
-        cleanup_additional_models(
-            set(
-                get_models_from_cond(positive, "control")
-                + get_models_from_cond(negative, "control")
+        if step == steps - 1:
+            cleanup_additional_models(
+                set(
+                    get_models_from_cond(positive, "control")
+                    + get_models_from_cond(negative, "control")
+                )
             )
-        )
         yield samples
