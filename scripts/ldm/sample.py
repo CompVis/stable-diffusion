@@ -61,7 +61,7 @@ def get_models_from_cond(cond, model_type):
 
 
 def convert_cond(cond):
-    print("convert_cond", len(cond), len(cond[0]), cond)
+    #print("convert_cond", len(cond), len(cond[0]), cond)
     out = []
     for c in cond:
         temp = c[1].copy()
