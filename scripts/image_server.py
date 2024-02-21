@@ -54,7 +54,7 @@ try:
     import base64
 
     # Import CLDM requirements
-    from cldm_inference import prepare_cldm, load_controlnet, sample_cldm
+    from cldm_inference import load_controlnet, sample_cldm, unload_cldm
 
     # Import console management libraries
     from rich import print as rprint
@@ -1835,9 +1835,7 @@ def manageComposition(lighting, composition, loras):
 
     return loras
 
-
-# Generate image from text prompt
-def txt2img(
+def prepare_inference(
     prompt,
     negative,
     translate,
@@ -1861,9 +1859,12 @@ def txt2img(
     preview,
     pixelvae,
     post,
+    
+    # options for cldm
+    load_raw_loras = False,
 ):
-    timer = time.time()
-
+    raw_loras = []
+    
     # Check gpu availability
     if device == "cuda" and not torch.cuda.is_available():
         if torch.backends.mps.is_available():
@@ -1971,7 +1972,8 @@ def txt2img(
     global modelPV
 
     # Patch tiling for model and modelTA
-    model, modelTA, modelPV = patch_tiling(tilingX, tilingY, model, modelTA, modelPV)
+    if load_raw_loras == False: # ignore for CLDM
+        model, modelTA, modelPV = patch_tiling(tilingX, tilingY, model, modelTA, modelPV)
 
     # Set the precision scope based on device and precision
     if device == "cuda" and precision == "autocast":
@@ -2002,65 +2004,136 @@ def txt2img(
                         # Write attempted decrypted file
                         dec_file.write(decryptedFiles[i])
                         try:
-                            # Load decrypted
-                            loadedLoras.append(load_lora(loraPair["file"], model))
+                            if load_raw_loras:
+                                raw_loras.append(
+                                    {
+                                        "sd": load_lora_raw(loraPair["file"]),
+                                        "weight": loraPair["weight"],
+                                    }
+                                )
+                            else:
+                                # Load decrypted
+                                loadedLoras.append(load_lora(loraPair["file"], model))    
                         except:
-                            # Decrypted file could not be read, revert to unchanged, and return an error
-                            decryptedFiles[i] = "none"
-                            dec_file.write(encrypted)
-                            loadedLoras.append(None)
-                            rprint(
-                                f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted"
-                            )
-                            continue
+                            if load_raw_loras == False:
+                                # Decrypted file could not be read, revert to unchanged, and return an error
+                                decryptedFiles[i] = "none"
+                                dec_file.write(encrypted)
+                                loadedLoras.append(None)
+                                rprint(
+                                    f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted"
+                                )
+                                continue
             else:
                 # Add lora to unet
-                loadedLoras.append(load_lora(loraPair["file"], model))
-            loadedLoras[i].multiplier = loraPair["weight"] / 100
-            # Prepare for inference
-            register_lora_for_inference(loadedLoras[i])
-            apply_lora()
-            if not any(name == os.path.splitext(loraName)[0] for name in system_models):
-                rprint(
-                    f"[#494b9b]Using [#48a971]{os.path.splitext(loraName)[0]} [#494b9b]LoRA with [#48a971]{loraPair['weight']}% [#494b9b]strength"
-                )
+                if load_raw_loras == False:
+                    loadedLoras.append(load_lora(loraPair["file"], model))
+                
+            if load_raw_loras == False:
+                loadedLoras[i].multiplier = loraPair["weight"] / 100
+                # Prepare for inference
+                register_lora_for_inference(loadedLoras[i])
+                apply_lora()
+                if not any(name == os.path.splitext(loraName)[0] for name in system_models):
+                    rprint(
+                        f"[#494b9b]Using [#48a971]{os.path.splitext(loraName)[0]} [#494b9b]LoRA with [#48a971]{loraPair['weight']}% [#494b9b]strength"
+                    )
         else:
-            loadedLoras.append(None)
+            if load_raw_loras == False:
+                loadedLoras.append(None)
 
     seeds = []
-    with torch.no_grad():
-        # Create conditioning values for each batch, then unload the text encoder
-        negative_conditioning = []
-        conditioning = []
-        shape = []
-        # Use the specified precision scope
-        with precision_scope("cuda"):
-            modelCS.to(device)
-            condBatch = batch
-            condCount = 0
-            for run in range(runs):
-                # Compute conditioning tokens using prompt and negative
-                condBatch = min(condBatch, total_images - condCount)
-                negative_conditioning.append(
-                    modelCS.get_learned_conditioning(
-                        negative_data[condCount : condCount + condBatch]
-                    )
+    # with torch.no_grad():
+    # Create conditioning values for each batch, then unload the text encoder
+    negative_conditioning = []
+    conditioning = []
+    shape = []
+    # Use the specified precision scope
+    with precision_scope("cuda"):
+        modelCS.to(device)
+        condBatch = batch
+        condCount = 0
+        for run in range(runs):
+            # Compute conditioning tokens using prompt and negative
+            condBatch = min(condBatch, total_images - condCount)
+            negative_conditioning.append(
+                modelCS.get_learned_conditioning(
+                    negative_data[condCount : condCount + condBatch]
                 )
-                conditioning.append(
-                    modelCS.get_learned_conditioning(
-                        data[condCount : condCount + condBatch]
-                    )
+            )
+            conditioning.append(
+                modelCS.get_learned_conditioning(
+                    data[condCount : condCount + condBatch]
                 )
-                shape.append([condBatch, 4, gHeight, gWidth])
-                condCount += condBatch
+            )
+            shape.append([condBatch, 4, gHeight, gWidth])
+            condCount += condBatch
 
-            # Move modelCS to CPU if necessary to free up GPU memory
-            if device == "cuda":
-                mem = torch.cuda.memory_allocated() / 1e6
-                modelCS.to("cpu")
-                # Wait until memory usage decreases
-                while torch.cuda.memory_allocated() / 1e6 >= mem:
-                    time.sleep(1)
+        # Move modelCS to CPU if necessary to free up GPU memory
+        if device == "cuda":
+            mem = torch.cuda.memory_allocated() / 1e6
+            modelCS.to("cpu")
+            # Wait until memory usage decreases
+            while torch.cuda.memory_allocated() / 1e6 >= mem:
+                time.sleep(1)
+        
+        return conditioning, negative_conditioning, runs, precision_scope, pre_steps, shape, sampler, start_code, data, negative_data, up_steps, seeds, decryptedFiles, fernet, batch, raw_loras
+    
+
+# Generate image from text prompt
+def txt2img(
+    prompt,
+    negative,
+    translate,
+    promptTuning,
+    W,
+    H,
+    pixelSize,
+    upscale,
+    quality,
+    scale,
+    lighting,
+    composition,
+    seed,
+    total_images,
+    maxBatchSize,
+    device,
+    precision,
+    loras,
+    tilingX,
+    tilingY,
+    preview,
+    pixelvae,
+    post,
+):
+    timer = time.time()
+    
+    with torch.no_grad():
+        conditioning, negative_conditioning, runs, precision_scope, pre_steps, shape, sampler, start_code, data, negative_data, up_steps, seeds, decryptedFiles, fernet, batch, raw_loras = prepare_inference(
+            prompt,
+            negative,
+            translate,
+            promptTuning,
+            W,
+            H,
+            pixelSize,
+            upscale,
+            quality,
+            scale,
+            lighting,
+            composition,
+            seed,
+            total_images,
+            maxBatchSize,
+            device,
+            precision,
+            loras,
+            tilingX,
+            tilingY,
+            preview,
+            pixelvae,
+            post,
+        )
 
         base_count = 0
         output = []
@@ -2902,7 +2975,7 @@ async def server(websocket):
                                 )
                             )
                         
-                        state_dict = load_model(
+                        load_model(
                             modelData["file"],
                             "scripts/v1-inference.yaml",
                             modelData["device"],
@@ -2913,7 +2986,7 @@ async def server(websocket):
                         
                         global modelCS
                         
-                        conditioning, negative_conditioning = prepare_cldm(
+                        conditioning, negative_conditioning, runs, precision_scope, pre_steps, shape, sampler, start_code, data, negative_data, up_steps, seeds, decryptedFiles, fernet, batch, raw_loras = prepare_inference(
                             values["prompt"],
                             values["negative"],
                             values["translate"],
@@ -2937,13 +3010,7 @@ async def server(websocket):
                             values["send_progress"],
                             values["use_pixelvae"],
                             values["post_process"],
-                            rprint,
-                            manageComposition,
-                            managePrompts,
-                            seed_everything,
-                            modelPath,
-                            modelCS,
-                            system_models
+                            True,
                         )
                         
                         model_patcher, cldm_cond, cldm_uncond = load_controlnet(
@@ -2986,11 +3053,13 @@ async def server(websocket):
                             values["use_pixelvae"],
                             values["tile_x"],
                             values["tile_y"],
-                            values["loras"],
+                            raw_loras,
                             values["post_process"],
                         )
                         img.show()
                         img.save("cldm_sample.png")
+                        
+                        unload_cldm()
                         
                     case "_txt2img":
                         try:

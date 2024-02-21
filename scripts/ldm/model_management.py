@@ -882,3 +882,7 @@ def throw_exception_if_processing_interrupted():
         if interrupt_processing:
             interrupt_processing = False
             raise InterruptProcessingException()
+
+
+def unload_all_models():
+    free_memory(1e30, get_torch_device())
