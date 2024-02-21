@@ -10,7 +10,7 @@ import torch
 import torch as th
 import torch.nn as nn
 import pytorch_lightning as pl
-from pytorch_lightning.utilities.distributed import rank_zero_only
+from pytorch_lightning.utilities import rank_zero_only
 import numpy as np
 from torch.optim.lr_scheduler import LambdaLR
 from torch import einsum

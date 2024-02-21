@@ -118,7 +118,6 @@ def get_total_memory(dev=None, torch_total_too=False):
 
 total_vram = get_total_memory(get_torch_device()) / (1024 * 1024)
 total_ram = psutil.virtual_memory().total / (1024 * 1024)
-print("Total VRAM {:0.0f} MB, total RAM {:0.0f} MB".format(total_vram, total_ram))
 
 try:
     OOM_EXCEPTION = torch.cuda.OutOfMemoryError
@@ -216,11 +215,9 @@ elif highvram or gpu_only:
 FORCE_FP32 = False
 FORCE_FP16 = True
 if force_fp32:
-    print("Forcing FP32, if this improves things please report it.")
     FORCE_FP32 = True
 
 if force_fp16:
-    print("Forcing FP16.")
     FORCE_FP16 = True
 
 if lowvram_available:
@@ -242,8 +239,6 @@ if cpu_state != CPUState.GPU:
 
 if cpu_state == CPUState.MPS:
     vram_state = VRAMState.SHARED
-
-print(f"Set vram state to: {vram_state.name}")
 
 DISABLE_SMART_MEMORY = disable_smart_memory
 
@@ -268,13 +263,6 @@ def get_torch_device_name(device):
     else:
         return "CUDA {}: {}".format(device, torch.cuda.get_device_name(device))
 
-
-try:
-    print("Device:", get_torch_device_name(get_torch_device()))
-except:
-    print("Could not pick default device.")
-
-print("VAE dtype:", VAE_DTYPE)
 
 current_loaded_models = []
 

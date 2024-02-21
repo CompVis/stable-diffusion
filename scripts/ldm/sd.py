@@ -176,7 +176,6 @@ def load_checkpoint_guess_config(
             current_device=inital_load_device,
         )
         if inital_load_device != torch.device("cpu"):
-            print("loaded straight to GPU")
             ldm.model_management.load_model_gpu(model_patcher)
 
     return (model_patcher, clip, vae, clipvision)
