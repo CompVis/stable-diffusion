@@ -1591,7 +1591,6 @@ def prepare_inference(
     W,
     H,
     pixelSize,
-    upscale,
     quality,
     scale,
     lighting,
@@ -1604,9 +1603,6 @@ def prepare_inference(
     loras,
     tilingX,
     tilingY,
-    preview,
-    pixelvae,
-    post,
     
     # options for cldm
     load_raw_loras = False,
@@ -1646,42 +1642,24 @@ def prepare_inference(
     # Derive steps, cfg, lcm weight from quality setting
     global modelPath
     # Curves defined by https://www.desmos.com/calculator/kny0embnkg
-    steps = round(3.4 + ((quality ** 2) / 1.5))
+    steps = round(9 + (((quality-1.85) ** 2) * 1.1))
     scale = max(1, scale * ((1.6 + (((quality - 1.6) ** 2) / 4)) / 5))
     lcm_weight = max(1.5, 10 - (quality * 1.5))
     if lcm_weight > 0:
         loras.append({"file": os.path.join(modelPath, "quality.lcm"), "weight": round(lcm_weight*10)})
 
-    # High resolution adjustments for consistency
-    gWidth = W // 8
-    gHeight = H // 8
-
-    if gWidth >= 96 or gHeight >= 96:
-        resfix_weight = round(max(4, min(((((math.sqrt(gWidth * gHeight)/10) - 10) ** 3) / 3000) + 4, 7.5)) * 10)
-        loras.append({"file": os.path.join(modelPath, "resfix.lcm"), "weight": resfix_weight})
-
     # Composition and lighting modifications
     loras = manageComposition(lighting, composition, loras)
 
-    # Composition enhancement settings (high res fix)
-    pre_steps = steps
-    up_steps = 1
-    if gWidth >= 96 and gHeight >= 96 and upscale:
-        lower = 50
-        aspect = gWidth / gHeight
-        gx = gWidth
-        gy = gHeight
-        # Calculate initial image size from given large image
-        # Targets resolutions between 64x64 and 96x96 while respecting aspect ratios
-        # Interactive example here: https://editor.p5js.org/Astropulse/full/Co7CGTAnm
-        gWidth = int((lower * max(1, aspect)) + ((gy / 7) * aspect))
-        gHeight = int((lower * max(1, 1 / aspect)) + ((gx / 7) * (1 / aspect)))
-
-        # Curves defined by https://www.desmos.com/calculator/kny0embnkg
-        pre_steps = round(steps * ((10 - (((quality - 1.1) ** 2) / 8)) / 10))
-        up_steps = round(steps * max(0.42, ((((quality - 7.2) ** 2) / 2.5) + 3.2) / 10))
-    else:
-        upscale = False
+    # High resolution adjustments for consistency
+    if W // 8 >= 96 or H // 8 >= 96:
+        loras.append({"file": os.path.join(modelPath, "resfix.lcm"), "weight": 40})
+    
+        # Apply 'cropped' lora for enhanced composition at high resolution
+        
+        crop_weight = round(max(3, min(round(math.sqrt(2 * ((math.sqrt((W // 8) * (H // 8))/10) - 9)) + 1, 2), 7)) * 100)
+        if True:
+            loras.append({"file": os.path.join(os.path.join(modelPath, "LECO"), "crop.leco"), "weight": crop_weight})
 
     # Apply modifications to raw prompts
     data, negative_data = managePrompts(
@@ -1690,7 +1668,7 @@ def prepare_inference(
         W,
         H,
         seed,
-        upscale,
+        False,
         total_images,
         loras,
         translate,
@@ -1701,14 +1679,6 @@ def prepare_inference(
     rprint(
         f"\n[#48a971]Text to Image[white] generating [#48a971]{total_images}[white] quality [#48a971]{quality}[white] images over [#48a971]{runs}[white] batches with [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)"
     )
-
-    if W // 8 >= 96 and H // 8 >= 96 and upscale:
-        rprint(
-            f"[#48a971]Pre-generating[white] composition image at [#48a971]{gWidth * 8}[white]x[#48a971]{gHeight * 8} [white]([#48a971]{(gWidth * 8) // pixelSize}[white]x[#48a971]{(gHeight * 8) // pixelSize}[white] pixels)"
-        )
-
-    start_code = None
-    sampler = "pxlcm"
 
     global model
     global modelCS
@@ -1852,7 +1822,7 @@ def prepare_inference(
 
             conditioning.append(text_embed)
             negative_conditioning.append(modelCS.get_learned_conditioning(negative_data[condCount : condCount + condBatch]))
-            shape.append([condBatch, 4, gHeight, gWidth])
+            shape.append([condBatch, 4, H // 8, W // 8])
             condCount += condBatch
 
         # Move modelCS to CPU if necessary to free up GPU memory
@@ -1863,7 +1833,7 @@ def prepare_inference(
             while torch.cuda.memory_allocated() / 1e6 >= mem:
                 time.sleep(1)
         
-        return conditioning, negative_conditioning, runs, precision_scope, pre_steps, shape, sampler, start_code, data, negative_data, up_steps, seeds, decryptedFiles, fernet, batch, raw_loras
+        return conditioning, negative_conditioning, steps, scale, runs, data, negative_data, seeds, batch, raw_loras
     
 
 # Generate image from text prompt
@@ -2193,7 +2163,6 @@ def txt2img(
                             },
                         }
 
-                #torch.save(samples_ddim, "rd.pt")
                 if upscale:
                     # Apply 'cropped' lora for enhanced composition at high resolution
                     crop_weight = max(3, min(round(math.sqrt(2 * ((math.sqrt((W // 8) * (H // 8))/10) - 9)), 2), 7))
@@ -2323,12 +2292,14 @@ def cltxt2img(modelFileString, prompt, negative, translate, promptTuning, W, H, 
     global modelTA
     global modelPV
                         
-    conditioning, negative_conditioning, runs, precision_scope, pre_steps, shape, sampler, start_code, data, negative_data, up_steps, seeds, decryptedFiles, fernet, batch, raw_loras = prepare_inference(
-        prompt, negative, translate, promptTuning, W, H, pixelSize, upscale, quality, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, preview, pixelvae, post, True)
+    conditioning, negative_conditioning, steps, scale, runs, data, negative_data, seeds, batch, raw_loras = prepare_inference(
+        prompt, negative, translate, promptTuning, W, H, pixelSize, quality, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, True)
     
     model_patcher, cldm_cond, cldm_uncond = load_controlnet(
         "./models/controllora/Composition.safetensors",
         "./vangogh.png",
+        W,
+        H,
         1.0,
         modelFileString,
         0, # might need to point to the physical device, in this case defaults to first GPU available
@@ -2352,8 +2323,8 @@ def cltxt2img(modelFileString, prompt, negative, translate, promptTuning, W, H, 
                 cldm_cond,
                 cldm_uncond,
                 seed,
-                20, # steps,
-                5.0, # cfg,
+                steps, # steps,
+                scale, # cfg,
                 "euler", # sampler,
                 batch, # batch size
                 W,
@@ -2375,7 +2346,7 @@ def cltxt2img(modelFileString, prompt, negative, translate, promptTuning, W, H, 
                         "action": "display_title",
                         "type": "txt2img",
                         "value": {
-                            "text": f"Generating... {step}/{pre_steps} steps in batch {run+1}/{runs}"
+                            "text": f"Generating... {step}/{steps} steps in batch {run+1}/{runs}"
                         },
                     }
                     yield {
