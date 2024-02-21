@@ -3,8 +3,8 @@ cryptography
 pygetwindow==0.0.9
 websockets==10.4
 albumentations==0.4.3
-opencv-python
-opencv-python-headless
+opencv-python==4.8.1.78
+opencv-python-headless==4.8.1.78
 pudb==2019.2
 imageio==2.9.0
 imageio-ffmpeg==0.4.2

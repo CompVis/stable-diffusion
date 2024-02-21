@@ -11,7 +11,7 @@ def load_lora_for_models(model, clip, lora, strength_model, strength_clip):
     loaded = load_lora(lora, key_map)
     if model is not None:
         new_modelpatcher = model.clone()
-        k = new_modelpatcher.add_patches(loaded, strength_model)
+        k = new_modelpatcher.add_patches(loaded, strength_patch=strength_model)
     else:
         k = ()
         new_modelpatcher = None

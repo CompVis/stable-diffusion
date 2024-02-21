@@ -238,7 +238,8 @@ def lora_apply_weights(self: Union[torch.nn.Conv2d, torch.nn.Linear, torch.nn.Mu
         for lora in loaded_loras:
             module = lora.modules.get(lora_layer_name, None)
             if module is not None and hasattr(self, 'weight'):
-                self.weight += lora_calc_updown(lora, module, self.weight)
+                updown = lora_calc_updown(lora, module, self.weight)
+                self.weight.copy_((self.weight.to(dtype=updown.dtype) + updown).to(dtype=self.weight.dtype))
                 continue
 
             module_q = lora.modules.get(lora_layer_name + "_q_proj", None)
@@ -250,10 +251,11 @@ def lora_apply_weights(self: Union[torch.nn.Conv2d, torch.nn.Linear, torch.nn.Mu
                 updown_q = lora_calc_updown(lora, module_q, self.in_proj_weight)
                 updown_k = lora_calc_updown(lora, module_k, self.in_proj_weight)
                 updown_v = lora_calc_updown(lora, module_v, self.in_proj_weight)
-                updown_qkv = torch.vstack([updown_q, updown_k, updown_v])
+                updown_qkv = torch.vstack([updown_q, updown_k, updown_v]).to(self.weight.dtype)
 
                 self.in_proj_weight += updown_qkv
-                self.out_proj.weight += lora_calc_updown(lora, module_out, self.out_proj.weight)
+                updown = lora_calc_updown(lora, module_out, self.out_proj.weight)
+                self.out_proj.weight.copy_((self.out_proj.weight.to(dtype=updown.dtype) + updown).to(dtype=self.out_proj.weight.dtype))
                 continue
 
             if module is None:
@@ -265,8 +267,8 @@ def lora_apply_weights(self: Union[torch.nn.Conv2d, torch.nn.Linear, torch.nn.Mu
 
 def lora_calc_updown(lora, module, target):
     with torch.no_grad():
-        up = module.up.weight.to(target.device, dtype=target.dtype)
-        down = module.down.weight.to(target.device, dtype=target.dtype)
+        up = module.up.weight.to(target.device).to(torch.float32)
+        down = module.down.weight.to(target.device).to(torch.float32)
 
         if up.shape[2:] == (1, 1) and down.shape[2:] == (1, 1):
             updown = (up.squeeze(2).squeeze(2) @ down.squeeze(2).squeeze(2)).unsqueeze(2).unsqueeze(3)

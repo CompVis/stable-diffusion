@@ -13,7 +13,7 @@ def load_controlnet(
     controlnet_model,
     conditioning_img,
     strength,
-    # state_dict,
+    model_file,
     device,
     conditioning,
     negative_conditioning,
@@ -28,7 +28,7 @@ def load_controlnet(
 
     # Load base model
     out = load_checkpoint_guess_config(
-        "./models/base/model.safetensors",
+        model_file,
         output_vae=False,
         output_clip=False,
         output_clipvision=False,
@@ -63,7 +63,7 @@ def load_controlnet(
     lora_model_patcher = model_patcher
 
     for lora in raw_loras:
-        print(lora)
+        print(lora["weight"])
         lora_model_patcher, _clip = load_lora_for_models(
             lora_model_patcher, None, lora["sd"], lora["weight"] / 100, 0
         )
