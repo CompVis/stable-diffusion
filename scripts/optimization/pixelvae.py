@@ -177,7 +177,7 @@ class PixelVAE:
         return result
 
     def run_cluster(self, samples, threshold=0.001, rand_seed=1, select='local8', wrap_x=False, wrap_y=False):
-        predicts = self.model.forward(samples.to(self.device).to(torch.float32))
+        predicts = self.model.forward(samples.to(self.device).to(torch.float32)).to(torch.float32)
 
         # compute softmax per channel, split channels
         compute_softmax(self.binning, predicts)
