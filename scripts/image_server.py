@@ -1401,16 +1401,16 @@ def rembg(images, modelpath):
 
 
 # Render image from latent usinf Tiny Autoencoder or clustered Pixel VAE
-def render(modelTA, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post):
+def render(modelTA, modelPV, samples_ddim, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post):
     if pixelvae:
         # Pixel clustering mode, lower threshold means bigger clusters
         denoise = 0.08
-        x_sample = modelPV.run_cluster(samples_ddim[i:i+1], threshold=denoise, select="local4", wrap_x=tilingX, wrap_y=tilingY)
+        x_sample = modelPV.run_cluster(samples_ddim, threshold=denoise, select="local4", wrap_x=tilingX, wrap_y=tilingY)
         # x_sample = modelPV.run_plain(samples_ddim[i:i+1])
         x_sample = x_sample[0].cpu().numpy()
     else:
         try:
-            x_sample = modelTA.decoder(samples_ddim[i:i+1].to(device))
+            x_sample = modelTA.decoder(samples_ddim.to(device))
             x_sample = torch.clamp((x_sample.cpu().float()), min = 0.0, max = 1.0)
             x_sample = x_sample.cpu().movedim(1, -1)
             x_sample = 255.0 * x_sample[0].cpu().numpy()
@@ -1432,7 +1432,7 @@ def render(modelTA, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae,
                 rprint(f"\n[#ab333d]Ran out of VRAM during decode, switching to fast pixel decoder")
                 # Pixel clustering mode, lower threshold means bigger clusters
                 denoise = 0.08
-                x_sample = modelPV.run_cluster(samples_ddim[i:i+1], threshold=denoise, select="local4", wrap_x=tilingX, wrap_y=tilingY)
+                x_sample = modelPV.run_cluster(samples_ddim, threshold=denoise, select="local4", wrap_x=tilingX, wrap_y=tilingY)
                 x_sample = x_sample[0].cpu().numpy()
             else:
                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
@@ -1473,8 +1473,8 @@ def render(modelTA, modelPV, samples_ddim, i, device, H, W, pixelSize, pixelvae,
 
 
 # Render image from latent using direct Pixel VAE conversion
-def fastRender(modelPV, samples_ddim, pixelSize, W, H, i):
-    x_sample = modelPV.run_plain(samples_ddim[i:i+1])
+def fastRender(modelPV, samples_ddim, pixelSize, W, H):
+    x_sample = modelPV.run_plain(samples_ddim)
     x_sample = x_sample[0].cpu().numpy()
     x_sample_image = Image.fromarray(x_sample.astype(np.uint8))
     if pixelSize > 8:
@@ -2182,9 +2182,7 @@ def txt2img(
                         # Render and send image previews
                         displayOut = []
                         for i in range(batch):
-                            x_sample_image = fastRender(
-                                modelPV, samples_ddim, pixelSize, W, H, i
-                            )
+                            x_sample_image = fastRender(modelPV, samples_ddim[i:i+1], pixelSize, W, H)
                             name = str(hash(str([data[i], negative_data[i], translate, promptTuning, W, H, upscale, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
                             displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                         yield {
@@ -2245,9 +2243,7 @@ def txt2img(
                             # Render and send image previews
                             displayOut = []
                             for i in range(batch):
-                                x_sample_image = fastRender(
-                                    modelPV, samples_ddim, pixelSize, W, H, i
-                                )
+                                x_sample_image = fastRender(modelPV, samples_ddim[i:i+1], pixelSize, W, H)
                                 name = str(hash(str([data[i], negative_data[i], translate, promptTuning, W, H, upscale, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
                                 displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                             yield {
@@ -2272,8 +2268,7 @@ def txt2img(
                     x_sample_image, post = render(
                         modelTA,
                         modelPV,
-                        samples_ddim,
-                        i,
+                        samples_ddim[i:i+1],
                         device,
                         H,
                         W,
@@ -2398,11 +2393,8 @@ def neural_img2img(modelFileString, controlnets, prompt, negative, input_image, 
                     # Render and send image previews
                     displayOut = []
                     for i in range(batch):
-                        print(samples_ddim.shape)
-                        x_sample_image = fastRender(
-                            modelPV, samples_ddim, pixelSize, W, H, i
-                        )
-                        name = str(hash(str([data[i], negative_data[i], input_image, translate, promptTuning, W, H, upscale, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
+                        x_sample_image = fastRender(modelPV, samples_ddim[i:i+1], pixelSize, W, H)
+                        name = str(hash(str([data[i], negative_data[i], input_image.resize((16, 16), resample=Image.Resampling.NEAREST), translate, promptTuning, W, H, upscale, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
                         displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                     yield {
                         "action": "display_title",
@@ -2425,8 +2417,7 @@ def neural_img2img(modelFileString, controlnets, prompt, negative, input_image, 
                 x_sample_image, post = render(
                     modelTA,
                     modelPV,
-                    samples_ddim,
-                    i,
+                    samples_ddim[i:i+1],
                     device,
                     H,
                     W,
@@ -2443,7 +2434,7 @@ def neural_img2img(modelFileString, controlnets, prompt, negative, input_image, 
 
                 seeds.append(str(seed))
 
-                name = str(hash(str([data[i], negative_data[i], input_image, translate, promptTuning, W, H, upscale, quality, scale, device, raw_loras, tilingX, tilingY, pixelvae, seed])) & 0x7FFFFFFFFFFFFFFF)
+                name = str(hash(str([data[i], negative_data[i], input_image.resize((16, 16), resample=Image.Resampling.NEAREST), translate, promptTuning, W, H, upscale, quality, scale, device, raw_loras, tilingX, tilingY, pixelvae, seed])) & 0x7FFFFFFFFFFFFFFF)
                 output.append({"name": name, "seed": seed, "format": "png", "image": x_sample_image, "width": x_sample_image.width, "height": x_sample_image.height})
 
                 seed += 1
@@ -2466,7 +2457,7 @@ def neural_img2img(modelFileString, controlnets, prompt, negative, input_image, 
             "type": "neural_pixelate",
             "value": {"images": final, "prompts": data, "negatives": negative_data},
         }
-            
+
         unload_cldm()
 
 
@@ -2739,10 +2730,8 @@ def img2img(
                         # Render and send image previews
                         displayOut = []
                         for i in range(batch):
-                            x_sample_image = fastRender(
-                                modelPV, samples_ddim, pixelSize, W, H, i
-                            )
-                            name = str(hash(str([data[i], negative_data[i], images[0], strength, translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
+                            x_sample_image = fastRender(modelPV, samples_ddim[i:i+1], pixelSize, W, H)
+                            name = str(hash(str([data[i], negative_data[i], images[0].resize((16, 16), resample=Image.Resampling.NEAREST), strength, translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
                             displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                         yield {
                             "action": "display_title",
@@ -2766,8 +2755,7 @@ def img2img(
                     x_sample_image, post = render(
                         modelTA,
                         modelPV,
-                        samples_ddim,
-                        i,
+                        samples_ddim[i:i+1],
                         device,
                         H,
                         W,
@@ -2783,7 +2771,7 @@ def img2img(
                         play("iteration.wav")
 
                     seeds.append(str(seed))
-                    name = str(hash(str([data[i], negative_data[i], images[0], strength, translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed])) & 0x7FFFFFFFFFFFFFFF)
+                    name = str(hash(str([data[i], negative_data[i], images[0].resize((16, 16), resample=Image.Resampling.NEAREST), strength, translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed])) & 0x7FFFFFFFFFFFFFFF)
                     output.append({"name": name, "seed": seed, "format": "png", "image": x_sample_image, "width": x_sample_image.width, "height": x_sample_image.height})
 
                     seed += 1
