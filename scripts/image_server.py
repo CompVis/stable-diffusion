@@ -96,6 +96,8 @@ except:
 # Global variables
 global modelName
 modelName = None
+global modelSettings
+modelSettings = None
 # Unet
 global model
 # Conditioning (clip)
@@ -683,7 +685,10 @@ def load_model_from_config(model, verbose=False):
 # Load stable diffusion 1.5 format model
 def load_model(modelFileString, config, device, precision, optimized, split = True):
     global modelName
-    if modelFileString != modelName:
+    global modelSettings
+
+    modelParams = {"file": modelFileString, "device": device, "precision": precision, "optimized": optimized}
+    if modelSettings != modelParams:
         timer = time.time()
 
         if device == "cuda" and not torch.cuda.is_available():
@@ -804,6 +809,7 @@ def load_model(modelFileString, config, device, precision, optimized, split = Tr
             assign_lora_names_to_compvis_modules(model, modelCS)
 
         modelName = modelFileString
+        modelSettings = modelParams
 
         # Print loading information
         play("iteration.wav")
