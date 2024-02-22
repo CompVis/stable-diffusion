@@ -13,7 +13,7 @@ try:
     from itertools import islice, product
     from einops import rearrange
     from pytorch_lightning import seed_everything
-    from transformers import BlipProcessor, BlipForConditionalGeneration
+    from transformers import BlipProcessor, BlipForConditionalGeneration, set_seed
     from contextlib import nullcontext
     from typing import Optional
     import psutil
@@ -641,18 +641,15 @@ def adjust_gamma(image, gamma=1.0):
 # Load blip image captioning model
 def load_blip(path):
     timer = time.time()
-    print("Loading BLIP model")
+    print("\nLoading vision model")
     try:
         processor = BlipProcessor.from_pretrained(path)
         model = BlipForConditionalGeneration.from_pretrained(path)
-        rprint(
-            f"[#c4f129]Loaded in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds"
-        )
+        play("iteration.wav")
+        rprint(f"[#c4f129]Loaded in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
         return {"processor": processor, "model": model}
     except Exception as e:
-        rprint(
-            f"[#ab333d]{traceback.format_exc()}\n\nBLIP could not be loaded, this may indicate a model has not been downloaded fully, or you have run out of RAM."
-        )
+        rprint(f"[#ab333d]{traceback.format_exc()}\n\nBLIP could not be loaded, this may indicate a model has not been downloaded fully, or you have run out of RAM.")
         return None
 
 
@@ -817,14 +814,13 @@ def load_model(modelFileString, config, device, precision, optimized, split = Tr
 
         # Print loading information
         play("iteration.wav")
+        rprint(f"[#c4f129]Loaded model to [#48a971]{device}[#c4f129] with [#48a971]{precision} precision[#c4f129] in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
         
         if split:
-            rprint(f"[#c4f129]Loaded model to [#48a971]{model.cdevice}[#c4f129] with [#48a971]{precision} precision[#c4f129] in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
             split_loaded = True
         else:
             split_loaded = False
             return sd, modelFileString
-            
 
 
 # Apply prompt enhancements, defaults, and language model management
@@ -876,6 +872,7 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loras, tra
                             play("iteration.wav")
 
                         prompts = upsampled_captions
+                        del outputs, upsampled_caption
                         clearCache()
 
                         seed = seed - len(prompts)
@@ -963,6 +960,7 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loras, tra
         else:
             negatives = [f"{negative}, pixel art"] * generations
 
+    del loraNames
     return prompts, negatives
 
 
@@ -1613,6 +1611,8 @@ def prepare_inference(
     tilingX,
     tilingY,
     
+    # options for image to image
+    image = None,
     # options for cldm
     load_raw_loras = False,
 ):
@@ -1625,6 +1625,10 @@ def prepare_inference(
         else:
             device = "cpu"
             rprint(f"\n[#ab333d]GPU is not responding, loading model in CPU mode")
+
+    if image is not None:
+        # Load initial image and move it to the specified device
+        init_image = load_img(image.convert("RGB"), H, W).to(device)
 
     # Calculate maximum batch size
     global maxSize
@@ -1712,39 +1716,40 @@ def prepare_inference(
         if loraName != "none":
             # Handle proprietary models
             if os.path.splitext(loraName)[1] == ".pxlm":
-                with open(loraPair["file"], "rb") as enc_file:
-                    encrypted = enc_file.read()
-                    try:
-                        # Assume file is encrypted, decrypt it
-                        decryptedFiles[i] = fernet.decrypt(encrypted)
-                    except:
-                        # Decryption failed, assume not encrypted
-                        decryptedFiles[i] = encrypted
-
-                    with open(loraPair["file"], "wb") as dec_file:
-                        # Write attempted decrypted file
-                        dec_file.write(decryptedFiles[i])
+                try:
+                    with open(loraPair["file"], "rb") as enc_file:
+                        encrypted = enc_file.read()
                         try:
-                            if load_raw_loras:
-                                raw_loras.append(
-                                    {
-                                        "sd": load_lora_raw(loraPair["file"]),
-                                        "weight": loraPair["weight"],
-                                    }
-                                )
-                            else:
-                                # Load decrypted
-                                loadedLoras.append(load_lora(loraPair["file"], model))    
+                            # Assume file is encrypted, decrypt it
+                            decryptedFiles[i] = fernet.decrypt(encrypted)
                         except:
-                            # Decrypted file could not be read, revert to unchanged, and return an error
-                            if load_raw_loras == False:
-                                loadedLoras.append(None)
-                            decryptedFiles[i] = "none"
-                            dec_file.write(encrypted)
-                            rprint(
-                                f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted"
-                            )
-                            continue
+                            # Decryption failed, assume not encrypted
+                            decryptedFiles[i] = encrypted
+
+                        with open(loraPair["file"], "wb") as dec_file:
+                            # Write attempted decrypted file
+                            dec_file.write(decryptedFiles[i])
+                            try:
+                                if load_raw_loras:
+                                    raw_loras.append(
+                                        {
+                                            "sd": load_lora_raw(loraPair["file"]),
+                                            "weight": loraPair["weight"],
+                                        }
+                                    )
+                                else:
+                                    # Load decrypted
+                                    loadedLoras.append(load_lora(loraPair["file"], model))    
+                            except:
+                                # Decrypted file could not be read, revert to unchanged, and return an error
+                                if load_raw_loras == False:
+                                    loadedLoras.append(None)
+                                decryptedFiles[i] = "none"
+                                dec_file.write(encrypted)
+                                rprint(f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted")
+                                continue
+                except:
+                    rprint(f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted")
             else:
                 # Add lora to unet
                 if load_raw_loras:
@@ -1769,13 +1774,16 @@ def prepare_inference(
                 loadedLoras.append(None)
 
     seeds = []
-    # with torch.no_grad():
     # Create conditioning values for each batch, then unload the text encoder
     negative_conditioning = []
     conditioning = []
     shape = []
-    # Use the specified precision scope
     with precision_scope:
+        if image is not None:
+            # Move the initial image to latent space and resize it
+            init_latent_base = modelTA.encoder(init_image)
+            init_latent_base = torch.nn.functional.interpolate(init_latent_base, size=(H // 8, W // 8), mode="bilinear") * 6.0
+
         modelCS.to(device)
         condBatch = batch
         condCount = 0
@@ -1841,8 +1849,7 @@ def prepare_inference(
             # Wait until memory usage decreases
             while torch.cuda.memory_allocated() / 1e6 >= mem:
                 time.sleep(1)
-        
-        return conditioning, negative_conditioning, steps, scale, runs, data, negative_data, seeds, batch, raw_loras
+        return conditioning, negative_conditioning, init_latent_base, steps, scale, runs, data, negative_data, seeds, batch, raw_loras
     
 
 # Generate image from text prompt
@@ -2295,26 +2302,49 @@ def txt2img(
         }
 
 
-def cltxt2img(modelFileString, prompt, negative, translate, promptTuning, W, H, pixelSize, upscale, quality, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, preview, pixelvae, post):
+def neural_pixelate(modelFileString, prompt, negative, translate, promptTuning, W, H, pixelSize, upscale, quality, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, preview, pixelvae, post):
     timer = time.time()
     global modelCS
     global modelTA
     global modelPV
+
+    imageFile = "./86.png"
+    image = Image.open(imageFile).convert("RGB").resize((W, H), resample=Image.Resampling.BILINEAR)
+
+    global modelBLIP
+    if modelBLIP is None:
+        global modelPath
+        modelBLIP = load_blip(os.path.join(modelPath, "BLIP"))
+
+    if modelBLIP is not None:
+        processor = modelBLIP["processor"]
+        model = modelBLIP["model"]
+
+        if prompt is not None:
+            inputs = processor(image, prompt, return_tensors="pt")
+        else:
+            inputs = processor(image, return_tensors="pt")
+
+        rprint(f"\n[#48a971]Vision model [/]generating image description")
+        prompt = processor.decode(model.generate(**inputs, max_new_tokens=30)[0], repetition_penalty=1.2, skip_special_tokens=True)
+        rprint(f"[#48a971]Caption: [#494b9b]{prompt}")
+
+    image_blur = image.filter(ImageFilter.BoxBlur(2))
                         
-    conditioning, negative_conditioning, steps, scale, runs, data, negative_data, seeds, batch, raw_loras = prepare_inference(
-        prompt, negative, translate, promptTuning, W, H, pixelSize, quality, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, True)
+    conditioning, negative_conditioning, image_embed, steps, scale, runs, data, negative_data, seeds, batch, raw_loras = prepare_inference(
+        prompt, negative, translate, promptTuning, W, H, pixelSize, quality, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, image, True)
     
+    controlnets = [{"model_file": "./models/controllora/Tile.safetensors", "image": image_blur, "weight": 1.0}, {"model_file": "./models/controllora/Composition.safetensors", "image": image_blur, "weight": 0.4}]
+
     model_patcher, cldm_cond, cldm_uncond = load_controlnet(
-        "./models/controllora/Composition.safetensors",
-        "./vangogh.png",
+        controlnets,
         W,
         H,
-        1.0,
         modelFileString,
         0, # might need to point to the physical device, in this case defaults to first GPU available
         conditioning,
         negative_conditioning,
-        raw_loras = raw_loras
+        loras = raw_loras
     )
 
     _, fp16_mode, _ = get_precision(device, precision)
@@ -2334,11 +2364,12 @@ def cltxt2img(modelFileString, prompt, negative, translate, promptTuning, W, H, 
                 seed,
                 steps, # steps,
                 scale, # cfg,
-                "euler", # sampler,
+                "ddim", # sampler,
                 batch, # batch size
                 W,
                 H,
-                None, # initial latent for img2img,
+                image_embed, # initial latent for img2img
+                0.85, # denoise strength
                 "normal" # scheduler
             )):
                 samples_ddim = samples_ddim.to(fp16_mode)
@@ -3055,7 +3086,7 @@ async def server(websocket):
                                         }
                                     )
                                 )
-                            for result in cltxt2img(
+                            for result in neural_pixelate(
                                 modelData["file"],
                                 values["prompt"],
                                 values["negative"],

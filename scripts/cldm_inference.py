@@ -45,24 +45,16 @@ def load_image(image):
 
 
 def load_controlnet(
-    controlnet_model,
-    conditioning_img,
+    controlnets,
     width,
     height,
-    strength,
     model_file,
     device,
     conditioning,
     negative_conditioning,
-    raw_loras=[],
+    loras=[],
     unet_dtype=torch.float16,
 ):
-    # Load controlnet model
-    controlnet = load_controlnet_cldm(controlnet_model)
-
-    # Load conditioning image
-    (image, _mask) = load_image(Image.open(conditioning_img).resize((width, height), resample=Image.Resampling.BILINEAR))
-
     # Load base model
     out = load_checkpoint_guess_config(
         model_file,
@@ -99,8 +91,7 @@ def load_controlnet(
     # Apply loras
     lora_model_patcher = model_patcher
 
-    for lora in raw_loras:
-        print(lora["weight"])
+    for lora in loras:
         lora_model_patcher, _clip = load_lora_for_models(
             lora_model_patcher, None, lora["sd"], lora["weight"] / 100, 0
         )
@@ -109,12 +100,17 @@ def load_controlnet(
     cldm_conditioning = [[conditioning[0], {"pooled_output": None}]]
     cldm_negative_conditioning = [[negative_conditioning[0], {"pooled_output": None}]]
 
-    # Apply controlnet to conditioning
-    (controlled_conditioning,) = apply_controlnet(
-        cldm_conditioning, controlnet, image, strength
-    )
+    for controlnet_input in controlnets:
+        # Load controlnet model
+        controlnet = load_controlnet_cldm(controlnet_input["model_file"])
 
-    return lora_model_patcher, controlled_conditioning, cldm_negative_conditioning
+        # Load conditioning image
+        (image, _mask) = load_image(controlnet_input["image"])
+
+        # Apply controlnet to conditioning
+        (cldm_conditioning,) = apply_controlnet(cldm_conditioning, controlnet, image, controlnet_input["weight"])
+
+    return lora_model_patcher, cldm_conditioning, cldm_negative_conditioning
 
 
 def sample_cldm(
@@ -129,6 +125,7 @@ def sample_cldm(
     width=512,
     height=512,
     latent=None,
+    denoise=1.0, 
     scheduler = "normal",
 ):
     # Generate empty latents for txt2img
@@ -148,6 +145,7 @@ def sample_cldm(
         conditioning,
         negative_conditioning,
         latent,
+        denoise=denoise,
         seed=seed,
     ):
         yield samples_cldm / 6.0

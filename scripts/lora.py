@@ -1,6 +1,7 @@
 import os
 import re
 import io
+import copy
 from typing import Union
 import torch
 from safetensors.torch import load_file
@@ -144,7 +145,10 @@ def assign_lora_names_to_compvis_modules(model, modelCS):
     # print("Added LoRA layers")
 
 def load_lora_raw(filename):
-    return load_file(filename)
+    weights = load_file(filename)
+    new_weights = copy.deepcopy(weights)
+    del weights
+    return new_weights
 
 def load_lora(filename, model):
     lora_tensors = load_file(filename)
