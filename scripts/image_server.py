@@ -687,9 +687,13 @@ def load_model(modelFileString, config, device, precision, optimized, split = Tr
     global modelName
     global modelSettings
 
-    modelParams = {"file": modelFileString, "device": device, "precision": precision, "optimized": optimized}
+    modelParams = {"file": modelFileString, "device": device, "precision": precision, "optimized": optimized, "split": split}
     if modelSettings != modelParams:
         timer = time.time()
+
+        global split_loaded
+        if not split_loaded:
+            unload_cldm()
 
         if device == "cuda" and not torch.cuda.is_available():
             if torch.backends.mps.is_available():
@@ -814,7 +818,6 @@ def load_model(modelFileString, config, device, precision, optimized, split = Tr
         # Print loading information
         play("iteration.wav")
         
-        global split_loaded
         if split:
             rprint(f"[#c4f129]Loaded model to [#48a971]{model.cdevice}[#c4f129] with [#48a971]{precision} precision[#c4f129] in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
             split_loaded = True
@@ -2413,6 +2416,7 @@ def cltxt2img(modelFileString, prompt, negative, translate, promptTuning, W, H, 
             
         unload_cldm()
 
+
 # Generate image from image+text prompt
 def img2img(
     prompt,
@@ -2685,7 +2689,7 @@ def img2img(
                             x_sample_image = fastRender(
                                 modelPV, samples_ddim, pixelSize, W, H, i
                             )
-                            name = str(hash(str([data[i], negative_data[i], translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
+                            name = str(hash(str([data[i], negative_data[i], images[0], translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
                             displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                         yield {
                             "action": "display_title",
@@ -2726,7 +2730,7 @@ def img2img(
                         play("iteration.wav")
 
                     seeds.append(str(seed))
-                    name = str(hash(str([data[i], negative_data[i], translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed])) & 0x7FFFFFFFFFFFFFFF)
+                    name = str(hash(str([data[i], negative_data[i], images[0], translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed])) & 0x7FFFFFFFFFFFFFFF)
                     output.append({"name": name, "seed": seed, "format": "png", "image": x_sample_image, "width": x_sample_image.width, "height": x_sample_image.height})
 
                     seed += 1
