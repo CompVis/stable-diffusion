@@ -14,7 +14,7 @@ test-tube>=0.7.5
 streamlit>=0.73.1
 einops==0.3.0
 torch-fidelity==0.3.0
-transformers==4.35.2
+transformers==4.38.1
 torchmetrics==0.7.0
 safetensors==0.3.2
 kornia==0.6
