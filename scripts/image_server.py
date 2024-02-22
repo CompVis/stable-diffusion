@@ -1778,11 +1778,36 @@ def prepare_inference(
     negative_conditioning = []
     conditioning = []
     shape = []
+    encoded_latent = []
     with precision_scope:
         if image is not None:
             # Move the initial image to latent space and resize it
             init_latent_base = modelTA.encoder(init_image)
             init_latent_base = torch.nn.functional.interpolate(init_latent_base, size=(H // 8, W // 8), mode="bilinear") * 6.0
+
+            latentBatch = batch
+            latentCount = 0
+
+            # Move the initial image to latent space and resize it
+            init_latent_base = modelTA.encoder(init_image)
+            init_latent_base = torch.nn.functional.interpolate(init_latent_base, size=(H // 8, W // 8), mode="bilinear")
+            if init_latent_base.shape[0] < latentBatch:
+                # Create tiles of inputs to match batch arrangement
+                init_latent_base = init_latent_base.repeat(
+                    [math.ceil(latentBatch / init_latent_base.shape[0])]
+                    + [1] * (len(init_latent_base.shape) - 1)
+                )[:latentBatch]
+
+            for run in range(runs):
+                if total_images - latentCount < latentBatch:
+                    latentBatch = total_images - latentCount
+
+                    # Slice latents to new batch size
+                    init_latent_base = init_latent_base[:latentBatch]
+
+                # Encode the scaled latent
+                encoded_latent.append(init_latent_base)
+                latentCount += latentBatch
 
         modelCS.to(device)
         condBatch = batch
@@ -1849,7 +1874,7 @@ def prepare_inference(
             # Wait until memory usage decreases
             while torch.cuda.memory_allocated() / 1e6 >= mem:
                 time.sleep(1)
-        return conditioning, negative_conditioning, init_latent_base, steps, scale, runs, data, negative_data, seeds, batch, raw_loras
+        return conditioning, negative_conditioning, encoded_latent, steps, scale, runs, data, negative_data, seeds, batch, raw_loras
     
 
 # Generate image from text prompt
@@ -2302,40 +2327,35 @@ def txt2img(
         }
 
 
-def neural_pixelate(modelFileString, prompt, negative, translate, promptTuning, W, H, pixelSize, upscale, quality, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, preview, pixelvae, post):
+def neural_img2img(modelFileString, controlnets, prompt, negative, input_image, autocaption, translate, promptTuning, W, H, pixelSize, upscale, quality, scale, strength, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, preview, pixelvae, post):
     timer = time.time()
     global modelCS
     global modelTA
     global modelPV
 
-    imageFile = "./86.png"
-    image = Image.open(imageFile).convert("RGB").resize((W, H), resample=Image.Resampling.BILINEAR)
+    if autocaption:
+        global modelBLIP
+        if modelBLIP is None:
+            global modelPath
+            modelBLIP = load_blip(os.path.join(modelPath, "BLIP"))
 
-    global modelBLIP
-    if modelBLIP is None:
-        global modelPath
-        modelBLIP = load_blip(os.path.join(modelPath, "BLIP"))
+        if modelBLIP is not None:
+            processor = modelBLIP["processor"]
+            model = modelBLIP["model"]
 
-    if modelBLIP is not None:
-        processor = modelBLIP["processor"]
-        model = modelBLIP["model"]
+            blip_image = input_image.resize((512, 512), resample=Image.Resampling.BILINEAR)
+            if prompt is not None:
+                inputs = processor(blip_image, prompt, return_tensors="pt")
+            else:
+                inputs = processor(blip_image, return_tensors="pt")
 
-        if prompt is not None:
-            inputs = processor(image, prompt, return_tensors="pt")
-        else:
-            inputs = processor(image, return_tensors="pt")
-
-        rprint(f"\n[#48a971]Vision model [/]generating image description")
-        prompt = processor.decode(model.generate(**inputs, max_new_tokens=30)[0], repetition_penalty=1.2, skip_special_tokens=True)
-        rprint(f"[#48a971]Caption: [#494b9b]{prompt}")
-
-    image_blur = image.filter(ImageFilter.BoxBlur(2))
+            rprint(f"\n[#48a971]Vision model [/]generating image description")
+            prompt = processor.decode(model.generate(**inputs, max_new_tokens=30)[0], repetition_penalty=1.2, skip_special_tokens=True)
+            rprint(f"[#48a971]Caption: [#494b9b]{prompt}")
                         
     conditioning, negative_conditioning, image_embed, steps, scale, runs, data, negative_data, seeds, batch, raw_loras = prepare_inference(
-        prompt, negative, translate, promptTuning, W, H, pixelSize, quality, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, image, True)
+        prompt, negative, translate, promptTuning, W, H, pixelSize, quality, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, input_image, True)
     
-    controlnets = [{"model_file": "./models/controllora/Tile.safetensors", "image": image_blur, "weight": 1.0}, {"model_file": "./models/controllora/Composition.safetensors", "image": image_blur, "weight": 0.4}]
-
     model_patcher, cldm_cond, cldm_uncond = load_controlnet(
         controlnets,
         W,
@@ -2368,30 +2388,32 @@ def neural_pixelate(modelFileString, prompt, negative, translate, promptTuning, 
                 batch, # batch size
                 W,
                 H,
-                image_embed, # initial latent for img2img
-                0.85, # denoise strength
+                image_embed[run], # initial latent for img2img
+                strength, # denoise strength
                 "normal" # scheduler
             )):
                 samples_ddim = samples_ddim.to(fp16_mode)
+                #samples_ddim = torch.stack(samples_ddim, dim=0).squeeze(1)
                 if preview:
                     # Render and send image previews
                     displayOut = []
                     for i in range(batch):
+                        print(samples_ddim.shape)
                         x_sample_image = fastRender(
                             modelPV, samples_ddim, pixelSize, W, H, i
                         )
-                        name = str(hash(str([data[i], negative_data[i], translate, promptTuning, W, H, upscale, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
+                        name = str(hash(str([data[i], negative_data[i], input_image, translate, promptTuning, W, H, upscale, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
                         displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                     yield {
                         "action": "display_title",
-                        "type": "txt2img",
+                        "type": "neural_pixelate",
                         "value": {
                             "text": f"Generating... {step}/{steps} steps in batch {run+1}/{runs}"
                         },
                     }
                     yield {
                         "action": "display_image",
-                        "type": "txt2img",
+                        "type": "neural_pixelate",
                         "value": {
                             "images": displayOut,
                             "prompts": data,
@@ -2421,7 +2443,7 @@ def neural_pixelate(modelFileString, prompt, negative, translate, promptTuning, 
 
                 seeds.append(str(seed))
 
-                name = str(hash(str([data[i], negative_data[i], translate, promptTuning, W, H, upscale, quality, scale, device, raw_loras, tilingX, tilingY, pixelvae, seed])) & 0x7FFFFFFFFFFFFFFF)
+                name = str(hash(str([data[i], negative_data[i], input_image, translate, promptTuning, W, H, upscale, quality, scale, device, raw_loras, tilingX, tilingY, pixelvae, seed])) & 0x7FFFFFFFFFFFFFFF)
                 output.append({"name": name, "seed": seed, "format": "png", "image": x_sample_image, "width": x_sample_image.width, "height": x_sample_image.height})
 
                 seed += 1
@@ -2441,7 +2463,7 @@ def neural_pixelate(modelFileString, prompt, negative, translate, promptTuning, 
         )
         yield {
             "action": "display_image",
-            "type": "txt2img",
+            "type": "neural_pixelate",
             "value": {"images": final, "prompts": data, "negatives": negative_data},
         }
             
@@ -2720,7 +2742,7 @@ def img2img(
                             x_sample_image = fastRender(
                                 modelPV, samples_ddim, pixelSize, W, H, i
                             )
-                            name = str(hash(str([data[i], negative_data[i], images[0], translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
+                            name = str(hash(str([data[i], negative_data[i], images[0], strength, translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
                             displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                         yield {
                             "action": "display_title",
@@ -2761,7 +2783,7 @@ def img2img(
                         play("iteration.wav")
 
                     seeds.append(str(seed))
-                    name = str(hash(str([data[i], negative_data[i], images[0], translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed])) & 0x7FFFFFFFFFFFFFFF)
+                    name = str(hash(str([data[i], negative_data[i], images[0], strength, translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed])) & 0x7FFFFFFFFFFFFFFF)
                     output.append({"name": name, "seed": seed, "format": "png", "image": x_sample_image, "width": x_sample_image.width, "height": x_sample_image.height})
 
                     seed += 1
@@ -3051,7 +3073,7 @@ async def server(websocket):
             try:
                 message = json.loads(message)
                 match message["action"]:
-                    case "txt2img":
+                    case "img2img":
                         try:
                             # Extract parameters from the message
                             values = message["value"]
@@ -3062,7 +3084,7 @@ async def server(websocket):
                                     json.dumps(
                                         {
                                             "action": "display_title",
-                                            "type": "txt2img",
+                                            "type": "neural_pixelate",
                                             "value": {"text": "Loading model"},
                                         }
                                     )
@@ -3081,15 +3103,38 @@ async def server(websocket):
                                     json.dumps(
                                         {
                                             "action": "display_title",
-                                            "type": "txt2img",
+                                            "type": "neural_pixelate",
                                             "value": {"text": "Generating..."},
                                         }
                                     )
                                 )
-                            for result in neural_pixelate(
+                            
+                            # Neural pixelate
+                            # Decode input image
+                            init_img = decodeImage(values["images"][0])
+
+                            # Resize image to output dimensions
+                            image = init_img.resize((values["width"], values["height"]), resample=Image.Resampling.BILINEAR)
+
+                            # Blur filter for pixelate
+                            image_blur = image.filter(ImageFilter.BoxBlur(2))
+
+                            # i2i strength
+                            strength = 0.85
+
+                            # Use vision model to label input image
+                            autocaption = True
+
+                            # Net models, images, and weights in order
+                            controlnets = [{"model_file": "./models/controllora/Tile.safetensors", "image": image_blur, "weight": 1.0}, {"model_file": "./models/controllora/Composition.safetensors", "image": image_blur, "weight": 0.4}]
+
+                            for result in neural_img2img(
                                 modelData["file"],
+                                controlnets,
                                 values["prompt"],
                                 values["negative"],
+                                image,
+                                autocaption,
                                 values["translate"],
                                 values["prompt_tuning"],
                                 values["width"],
@@ -3098,6 +3143,7 @@ async def server(websocket):
                                 values["enhance_composition"],
                                 values["quality"],
                                 values["scale"],
+                                strength,
                                 values["lighting"],
                                 values["composition"],
                                 values["seed"],
@@ -3119,7 +3165,7 @@ async def server(websocket):
                                 json.dumps(
                                     {
                                         "action": "returning",
-                                        "type": "txt2img",
+                                        "type": "img2img",
                                         "value": {"images": result["value"]["images"]},
                                     }
                                 )
@@ -3143,7 +3189,7 @@ async def server(websocket):
                                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                             play("error.wav")
                             await websocket.send(json.dumps({"action": "error"}))
-                    case "_txt2img":
+                    case "txt2img":
                         try:
                             # Extract parameters from the message
                             values = message["value"]
@@ -3233,7 +3279,7 @@ async def server(websocket):
                                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                             play("error.wav")
                             await websocket.send(json.dumps({"action": "error"}))
-                    case "img2img":
+                    case "_img2img":
                         try:
                             # Extract parameters from the message
                             values = message["value"]
