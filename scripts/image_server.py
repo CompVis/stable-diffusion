@@ -1414,10 +1414,13 @@ def render(modelTA, modelPV, samples_ddim, device, H, W, pixelSize, pixelvae, ti
             x_sample = torch.clamp((x_sample.cpu().float()), min = 0.0, max = 1.0)
             x_sample = x_sample.cpu().movedim(1, -1)
             x_sample = 255.0 * x_sample[0].cpu().numpy()
-            x_sample = Image.fromarray(np.clip(x_sample, 0, 255).astype(np.uint8))
+            x_sample = np.clip(x_sample, 0, 255).astype(np.uint8)
+
+            # Denoise the generated image
+            x_sample = cv2.fastNlMeansDenoisingColored(x_sample, None, 6, 6, 3, 21)
 
             # Color adjustments to account for Tiny Autoencoder
-            contrast = ImageEnhance.Contrast(x_sample)
+            contrast = ImageEnhance.Contrast(Image.fromarray(x_sample))
             x_sample_contrast = contrast.enhance(1.3)
             saturation = ImageEnhance.Color(x_sample_contrast)
             x_sample_saturation = saturation.enhance(1.2)
@@ -1425,8 +1428,7 @@ def render(modelTA, modelPV, samples_ddim, device, H, W, pixelSize, pixelvae, ti
             # Convert back to NumPy array if necessary
             x_sample = np.array(x_sample_saturation)
 
-            # Denoise the generated image
-            x_sample = cv2.fastNlMeansDenoisingColored(x_sample, None, 6, 6, 3, 21)
+            
         except:
             if "torch.cuda.OutOfMemoryError" in traceback.format_exc() or "Invalid buffer size" in traceback.format_exc():
                 rprint(f"\n[#ab333d]Ran out of VRAM during decode, switching to fast pixel decoder")
@@ -1591,6 +1593,7 @@ def manageComposition(lighting, composition, loras):
 
 
 def prepare_inference(
+    title,
     prompt,
     negative,
     translate,
@@ -1690,7 +1693,7 @@ def prepare_inference(
     seed_everything(seed)
 
     rprint(
-        f"\n[#48a971]Text to Image[white] generating [#48a971]{total_images}[white] quality [#48a971]{quality}[white] images over [#48a971]{runs}[white] batches with [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)"
+        f"\n[#48a971]{title}[white] generating [#48a971]{total_images}[white] quality [#48a971]{quality}[white] images over [#48a971]{runs}[white] batches with [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)"
     )
 
     global model
@@ -2322,7 +2325,7 @@ def txt2img(
         }
 
 
-def neural_img2img(modelFileString, controlnets, prompt, negative, input_image, autocaption, translate, promptTuning, W, H, pixelSize, upscale, quality, scale, strength, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, preview, pixelvae, post):
+def neural_img2img(modelFileString, title, controlnets, prompt, negative, input_image, autocaption, translate, promptTuning, W, H, pixelSize, upscale, quality, scale, strength, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, preview, pixelvae, post):
     timer = time.time()
     global modelCS
     global modelTA
@@ -2349,8 +2352,10 @@ def neural_img2img(modelFileString, controlnets, prompt, negative, input_image, 
             rprint(f"[#48a971]Caption: [#494b9b]{prompt}")
                         
     conditioning, negative_conditioning, image_embed, steps, scale, runs, data, negative_data, seeds, batch, raw_loras = prepare_inference(
-        prompt, negative, translate, promptTuning, W, H, pixelSize, quality, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, input_image, True)
+        title, prompt, negative, translate, promptTuning, W, H, pixelSize, quality, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, input_image, True)
     
+    title = title.lower().replace(' ', '_')
+
     model_patcher, cldm_cond, cldm_uncond = load_controlnet(
         controlnets,
         W,
@@ -2398,14 +2403,14 @@ def neural_img2img(modelFileString, controlnets, prompt, negative, input_image, 
                         displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                     yield {
                         "action": "display_title",
-                        "type": "neural_pixelate",
+                        "type": title,
                         "value": {
                             "text": f"Generating... {step}/{steps} steps in batch {run+1}/{runs}"
                         },
                     }
                     yield {
                         "action": "display_image",
-                        "type": "neural_pixelate",
+                        "type": title,
                         "value": {
                             "images": displayOut,
                             "prompts": data,
@@ -2443,7 +2448,27 @@ def neural_img2img(modelFileString, controlnets, prompt, negative, input_image, 
             del samples_ddim
 
         if post:
-            output = palettizeOutput(output)
+            # Reduce input image to key colors
+            palette_img = input_image.resize((W // 8, H // 8), resample=Image.Resampling.BILINEAR)
+            numColors = determine_best_k(palette_img, 96)
+            palette_img = palette_img.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert("RGB")
+
+            # Extract palette colors
+            palette = np.concatenate([x[1] for x in palette_img.getcolors(96)]).tolist()
+
+            # Create a new palette image
+            tempPaletteImage = Image.new("P", (256, 1))
+            tempPaletteImage.putpalette(palette)
+
+            # Convert generated image to reduced input image palette
+            temp_output = output
+            output = []
+            for image in temp_output:
+                tempImage = image["image"]
+                # Perform quantization without dithering
+                image_indexed = tempImage.quantize(method=1, kmeans=numColors, palette=tempPaletteImage, dither=0).convert("RGB")
+
+                output.append({"name": image["name"], "seed": image["seed"], "format": image["format"], "image": image_indexed, "width": image["width"], "height": image["height"]})
 
         final = []
         for image in output:
@@ -2454,7 +2479,7 @@ def neural_img2img(modelFileString, controlnets, prompt, negative, input_image, 
         )
         yield {
             "action": "display_image",
-            "type": "neural_pixelate",
+            "type": title,
             "value": {"images": final, "prompts": data, "negatives": negative_data},
         }
 
@@ -2731,7 +2756,7 @@ def img2img(
                         displayOut = []
                         for i in range(batch):
                             x_sample_image = fastRender(modelPV, samples_ddim[i:i+1], pixelSize, W, H)
-                            name = str(hash(str([data[i], negative_data[i], images[0].resize((16, 16), resample=Image.Resampling.NEAREST), strength, translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
+                            name = str(hash(str([data[i], negative_data[i], init_img.resize((16, 16), resample=Image.Resampling.NEAREST), strength, translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
                             displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                         yield {
                             "action": "display_title",
@@ -2771,7 +2796,7 @@ def img2img(
                         play("iteration.wav")
 
                     seeds.append(str(seed))
-                    name = str(hash(str([data[i], negative_data[i], images[0].resize((16, 16), resample=Image.Resampling.NEAREST), strength, translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed])) & 0x7FFFFFFFFFFFFFFF)
+                    name = str(hash(str([data[i], negative_data[i], init_img.resize((16, 16), resample=Image.Resampling.NEAREST), strength, translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed])) & 0x7FFFFFFFFFFFFFFF)
                     output.append({"name": name, "seed": seed, "format": "png", "image": x_sample_image, "width": x_sample_image.width, "height": x_sample_image.height})
 
                     seed += 1
@@ -3098,6 +3123,8 @@ async def server(websocket):
                                 )
                             
                             # Neural pixelate
+                            title = "Neural Pixelate"
+
                             # Decode input image
                             init_img = decodeImage(values["images"][0])
 
@@ -3114,10 +3141,11 @@ async def server(websocket):
                             autocaption = True
 
                             # Net models, images, and weights in order
-                            controlnets = [{"model_file": "./models/controllora/Composition.safetensors", "image": image_blur, "weight": 0.4}]
+                            controlnets = [{"model_file": "./models/controllora/Tile.safetensors", "image": image_blur, "weight": 1.0}, {"model_file": "./models/controllora/Composition.safetensors", "image": image, "weight": 0.7}]
 
                             for result in neural_img2img(
                                 modelData["file"],
+                                title,
                                 controlnets,
                                 values["prompt"],
                                 values["negative"],
