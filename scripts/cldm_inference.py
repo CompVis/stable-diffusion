@@ -64,29 +64,6 @@ def load_controlnet(
     )
     
     model_patcher = out[0]
-    
-    # model_config = model_config_from_unet(
-    #     state_dict, "model.diffusion_model.", unet_dtype
-    # )
-
-    # # Set the weights
-    # sd_model = model_config.get_model(
-    #     state_dict,
-    #     "model.diffusion_model.",
-    #     device=device,
-    # )
-    # sd_model.load_model_weights(state_dict, "model.diffusion_model.")
-
-    # # Create the comfy model
-    # model_patcher = ModelPatcher(
-    #     sd_model,
-    #     load_device=device,
-    #     current_device=device,
-    #     offload_device=torch.device("cpu"),
-    # )
-
-    # # Move model to GPU
-    # load_model_gpu(model_patcher)
 
     # Apply loras
     lora_model_patcher = model_patcher

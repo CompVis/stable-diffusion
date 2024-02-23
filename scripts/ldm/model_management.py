@@ -86,6 +86,14 @@ def get_torch_device():
             return torch.device(torch.cuda.current_device())
 
 
+def module_size(module):
+    module_mem = 0
+    sd = module.state_dict()
+    for k in sd:
+        t = sd[k]
+        module_mem += t.nelement() * t.element_size()
+    return module_mem
+
 def get_total_memory(dev=None, torch_total_too=False):
     global directml_enabled
     if dev is None:

@@ -3114,7 +3114,7 @@ async def server(websocket):
                             autocaption = True
 
                             # Net models, images, and weights in order
-                            controlnets = [{"model_file": "./models/controllora/Tile.safetensors", "image": image_blur, "weight": 1.0}, {"model_file": "./models/controllora/Composition.safetensors", "image": image_blur, "weight": 0.4}]
+                            controlnets = [{"model_file": "./models/controllora/Composition.safetensors", "image": image_blur, "weight": 0.4}]
 
                             for result in neural_img2img(
                                 modelData["file"],
