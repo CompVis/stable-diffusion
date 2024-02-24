@@ -61,7 +61,6 @@ def get_models_from_cond(cond, model_type):
 
 
 def convert_cond(cond):
-    #print("convert_cond", len(cond), len(cond[0]), cond)
     out = []
     for c in cond:
         temp = c[1].copy()
@@ -99,23 +98,6 @@ def cleanup_additional_models(models):
     for m in models:
         if hasattr(m, "cleanup"):
             m.cleanup()
-
-
-# def prepare_sampling(model, noise_shape, positive, negative, noise_mask):
-#     device = model.load_device
-#     positive = convert_cond(positive)
-#     negative = convert_cond(negative)
-
-#     if noise_mask is not None:
-#         noise_mask = prepare_mask(noise_mask, noise_shape, device)
-
-#     real_model = None
-#     models, inference_memory = get_additional_models(positive, negative, model.model_dtype())
-#     comfy.model_management.load_models_gpu([model] + models, model.memory_required([noise_shape[0] * 2] + list(noise_shape[1:])) + inference_memory)
-#     real_model = model.model
-
-#     return real_model, positive, negative, noise_mask, models
-
 
 def sample(
     model,

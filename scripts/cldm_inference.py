@@ -6,9 +6,7 @@ from ldm.sample import prepare_noise, sample
 from ldm.model_management import unload_all_models
 from ldm.lora import load_lora_for_models
 from ldm.sd import load_checkpoint_guess_config
-
-import copy
-from PIL import Image, ImageOps
+from PIL import ImageOps
 import numpy as np
 import torch
 
@@ -62,7 +60,7 @@ def load_controlnet(
         output_clip=False,
         output_clipvision=False,
     )
-    
+
     model_patcher = out[0]
 
     # Apply loras
@@ -86,6 +84,9 @@ def load_controlnet(
 
         # Apply controlnet to conditioning
         (cldm_conditioning,) = apply_controlnet(cldm_conditioning, controlnet, image, controlnet_input["weight"])
+        
+    # Patch the model
+    lora_model_patcher.patch_model()
 
     return lora_model_patcher, cldm_conditioning, cldm_negative_conditioning
 

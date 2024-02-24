@@ -163,10 +163,9 @@ def load_checkpoint_guess_config(
                     "no CLIP/text encoder weights in checkpoint, the text encoder model will not be loaded."
                 )
 
-    left_over = sd.keys()
-    if len(left_over) > 0:
-        # print("left over keys:", left_over)
-        pass
+    # left_over = sd.keys()
+    # if len(left_over) > 0:
+    #     print("left over keys:", left_over)
 
     if output_model:
         model_patcher = ldm.model_patcher.ModelPatcher(

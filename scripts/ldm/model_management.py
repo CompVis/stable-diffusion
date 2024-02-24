@@ -309,31 +309,41 @@ class LoadedModel:
 
         if lowvram_model_memory > 0:
             print("loading in lowvram mode", lowvram_model_memory / (1024 * 1024))
-            device_map = accelerate.infer_auto_device_map(
-                self.real_model,
-                max_memory={
-                    0: "{}MiB".format(lowvram_model_memory // (1024 * 1024)),
-                    "cpu": "16GiB",
-                },
-            )
-            accelerate.dispatch_model(
-                self.real_model, device_map=device_map, main_device=self.device
-            )
+            mem_counter = 0
+            for m in self.real_model.modules():
+                if hasattr(m, "comfy_cast_weights"):
+                    m.prev_comfy_cast_weights = m.comfy_cast_weights
+                    m.comfy_cast_weights = True
+                    module_mem = module_size(m)
+                    if mem_counter + module_mem < lowvram_model_memory:
+                        m.to(self.device)
+                        mem_counter += module_mem
+                elif hasattr(
+                    m, "weight"
+                ):  # only modules with comfy_cast_weights can be set to lowvram mode
+                    m.to(self.device)
+                    mem_counter += module_size(m)
+                    print("lowvram: loaded module regularly", m)
+
             self.model_accelerated = True
 
-        if is_intel_xpu() and not disable_ipex_optimize:
-            self.real_model = torch.xpu.optimize(
-                self.real_model.eval(),
-                inplace=True,
-                auto_kernel_selection=True,
-                graph_mode=True,
-            )
+        # if is_intel_xpu() and not args.disable_ipex_optimize:
+        #     self.real_model = torch.xpu.optimize(
+        #         self.real_model.eval(),
+        #         inplace=True,
+        #         auto_kernel_selection=True,
+        #         graph_mode=True,
+        #     )
 
         return self.real_model
 
     def model_unload(self):
         if self.model_accelerated:
-            accelerate.hooks.remove_hook_from_submodules(self.real_model)
+            for m in self.real_model.modules():
+                if hasattr(m, "prev_comfy_cast_weights"):
+                    m.comfy_cast_weights = m.prev_comfy_cast_weights
+                    del m.prev_comfy_cast_weights
+
             self.model_accelerated = False
 
         self.model.unpatch_model(self.model.offload_device)

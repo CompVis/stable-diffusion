@@ -51,3 +51,6 @@ temp/RD_decode_temp.png
 temp/RD_encode_temp.png
 temp/RD_mask.png
 venv
+models/base/BLIP/*
+models/base/LECO/*
+models/base/RDGenerationLog.txt
