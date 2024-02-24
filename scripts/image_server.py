@@ -121,7 +121,7 @@ loadedDevice = "cpu"
 global modelPath
 
 global system_models
-system_models = ["quality", "resfix", "crop", "brightness", "contrast", "saturation", "outline", "color_cr", "color_mg", "color_yb", "light_bf", "light_du", "light_lr"]
+system_models = ["quality", "resfix", "crop", "detail", "brightness", "contrast", "saturation", "outline", "color_cr", "color_mg", "color_yb", "light_bf", "light_du", "light_lr"]
 
 global sounds
 sounds = False
@@ -1705,7 +1705,7 @@ def prepare_inference(
     found_contrast = False
     for lora in loras:
         if lora["file"] == os.path.join(lecoPath, "brightness.leco"):
-            lora["weight"] = lora["weight"] + 35
+            lora["weight"] = lora["weight"] + 30
         if lora["file"] == os.path.join(lecoPath, "contrast.leco"):
             found_contrast = True
             lora["weight"] = lora["weight"] + 120
@@ -1797,16 +1797,12 @@ def prepare_inference(
     encoded_latent = []
     with precision_scope:
         if image is not None:
-            # Move the initial image to latent space and resize it
-            init_latent_base = modelTA.encoder(init_image)
-            init_latent_base = torch.nn.functional.interpolate(init_latent_base, size=(H // 8, W // 8), mode="bilinear") * 6.0
-
             latentBatch = batch
             latentCount = 0
 
             # Move the initial image to latent space and resize it
             init_latent_base = modelTA.encoder(init_image)
-            init_latent_base = torch.nn.functional.interpolate(init_latent_base, size=(H // 8, W // 8), mode="bilinear")
+            init_latent_base = torch.nn.functional.interpolate(init_latent_base, size=(H // 8, W // 8), mode="bilinear") * 6.0
             if init_latent_base.shape[0] < latentBatch:
                 # Create tiles of inputs to match batch arrangement
                 init_latent_base = init_latent_base.repeat(
@@ -1824,6 +1820,9 @@ def prepare_inference(
                 # Encode the scaled latent
                 encoded_latent.append(init_latent_base)
                 latentCount += latentBatch
+        else:
+            for run in range(runs):
+                encoded_latent.append(None)
 
         modelCS.to(device)
         condBatch = batch
@@ -2357,13 +2356,13 @@ def resize_image(original_width, original_height, target_size = 512):
     return (int(new_width), int(new_height))  # Returning integer values for dimensions
 
 
-def neural_img2img(modelFileString, title, controlnets, prompt, negative, init_img, autocaption, promptTuning, W, H, pixelSize, steps, scale, strength, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, preview, pixelvae, mapColors, post):
+def neural_inference(modelFileString, title, controlnets, prompt, negative, autocaption, promptTuning, W, H, pixelSize, steps, scale, strength, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, preview, pixelvae, mapColors, post, init_img = None):
     timer = time.time()
     global modelCS
     global modelTA
     global modelPV
 
-    if autocaption:
+    if autocaption and init_img is not None:
         global modelBLIP
         if modelBLIP is None:
             global modelPath
@@ -2470,7 +2469,10 @@ def neural_img2img(modelFileString, title, controlnets, prompt, negative, init_i
                     play("iteration.wav")
 
                 seeds.append(str(seed))
-                name = str(hash(str([data[i], negative_data[i], init_img.resize((16, 16), resample=Image.Resampling.NEAREST), promptTuning, W, H, steps, scale, device, loras, pixelvae, seed])) & 0x7FFFFFFFFFFFFFFF)
+                name = [data[i], negative_data[i], promptTuning, W, H, steps, scale, device, loras, pixelvae, seed]
+                if init_img is not None:
+                    name.append(init_img.resize((16, 16), resample=Image.Resampling.NEAREST))
+                name = str(hash(str(name)) & 0x7FFFFFFFFFFFFFFF)
                 output.append({"name": name, "seed": seed, "format": "png", "image": x_sample_image, "width": x_sample_image.width, "height": x_sample_image.height})
 
                 seed += 1
@@ -2478,7 +2480,7 @@ def neural_img2img(modelFileString, title, controlnets, prompt, negative, init_i
             # Delete the samples to free up memory
             del samples_ddim
 
-        if mapColors and (init_img is not None):
+        if mapColors and init_img is not None:
             numColors = 256
             palette_img = init_img.resize((W // 8, H // 8), resample=Image.Resampling.NEAREST)
             palette_img = palette_img.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert("RGB")
@@ -3122,6 +3124,125 @@ async def server(websocket):
             try:
                 message = json.loads(message)
                 match message["action"]:
+                    case "detail":
+                        try:
+                            title = "Neural Detail"
+
+                            # Extract parameters from the message
+                            values = message["value"]
+                            modelData = values["model"]
+
+                            if values["send_progress"]:
+                                await websocket.send(
+                                    json.dumps(
+                                        {
+                                            "action": "display_title",
+                                            "type": title.lower().replace(' ', '_'),
+                                            "value": {"text": "Loading model"},
+                                        }
+                                    )
+                                )
+                            
+                            load_model(
+                                modelData["file"],
+                                "scripts/v1-inference.yaml",
+                                modelData["device"],
+                                modelData["precision"],
+                                modelData["optimized"],
+                                False
+                            )
+                            if values["send_progress"]:
+                                await websocket.send(
+                                    json.dumps(
+                                        {
+                                            "action": "display_title",
+                                            "type": title.lower().replace(' ', '_'),
+                                            "value": {"text": "Generating..."},
+                                        }
+                                    )
+                                )
+                            
+                            # Neural detail workflow
+                            
+                            # Decode input image
+                            init_img = decodeImage(values["images"][0])
+
+                            # Resize image to output dimensions
+                            image = init_img.resize((values["width"], values["height"]), resample=Image.Resampling.NEAREST)
+
+                            # Blur filter for detail
+                            image_blur = image.filter(ImageFilter.BoxBlur(2))
+
+                            # i2i strength
+                            strength = 0.5 + (values["detail"] * 0.05)
+
+                            # Net models, images, and weights in order
+                            modelPath, _ = os.path.split(modelData["file"])
+                            netPath = os.path.join(modelPath, "CONTROLNET")
+                            lecoPath = os.path.join(modelPath, "LECO")
+                            loras = values["loras"]
+                            loras.append({"file": os.path.join(lecoPath, "detail.leco"), "weight": values["detail"] * -10})
+                            controlnets = [{"model_file": os.path.join(netPath, "Tile.safetensors"), "image": image_blur, "weight": 0.5}, {"model_file": os.path.join(netPath, "Composition.safetensors"), "image": image, "weight": 0.5}]
+
+                            for result in neural_inference(
+                                modelData["file"],
+                                title,
+                                controlnets,
+                                values["prompt"],
+                                values["negative"],
+                                values["blip"],
+                                values["prompt_tuning"],
+                                values["width"],
+                                values["height"],
+                                values["pixel_size"],
+                                values["steps"],
+                                values["scale"],
+                                strength,
+                                values["lighting"],
+                                values["composition"],
+                                values["seed"],
+                                values["generations"],
+                                values["max_batch_size"],
+                                modelData["device"],
+                                modelData["precision"],
+                                loras,
+                                values["send_progress"],
+                                values["use_pixelvae"],
+                                values["color_map"],
+                                values["post_process"],
+                                init_img # Pass original, unscaled image
+                            ):
+                                if values["send_progress"]:
+                                    await websocket.send(json.dumps(result))
+
+                            await websocket.send(
+                                json.dumps(
+                                    {
+                                        "action": "returning",
+                                        "type": "img2img",
+                                        "value": {"images": result["value"]["images"]},
+                                    }
+                                )
+                            )
+                        except Exception as e:
+                            if "SSLCertVerificationError" in traceback.format_exc():
+                                rprint(
+                                    f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal"
+                                )
+                            elif (
+                                "torch.cuda.OutOfMemoryError" in traceback.format_exc()
+                            ):
+                                rprint(
+                                    f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size"
+                                )
+                                if modelLM is not None:
+                                    rprint(
+                                        f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources"
+                                    )
+                            else:
+                                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                            play("error.wav")
+                            await websocket.send(json.dumps({"action": "error"}))
                     case "resize":
                         try:
                             title = "Neural Resize"
@@ -3174,15 +3295,14 @@ async def server(websocket):
                             # Net models, images, and weights in order
                             modelPath, _ = os.path.split(modelData["file"])
                             netPath = os.path.join(modelPath, "CONTROLNET")
-                            controlnets = [{"model_file": os.path.join(netPath, "Tile.safetensors"), "image": image, "weight": 0.8}, {"model_file": os.path.join(netPath, "Composition.safetensors"), "image": image, "weight": 0.6}]
+                            controlnets = [{"model_file": os.path.join(netPath, "Tile.safetensors"), "image": image, "weight": 0.8}, {"model_file": os.path.join(netPath, "Composition.safetensors"), "image": image, "weight": 0.4}]
 
-                            for result in neural_img2img(
+                            for result in neural_inference(
                                 modelData["file"],
                                 title,
                                 controlnets,
                                 values["prompt"],
                                 values["negative"],
-                                init_img, # Pass original, unscaled image
                                 values["blip"],
                                 values["prompt_tuning"],
                                 values["width"],
@@ -3202,7 +3322,8 @@ async def server(websocket):
                                 values["send_progress"],
                                 values["use_pixelvae"],
                                 values["color_map"],
-                                values["post_process"]
+                                values["post_process"],
+                                init_img # Pass original, unscaled image
                             ):
                                 if values["send_progress"]:
                                     await websocket.send(json.dumps(result))
@@ -3237,6 +3358,8 @@ async def server(websocket):
                             await websocket.send(json.dumps({"action": "error"}))
                     case "pixelate":
                         try:
+                            title = "Neural Pixelate"
+
                             # Extract parameters from the message
                             values = message["value"]
                             modelData = values["model"]
@@ -3246,7 +3369,7 @@ async def server(websocket):
                                     json.dumps(
                                         {
                                             "action": "display_title",
-                                            "type": "neural_pixelate",
+                                            "type": title.lower().replace(' ', '_'),
                                             "value": {"text": "Loading model"},
                                         }
                                     )
@@ -3265,14 +3388,11 @@ async def server(websocket):
                                     json.dumps(
                                         {
                                             "action": "display_title",
-                                            "type": "neural_pixelate",
+                                            "type": title.lower().replace(' ', '_'),
                                             "value": {"text": "Generating..."},
                                         }
                                     )
                                 )
-                            
-                            # Neural pixelate
-                            title = "Neural Pixelate"
 
                             # Decode input image
                             init_img = decodeImage(values["images"][0])
@@ -3291,13 +3411,12 @@ async def server(websocket):
                             netPath = os.path.join(modelPath, "CONTROLNET")
                             controlnets = [{"model_file": os.path.join(netPath, "Tile.safetensors"), "image": image_blur, "weight": 1.0}, {"model_file": os.path.join(netPath, "Composition.safetensors"), "image": image, "weight": 0.6}]
 
-                            for result in neural_img2img(
+                            for result in neural_inference(
                                 modelData["file"],
                                 title,
                                 controlnets,
                                 values["prompt"],
                                 values["negative"],
-                                init_img, # Pass original, unscaled image
                                 values["blip"],
                                 values["prompt_tuning"],
                                 values["width"],
@@ -3317,7 +3436,8 @@ async def server(websocket):
                                 values["send_progress"],
                                 values["use_pixelvae"],
                                 values["color_map"],
-                                values["post_process"]
+                                values["post_process"],
+                                init_img # Pass original, unscaled image
                             ):
                                 if values["send_progress"]:
                                     await websocket.send(json.dumps(result))
