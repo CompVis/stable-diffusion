@@ -327,6 +327,51 @@ def patch_tiling(tilingX, tilingY, model, modelTA, modelPV):
     return model, modelTA, modelPV
 
 
+def remove_repeated_words(string):
+    # Splitting the string by spaces to preserve original punctuation
+    parts = string.split()
+    normalized_parts = []
+    separators = []
+    
+    # Normalize parts and remember original separators
+    for part in parts:
+        if part.endswith(","):
+            normalized_parts.append(part[:-1])
+            separators.append(", ")
+        else:
+            normalized_parts.append(part)
+            separators.append(" ")
+    
+    # Check for repetitions from the end
+    if len(normalized_parts) > 1:
+        i = -2
+        while -i <= len(normalized_parts) and normalized_parts[-1] == normalized_parts[i]:
+            i -= 1
+        if i != -2:
+            # Keep one instance of the repeated word
+            final_parts = normalized_parts[:i+2]
+        else:
+            final_parts = normalized_parts
+    else:
+        final_parts = normalized_parts
+    
+    # Reconstruct the string using the original separators
+    reconstructed_string = ""
+    for i, part in enumerate(final_parts):
+        if i < len(separators) - 1:  # Avoid index out of range
+            reconstructed_string += part + separators[i]
+        else:
+            reconstructed_string += part  # Last part, no separator
+    
+    # Handling trailing separators if the last part was a repetition
+    if reconstructed_string.endswith(", "):
+        reconstructed_string = reconstructed_string[:-2]
+    elif reconstructed_string.endswith(" "):
+        reconstructed_string = reconstructed_string[:-1]
+    
+    return reconstructed_string
+
+
 # Print image in console
 def climage(image, alignment, *args):
     # Get console bounds with a small margin - better safe than sorry
@@ -1601,7 +1646,7 @@ def prepare_inference(
     W,
     H,
     pixelSize,
-    quality,
+    steps,
     scale,
     lighting,
     composition,
@@ -1611,13 +1656,9 @@ def prepare_inference(
     device,
     precision,
     loras,
-    tilingX,
-    tilingY,
     
     # options for image to image
     image = None,
-    # options for cldm
-    load_raw_loras = False,
 ):
     raw_loras = []
     
@@ -1631,6 +1672,7 @@ def prepare_inference(
 
     if image is not None:
         # Load initial image and move it to the specified device
+        image = image.resize((W, H), resample=Image.Resampling.BILINEAR)
         init_image = load_img(image.convert("RGB"), H, W).to(device)
 
     # Calculate maximum batch size
@@ -1655,15 +1697,7 @@ def prepare_inference(
     wtile = max_tile(W // 8)
     htile = max_tile(H // 8)
 
-    # Derive steps, cfg, lcm weight from quality setting
     global modelPath
-    # Curves defined by https://www.desmos.com/calculator/kny0embnkg
-    steps = round(9 + (((quality-1.85) ** 2) * 1.1))
-    scale = max(1, scale * ((1.6 + (((quality - 1.6) ** 2) / 4)) / 5))
-    lcm_weight = max(1.5, 10 - (quality * 1.5))
-    if lcm_weight > 0:
-        loras.append({"file": os.path.join(modelPath, "quality.lcm"), "weight": round(lcm_weight*10)})
-
     # Composition and lighting modifications
     loras = manageComposition(lighting, composition, loras)
 
@@ -1693,7 +1727,7 @@ def prepare_inference(
     seed_everything(seed)
 
     rprint(
-        f"\n[#48a971]{title}[white] generating [#48a971]{total_images}[white] quality [#48a971]{quality}[white] images over [#48a971]{runs}[white] batches with [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)"
+        f"\n[#48a971]{title}[white] generating [#48a971]{total_images}[white] images with [#48a971]{steps}[white] steps over [#48a971]{runs}[white] batches with [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)"
     )
 
     global model
@@ -1701,16 +1735,11 @@ def prepare_inference(
     global modelTA
     global modelPV
 
-    # Patch tiling for model and modelTA
-    if load_raw_loras == False: # ignore for CLDM
-        model, modelTA, modelPV = patch_tiling(tilingX, tilingY, model, modelTA, modelPV)
-
     # Set the precision scope based on device and precision
     precision, fp16_mode, _ = get_precision(device, precision)
     precision_scope = autocast(device, precision, fp16_mode)
 
     # !!! REMEMBER: ALL MODEL FILES ARE BOUND UNDER THE LICENSE AGREEMENTS OUTLINED HERE: https://astropulse.co/#retrodiffusioneula https://astropulse.co/#retrodiffusionmodeleula !!!
-    loadedLoras = []
     decryptedFiles = []
     fernet = Fernet("I47jl1hqUPug4KbVYd60_zeXhn_IH_ECT3QRGiBxdxo=")
     for i, loraPair in enumerate(loras):
@@ -1733,20 +1762,14 @@ def prepare_inference(
                             # Write attempted decrypted file
                             dec_file.write(decryptedFiles[i])
                             try:
-                                if load_raw_loras:
-                                    raw_loras.append(
-                                        {
-                                            "sd": load_lora_raw(loraPair["file"]),
-                                            "weight": loraPair["weight"],
-                                        }
-                                    )
-                                else:
-                                    # Load decrypted
-                                    loadedLoras.append(load_lora(loraPair["file"], model))    
+                                raw_loras.append(
+                                    {
+                                        "sd": load_lora_raw(loraPair["file"]),
+                                        "weight": loraPair["weight"],
+                                    }
+                                )   
                             except:
                                 # Decrypted file could not be read, revert to unchanged, and return an error
-                                if load_raw_loras == False:
-                                    loadedLoras.append(None)
                                 decryptedFiles[i] = "none"
                                 dec_file.write(encrypted)
                                 rprint(f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted")
@@ -1755,26 +1778,15 @@ def prepare_inference(
                     rprint(f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted")
             else:
                 # Add lora to unet
-                if load_raw_loras:
-                    raw_loras.append(
-                        {
-                            "sd": load_lora_raw(loraPair["file"]),
-                            "weight": loraPair["weight"],
-                        }
-                    )
-                else:
-                    loadedLoras.append(load_lora(loraPair["file"], model))
+                raw_loras.append(
+                    {
+                        "sd": load_lora_raw(loraPair["file"]),
+                        "weight": loraPair["weight"],
+                    }
+                )
                 
-            if load_raw_loras == False:
-                loadedLoras[i].multiplier = loraPair["weight"] / 100
-                # Prepare for inference
-                register_lora_for_inference(loadedLoras[i])
-                apply_lora()
             if not any(name == os.path.splitext(loraName)[0] for name in system_models):
                 rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraName)[0]} [#494b9b]LoRA with [#48a971]{loraPair['weight']}% [#494b9b]strength")
-        else:
-            if load_raw_loras == False:
-                loadedLoras.append(None)
 
     seeds = []
     # Create conditioning values for each batch, then unload the text encoder
@@ -2186,7 +2198,7 @@ def txt2img(
                         displayOut = []
                         for i in range(batch):
                             x_sample_image = fastRender(modelPV, samples_ddim[i:i+1], pixelSize, W, H)
-                            name = str(hash(str([data[i], negative_data[i], translate, promptTuning, W, H, upscale, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
+                            name = str(seed+i)
                             displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                         yield {
                             "action": "display_title",
@@ -2247,7 +2259,7 @@ def txt2img(
                             displayOut = []
                             for i in range(batch):
                                 x_sample_image = fastRender(modelPV, samples_ddim[i:i+1], pixelSize, W, H)
-                                name = str(hash(str([data[i], negative_data[i], translate, promptTuning, W, H, upscale, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
+                                name = str(seed+i)
                                 displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                             yield {
                                 "action": "display_title",
@@ -2288,7 +2300,7 @@ def txt2img(
 
                     seeds.append(str(seed))
 
-                    name = str(hash(str([data[i], negative_data[i], translate, promptTuning, W, H, upscale, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed])) & 0x7FFFFFFFFFFFFFFF)
+                    name = str(hash(str([data[i], negative_data[i], translate, promptTuning, W, H, upscale, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed, post])) & 0x7FFFFFFFFFFFFFFF)
                     output.append({"name": name, "seed": seed, "format": "png", "image": x_sample_image, "width": x_sample_image.width, "height": x_sample_image.height})
 
                     seed += 1
@@ -2325,7 +2337,26 @@ def txt2img(
         }
 
 
-def neural_img2img(modelFileString, title, controlnets, prompt, negative, input_image, autocaption, translate, promptTuning, W, H, pixelSize, upscale, quality, scale, strength, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, preview, pixelvae, post):
+def resize_image(original_width, original_height, target_size = 512):
+    target_area = target_size ** 2
+    aspect_ratio = original_width / original_height
+    
+    new_width = math.sqrt(target_area * aspect_ratio)
+    new_height = math.sqrt(target_area / aspect_ratio)
+    
+    # Adjust dimensions if they exceed the original dimensions, maintaining aspect ratio
+    if new_width > original_width or new_height > original_height:
+        if original_width > original_height:
+            new_width = original_width
+            new_height = new_width / aspect_ratio
+        else:
+            new_height = original_height
+            new_width = new_height * aspect_ratio
+    
+    return (int(new_width), int(new_height))  # Returning integer values for dimensions
+
+
+def neural_img2img(modelFileString, title, controlnets, prompt, negative, init_img, autocaption, promptTuning, W, H, pixelSize, steps, scale, strength, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, preview, pixelvae, mapColors, post):
     timer = time.time()
     global modelCS
     global modelTA
@@ -2341,19 +2372,19 @@ def neural_img2img(modelFileString, title, controlnets, prompt, negative, input_
             processor = modelBLIP["processor"]
             model = modelBLIP["model"]
 
-            blip_image = input_image.resize((512, 512), resample=Image.Resampling.BILINEAR)
+            blip_image = init_img.resize(resize_image(init_img.width, init_img.height, 512), resample=Image.Resampling.BILINEAR)
             if prompt is not None:
                 inputs = processor(blip_image, prompt, return_tensors="pt")
             else:
                 inputs = processor(blip_image, return_tensors="pt")
 
             rprint(f"\n[#48a971]Vision model [/]generating image description")
-            prompt = processor.decode(model.generate(**inputs, max_new_tokens=30)[0], repetition_penalty=1.2, skip_special_tokens=True)
+            prompt = remove_repeated_words(processor.decode(model.generate(**inputs, max_new_tokens=30)[0], skip_special_tokens=True))
             rprint(f"[#48a971]Caption: [#494b9b]{prompt}")
-                        
-    conditioning, negative_conditioning, image_embed, steps, scale, runs, data, negative_data, seeds, batch, raw_loras = prepare_inference(
-        title, prompt, negative, translate, promptTuning, W, H, pixelSize, quality, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, input_image, True)
     
+    conditioning, negative_conditioning, image_embed, steps, scale, runs, data, negative_data, seeds, batch, raw_loras = prepare_inference(
+        title, prompt, negative, False, promptTuning, W, H, pixelSize, steps, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, init_img)
+
     title = title.lower().replace(' ', '_')
 
     model_patcher, cldm_cond, cldm_uncond = load_controlnet(
@@ -2383,7 +2414,7 @@ def neural_img2img(modelFileString, title, controlnets, prompt, negative, input_
                 cldm_uncond,
                 seed,
                 steps, # steps,
-                scale, # cfg,
+                scale + 3.5, # cfg,
                 "ddim", # sampler,
                 batch, # batch size
                 W,
@@ -2399,7 +2430,7 @@ def neural_img2img(modelFileString, title, controlnets, prompt, negative, input_
                     displayOut = []
                     for i in range(batch):
                         x_sample_image = fastRender(modelPV, samples_ddim[i:i+1], pixelSize, W, H)
-                        name = str(hash(str([data[i], negative_data[i], input_image.resize((16, 16), resample=Image.Resampling.NEAREST), translate, promptTuning, W, H, upscale, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
+                        name = str(seed+i)
                         displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                     yield {
                         "action": "display_title",
@@ -2428,18 +2459,16 @@ def neural_img2img(modelFileString, title, controlnets, prompt, negative, input_
                     W,
                     pixelSize,
                     pixelvae,
-                    tilingX,
-                    tilingY,
+                    False,
+                    False,
                     raw_loras,
                     post,
                 )
-
                 if total_images > 1 and (base_count + 1) < total_images:
                     play("iteration.wav")
 
                 seeds.append(str(seed))
-
-                name = str(hash(str([data[i], negative_data[i], input_image.resize((16, 16), resample=Image.Resampling.NEAREST), translate, promptTuning, W, H, upscale, quality, scale, device, raw_loras, tilingX, tilingY, pixelvae, seed])) & 0x7FFFFFFFFFFFFFFF)
+                name = str(hash(str([data[i], negative_data[i], init_img.resize((16, 16), resample=Image.Resampling.NEAREST), promptTuning, W, H, steps, scale, device, loras, pixelvae, seed])) & 0x7FFFFFFFFFFFFFFF)
                 output.append({"name": name, "seed": seed, "format": "png", "image": x_sample_image, "width": x_sample_image.width, "height": x_sample_image.height})
 
                 seed += 1
@@ -2447,14 +2476,14 @@ def neural_img2img(modelFileString, title, controlnets, prompt, negative, input_
             # Delete the samples to free up memory
             del samples_ddim
 
-        if post:
-            # Reduce input image to key colors
-            palette_img = input_image.resize((W // 8, H // 8), resample=Image.Resampling.BILINEAR)
-            numColors = determine_best_k(palette_img, 96)
+        if mapColors and (init_img is not None):
+            numColors = 256
+            palette_img = init_img.resize((W // 8, H // 8), resample=Image.Resampling.NEAREST)
             palette_img = palette_img.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert("RGB")
+            numColors = len(palette_img.getcolors(numColors))
 
             # Extract palette colors
-            palette = np.concatenate([x[1] for x in palette_img.getcolors(96)]).tolist()
+            palette = np.concatenate([x[1] for x in palette_img.getcolors(numColors)]).tolist()
 
             # Create a new palette image
             tempPaletteImage = Image.new("P", (256, 1))
@@ -2467,8 +2496,13 @@ def neural_img2img(modelFileString, title, controlnets, prompt, negative, input_
                 tempImage = image["image"]
                 # Perform quantization without dithering
                 image_indexed = tempImage.quantize(method=1, kmeans=numColors, palette=tempPaletteImage, dither=0).convert("RGB")
+                if post:
+                    numColors = determine_best_k(image_indexed, 96)
+                    image_indexed = image_indexed.quantize(colors=numColors, method=1, kmeans=numColors, dither=0).convert("RGB")
 
                 output.append({"name": image["name"], "seed": image["seed"], "format": image["format"], "image": image_indexed, "width": image["width"], "height": image["height"]})
+        elif post:
+            output = palettizeOutput(output)
 
         final = []
         for image in output:
@@ -2756,7 +2790,7 @@ def img2img(
                         displayOut = []
                         for i in range(batch):
                             x_sample_image = fastRender(modelPV, samples_ddim[i:i+1], pixelSize, W, H)
-                            name = str(hash(str([data[i], negative_data[i], init_img.resize((16, 16), resample=Image.Resampling.NEAREST), strength, translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed+i])) & 0x7FFFFFFFFFFFFFFF)
+                            name = str(seed+i)
                             displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                         yield {
                             "action": "display_title",
@@ -2796,7 +2830,7 @@ def img2img(
                         play("iteration.wav")
 
                     seeds.append(str(seed))
-                    name = str(hash(str([data[i], negative_data[i], init_img.resize((16, 16), resample=Image.Resampling.NEAREST), strength, translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed])) & 0x7FFFFFFFFFFFFFFF)
+                    name = str(hash(str([data[i], negative_data[i], init_img.resize((16, 16), resample=Image.Resampling.NEAREST), strength, translate, promptTuning, W, H, quality, scale, device, loras, tilingX, tilingY, pixelvae, seed, post])) & 0x7FFFFFFFFFFFFFFF)
                     output.append({"name": name, "seed": seed, "format": "png", "image": x_sample_image, "width": x_sample_image.width, "height": x_sample_image.height})
 
                     seed += 1
@@ -3086,7 +3120,120 @@ async def server(websocket):
             try:
                 message = json.loads(message)
                 match message["action"]:
-                    case "img2img":
+                    case "resize":
+                        try:
+                            title = "Neural Resize"
+
+                            # Extract parameters from the message
+                            values = message["value"]
+                            modelData = values["model"]
+
+                            if values["send_progress"]:
+                                await websocket.send(
+                                    json.dumps(
+                                        {
+                                            "action": "display_title",
+                                            "type": title.lower().replace(' ', '_'),
+                                            "value": {"text": "Loading model"},
+                                        }
+                                    )
+                                )
+                            
+                            load_model(
+                                modelData["file"],
+                                "scripts/v1-inference.yaml",
+                                modelData["device"],
+                                modelData["precision"],
+                                modelData["optimized"],
+                                False
+                            )
+                            if values["send_progress"]:
+                                await websocket.send(
+                                    json.dumps(
+                                        {
+                                            "action": "display_title",
+                                            "type": title.lower().replace(' ', '_'),
+                                            "value": {"text": "Generating..."},
+                                        }
+                                    )
+                                )
+                            
+                            # Neural resize workflow
+                            
+                            # Decode input image
+                            init_img = decodeImage(values["images"][0])
+
+                            # Resize image to output dimensions
+                            image = init_img.resize((values["width"], values["height"]), resample=Image.Resampling.BILINEAR)
+
+                            # i2i strength
+                            strength = 0.9
+
+                            # Net models, images, and weights in order
+                            modelPath, _ = os.path.split(modelData["file"])
+                            netPath = os.path.join(modelPath, "CONTROLNET")
+                            controlnets = [{"model_file": os.path.join(netPath, "Tile.safetensors"), "image": image, "weight": 0.8}, {"model_file": os.path.join(netPath, "Composition.safetensors"), "image": image, "weight": 0.6}]
+
+                            for result in neural_img2img(
+                                modelData["file"],
+                                title,
+                                controlnets,
+                                values["prompt"],
+                                values["negative"],
+                                init_img, # Pass original, unscaled image
+                                values["blip"],
+                                values["prompt_tuning"],
+                                values["width"],
+                                values["height"],
+                                values["pixel_size"],
+                                values["steps"],
+                                values["scale"],
+                                strength,
+                                values["lighting"],
+                                values["composition"],
+                                values["seed"],
+                                values["generations"],
+                                values["max_batch_size"],
+                                modelData["device"],
+                                modelData["precision"],
+                                values["loras"],
+                                values["send_progress"],
+                                values["use_pixelvae"],
+                                values["color_map"],
+                                values["post_process"]
+                            ):
+                                if values["send_progress"]:
+                                    await websocket.send(json.dumps(result))
+
+                            await websocket.send(
+                                json.dumps(
+                                    {
+                                        "action": "returning",
+                                        "type": "img2img",
+                                        "value": {"images": result["value"]["images"]},
+                                    }
+                                )
+                            )
+                        except Exception as e:
+                            if "SSLCertVerificationError" in traceback.format_exc():
+                                rprint(
+                                    f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal"
+                                )
+                            elif (
+                                "torch.cuda.OutOfMemoryError" in traceback.format_exc()
+                            ):
+                                rprint(
+                                    f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size"
+                                )
+                                if modelLM is not None:
+                                    rprint(
+                                        f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources"
+                                    )
+                            else:
+                                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                            play("error.wav")
+                            await websocket.send(json.dumps({"action": "error"}))
+                    case "pixelate":
                         try:
                             # Extract parameters from the message
                             values = message["value"]
@@ -3137,11 +3284,10 @@ async def server(websocket):
                             # i2i strength
                             strength = 0.85
 
-                            # Use vision model to label input image
-                            autocaption = True
-
                             # Net models, images, and weights in order
-                            controlnets = [{"model_file": "./models/controllora/Tile.safetensors", "image": image_blur, "weight": 1.0}, {"model_file": "./models/controllora/Composition.safetensors", "image": image, "weight": 0.7}]
+                            modelPath, _ = os.path.split(modelData["file"])
+                            netPath = os.path.join(modelPath, "CONTROLNET")
+                            controlnets = [{"model_file": os.path.join(netPath, "Tile.safetensors"), "image": image_blur, "weight": 1.0}, {"model_file": os.path.join(netPath, "Composition.safetensors"), "image": image, "weight": 0.6}]
 
                             for result in neural_img2img(
                                 modelData["file"],
@@ -3149,15 +3295,13 @@ async def server(websocket):
                                 controlnets,
                                 values["prompt"],
                                 values["negative"],
-                                image,
-                                autocaption,
-                                values["translate"],
+                                init_img, # Pass original, unscaled image
+                                values["blip"],
                                 values["prompt_tuning"],
                                 values["width"],
                                 values["height"],
                                 values["pixel_size"],
-                                values["enhance_composition"],
-                                values["quality"],
+                                values["steps"],
                                 values["scale"],
                                 strength,
                                 values["lighting"],
@@ -3168,11 +3312,10 @@ async def server(websocket):
                                 modelData["device"],
                                 modelData["precision"],
                                 values["loras"],
-                                values["tile_x"],
-                                values["tile_y"],
                                 values["send_progress"],
                                 values["use_pixelvae"],
-                                values["post_process"],
+                                values["color_map"],
+                                values["post_process"]
                             ):
                                 if values["send_progress"]:
                                     await websocket.send(json.dumps(result))
@@ -3295,7 +3438,7 @@ async def server(websocket):
                                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                             play("error.wav")
                             await websocket.send(json.dumps({"action": "error"}))
-                    case "_img2img":
+                    case "img2img":
                         try:
                             # Extract parameters from the message
                             values = message["value"]
