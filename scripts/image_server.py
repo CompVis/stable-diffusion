@@ -1701,15 +1701,16 @@ def prepare_inference(
     # Composition and lighting modifications
     loras = manageComposition(lighting, composition, loras)
 
-    # High resolution adjustments for consistency
-    if W // 8 >= 96 or H // 8 >= 96:
-        loras.append({"file": os.path.join(modelPath, "resfix.lcm"), "weight": 40})
-    
-        # Apply 'cropped' lora for enhanced composition at high resolution
-        
-        crop_weight = round(max(3, min(round(math.sqrt(2 * ((math.sqrt((W // 8) * (H // 8))/10) - 9)) + 1, 2), 7)) * 100)
-        if True:
-            loras.append({"file": os.path.join(os.path.join(modelPath, "LECO"), "crop.leco"), "weight": crop_weight})
+    lecoPath = os.path.join(modelPath, "LECO")
+    found_contrast = False
+    for lora in loras:
+        if lora["file"] == os.path.join(lecoPath, "brightness.leco"):
+            lora["weight"] = lora["weight"] + 35
+        if lora["file"] == os.path.join(lecoPath, "contrast.leco"):
+            found_contrast = True
+            lora["weight"] = lora["weight"] + 120
+    if not found_contrast:
+        loras.append({"file": os.path.join(lecoPath, "contrast.leco"), "weight": 120})
 
     # Apply modifications to raw prompts
     data, negative_data = managePrompts(
@@ -2387,6 +2388,7 @@ def neural_img2img(modelFileString, title, controlnets, prompt, negative, init_i
 
     title = title.lower().replace(' ', '_')
 
+    rprint(f"[#48a971]Patching model for controlnet")
     model_patcher, cldm_cond, cldm_uncond = load_controlnet(
         controlnets,
         W,
