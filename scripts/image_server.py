@@ -10,13 +10,11 @@ try:
     from omegaconf import OmegaConf
     from PIL import Image, ImageEnhance, ImageFilter
     import cv2
-    from itertools import islice, product
+    from itertools import product
     from einops import rearrange
     from pytorch_lightning import seed_everything
     from transformers import BlipProcessor, BlipForConditionalGeneration, set_seed
-    from contextlib import nullcontext
     from typing import Optional
-    import psutil
     from safetensors.torch import load_file
     from cryptography.fernet import Fernet
 
@@ -49,7 +47,7 @@ try:
 
     # Import websocket tools
     import requests
-    from websockets import serve, connect
+    from websockets import serve
     from io import BytesIO
     import base64
 
@@ -1705,7 +1703,7 @@ def prepare_inference(
     found_contrast = False
     for lora in loras:
         if lora["file"] == os.path.join(lecoPath, "brightness.leco"):
-            lora["weight"] = lora["weight"] + 30
+            lora["weight"] = lora["weight"] - 40
         if lora["file"] == os.path.join(lecoPath, "contrast.leco"):
             found_contrast = True
             lora["weight"] = lora["weight"] + 120
@@ -2356,7 +2354,7 @@ def resize_image(original_width, original_height, target_size = 512):
     return (int(new_width), int(new_height))  # Returning integer values for dimensions
 
 
-def neural_inference(modelFileString, title, controlnets, prompt, negative, autocaption, promptTuning, W, H, pixelSize, steps, scale, strength, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, preview, pixelvae, mapColors, post, init_img = None):
+def neural_inference(modelFileString, title, controlnets, prompt, negative, autocaption, translate, promptTuning, W, H, pixelSize, steps, scale, strength, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, preview, pixelvae, mapColors, post, init_img = None):
     timer = time.time()
     global modelCS
     global modelTA
@@ -2383,7 +2381,7 @@ def neural_inference(modelFileString, title, controlnets, prompt, negative, auto
             rprint(f"[#48a971]Caption: [#494b9b]{prompt}")
     
     conditioning, negative_conditioning, image_embed, steps, scale, runs, data, negative_data, seeds, batch, raw_loras = prepare_inference(
-        title, prompt, negative, False, promptTuning, W, H, pixelSize, steps, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, init_img)
+        title, prompt, negative, translate, promptTuning, W, H, pixelSize, steps, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, init_img)
 
     title = title.lower().replace(' ', '_')
 
@@ -2415,7 +2413,7 @@ def neural_inference(modelFileString, title, controlnets, prompt, negative, auto
                 cldm_uncond,
                 seed,
                 steps, # steps,
-                scale + 3.5, # cfg,
+                scale + 2.0, # cfg,
                 "ddim", # sampler,
                 batch, # batch size
                 W,
@@ -2425,7 +2423,6 @@ def neural_inference(modelFileString, title, controlnets, prompt, negative, auto
                 "normal" # scheduler
             )):
                 samples_ddim = samples_ddim.to(fp16_mode)
-                #samples_ddim = torch.stack(samples_ddim, dim=0).squeeze(1)
                 if preview:
                     # Render and send image previews
                     displayOut = []
@@ -2469,7 +2466,7 @@ def neural_inference(modelFileString, title, controlnets, prompt, negative, auto
                     play("iteration.wav")
 
                 seeds.append(str(seed))
-                name = [data[i], negative_data[i], promptTuning, W, H, steps, scale, device, loras, pixelvae, seed]
+                name = [data[i], negative_data[i], translate, promptTuning, W, H, steps, scale, device, loras, pixelvae, seed]
                 if init_img is not None:
                     name.append(init_img.resize((16, 16), resample=Image.Resampling.NEAREST))
                 name = str(hash(str(name)) & 0x7FFFFFFFFFFFFFFF)
@@ -3124,6 +3121,123 @@ async def server(websocket):
             try:
                 message = json.loads(message)
                 match message["action"]:
+                    case "transform":
+                        try:
+                            title = "Neural Transform"
+
+                            # Extract parameters from the message
+                            values = message["value"]
+                            modelData = values["model"]
+
+                            if values["send_progress"]:
+                                await websocket.send(
+                                    json.dumps(
+                                        {
+                                            "action": "display_title",
+                                            "type": title.lower().replace(' ', '_'),
+                                            "value": {"text": "Loading model"},
+                                        }
+                                    )
+                                )
+                            
+                            load_model(
+                                modelData["file"],
+                                "scripts/v1-inference.yaml",
+                                modelData["device"],
+                                modelData["precision"],
+                                modelData["optimized"],
+                                False
+                            )
+                            if values["send_progress"]:
+                                await websocket.send(
+                                    json.dumps(
+                                        {
+                                            "action": "display_title",
+                                            "type": title.lower().replace(' ', '_'),
+                                            "value": {"text": "Generating..."},
+                                        }
+                                    )
+                                )
+                            
+                            # Neural detail workflow
+                            
+                            # Decode input image
+                            init_img = decodeImage(values["images"][0])
+
+                            # Resize image to output dimensions
+                            image = init_img.resize((values["width"], values["height"]), resample=Image.Resampling.NEAREST).convert("RGB")
+
+                            # Blur filter for detail
+                            image_blur = image.filter(ImageFilter.BoxBlur(4))
+
+                            # Net models, images, and weights in order
+                            modelPath, _ = os.path.split(modelData["file"])
+                            netPath = os.path.join(modelPath, "CONTROLNET")
+                            lecoPath = os.path.join(modelPath, "LECO")
+                            loras = values["loras"]
+                            loras.append({"file": os.path.join(lecoPath, "detail.leco"), "weight": -50})
+                            controlnets = [{"model_file": os.path.join(netPath, "Composition.safetensors"), "image": image, "weight": 1.0}]
+
+                            for result in neural_inference(
+                                modelData["file"],
+                                title,
+                                controlnets,
+                                values["prompt"],
+                                values["negative"],
+                                False,
+                                values["translate"],
+                                values["prompt_tuning"],
+                                values["width"],
+                                values["height"],
+                                values["pixel_size"],
+                                values["steps"],
+                                values["scale"],
+                                1.0,
+                                values["lighting"],
+                                values["composition"],
+                                values["seed"],
+                                values["generations"],
+                                values["max_batch_size"],
+                                modelData["device"],
+                                modelData["precision"],
+                                values["loras"],
+                                values["send_progress"],
+                                values["use_pixelvae"],
+                                False,
+                                values["post_process"],
+                                init_img
+                            ):
+                                if values["send_progress"]:
+                                    await websocket.send(json.dumps(result))
+
+                            await websocket.send(
+                                json.dumps(
+                                    {
+                                        "action": "returning",
+                                        "type": "img2img",
+                                        "value": {"images": result["value"]["images"]},
+                                    }
+                                )
+                            )
+                        except Exception as e:
+                            if "SSLCertVerificationError" in traceback.format_exc():
+                                rprint(
+                                    f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal"
+                                )
+                            elif (
+                                "torch.cuda.OutOfMemoryError" in traceback.format_exc()
+                            ):
+                                rprint(
+                                    f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size"
+                                )
+                                if modelLM is not None:
+                                    rprint(
+                                        f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources"
+                                    )
+                            else:
+                                rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
+                            play("error.wav")
+                            await websocket.send(json.dumps({"action": "error"}))
                     case "detail":
                         try:
                             title = "Neural Detail"
@@ -3191,6 +3305,7 @@ async def server(websocket):
                                 values["prompt"],
                                 values["negative"],
                                 values["blip"],
+                                False,
                                 values["prompt_tuning"],
                                 values["width"],
                                 values["height"],
@@ -3295,6 +3410,9 @@ async def server(websocket):
                             # Net models, images, and weights in order
                             modelPath, _ = os.path.split(modelData["file"])
                             netPath = os.path.join(modelPath, "CONTROLNET")
+                            lecoPath = os.path.join(modelPath, "LECO")
+                            loras = values["loras"]
+                            loras.append({"file": os.path.join(lecoPath, "detail.leco"), "weight": -40})
                             controlnets = [{"model_file": os.path.join(netPath, "Tile.safetensors"), "image": image, "weight": 0.8}, {"model_file": os.path.join(netPath, "Composition.safetensors"), "image": image, "weight": 0.4}]
 
                             for result in neural_inference(
@@ -3304,6 +3422,7 @@ async def server(websocket):
                                 values["prompt"],
                                 values["negative"],
                                 values["blip"],
+                                False,
                                 values["prompt_tuning"],
                                 values["width"],
                                 values["height"],
@@ -3418,6 +3537,7 @@ async def server(websocket):
                                 values["prompt"],
                                 values["negative"],
                                 values["blip"],
+                                False,
                                 values["prompt_tuning"],
                                 values["width"],
                                 values["height"],
@@ -3926,7 +4046,6 @@ async def server(websocket):
                             asyncio.get_event_loop().stop
                         )
             except:
-                print(traceback.format_exc())
                 pass
     except Exception as e:
         if "asyncio.exceptions.IncompleteReadError" in traceback.format_exc():
