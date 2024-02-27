@@ -83,7 +83,13 @@ def get_torch_device():
         if is_intel_xpu():
             return torch.device("xpu")
         else:
-            return torch.device(torch.cuda.current_device())
+            try:
+                return torch.device(torch.cuda.current_device())
+            except:
+                cpu_state = CPUState.MPS
+                return torch.device("mps")
+
+
 
 
 def module_size(module):

@@ -1453,7 +1453,10 @@ def render(modelTA, modelPV, samples_ddim, device, H, W, pixelSize, pixelvae, ti
         x_sample = x_sample[0].cpu().numpy()
     else:
         try:
-            x_sample = modelTA.decoder(samples_ddim.to(device))
+            try:
+                x_sample = modelTA.decoder(samples_ddim.to(device))
+            except:
+                x_sample = modelTA.decoder(samples_ddim.to("mps").to(torch.float32))
             x_sample = torch.clamp((x_sample.cpu().float()), min = 0.0, max = 1.0)
             x_sample = x_sample.cpu().movedim(1, -1)
             x_sample = 255.0 * x_sample[0].cpu().numpy()
