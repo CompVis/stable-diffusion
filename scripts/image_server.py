@@ -86,9 +86,7 @@ except:
     import traceback
 
     print(f"ERROR:\n{traceback.format_exc()}")
-    input(
-        "Catastrophic failure, send this error to the developer.\nPress any key to exit."
-    )
+    input("Catastrophic failure, send this error to the developer.\nPress any key to exit.")
     exit()
 
 # Global variables
@@ -265,43 +263,25 @@ def patch_conv_asymmetric(model, x, y):
             layer.padding_modeY = "circular" if y else "constant"
 
             # Compute padding values based on reversed padding repeated twice
-            layer.paddingX = (
-                layer._reversed_padding_repeated_twice[0],
-                layer._reversed_padding_repeated_twice[1],
-                0,
-                0,
-            )
-            layer.paddingY = (
-                0,
-                0,
-                layer._reversed_padding_repeated_twice[2],
-                layer._reversed_padding_repeated_twice[3],
-            )
+            layer.paddingX = (layer._reversed_padding_repeated_twice[0], layer._reversed_padding_repeated_twice[1], 0, 0)
+            layer.paddingY = (0, 0, layer._reversed_padding_repeated_twice[2], layer._reversed_padding_repeated_twice[3])
 
             # Patch the _conv_forward method with a replacement function
-            layer._conv_forward = __replacementConv2DConvForward.__get__(
-                layer, torch.nn.Conv2d
-            )
+            layer._conv_forward = __replacementConv2DConvForward.__get__(layer, torch.nn.Conv2d)
 
 
 # Restore original _conv_forward method for Conv2d layers in the model
 def restoreConv2DMethods(model):
     for layer in flatten(model):
         if type(layer) == torch.nn.Conv2d:
-            layer._conv_forward = torch.nn.Conv2d._conv_forward.__get__(
-                layer, torch.nn.Conv2d
-            )
+            layer._conv_forward = torch.nn.Conv2d._conv_forward.__get__(layer, torch.nn.Conv2d)
 
 
 # Replacement function for Conv2d's _conv_forward method
-def __replacementConv2DConvForward(
-    self, input: Tensor, weight: Tensor, bias: Optional[Tensor]
-):
+def __replacementConv2DConvForward(self, input: Tensor, weight: Tensor, bias: Optional[Tensor]):
     working = F.pad(input, self.paddingX, mode=self.padding_modeX)
     working = F.pad(working, self.paddingY, mode=self.padding_modeY)
-    return F.conv2d(
-        working, weight, bias, self.stride, _pair(0), self.dilation, self.groups
-    )
+    return F.conv2d(working, weight, bias, self.stride, _pair(0), self.dilation, self.groups)
 
 
 # Patch Conv2d layers in the given models for asymmetric padding
@@ -313,14 +293,7 @@ def patch_tiling(tilingX, tilingY, model, modelTA, modelPV):
 
     if tilingX or tilingY:
         # Print a message indicating the direction(s) patched for tiling
-        rprint(
-            "[#494b9b]Patched for tiling in the [#48a971]"
-            + "X" * tilingX
-            + "[#494b9b] and [#48a971]" * (tilingX and tilingY)
-            + "Y" * tilingY
-            + "[#494b9b] direction"
-            + "s" * (tilingX and tilingY)
-        )
+        rprint("[#494b9b]Patched for tiling in the [#48a971]" + "X" * tilingX + "[#494b9b] and [#48a971]" * (tilingX and tilingY) + "Y" * tilingY + "[#494b9b] direction" + "s" * (tilingX and tilingY))
 
     return model, modelTA, modelPV
 
@@ -373,10 +346,7 @@ def remove_repeated_words(string):
 # Print image in console
 def climage(image, alignment, *args):
     # Get console bounds with a small margin - better safe than sorry
-    twidth, theight = (
-        os.get_terminal_size().columns - 1,
-        (os.get_terminal_size().lines - 1) * 2,
-    )
+    twidth, theight = (os.get_terminal_size().columns - 1, (os.get_terminal_size().lines - 1) * 2)
 
     # Set up variables
     image = image.convert("RGBA")
@@ -410,24 +380,12 @@ def climage(image, alignment, *args):
                 line.append(f" ")
             else:
                 # Convert to hex colors for Rich to use
-                rgb, rgb2 = "#{:02x}{:02x}{:02x}".format(
-                    r, g, b
-                ), "#{:02x}{:02x}{:02x}".format(r2, g2, b2)
+                rgb, rgb2 = "#{:02x}{:02x}{:02x}".format(r, g, b), "#{:02x}{:02x}{:02x}".format(r2, g2, b2)
 
                 # Lookup table because I was bored
-                colorCodes = [
-                    f"{rgb2} on {rgb}",
-                    f"{rgb2}",
-                    f"{rgb}",
-                    "nothing",
-                    f"{rgb}",
-                ]
+                colorCodes = [f"{rgb2} on {rgb}", f"{rgb2}", f"{rgb}", "nothing", f"{rgb}"]
                 # ~It just works~
-                maping = (
-                    int(a < 200)
-                    + (int(a2 < 200) * 2)
-                    + (int(rgb == rgb2 and a + a2 > 400) * 4)
-                )
+                maping = (int(a < 200) + (int(a2 < 200) * 2) + (int(rgb == rgb2 and a + a2 > 400) * 4))
                 color = colorCodes[maping]
 
                 if rgb == rgb2:
@@ -444,17 +402,7 @@ def climage(image, alignment, *args):
 
 
 # Print progress bar in console
-def clbar(
-    iterable,
-    name="",
-    printEnd="\r",
-    position="",
-    unit="it",
-    disable=False,
-    prefixwidth=1,
-    suffixwidth=1,
-    total=0,
-):
+def clbar(iterable, name="", printEnd="\r", position="", unit="it", disable=False, prefixwidth=1, suffixwidth=1, total=0):
     # Console manipulation stuff
     def up(lines=1):
         for _ in range(lines):
@@ -490,26 +438,18 @@ def clbar(
             # Define progress bar graphic
             line1 = [
                 "[#494b9b on #3b1725]▄[/#494b9b on #3b1725]",
-                "[#c4f129 on #494b9b]▄[/#c4f129 on #494b9b]"
-                * int(int(barwidth * min(total, iteration) // total) > 0),
-                "[#ffffff on #494b9b]▄[/#ffffff on #494b9b]"
-                * max(0, int(barwidth * min(total, iteration) // total) - 2),
-                "[#c4f129 on #494b9b]▄[/#c4f129 on #494b9b]"
-                * int(int(barwidth * min(total, iteration) // total) > 1),
-                "[#3b1725 on #494b9b]▄[/#3b1725 on #494b9b]"
-                * max(0, barwidth - int(barwidth * min(total, iteration) // total)),
+                "[#c4f129 on #494b9b]▄[/#c4f129 on #494b9b]" * int(int(barwidth * min(total, iteration) // total) > 0),
+                "[#ffffff on #494b9b]▄[/#ffffff on #494b9b]" * max(0, int(barwidth * min(total, iteration) // total) - 2),
+                "[#c4f129 on #494b9b]▄[/#c4f129 on #494b9b]" * int(int(barwidth * min(total, iteration) // total) > 1),
+                "[#3b1725 on #494b9b]▄[/#3b1725 on #494b9b]" * max(0, barwidth - int(barwidth * min(total, iteration) // total)),
                 "[#494b9b on #3b1725]▄[/#494b9b on #3b1725]",
             ]
             line2 = [
                 "[#3b1725 on #494b9b]▄[/#3b1725 on #494b9b]",
-                "[#494b9b on #48a971]▄[/#494b9b on #48a971]"
-                * int(int(barwidth * min(total, iteration) // total) > 0),
-                "[#494b9b on #c4f129]▄[/#494b9b on #c4f129]"
-                * max(0, int(barwidth * min(total, iteration) // total) - 2),
-                "[#494b9b on #48a971]▄[/#494b9b on #48a971]"
-                * int(int(barwidth * min(total, iteration) // total) > 1),
-                "[#494b9b on #3b1725]▄[/#494b9b on #3b1725]"
-                * max(0, barwidth - int(barwidth * min(total, iteration) // total)),
+                "[#494b9b on #48a971]▄[/#494b9b on #48a971]" * int(int(barwidth * min(total, iteration) // total) > 0),
+                "[#494b9b on #c4f129]▄[/#494b9b on #c4f129]" * max(0, int(barwidth * min(total, iteration) // total) - 2),
+                "[#494b9b on #48a971]▄[/#494b9b on #48a971]" * int(int(barwidth * min(total, iteration) // total) > 1),
+                "[#494b9b on #3b1725]▄[/#494b9b on #3b1725]" * max(0, barwidth - int(barwidth * min(total, iteration) // total)),
                 "[#3b1725 on #494b9b]▄[/#3b1725 on #494b9b]",
             ]
 
@@ -541,25 +481,15 @@ def clbar(
                 else:
                     speedColor = "[#ab333d]"
 
-                passed = "{:02d}:{:02d}".format(
-                    math.floor(sum(delay) / 60), round(sum(delay)) % 60
-                )
-                remaining = "{:02d}:{:02d}".format(
-                    math.floor((total * np.mean(delay) - sum(delay)) / 60),
-                    round(total * np.mean(delay) - sum(delay)) % 60,
-                )
+                passed = "{:02d}:{:02d}".format(math.floor(sum(delay) / 60), round(sum(delay)) % 60)
+                remaining = "{:02d}:{:02d}".format(math.floor((total * np.mean(delay) - sum(delay)) / 60), round(total * np.mean(delay) - sum(delay)) % 60)
 
             speed = f" {min(total, iteration)}/{total} at {measure} "
             prediction = f" {passed} < {remaining} "
 
             # Print single bar across two lines
-            rprint(
-                f'\r{f"{name}".center(prefix)} {"".join(line1)}{speedColor}{speed.center(suffix-1)}[white]'
-            )
-            rprint(
-                f'[#48a971]{f"{percent}%".center(prefix)}[/#48a971] {"".join(line2)}[#494b9b]{prediction.center(suffix-1)}',
-                end=printEnd,
-            )
+            rprint(f'\r{f"{name}".center(prefix)} {"".join(line1)}{speedColor}{speed.center(suffix-1)}[white]')
+            rprint(f'[#48a971]{f"{percent}%".center(prefix)}[/#48a971] {"".join(line2)}[#494b9b]{prediction.center(suffix-1)}', end=printEnd)
             delay.append(time.time())
 
             return delay
@@ -596,19 +526,11 @@ def encodeImage(image, format):
 def decodeImage(imageString):
     try:
         if imageString["format"] == "png":
-            return Image.open(BytesIO(base64.b64decode(imageString["image"]))).convert(
-                "RGB"
-            )
+            return Image.open(BytesIO(base64.b64decode(imageString["image"]))).convert("RGB")
         else:
-            return Image.frombytes(
-                format,
-                (imageString["width"], imageString["height"]),
-                base64.b64decode(imageString["image"]),
-            ).convert("RGB")
+            return Image.frombytes(format, (imageString["width"], imageString["height"]), base64.b64decode(imageString["image"])).convert("RGB")
     except:
-        rprint(
-            f"\n[#ab333d]ERROR: Image cannot be decoded from bytes. It may have been corrupted."
-        )
+        rprint(f"\n[#ab333d]ERROR: Image cannot be decoded from bytes. It may have been corrupted.")
         print(imageString)
         return None
 
@@ -653,11 +575,7 @@ def caption_images(blip, images, prompt=None):
         else:
             inputs = processor(image, return_tensors="pt")
 
-        outputs.append(
-            processor.decode(
-                model.generate(**inputs, max_new_tokens=30)[0], skip_special_tokens=True
-            )
-        )
+        outputs.append(processor.decode(model.generate(**inputs, max_new_tokens=30)[0], skip_special_tokens=True))
     return outputs
 
 
@@ -704,9 +622,7 @@ def load_model_from_config(model, verbose=False):
         try:
             pl_sd = load_file(model, device="cpu")
         except:
-            rprint(
-                f"[#ab333d]Model is not a Safetensor. Please consider using Safetensors format for better security."
-            )
+            rprint(f"[#ab333d]Model is not a Safetensor. Please consider using Safetensors format for better security.")
             pl_sd = torch.load(model, map_location="cpu")
 
         sd = pl_sd
@@ -717,9 +633,7 @@ def load_model_from_config(model, verbose=False):
 
         return sd
     except Exception as e:
-        rprint(
-            f"[#ab333d]{traceback.format_exc()}\n\nThis may indicate a model has not been downloaded fully, or is corrupted."
-        )
+        rprint(f"[#ab333d]{traceback.format_exc()}\n\nThis may indicate a model has not been downloaded fully, or is corrupted.")
 
 
 # Load stable diffusion 1.5 format model
@@ -804,9 +718,7 @@ def load_model(modelFileString, config, device, precision, optimized, split = Tr
             warnings.simplefilter("ignore")
             # Load the pixelvae
             decoder_path = os.path.abspath("models/decoder/decoder.px")
-            modelPV = load_pixelvae_model(
-                decoder_path, device, "eVWtlIBjTRr0-gyZB0smWSwxCiF8l4PVJcNJOIFLFqE="
-            )
+            modelPV = load_pixelvae_model(decoder_path, device, "eVWtlIBjTRr0-gyZB0smWSwxCiF8l4PVJcNJOIFLFqE=")
 
         # Instantiate and load the main model
         if split:
@@ -954,19 +866,16 @@ def managePrompts(prompt, negative, W, H, seed, upscale, generations, loras, tra
         negativeList = [negative, "mutated, noise, nsfw, nude, frame, film reel, snowglobe, deformed, stock image, watermark, text, signature, username"]
 
         # Lora specific modifications
-        if any(
-            f"{_}.pxlm" in loraNames
-            for _ in [
-                "topdown",
-                "isometric",
-                "neogeo",
-                "nes",
-                "snes",
-                "playstation",
-                "gameboy",
-                "gameboyadvance",
-            ]
-        ):
+        if any(f"{_}.pxlm" in loraNames for _ in [
+            "topdown",
+            "isometric",
+            "neogeo",
+            "nes",
+            "snes",
+            "playstation",
+            "gameboy",
+            "gameboyadvance"
+        ]):
             prefix = "pixel"
             suffix = ""
         elif any(f"{_}.pxlm" in loraNames for _ in ["frontfacing", "gameicons", "flatshading"]):
@@ -1638,29 +1547,7 @@ def manageComposition(lighting, composition, loras):
     return loras
 
 
-def prepare_inference(
-    title,
-    prompt,
-    negative,
-    translate,
-    promptTuning,
-    W,
-    H,
-    pixelSize,
-    steps,
-    scale,
-    lighting,
-    composition,
-    seed,
-    total_images,
-    maxBatchSize,
-    device,
-    precision,
-    loras,
-    
-    # options for image to image
-    image = None,
-):
+def prepare_inference(title, prompt, negative, translate, promptTuning, W, H, pixelSize, steps, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, image = None):
     raw_loras = []
     
     # Check gpu availability
@@ -1714,23 +1601,10 @@ def prepare_inference(
         loras.append({"file": os.path.join(lecoPath, "contrast.leco"), "weight": 120})
 
     # Apply modifications to raw prompts
-    data, negative_data = managePrompts(
-        prompt,
-        negative,
-        W,
-        H,
-        seed,
-        False,
-        total_images,
-        loras,
-        translate,
-        promptTuning,
-    )
+    data, negative_data = managePrompts(prompt, negative, W, H, seed, False, total_images, loras, translate, promptTuning)
     seed_everything(seed)
 
-    rprint(
-        f"\n[#48a971]{title}[white] generating [#48a971]{total_images}[white] images with [#48a971]{steps}[white] steps over [#48a971]{runs}[white] batches with [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)"
-    )
+    rprint(f"\n[#48a971]{title}[white] generating [#48a971]{total_images}[white] images with [#48a971]{steps}[white] steps over [#48a971]{runs}[white] batches with [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
 
     global model
     global modelCS
@@ -1764,12 +1638,7 @@ def prepare_inference(
                             # Write attempted decrypted file
                             dec_file.write(decryptedFiles[i])
                             try:
-                                raw_loras.append(
-                                    {
-                                        "sd": load_lora_raw(loraPair["file"]),
-                                        "weight": loraPair["weight"],
-                                    }
-                                )   
+                                raw_loras.append({"sd": load_lora_raw(loraPair["file"]), "weight": loraPair["weight"]})   
                             except:
                                 # Decrypted file could not be read, revert to unchanged, and return an error
                                 decryptedFiles[i] = "none"
@@ -1780,12 +1649,7 @@ def prepare_inference(
                     rprint(f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted")
             else:
                 # Add lora to unet
-                raw_loras.append(
-                    {
-                        "sd": load_lora_raw(loraPair["file"]),
-                        "weight": loraPair["weight"],
-                    }
-                )
+                raw_loras.append({"sd": load_lora_raw(loraPair["file"]), "weight": loraPair["weight"]}) 
                 
             if not any(name == os.path.splitext(loraName)[0] for name in system_models):
                 rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraName)[0]} [#494b9b]LoRA with [#48a971]{loraPair['weight']}% [#494b9b]strength")
@@ -1806,10 +1670,7 @@ def prepare_inference(
             init_latent_base = torch.nn.functional.interpolate(init_latent_base, size=(H // 8, W // 8), mode="bilinear") * 6.0
             if init_latent_base.shape[0] < latentBatch:
                 # Create tiles of inputs to match batch arrangement
-                init_latent_base = init_latent_base.repeat(
-                    [math.ceil(latentBatch / init_latent_base.shape[0])]
-                    + [1] * (len(init_latent_base.shape) - 1)
-                )[:latentBatch]
+                init_latent_base = init_latent_base.repeat([math.ceil(latentBatch / init_latent_base.shape[0])] + [1] * (len(init_latent_base.shape) - 1))[:latentBatch]
 
             for run in range(runs):
                 if total_images - latentCount < latentBatch:
@@ -1894,35 +1755,8 @@ def prepare_inference(
     
 
 # Generate image from text prompt
-def txt2img(
-    prompt,
-    negative,
-    translate,
-    promptTuning,
-    W,
-    H,
-    pixelSize,
-    upscale,
-    quality,
-    scale,
-    lighting,
-    composition,
-    seed,
-    total_images,
-    maxBatchSize,
-    device,
-    precision,
-    loras,
-    tilingX,
-    tilingY,
-    preview,
-    pixelvae,
-    post,
-):
+def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale, quality, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, tilingX, tilingY, preview, pixelvae, post):
     timer = time.time()
-    
-    load_raw_loras = False
-    raw_loras = []
     
     # Check gpu availability
     if device == "cuda" and not torch.cuda.is_available():
@@ -1940,11 +1774,7 @@ def txt2img(
         batch = 1
     else:
         batch = min(total_images, math.floor((maxSize / size) ** 2))
-    runs = (
-        math.floor(total_images / batch)
-        if total_images % batch == 0
-        else math.floor(total_images / batch) + 1
-    )
+    runs = ( math.floor(total_images / batch) if total_images % batch == 0 else math.floor(total_images / batch) + 1)
 
     # Set the seed for random number generation if not provided
     if seed == None:
@@ -1995,28 +1825,13 @@ def txt2img(
         upscale = False
 
     # Apply modifications to raw prompts
-    data, negative_data = managePrompts(
-        prompt,
-        negative,
-        W,
-        H,
-        seed,
-        upscale,
-        total_images,
-        loras,
-        translate,
-        promptTuning,
-    )
+    data, negative_data = managePrompts(prompt, negative, W, H, seed, upscale, total_images, loras, translate, promptTuning,)
     seed_everything(seed)
 
-    rprint(
-        f"\n[#48a971]Text to Image[white] generating [#48a971]{total_images}[white] quality [#48a971]{quality}[white] images over [#48a971]{runs}[white] batches with [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)"
-    )
+    rprint(f"\n[#48a971]Text to Image[white] generating [#48a971]{total_images}[white] quality [#48a971]{quality}[white] images over [#48a971]{runs}[white] batches with [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
 
     if W // 8 >= 96 and H // 8 >= 96 and upscale:
-        rprint(
-            f"[#48a971]Pre-generating[white] composition image at [#48a971]{gWidth * 8}[white]x[#48a971]{gHeight * 8} [white]([#48a971]{(gWidth * 8) // pixelSize}[white]x[#48a971]{(gHeight * 8) // pixelSize}[white] pixels)"
-        )
+        rprint(f"[#48a971]Pre-generating[white] composition image at [#48a971]{gWidth * 8}[white]x[#48a971]{gHeight * 8} [white]([#48a971]{(gWidth * 8) // pixelSize}[white]x[#48a971]{(gHeight * 8) // pixelSize}[white] pixels)")
 
     start_code = None
     sampler = "pxlcm"
@@ -2027,8 +1842,7 @@ def txt2img(
     global modelPV
 
     # Patch tiling for model and modelTA
-    if load_raw_loras == False: # ignore for CLDM
-        model, modelTA, modelPV = patch_tiling(tilingX, tilingY, model, modelTA, modelPV)
+    model, modelTA, modelPV = patch_tiling(tilingX, tilingY, model, modelTA, modelPV)
 
     # Set the precision scope based on device and precision
     precision, fp16_mode, _ = get_precision(device, precision)
@@ -2057,43 +1871,34 @@ def txt2img(
                         # Write attempted decrypted file
                         dec_file.write(decryptedFiles[i])
                         try:
-                            if load_raw_loras:
-                                raw_loras.append(
-                                    {
-                                        "sd": load_lora_raw(loraPair["file"]),
-                                        "weight": loraPair["weight"],
-                                    }
-                                )
-                            else:
-                                # Load decrypted
-                                loadedLoras.append(load_lora(loraPair["file"], model))    
+                            # Load decrypted
+                            loadedLoras.append(load_lora(loraPair["file"], model))    
                         except:
-                            if load_raw_loras == False:
-                                # Decrypted file could not be read, revert to unchanged, and return an error
-                                decryptedFiles[i] = "none"
-                                dec_file.write(encrypted)
-                                loadedLoras.append(None)
-                                rprint(
-                                    f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted"
-                                )
-                                continue
+                            # Decrypted file could not be read, revert to unchanged, and return an error
+                            decryptedFiles[i] = "none"
+                            dec_file.write(encrypted)
+                            loadedLoras.append(None)
+                            rprint(f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted")
+                            continue
             else:
                 # Add lora to unet
-                if load_raw_loras == False:
+                try:
+                    # Load decrypted file
                     loadedLoras.append(load_lora(loraPair["file"], model))
-                
-            if load_raw_loras == False:
-                loadedLoras[i].multiplier = loraPair["weight"] / 100
-                # Prepare for inference
-                register_lora_for_inference(loadedLoras[i])
-                apply_lora()
-                if not any(name == os.path.splitext(loraName)[0] for name in system_models):
-                    rprint(
-                        f"[#494b9b]Using [#48a971]{os.path.splitext(loraName)[0]} [#494b9b]LoRA with [#48a971]{loraPair['weight']}% [#494b9b]strength"
-                    )
+                except:
+                    # File could not be read
+                    loadedLoras.append(None)
+                    rprint(f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted or an incorrect format. Only SD1.5 architecture LoRAs are supported.")
+                    continue
+            
+            loadedLoras[i].multiplier = loraPair["weight"] / 100
+            # Prepare for inference
+            register_lora_for_inference(loadedLoras[i])
+            apply_lora()
+            if not any(name == os.path.splitext(loraName)[0] for name in system_models):
+                rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraName)[0]} [#494b9b]LoRA with [#48a971]{loraPair['weight']}% [#494b9b]strength")
         else:
-            if load_raw_loras == False:
-                loadedLoras.append(None)
+            loadedLoras.append(None)
 
     seeds = []
     # with torch.no_grad():
@@ -2201,22 +2006,8 @@ def txt2img(
                             x_sample_image = fastRender(modelPV, samples_ddim[i:i+1], pixelSize, W, H)
                             name = str(seed+i)
                             displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
-                        yield {
-                            "action": "display_title",
-                            "type": "txt2img",
-                            "value": {
-                                "text": f"Generating... {step}/{pre_steps} steps in batch {run+1}/{runs}"
-                            },
-                        }
-                        yield {
-                            "action": "display_image",
-                            "type": "txt2img",
-                            "value": {
-                                "images": displayOut,
-                                "prompts": data,
-                                "negatives": negative_data,
-                            },
-                        }
+                        yield {"action": "display_title", "type": "txt2img", "value": {"text": f"Generating... {step}/{pre_steps} steps in batch {run+1}/{runs}"}}
+                        yield {"action": "display_image", "type": "txt2img", "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}
 
                 if upscale:
                     # Apply 'cropped' lora for enhanced composition at high resolution
@@ -2233,17 +2024,9 @@ def txt2img(
                         apply_lora()
 
                     # Upscale latents using bilinear interpolation
-                    samples_ddim = torch.nn.functional.interpolate(
-                        samples_ddim, size=(H // 8, W // 8), mode="bilinear"
-                    )
+                    samples_ddim = torch.nn.functional.interpolate(samples_ddim, size=(H // 8, W // 8), mode="bilinear")
                     # Encode latents
-                    encoded_latent = model.stochastic_encode(
-                        samples_ddim,
-                        torch.tensor([up_steps]).to(device),
-                        seed,
-                        0.0,
-                        int(up_steps * 1.5),
-                    )
+                    encoded_latent = model.stochastic_encode(samples_ddim, torch.tensor([up_steps]).to(device), seed, 0.0, int(up_steps * 1.5))
                     # Sample for up_steps
                     for step, samples_ddim in enumerate(
                         model.sample(
@@ -2262,39 +2045,12 @@ def txt2img(
                                 x_sample_image = fastRender(modelPV, samples_ddim[i:i+1], pixelSize, W, H)
                                 name = str(seed+i)
                                 displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
-                            yield {
-                                "action": "display_title",
-                                "type": "txt2img",
-                                "value": {
-                                    "text": f"Generating... {step}/{up_steps} steps in batch {run+1}/{runs}"
-                                },
-                            }
-                            yield {
-                                "action": "display_image",
-                                "type": "txt2img",
-                                "value": {
-                                    "images": displayOut,
-                                    "prompts": data,
-                                    "negatives": negative_data,
-                                },
-                            }
+                            yield {"action": "display_title", "type": "txt2img", "value": {"text": f"Generating... {step}/{up_steps} steps in batch {run+1}/{runs}"}}
+                            yield {"action": "display_image", "type": "txt2img", "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}
 
                 # Render final images in batch
                 for i in range(batch):
-                    x_sample_image, post = render(
-                        modelTA,
-                        modelPV,
-                        samples_ddim[i:i+1],
-                        device,
-                        H,
-                        W,
-                        pixelSize,
-                        pixelvae,
-                        tilingX,
-                        tilingY,
-                        loras,
-                        post,
-                    )
+                    x_sample_image, post = render(modelTA, modelPV, samples_ddim[i:i+1], device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
 
                     if total_images > 1 and (base_count + 1) < total_images:
                         play("iteration.wav")
@@ -2328,14 +2084,8 @@ def txt2img(
         for image in output:
             final.append({"name": image["name"], "seed": image["seed"], "format": image["format"], "image": encodeImage(image["image"], "png"), "width": image["width"], "height": image["height"]})
         play("batch.wav")
-        rprint(
-            f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}"
-        )
-        yield {
-            "action": "display_image",
-            "type": "txt2img",
-            "value": {"images": final, "prompts": data, "negatives": negative_data},
-        }
+        rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
+        yield {"action": "display_image", "type": "txt2img", "value": {"images": final, "prompts": data, "negatives": negative_data}}
 
 
 def resize_image(original_width, original_height, target_size = 512):
@@ -2383,22 +2133,12 @@ def neural_inference(modelFileString, title, controlnets, prompt, negative, auto
             prompt = remove_repeated_words(processor.decode(model.generate(**inputs, max_new_tokens=30)[0], skip_special_tokens=True))
             rprint(f"[#48a971]Caption: [#494b9b]{prompt}")
     
-    conditioning, negative_conditioning, image_embed, steps, scale, runs, data, negative_data, seeds, batch, raw_loras = prepare_inference(
-        title, prompt, negative, translate, promptTuning, W, H, pixelSize, steps, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, init_img)
+    conditioning, negative_conditioning, image_embed, steps, scale, runs, data, negative_data, seeds, batch, raw_loras = prepare_inference(title, prompt, negative, translate, promptTuning, W, H, pixelSize, steps, scale, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, init_img)
 
     title = title.lower().replace(' ', '_')
 
     rprint(f"[#48a971]Patching model for controlnet")
-    model_patcher, cldm_cond, cldm_uncond = load_controlnet(
-        controlnets,
-        W,
-        H,
-        modelFileString,
-        0, # might need to point to the physical device, in this case defaults to first GPU available
-        conditioning,
-        negative_conditioning,
-        loras = raw_loras
-    )
+    model_patcher, cldm_cond, cldm_uncond = load_controlnet(controlnets, W, H, modelFileString, 0, conditioning, negative_conditioning, loras = raw_loras)
 
     _, fp16_mode, _ = get_precision(device, precision)
 
@@ -2433,38 +2173,11 @@ def neural_inference(modelFileString, title, controlnets, prompt, negative, auto
                         x_sample_image = fastRender(modelPV, samples_ddim[i:i+1], pixelSize, W, H)
                         name = str(seed+i)
                         displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
-                    yield {
-                        "action": "display_title",
-                        "type": title,
-                        "value": {
-                            "text": f"Generating... {step}/{steps} steps in batch {run+1}/{runs}"
-                        },
-                    }
-                    yield {
-                        "action": "display_image",
-                        "type": title,
-                        "value": {
-                            "images": displayOut,
-                            "prompts": data,
-                            "negatives": negative_data,
-                        },
-                    }
+                    yield {"action": "display_title", "type": title, "value": {"text": f"Generating... {step}/{steps} steps in batch {run+1}/{runs}"}}
+                    yield {"action": "display_image", "type": title, "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}
             
             for i in range(batch):
-                x_sample_image, post = render(
-                    modelTA,
-                    modelPV,
-                    samples_ddim[i:i+1],
-                    device,
-                    H,
-                    W,
-                    pixelSize,
-                    pixelvae,
-                    False,
-                    False,
-                    raw_loras,
-                    post,
-                )
+                x_sample_image, post = render(modelTA, modelPV, samples_ddim[i:i+1], device, H, W, pixelSize, pixelvae, False, False, raw_loras, post)
                 if total_images > 1 and (base_count + 1) < total_images:
                     play("iteration.wav")
 
@@ -2512,14 +2225,8 @@ def neural_inference(modelFileString, title, controlnets, prompt, negative, auto
         for image in output:
             final.append({"name": image["name"], "seed": image["seed"], "format": image["format"], "image": encodeImage(image["image"], "png"), "width": image["width"], "height": image["height"]})
         play("batch.wav")
-        rprint(
-            f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}"
-        )
-        yield {
-            "action": "display_image",
-            "type": title,
-            "value": {"images": final, "prompts": data, "negatives": negative_data},
-        }
+        rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
+        yield {"action": "display_image", "type": title, "value": {"images": final, "prompts": data, "negatives": negative_data}}
 
         unload_cldm()
 
@@ -2679,15 +2386,20 @@ def img2img(
                             continue
             else:
                 # Add lora to unet
-                loadedLoras.append(load_lora(loraPair["file"], model))
+                try:
+                    # Load decrypted file
+                    loadedLoras.append(load_lora(loraPair["file"], model))
+                except:
+                    # File could not be read
+                    loadedLoras.append(None)
+                    rprint(f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted or an incorrect format. Only SD1.5 architecture LoRAs are supported.")
+                    continue
             loadedLoras[i].multiplier = loraPair["weight"] / 100
             # Prepare for inference
             register_lora_for_inference(loadedLoras[i])
             apply_lora()
             if not any(name == os.path.splitext(loraName)[0] for name in system_models):
-                rprint(
-                    f"[#494b9b]Using [#48a971]{os.path.splitext(loraName)[0]} [#494b9b]LoRA with [#48a971]{loraPair['weight']}% [#494b9b]strength"
-                )
+                rprint(f"[#494b9b]Using [#48a971]{os.path.splitext(loraName)[0]} [#494b9b]LoRA with [#48a971]{loraPair['weight']}% [#494b9b]strength")
         else:
             loadedLoras.append(None)
 
