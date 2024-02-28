@@ -2232,32 +2232,7 @@ def neural_inference(modelFileString, title, controlnets, prompt, negative, auto
 
 
 # Generate image from image+text prompt
-def img2img(
-    prompt,
-    negative,
-    translate,
-    promptTuning,
-    W,
-    H,
-    pixelSize,
-    quality,
-    scale,
-    strength,
-    lighting,
-    composition,
-    seed,
-    total_images,
-    maxBatchSize,
-    device,
-    precision,
-    loras,
-    images,
-    tilingX,
-    tilingY,
-    preview,
-    pixelvae,
-    post,
-):
+def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality, scale, strength, lighting, composition, seed, total_images, maxBatchSize, device, precision, loras, images, tilingX, tilingY, preview, pixelvae, post):
     timer = time.time()
 
     # Check gpu availability
@@ -2280,11 +2255,7 @@ def img2img(
         batch = 1
     else:
         batch = min(total_images, math.floor((maxSize / size) ** 2))
-    runs = (
-        math.floor(total_images / batch)
-        if total_images % batch == 0
-        else math.floor(total_images / batch) + 1
-    )
+    runs = (math.floor(total_images / batch) if total_images % batch == 0 else math.floor(total_images / batch) + 1)
 
     # Set the seed for random number generation if not provided
     if seed == None:
@@ -2318,23 +2289,10 @@ def img2img(
             loras.append({"file": os.path.join(os.path.join(modelPath, "LECO"), "crop.leco"), "weight": crop_weight})
 
     # Apply modifications to raw prompts
-    data, negative_data = managePrompts(
-        prompt,
-        negative,
-        W,
-        H,
-        seed,
-        False,
-        total_images,
-        loras,
-        translate,
-        promptTuning,
-    )
+    data, negative_data = managePrompts( prompt, negative, W, H, seed, False, total_images, loras, translate, promptTuning)
     seed_everything(seed)
 
-    rprint(
-        f"\n[#48a971]Image to Image[white] generating [#48a971]{total_images}[white] quality [#48a971]{quality}[white] images over [#48a971]{runs}[white] batches with [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)"
-    )
+    rprint(f"\n[#48a971]Image to Image[white] generating [#48a971]{total_images}[white] quality [#48a971]{quality}[white] images over [#48a971]{runs}[white] batches with [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
 
     sampler = "ddim"
 
@@ -2380,9 +2338,7 @@ def img2img(
                             decryptedFiles[i] = "none"
                             dec_file.write(encrypted)
                             loadedLoras.append(None)
-                            rprint(
-                                f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted"
-                            )
+                            rprint(f"[#ab333d]Modifier {os.path.splitext(loraName)[0]} could not be loaded, the file may be corrupted")
                             continue
             else:
                 # Add lora to unet
@@ -2420,15 +2376,10 @@ def img2img(
 
             # Move the initial image to latent space and resize it
             init_latent_base = modelTA.encoder(init_image)
-            init_latent_base = torch.nn.functional.interpolate(
-                init_latent_base, size=(H // 8, W // 8), mode="bilinear"
-            )
+            init_latent_base = torch.nn.functional.interpolate(init_latent_base, size=(H // 8, W // 8), mode="bilinear")
             if init_latent_base.shape[0] < latentBatch:
                 # Create tiles of inputs to match batch arrangement
-                init_latent_base = init_latent_base.repeat(
-                    [math.ceil(latentBatch / init_latent_base.shape[0])]
-                    + [1] * (len(init_latent_base.shape) - 1)
-                )[:latentBatch]
+                init_latent_base = init_latent_base.repeat([math.ceil(latentBatch / init_latent_base.shape[0])] + [1] * (len(init_latent_base.shape) - 1))[:latentBatch]
 
             for run in range(runs):
                 if total_images - latentCount < latentBatch:
@@ -2438,15 +2389,13 @@ def img2img(
                     init_latent_base = init_latent_base[:latentBatch]
 
                 # Encode the scaled latent
-                encoded_latent.append(
-                    model.stochastic_encode(
-                        init_latent_base,
-                        torch.tensor([steps]).to(device),
-                        seed + (run * latentCount),
-                        0.0,
-                        max(steps + 1, int(steps / strength)),
-                    )
-                )
+                encoded_latent.append(model.stochastic_encode(
+                    init_latent_base,
+                    torch.tensor([steps]).to(device),
+                    seed + (run * latentCount),
+                    0.0,
+                    max(steps + 1, int(steps / strength)),
+                ))
                 latentCount += latentBatch
 
             modelCS.to(device)
@@ -2455,16 +2404,8 @@ def img2img(
             for run in range(runs):
                 # Compute conditioning tokens using prompt and negative
                 condBatch = min(condBatch, total_images - condCount)
-                negative_conditioning.append(
-                    modelCS.get_learned_conditioning(
-                        negative_data[condCount : condCount + condBatch]
-                    )
-                )
-                conditioning.append(
-                    modelCS.get_learned_conditioning(
-                        data[condCount : condCount + condBatch]
-                    )
-                )
+                negative_conditioning.append(modelCS.get_learned_conditioning(negative_data[condCount : condCount + condBatch]))
+                conditioning.append(modelCS.get_learned_conditioning(data[condCount : condCount + condBatch]))
                 condCount += condBatch
 
             # Move modelCS to CPU if necessary to free up GPU memory
@@ -2478,14 +2419,7 @@ def img2img(
         base_count = 0
         output = []
         # Iterate over the specified number of iterations
-        for run in clbar(
-            range(runs),
-            name="Batches",
-            position="last",
-            unit="batch",
-            prefixwidth=12,
-            suffixwidth=28,
-        ):
+        for run in clbar(range(runs), name="Batches", position="last", unit="batch", prefixwidth=12, suffixwidth=28):
             batch = min(batch, total_images - base_count)
 
             # Use the specified precision scope
@@ -2508,39 +2442,12 @@ def img2img(
                             x_sample_image = fastRender(modelPV, samples_ddim[i:i+1], pixelSize, W, H)
                             name = str(seed+i)
                             displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
-                        yield {
-                            "action": "display_title",
-                            "type": "img2img",
-                            "value": {
-                                "text": f"Generating... {step}/{steps} steps in batch {run+1}/{runs}"
-                            },
-                        }
-                        yield {
-                            "action": "display_image",
-                            "type": "img2img",
-                            "value": {
-                                "images": displayOut,
-                                "prompts": data,
-                                "negatives": negative_data,
-                            },
-                        }
+                        yield {"action": "display_title", "type": "img2img", "value": {"text": f"Generating... {step}/{steps} steps in batch {run+1}/{runs}"}}
+                        yield {"action": "display_image", "type": "img2img", "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}
 
                 # Render final images in batch
                 for i in range(batch):
-                    x_sample_image, post = render(
-                        modelTA,
-                        modelPV,
-                        samples_ddim[i:i+1],
-                        device,
-                        H,
-                        W,
-                        pixelSize,
-                        pixelvae,
-                        tilingX,
-                        tilingY,
-                        loras,
-                        post,
-                    )
+                    x_sample_image, post = render(modelTA, modelPV, samples_ddim[i:i+1], device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
 
                     if total_images > 1 and (base_count + 1) < total_images:
                         play("iteration.wav")
@@ -2573,14 +2480,8 @@ def img2img(
         for image in output:
             final.append({"name": image["name"], "seed": image["seed"], "format": image["format"], "image": encodeImage(image["image"], "png"), "width": image["width"], "height": image["height"]})
         play("batch.wav")
-        rprint(
-            f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}"
-        )
-        yield {
-            "action": "display_image",
-            "type": "img2img",
-            "value": {"images": final, "prompts": data, "negatives": negative_data},
-        }
+        rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
+        yield {"action": "display_image", "type": "img2img", "value": {"images": final, "prompts": data, "negatives": negative_data}}
 
 
 # Wrapper for prompt manager
@@ -2601,32 +2502,19 @@ def prompt2prompt(path, prompt, negative, generations, seed):
             modelLM = load_chat_pipeline(os.path.join(modelPath, "LLM"))
             play("iteration.wav")
 
-            rprint(
-                f"[#c4f129]Loaded in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds"
-            )
+            rprint(f"[#c4f129]Loaded in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds")
     except Exception as e:
         if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
-            rprint(
-                f"\n[#494b9b]Translation model could not be loaded due to insufficient GPU resources."
-            )
+            rprint(f"\n[#494b9b]Translation model could not be loaded due to insufficient GPU resources.")
         else:
             rprint(f"\n[#494b9b]Translation model could not be loaded.")
     try:
         # Generate responses
-        rprint(
-            f"\n[#48a971]Translation model [white]generating [#48a971]{generations} [white]enhanced prompts"
-        )
+        rprint(f"\n[#48a971]Translation model [white]generating [#48a971]{generations} [white]enhanced prompts")
 
         upsampled_captions = []
         count = 0
-        for prompt in clbar(
-            prompts,
-            name="Enhancing",
-            position="",
-            unit="prompt",
-            prefixwidth=12,
-            suffixwidth=28,
-        ):
+        for prompt in clbar(prompts, name="Enhancing", position="", unit="prompt", prefixwidth=12, suffixwidth=28):
             # Try to generate a response, if no response is identified after retrys, set upsampled prompt to initial prompt
             upsampled_caption = None
             retrys = 5
@@ -2657,14 +2545,10 @@ def prompt2prompt(path, prompt, negative, generations, seed):
         else:
             clearCache()
     except:
-        rprint(
-            f"[#494b9b]Prompt enhancement failed unexpectedly. Prompts will not be edited."
-        )
+        rprint(f"[#494b9b]Prompt enhancement failed unexpectedly. Prompts will not be edited.")
 
     play("batch.wav")
-    rprint(
-        f"[#c4f129]Prompt enhancement completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}"
-    )
+    rprint(f"[#c4f129]Prompt enhancement completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
 
     return prompts
 
@@ -2696,9 +2580,7 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
         seed = randint(0, 1000000)
     seed_everything(seed)
 
-    rprint(
-        f"\n[#48a971]Running benchmark[white] with a maximum generation size of [#48a971]{maxTestSize*8}[white]x[#48a971]{maxTestSize*8}[white] ([#48a971]{maxTestSize}[white]x[#48a971]{maxTestSize}[white] pixels) for [#48a971]{tests}[white] total tests"
-    )
+    rprint(f"\n[#48a971]Running benchmark[white] with a maximum generation size of [#48a971]{maxTestSize*8}[white]x[#48a971]{maxTestSize*8}[white] ([#48a971]{maxTestSize}[white]x[#48a971]{maxTestSize}[white] pixels) for [#48a971]{tests}[white] total tests")
 
     start_code = None
     sampler = "pxlcm"
@@ -2734,14 +2616,7 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
                 time.sleep(1)
 
         # Iterate over the specified number of iterations
-        for n in clbar(
-            range(tests),
-            name="Tests",
-            position="last",
-            unit="test",
-            prefixwidth=12,
-            suffixwidth=28,
-        ):
+        for n in clbar(range(tests), name="Tests", position="last", unit="test", prefixwidth=12, suffixwidth=28,):
             benchTimer = time.time()
             timerPerStep = 1
             passedTest = False
@@ -2767,21 +2642,7 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
                     ):
                         pass
 
-                    render(
-                        modelTA,
-                        modelPV,
-                        samples_ddim,
-                        0,
-                        device,
-                        testSize,
-                        testSize,
-                        8,
-                        pixelvae,
-                        False,
-                        False,
-                        ["None"],
-                        False,
-                    )
+                    render(modelTA, modelPV, samples_ddim, 0, device, testSize, testSize, 8, pixelvae, False, False, ["None"], False)
 
                     # Delete the samples to free up memory
                     del samples_ddim
@@ -2821,9 +2682,7 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
             if test[1] == "Passed":
                 break
         play("batch.wav")
-        rprint(
-            f"[#c4f129]Benchmark completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n{printTests}\n[white]The maximum size possible on your hardware with less than [#48a971]{timeLimit}[white] seconds per step is [#48a971]{maxSize*8}[white]x[#48a971]{maxSize*8}[white] ([#48a971]{maxSize}[white]x[#48a971]{maxSize}[white] pixels)"
-        )
+        rprint(f"[#c4f129]Benchmark completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n{printTests}\n[white]The maximum size possible on your hardware with less than [#48a971]{timeLimit}[white] seconds per step is [#48a971]{maxSize*8}[white]x[#48a971]{maxSize*8}[white] ([#48a971]{maxSize}[white]x[#48a971]{maxSize}[white] pixels)")
 
 
 async def server(websocket):
@@ -2845,15 +2704,7 @@ async def server(websocket):
                             modelData = values["model"]
 
                             if values["send_progress"]:
-                                await websocket.send(
-                                    json.dumps(
-                                        {
-                                            "action": "display_title",
-                                            "type": title.lower().replace(' ', '_'),
-                                            "value": {"text": "Loading model"},
-                                        }
-                                    )
-                                )
+                                await websocket.send(json.dumps({"action": "display_title", "type": title.lower().replace(' ', '_'), "value": {"text": "Loading model"}}))
                             
                             load_model(
                                 modelData["file"],
@@ -2864,15 +2715,7 @@ async def server(websocket):
                                 False
                             )
                             if values["send_progress"]:
-                                await websocket.send(
-                                    json.dumps(
-                                        {
-                                            "action": "display_title",
-                                            "type": title.lower().replace(' ', '_'),
-                                            "value": {"text": "Generating..."},
-                                        }
-                                    )
-                                )
+                                await websocket.send(json.dumps({"action": "display_title", "type": title.lower().replace(' ', '_'), "value": {"text": "Generating..."}}))
                             
                             # Neural detail workflow
                             
@@ -2925,30 +2768,14 @@ async def server(websocket):
                                 if values["send_progress"]:
                                     await websocket.send(json.dumps(result))
 
-                            await websocket.send(
-                                json.dumps(
-                                    {
-                                        "action": "returning",
-                                        "type": "img2img",
-                                        "value": {"images": result["value"]["images"]},
-                                    }
-                                )
-                            )
+                            await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": result["value"]["images"]}}))
                         except Exception as e:
                             if "SSLCertVerificationError" in traceback.format_exc():
-                                rprint(
-                                    f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal"
-                                )
-                            elif (
-                                "torch.cuda.OutOfMemoryError" in traceback.format_exc()
-                            ):
-                                rprint(
-                                    f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size"
-                                )
+                                rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
+                            elif ("torch.cuda.OutOfMemoryError" in traceback.format_exc()):
+                                rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
                                 if modelLM is not None:
-                                    rprint(
-                                        f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources"
-                                    )
+                                    rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
                             else:
                                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                             play("error.wav")
@@ -2962,15 +2789,7 @@ async def server(websocket):
                             modelData = values["model"]
 
                             if values["send_progress"]:
-                                await websocket.send(
-                                    json.dumps(
-                                        {
-                                            "action": "display_title",
-                                            "type": title.lower().replace(' ', '_'),
-                                            "value": {"text": "Loading model"},
-                                        }
-                                    )
-                                )
+                                await websocket.send(json.dumps({"action": "display_title","type": title.lower().replace(' ', '_'),"value": {"text": "Loading model"}}))
                             
                             load_model(
                                 modelData["file"],
@@ -2981,15 +2800,7 @@ async def server(websocket):
                                 False
                             )
                             if values["send_progress"]:
-                                await websocket.send(
-                                    json.dumps(
-                                        {
-                                            "action": "display_title",
-                                            "type": title.lower().replace(' ', '_'),
-                                            "value": {"text": "Generating..."},
-                                        }
-                                    )
-                                )
+                                await websocket.send(json.dumps({"action": "display_title","type": title.lower().replace(' ', '_'),"value": {"text": "Generating..."}}))
                             
                             # Neural detail workflow
                             
@@ -3045,30 +2856,14 @@ async def server(websocket):
                                 if values["send_progress"]:
                                     await websocket.send(json.dumps(result))
 
-                            await websocket.send(
-                                json.dumps(
-                                    {
-                                        "action": "returning",
-                                        "type": "img2img",
-                                        "value": {"images": result["value"]["images"]},
-                                    }
-                                )
-                            )
+                            await websocket.send(json.dumps({"action": "returning","type": "img2img","value": {"images": result["value"]["images"]}}))
                         except Exception as e:
                             if "SSLCertVerificationError" in traceback.format_exc():
-                                rprint(
-                                    f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal"
-                                )
-                            elif (
-                                "torch.cuda.OutOfMemoryError" in traceback.format_exc()
-                            ):
-                                rprint(
-                                    f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size"
-                                )
+                                rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
+                            elif ("torch.cuda.OutOfMemoryError" in traceback.format_exc()):
+                                rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
                                 if modelLM is not None:
-                                    rprint(
-                                        f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources"
-                                    )
+                                    rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
                             else:
                                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                             play("error.wav")
@@ -3082,15 +2877,7 @@ async def server(websocket):
                             modelData = values["model"]
 
                             if values["send_progress"]:
-                                await websocket.send(
-                                    json.dumps(
-                                        {
-                                            "action": "display_title",
-                                            "type": title.lower().replace(' ', '_'),
-                                            "value": {"text": "Loading model"},
-                                        }
-                                    )
-                                )
+                                await websocket.send(json.dumps({"action": "display_title", "type": title.lower().replace(' ', '_'), "value": {"text": "Loading model"}}))
                             
                             load_model(
                                 modelData["file"],
@@ -3101,15 +2888,7 @@ async def server(websocket):
                                 False
                             )
                             if values["send_progress"]:
-                                await websocket.send(
-                                    json.dumps(
-                                        {
-                                            "action": "display_title",
-                                            "type": title.lower().replace(' ', '_'),
-                                            "value": {"text": "Generating..."},
-                                        }
-                                    )
-                                )
+                                await websocket.send(json.dumps({"action": "display_title", "type": title.lower().replace(' ', '_'), "value": {"text": "Generating..."}}))
                             
                             # Neural resize workflow
                             
@@ -3162,30 +2941,14 @@ async def server(websocket):
                                 if values["send_progress"]:
                                     await websocket.send(json.dumps(result))
 
-                            await websocket.send(
-                                json.dumps(
-                                    {
-                                        "action": "returning",
-                                        "type": "img2img",
-                                        "value": {"images": result["value"]["images"]},
-                                    }
-                                )
-                            )
+                            await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": result["value"]["images"]}}))
                         except Exception as e:
                             if "SSLCertVerificationError" in traceback.format_exc():
-                                rprint(
-                                    f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal"
-                                )
-                            elif (
-                                "torch.cuda.OutOfMemoryError" in traceback.format_exc()
-                            ):
-                                rprint(
-                                    f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size"
-                                )
+                                rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
+                            elif ("torch.cuda.OutOfMemoryError" in traceback.format_exc()):
+                                rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
                                 if modelLM is not None:
-                                    rprint(
-                                        f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources"
-                                    )
+                                    rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
                             else:
                                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                             play("error.wav")
@@ -3199,15 +2962,7 @@ async def server(websocket):
                             modelData = values["model"]
 
                             if values["send_progress"]:
-                                await websocket.send(
-                                    json.dumps(
-                                        {
-                                            "action": "display_title",
-                                            "type": title.lower().replace(' ', '_'),
-                                            "value": {"text": "Loading model"},
-                                        }
-                                    )
-                                )
+                                await websocket.send(json.dumps({"action": "display_title", "type": title.lower().replace(' ', '_'), "value": {"text": "Loading model"}}))
                             
                             load_model(
                                 modelData["file"],
@@ -3218,15 +2973,7 @@ async def server(websocket):
                                 False
                             )
                             if values["send_progress"]:
-                                await websocket.send(
-                                    json.dumps(
-                                        {
-                                            "action": "display_title",
-                                            "type": title.lower().replace(' ', '_'),
-                                            "value": {"text": "Generating..."},
-                                        }
-                                    )
-                                )
+                                await websocket.send(json.dumps({"action": "display_title", "type": title.lower().replace(' ', '_'), "value": {"text": "Generating..."}}))
 
                             # Decode input image
                             init_img = decodeImage(values["images"][0])
@@ -3277,30 +3024,14 @@ async def server(websocket):
                                 if values["send_progress"]:
                                     await websocket.send(json.dumps(result))
 
-                            await websocket.send(
-                                json.dumps(
-                                    {
-                                        "action": "returning",
-                                        "type": "img2img",
-                                        "value": {"images": result["value"]["images"]},
-                                    }
-                                )
-                            )
+                            await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": result["value"]["images"]}}))
                         except Exception as e:
                             if "SSLCertVerificationError" in traceback.format_exc():
-                                rprint(
-                                    f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal"
-                                )
-                            elif (
-                                "torch.cuda.OutOfMemoryError" in traceback.format_exc()
-                            ):
-                                rprint(
-                                    f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size"
-                                )
+                                rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
+                            elif ("torch.cuda.OutOfMemoryError" in traceback.format_exc()):
+                                rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
                                 if modelLM is not None:
-                                    rprint(
-                                        f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources"
-                                    )
+                                    rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
                             else:
                                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                             play("error.wav")
@@ -3312,15 +3043,7 @@ async def server(websocket):
                             modelData = values["model"]
 
                             if values["send_progress"]:
-                                await websocket.send(
-                                    json.dumps(
-                                        {
-                                            "action": "display_title",
-                                            "type": "txt2img",
-                                            "value": {"text": "Loading model"},
-                                        }
-                                    )
-                                )
+                                await websocket.send(json.dumps({"action": "display_title", "type": "txt2img", "value": {"text": "Loading model"}}))
                             load_model(
                                 modelData["file"],
                                 "scripts/v1-inference.yaml",
@@ -3330,15 +3053,7 @@ async def server(websocket):
                             )
 
                             if values["send_progress"]:
-                                await websocket.send(
-                                    json.dumps(
-                                        {
-                                            "action": "display_title",
-                                            "type": "txt2img",
-                                            "value": {"text": "Generating..."},
-                                        }
-                                    )
-                                )
+                                await websocket.send(json.dumps({"action": "display_title", "type": "txt2img", "value": {"text": "Generating..."}}))
                             for result in txt2img(
                                 values["prompt"],
                                 values["negative"],
@@ -3367,30 +3082,14 @@ async def server(websocket):
                                 if values["send_progress"]:
                                     await websocket.send(json.dumps(result))
 
-                            await websocket.send(
-                                json.dumps(
-                                    {
-                                        "action": "returning",
-                                        "type": "txt2img",
-                                        "value": {"images": result["value"]["images"]},
-                                    }
-                                )
-                            )
+                            await websocket.send(json.dumps({"action": "returning", "type": "txt2img", "value": {"images": result["value"]["images"]}}))
                         except Exception as e:
                             if "SSLCertVerificationError" in traceback.format_exc():
-                                rprint(
-                                    f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal"
-                                )
-                            elif (
-                                "torch.cuda.OutOfMemoryError" in traceback.format_exc()
-                            ):
-                                rprint(
-                                    f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size"
-                                )
+                                rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
+                            elif ("torch.cuda.OutOfMemoryError" in traceback.format_exc()):
+                                rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
                                 if modelLM is not None:
-                                    rprint(
-                                        f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources"
-                                    )
+                                    rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
                             else:
                                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                             play("error.wav")
@@ -3402,15 +3101,7 @@ async def server(websocket):
                             modelData = values["model"]
 
                             if values["send_progress"]:
-                                await websocket.send(
-                                    json.dumps(
-                                        {
-                                            "action": "display_title",
-                                            "type": "img2img",
-                                            "value": {"text": "Loading model"},
-                                        }
-                                    )
-                                )
+                                await websocket.send(json.dumps({"action": "display_title", "type": "img2img", "value": {"text": "Loading model"}}))
                             load_model(
                                 modelData["file"],
                                 "scripts/v1-inference.yaml",
@@ -3420,15 +3111,7 @@ async def server(websocket):
                             )
 
                             if values["send_progress"]:
-                                await websocket.send(
-                                    json.dumps(
-                                        {
-                                            "action": "display_title",
-                                            "type": "img2img",
-                                            "value": {"text": "Generating..."},
-                                        }
-                                    )
-                                )
+                                await websocket.send(json.dumps({"action": "display_title", "type": "img2img", "value": {"text": "Generating..."}}))
                             for result in img2img(
                                 values["prompt"],
                                 values["negative"],
@@ -3458,44 +3141,18 @@ async def server(websocket):
                                 if values["send_progress"]:
                                     await websocket.send(json.dumps(result))
 
-                            await websocket.send(
-                                json.dumps(
-                                    {
-                                        "action": "returning",
-                                        "type": "img2img",
-                                        "value": {"images": result["value"]["images"]},
-                                    }
-                                )
-                            )
+                            await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": result["value"]["images"]}}))
                         except Exception as e:
                             if "SSLCertVerificationError" in traceback.format_exc():
-                                rprint(
-                                    f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal"
-                                )
-                            elif (
-                                "torch.cuda.OutOfMemoryError" in traceback.format_exc()
-                            ):
-                                rprint(
-                                    f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size. If samples are at 100%, this was caused by the VAE running out of memory, try enabling the Fast Pixel Decoder"
-                                )
+                                rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
+                            elif ("torch.cuda.OutOfMemoryError" in traceback.format_exc()):
+                                rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size. If samples are at 100%, this was caused by the VAE running out of memory, try enabling the Fast Pixel Decoder")
                                 if modelLM is not None:
-                                    rprint(
-                                        f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources"
-                                    )
-                            elif (
-                                "Expected batch_size > 0 to be true"
-                                in traceback.format_exc()
-                            ):
-                                rprint(
-                                    f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources during image encoding. Please lower the maximum batch size, or use a smaller input image"
-                                )
-                            elif (
-                                "cannot reshape tensor of 0 elements"
-                                in traceback.format_exc()
-                            ):
-                                rprint(
-                                    f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources during image encoding. Please lower the maximum batch size, or use a smaller input image"
-                                )
+                                    rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
+                            elif ("Expected batch_size > 0 to be true" in traceback.format_exc()):
+                                rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources during image encoding. Please lower the maximum batch size, or use a smaller input image")
+                            elif ("cannot reshape tensor of 0 elements" in traceback.format_exc()):
+                                rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources during image encoding. Please lower the maximum batch size, or use a smaller input image")
                             else:
                                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                             play("error.wav")
@@ -3522,30 +3179,14 @@ async def server(websocket):
                                 modelData["precision"],
                             )
 
-                            await websocket.send(
-                                json.dumps(
-                                    {
-                                        "action": "returning",
-                                        "type": "txt2pal",
-                                        "value": {"images": images},
-                                    }
-                                )
-                            )
+                            await websocket.send(json.dumps({"action": "returning", "type": "txt2pal", "value": {"images": images}}))
                         except Exception as e:
                             if "SSLCertVerificationError" in traceback.format_exc():
-                                rprint(
-                                    f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal"
-                                )
-                            elif (
-                                "torch.cuda.OutOfMemoryError" in traceback.format_exc()
-                            ):
-                                rprint(
-                                    f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size"
-                                )
+                                rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
+                            elif ("torch.cuda.OutOfMemoryError" in traceback.format_exc()):
+                                rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
                                 if modelLM is not None:
-                                    rprint(
-                                        f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources"
-                                    )
+                                    rprint(f"\n[#ab333d]Try disabling LLM enhanced prompts to free up gpu resources")
                             else:
                                 rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                             play("error.wav")
@@ -3562,15 +3203,7 @@ async def server(websocket):
                                 values["generations"],
                                 values["seed"],
                             )
-                            await websocket.send(
-                                json.dumps(
-                                    {
-                                        "action": "returning",
-                                        "type": "translate",
-                                        "value": prompts,
-                                    }
-                                )
-                            )
+                            await websocket.send(json.dumps({"action": "returning", "type": "translate", "value": prompts}))
                         except Exception as e:
                             rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                             play("error.wav")
@@ -3599,15 +3232,7 @@ async def server(websocket):
                                 values["seed"],
                             )
 
-                            await websocket.send(
-                                json.dumps(
-                                    {
-                                        "action": "returning",
-                                        "type": "benchmark",
-                                        "value": max(32, maxSize - 8),
-                                    }
-                                )
-                            )  # We subtract 8 to leave a little VRAM headroom, so it doesn't OOM if you open a youtube tab T-T
+                            await websocket.send(json.dumps({"action": "returning", "type": "benchmark", "value": max(32, maxSize - 8)}))  # We subtract 8 to leave a little VRAM headroom, so it doesn't OOM if you open a youtube tab T-T
                         except Exception as e:
                             rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                             play("error.wav")
@@ -3628,15 +3253,7 @@ async def server(websocket):
                                 values["smoothness"],
                                 values["intensity"],
                             )
-                            await websocket.send(
-                                json.dumps(
-                                    {
-                                        "action": "returning",
-                                        "type": "palettize",
-                                        "value": {"images": images},
-                                    }
-                                )
-                            )
+                            await websocket.send(json.dumps({"action": "returning", "type": "palettize", "value": {"images": images}}))
                         except Exception as e:
                             rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                             play("error.wav")
@@ -3646,15 +3263,7 @@ async def server(websocket):
                             # Extract parameters from the message
                             values = message["value"]
                             images = rembg(values["images"], values["model_folder"])
-                            await websocket.send(
-                                json.dumps(
-                                    {
-                                        "action": "returning",
-                                        "type": "rembg",
-                                        "value": {"images": images},
-                                    }
-                                )
-                            )
+                            await websocket.send(json.dumps({"action": "returning", "type": "rembg", "value": {"images": images}}))
                         except Exception as e:
                             rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                             play("error.wav")
@@ -3664,15 +3273,7 @@ async def server(websocket):
                             # Extract parameters from the message
                             values = message["value"]
                             images = pixelDetectVerbose(values["images"])
-                            await websocket.send(
-                                json.dumps(
-                                    {
-                                        "action": "returning",
-                                        "type": "pixelDetect",
-                                        "value": {"images": images},
-                                    }
-                                )
-                            )
+                            await websocket.send(json.dumps({"action": "returning", "type": "pixelDetect", "value": {"images": images}}))
                         except Exception as e:
                             rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                             play("error.wav")
@@ -3687,15 +3288,7 @@ async def server(websocket):
                                 values["height"],
                                 values["centroids"],
                             )
-                            await websocket.send(
-                                json.dumps(
-                                    {
-                                        "action": "returning",
-                                        "type": "kcentroid",
-                                        "value": {"images": images},
-                                    }
-                                )
-                            )
+                            await websocket.send(json.dumps({"action": "returning", "type": "kcentroid", "value": {"images": images}}))
                         except Exception as e:
                             rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                             play("error.wav")
@@ -3708,9 +3301,7 @@ async def server(websocket):
                                 message["value"]["play_sound"],
                                 message["value"]["version"],
                             )
-                            rd = gw.getWindowsWithTitle(
-                                "Retro Diffusion Image Generator"
-                            )[0]
+                            rd = gw.getWindowsWithTitle("Retro Diffusion Image Generator")[0]
                             if not background:
                                 try:
                                     # Restore and activate the window
@@ -3731,20 +3322,13 @@ async def server(websocket):
                             play("click.wav")
                             await websocket.send(json.dumps({"action": "connected"}))
                         else:
-                            rprint(
-                                f"\n[#ab333d]The current client is on a version that is incompatible with the image generator version. Please update the extension."
-                            )
+                            rprint(f"\n[#ab333d]The current client is on a version that is incompatible with the image generator version. Please update the extension.")
                     case "recieved":
                         if not background:
                             try:
-                                rd = gw.getWindowsWithTitle(
-                                    "Retro Diffusion Image Generator"
-                                )[0]
+                                rd = gw.getWindowsWithTitle("Retro Diffusion Image Generator")[0]
                                 if gw.getActiveWindow() is not None:
-                                    if (
-                                        gw.getActiveWindow().title
-                                        == "Retro Diffusion Image Generator"
-                                    ):
+                                    if (gw.getActiveWindow().title == "Retro Diffusion Image Generator"):
                                         # Minimize the window
                                         rd.minimize()
                             except:
@@ -3757,9 +3341,7 @@ async def server(websocket):
                         global timeout
                         running = False
                         await websocket.close()
-                        asyncio.get_event_loop().call_soon_threadsafe(
-                            asyncio.get_event_loop().stop
-                        )
+                        asyncio.get_event_loop().call_soon_threadsafe(asyncio.get_event_loop().stop)
             except:
                 pass
     except Exception as e:
