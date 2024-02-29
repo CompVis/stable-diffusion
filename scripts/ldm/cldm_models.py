@@ -51,7 +51,8 @@ from ldm.util import (
     zero_module,
     to_tile,
     from_tile,
-    max_tile
+    max_tile,
+    ToDo
 )
 
 import ldm.ops
@@ -4017,17 +4018,26 @@ class BasicTransformerBlock(nn.Module):
         _, _, h, w = original_shape
         _, qn, _ = q.shape
 
-        nw = max_tile(w)
-        nh = max_tile(h)
+        hyperTile = False
 
-        if qn == h * w:
-            q = to_tile(q, nh, nw, original_shape)
-            k = to_tile(k, nh, nw, original_shape)
-            v = to_tile(v, nh, nw, original_shape)
+        if hyperTile:
+            nw = max_tile(w)
+            nh = max_tile(h)
+
+            if qn == h * w:
+                q = to_tile(q, nh, nw, original_shape)
+                k = to_tile(k, nh, nw, original_shape)
+                v = to_tile(v, nh, nw, original_shape)
+        else:
+            l1_depth = max(1.5, math.sqrt(w * h) / 409)
+            l2_depth = max(1.0, math.sqrt(w * h) / 818)
+
+            m = ToDo(q, l1_depth, l2_depth, original_shape)
+            k, v = m(k), m(v)
 
         n = self.attn1(q, context=k, value=v)
 
-        if qn == h * w:
+        if qn == h * w and hyperTile:
             n = from_tile(n, nh, nw, original_shape)
 
         x += n

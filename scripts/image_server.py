@@ -1581,10 +1581,6 @@ def prepare_inference(title, prompt, negative, translate, promptTuning, W, H, pi
     if seed == None:
         seed = randint(0, 1000000)
 
-    # Set attention map tile values
-    wtile = max_tile(W // 8)
-    htile = max_tile(H // 8)
-
     global modelPath
     # Composition and lighting modifications
     loras = manageComposition(lighting, composition, loras)
@@ -1604,7 +1600,7 @@ def prepare_inference(title, prompt, negative, translate, promptTuning, W, H, pi
     data, negative_data = managePrompts(prompt, negative, W, H, seed, False, total_images, loras, translate, promptTuning)
     seed_everything(seed)
 
-    rprint(f"\n[#48a971]{title}[white] generating [#48a971]{total_images}[white] images with [#48a971]{steps}[white] steps over [#48a971]{runs}[white] batches with [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
+    rprint(f"\n[#48a971]{title}[white] generating [#48a971]{total_images}[white] images with [#48a971]{steps}[white] steps over [#48a971]{runs}[white] batches at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
 
     global model
     global modelCS
@@ -1780,10 +1776,6 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
     if seed == None:
         seed = randint(0, 1000000)
 
-    # Set attention map tile values
-    wtile = max_tile(W // 8)
-    htile = max_tile(H // 8)
-
     # Derive steps, cfg, lcm weight from quality setting
     global modelPath
     # Curves defined by https://www.desmos.com/calculator/kny0embnkg
@@ -1828,7 +1820,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
     data, negative_data = managePrompts(prompt, negative, W, H, seed, upscale, total_images, loras, translate, promptTuning,)
     seed_everything(seed)
 
-    rprint(f"\n[#48a971]Text to Image[white] generating [#48a971]{total_images}[white] quality [#48a971]{quality}[white] images over [#48a971]{runs}[white] batches with [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
+    rprint(f"\n[#48a971]Text to Image[white] generating [#48a971]{total_images}[white] quality [#48a971]{quality}[white] images over [#48a971]{runs}[white] batches at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
 
     if W // 8 >= 96 and H // 8 >= 96 and upscale:
         rprint(f"[#48a971]Pre-generating[white] composition image at [#48a971]{gWidth * 8}[white]x[#48a971]{gHeight * 8} [white]([#48a971]{(gWidth * 8) // pixelSize}[white]x[#48a971]{(gHeight * 8) // pixelSize}[white] pixels)")
@@ -2261,10 +2253,6 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
     if seed == None:
         seed = randint(0, 1000000)
 
-    # Set attention map tile values
-    wtile = max_tile(W // 8)
-    htile = max_tile(H // 8)
-
     strength = strength / 100
 
     # Derive steps, cfg, lcm weight from quality setting
@@ -2292,7 +2280,7 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
     data, negative_data = managePrompts( prompt, negative, W, H, seed, False, total_images, loras, translate, promptTuning)
     seed_everything(seed)
 
-    rprint(f"\n[#48a971]Image to Image[white] generating [#48a971]{total_images}[white] quality [#48a971]{quality}[white] images over [#48a971]{runs}[white] batches with [#48a971]{wtile}[white]x[#48a971]{htile}[white] attention tiles at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
+    rprint(f"\n[#48a971]Image to Image[white] generating [#48a971]{total_images}[white] quality [#48a971]{quality}[white] images over [#48a971]{runs}[white] batches at [#48a971]{W}[white]x[#48a971]{H}[white] ([#48a971]{W // pixelSize}[white]x[#48a971]{H // pixelSize}[white] pixels)")
 
     sampler = "ddim"
 
