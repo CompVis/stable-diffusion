@@ -825,12 +825,12 @@ class BasicTransformerBlock(nn.Module):
                 q = to_tile(q, nh, nw, original_shape)
                 k = to_tile(k, nh, nw, original_shape)
                 v = to_tile(v, nh, nw, original_shape)
-        else:
-            l1_depth = max(1.5, math.sqrt(w * h) / 409)
-            l2_depth = max(1.0, math.sqrt(w * h) / 818)
+            
+        l1_depth = max(1.5, math.sqrt(w * h) / 409)
+        l2_depth = max(1.0, math.sqrt(w * h) / 818)
 
-            m = ToDo(q, l1_depth, l2_depth, original_shape)
-            k, v = m(k), m(v)
+        m = ToDo(q, l1_depth, l2_depth, original_shape)
+        k, v = m(k), m(v)
 
         n = self.attn1(q, context=k, value=v)
 

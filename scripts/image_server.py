@@ -1589,12 +1589,12 @@ def prepare_inference(title, prompt, negative, translate, promptTuning, W, H, pi
     found_contrast = False
     for lora in loras:
         if lora["file"] == os.path.join(lecoPath, "brightness.leco"):
-            lora["weight"] = lora["weight"] - 40
+            lora["weight"] = lora["weight"] - 20
         if lora["file"] == os.path.join(lecoPath, "contrast.leco"):
             found_contrast = True
-            lora["weight"] = lora["weight"] + 120
+            lora["weight"] = lora["weight"] + 200
     if not found_contrast:
-        loras.append({"file": os.path.join(lecoPath, "contrast.leco"), "weight": 120})
+        loras.append({"file": os.path.join(lecoPath, "contrast.leco"), "weight": 200})
 
     # Apply modifications to raw prompts
     data, negative_data = managePrompts(prompt, negative, W, H, seed, False, total_images, loras, translate, promptTuning)
@@ -2978,7 +2978,7 @@ async def server(websocket):
                             # Net models, images, and weights in order
                             modelPath, _ = os.path.split(modelData["file"])
                             netPath = os.path.join(modelPath, "CONTROLNET")
-                            controlnets = [{"model_file": os.path.join(netPath, "Tile.safetensors"), "image": image_blur, "weight": 1.0}, {"model_file": os.path.join(netPath, "Composition.safetensors"), "image": image, "weight": 0.6}]
+                            controlnets = [{"model_file": os.path.join(netPath, "Tile.safetensors"), "image": image_blur, "weight": 1.0}, {"model_file": os.path.join(netPath, "Composition.safetensors"), "image": image_blur, "weight": 0.5}]
 
                             for result in neural_inference(
                                 modelData["file"],
