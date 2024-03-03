@@ -1363,7 +1363,8 @@ def rembg(images, modelpath):
 
 
 # Render image from latent usinf Tiny Autoencoder or clustered Pixel VAE
-def render(modelTA, modelPV, samples_ddim, device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post):
+def render(modelTA, modelPV, samples_ddim, device, precision, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post):
+    precision, fp16_mode, fp8_mode = get_precision(device, precision)
     if pixelvae:
         # Pixel clustering mode, lower threshold means bigger clusters
         denoise = 0.08
@@ -1373,7 +1374,10 @@ def render(modelTA, modelPV, samples_ddim, device, H, W, pixelSize, pixelvae, ti
     else:
         try:
             try:
-                x_sample = modelTA.decoder(samples_ddim.to(device).to(torch.float32))
+                if precision == "fp32":
+                    x_sample = modelTA.decoder(samples_ddim.to(device).to(torch.float32))
+                else:
+                    x_sample = modelTA.decoder(samples_ddim.to(device).to(fp16_mode))
             except:
                 x_sample = modelTA.decoder(samples_ddim.to("mps").to(torch.float32))
             x_sample = torch.clamp((x_sample.cpu().float()), min = 0.0, max = 1.0)
@@ -2052,7 +2056,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
 
                 # Render final images in batch
                 for i in range(batch):
-                    x_sample_image, post = render(modelTA, modelPV, samples_ddim[i:i+1], device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
+                    x_sample_image, post = render(modelTA, modelPV, samples_ddim[i:i+1], device, precision, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
 
                     if total_images > 1 and (base_count + 1) < total_images:
                         play("iteration.wav")
@@ -2179,7 +2183,7 @@ def neural_inference(modelFileString, title, controlnets, prompt, negative, auto
                     yield {"action": "display_image", "type": title, "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}
             
             for i in range(batch):
-                x_sample_image, post = render(modelTA, modelPV, samples_ddim[i:i+1], device, H, W, pixelSize, pixelvae, False, False, raw_loras, post)
+                x_sample_image, post = render(modelTA, modelPV, samples_ddim[i:i+1], device, precision, H, W, pixelSize, pixelvae, False, False, raw_loras, post)
                 if total_images > 1 and (base_count + 1) < total_images:
                     play("iteration.wav")
 
@@ -2445,7 +2449,7 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
 
                 # Render final images in batch
                 for i in range(batch):
-                    x_sample_image, post = render(modelTA, modelPV, samples_ddim[i:i+1], device, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
+                    x_sample_image, post = render(modelTA, modelPV, samples_ddim[i:i+1], device, precision, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post)
 
                     if total_images > 1 and (base_count + 1) < total_images:
                         play("iteration.wav")
@@ -2640,7 +2644,7 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
                     ):
                         pass
 
-                    render(modelTA, modelPV, samples_ddim, 0, device, testSize, testSize, 8, pixelvae, False, False, ["None"], False)
+                    render(modelTA, modelPV, samples_ddim, 0, device, precision, testSize, testSize, 8, pixelvae, False, False, ["None"], False)
 
                     # Delete the samples to free up memory
                     del samples_ddim
