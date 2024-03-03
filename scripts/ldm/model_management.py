@@ -3,6 +3,7 @@ from enum import Enum
 import ldm.utils
 import torch
 import sys
+import platform
 
 import ldm.model_management
 
@@ -86,8 +87,11 @@ def get_torch_device():
             try:
                 return torch.device(torch.cuda.current_device())
             except:
-                cpu_state = CPUState.MPS
-                return torch.device("mps")
+                if platform.system() == "Darwin":
+                    cpu_state = CPUState.MPS
+                    return torch.device("mps")
+                else:
+                    return torch.device("cuda")
 
 
 
