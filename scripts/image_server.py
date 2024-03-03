@@ -206,7 +206,7 @@ def get_precision(device, precision):
                 precision = "fp16"
 
         # If GPU is nvidia 20xx disable float8 precision
-        elif gpu_name.startswith("NVIDIA GeForce GTX 20"):
+        elif gpu_name.startswith("NVIDIA GeForce RTX 20"):
             if device == "cuda" and (precision == "fp8" or precision == "fp16"):
                 fp16_mode = torch.float16
                 precision = "fp16"
