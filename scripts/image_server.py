@@ -759,7 +759,11 @@ def load_model(modelFileString, config, device, precision, optimized, split = Tr
             precision = fp8_mode
             rprint(f"Applied [#48a971]torch.fp8[/] to model")
         else:
-            precision = "torch.float32"
+            precision = torch.float32
+            if split:
+                model.to(precision)
+            modelCS.to(precision)
+            modelTA.to(precision)
 
         if split:
             assign_lora_names_to_compvis_modules(model, modelCS)
