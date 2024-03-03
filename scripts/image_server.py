@@ -1372,7 +1372,7 @@ def render(modelTA, modelPV, samples_ddim, device, H, W, pixelSize, pixelvae, ti
     else:
         try:
             try:
-                x_sample = modelTA.decoder(samples_ddim.to(device))
+                x_sample = modelTA.decoder(samples_ddim.to(device).to(torch.float32))
             except:
                 x_sample = modelTA.decoder(samples_ddim.to("mps").to(torch.float32))
             x_sample = torch.clamp((x_sample.cpu().float()), min = 0.0, max = 1.0)
