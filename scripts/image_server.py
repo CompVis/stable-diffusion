@@ -215,6 +215,11 @@ def get_precision(device, precision):
         elif not "NVIDIA" in gpu_name:
             fp16_mode = torch.float16
             precision = "fp32"
+
+        else:
+            fp16_mode = torch.float16
+            precision = "fp32"
+
     else:
         # Fallback to fp32 precision
         fp16_mode = torch.float16
