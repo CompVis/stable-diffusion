@@ -91,7 +91,8 @@ def get_torch_device():
                     cpu_state = CPUState.MPS
                     return torch.device("mps")
                 else:
-                    return torch.device("cuda")
+                    cpu_state = CPUState.CPU
+                    return torch.device("cpu")
 
 
 
