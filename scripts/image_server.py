@@ -2007,7 +2007,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
 
                 if upscale:
                     # Apply 'cropped' lora for enhanced composition at high resolution
-                    crop_weight = max(3, min(round(math.sqrt(2 * ((math.sqrt((W // 8) * (H // 8))/10) - 9)), 2), 7))
+                    crop_weight = max(3, min(round(math.sqrt(max(1, 2 * ((math.sqrt((W // 8) * (H // 8))/10) - 9))) + 1, 2), 7))
                     if True:
                         loraPair = {"file": os.path.join(os.path.join(modelPath, "LECO"), "crop.leco"), "weight": crop_weight}
                         loras.append(loraPair)
@@ -2272,11 +2272,11 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
     loras = manageComposition(lighting, composition, loras)
 
     # High resolution adjustments for consistency
-    if W // 8 >= 96 or H // 8 >= 96:
+    if math.sqrt((W // 8) * (H // 8)) >= 96:
         loras.append({"file": os.path.join(modelPath, "resfix.lcm"), "weight": 40})
     
         # Apply 'cropped' lora for enhanced composition at high resolution
-        crop_weight = max(3, min(round(math.sqrt(2 * ((math.sqrt((W // 8) * (H // 8))/10) - 9)) + 1, 2), 7))
+        crop_weight = max(3, min(round(math.sqrt(max(1, 2 * ((math.sqrt((W // 8) * (H // 8))/10) - 9))) + 1, 2), 7))
         if True:
             loras.append({"file": os.path.join(os.path.join(modelPath, "LECO"), "crop.leco"), "weight": crop_weight})
 
