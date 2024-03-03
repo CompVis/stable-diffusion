@@ -185,7 +185,12 @@ def play(file):
 # Calculate precision mode by gpu
 def get_precision(device, precision):
     fp16_mode = torch.bfloat16
-    fp8_mode = torch.float8_e4m3fn
+    try:
+        fp8_mode = torch.float8_e4m3fn
+    except:
+        if precision == "fp8":
+            precision = "fp16"
+        fp8_mode = torch.bfloat16
     if device == "cuda" and torch.cuda.is_available():
         # If GPU is nvidia 10xx force fp32 precision
         gpu_name = torch.cuda.get_device_name(device)
