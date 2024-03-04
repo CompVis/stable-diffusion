@@ -2018,16 +2018,15 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
                 if upscale:
                     # Apply 'cropped' lora for enhanced composition at high resolution
                     crop_weight = max(3, min(round(math.sqrt(max(1, 2 * ((math.sqrt((W // 8) * (H // 8))/10) - 9))) + 1, 2), 7))
-                    if True:
-                        loraPair = {"file": os.path.join(os.path.join(modelPath, "LECO"), "crop.leco"), "weight": crop_weight}
-                        loras.append(loraPair)
-                        decryptedFiles.append("none")
-                        _, loraName = os.path.split(loraPair["file"])
-                        loadedLoras.append(load_lora(loraPair["file"], model))
-                        loadedLoras[len(loadedLoras)-1].multiplier = loraPair["weight"]
-                        # Prepare for inference
-                        register_lora_for_inference(loadedLoras[len(loadedLoras)-1])
-                        apply_lora()
+                    loraPair = {"file": os.path.join(os.path.join(modelPath, "LECO"), "crop.leco"), "weight": crop_weight}
+                    loras.append(loraPair)
+                    decryptedFiles.append("none")
+                    _, loraName = os.path.split(loraPair["file"])
+                    loadedLoras.append(load_lora(loraPair["file"], model))
+                    loadedLoras[len(loadedLoras)-1].multiplier = loraPair["weight"]
+                    # Prepare for inference
+                    register_lora_for_inference(loadedLoras[len(loadedLoras)-1])
+                    apply_lora()
 
                     # Upscale latents using bilinear interpolation
                     samples_ddim = torch.nn.functional.interpolate(samples_ddim, size=(H // 8, W // 8), mode="bilinear")
@@ -2053,6 +2052,10 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
                                 displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
                             yield {"action": "display_title", "type": "txt2img", "value": {"text": f"Generating... {step}/{up_steps} steps in batch {run+1}/{runs}"}}
                             yield {"action": "display_image", "type": "txt2img", "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}
+
+                    # Remove crop lora
+                    remove_lora_for_inference(loadedLoras[len(loadedLoras)-1])
+                    loadedLoras.pop()
 
                 # Render final images in batch
                 for i in range(batch):
