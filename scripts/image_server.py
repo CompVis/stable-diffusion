@@ -753,7 +753,7 @@ def load_model(modelFileString, config, device, precision, optimized, split = Tr
             if split:
                 model.to(fp16_mode)
             modelCS.to(fp16_mode)
-            modelTA.to(fp16_mode)
+            modelTA.to(torch.float16)
             precision = fp16_mode
         elif device == "cuda" and precision == "fp8":
             if split:
@@ -761,15 +761,15 @@ def load_model(modelFileString, config, device, precision, optimized, split = Tr
             for layer in flatten(modelCS):
                 if isinstance(layer, torch.nn.Linear):
                     layer.to(fp8_mode)
-            modelTA.to(fp16_mode)
+            modelTA.to(torch.float16)
             precision = fp8_mode
             rprint(f"Applied [#48a971]torch.fp8[/] to model")
         else:
-            precision = torch.float32
             if split:
-                model.to(precision)
-            modelCS.to(precision)
-            modelTA.to(precision)
+                model.to(torch.float32)
+            modelCS.to(torch.float32)
+            modelTA.to(torch.float32)
+            precision = torch.float32
 
         if split:
             assign_lora_names_to_compvis_modules(model, modelCS)
@@ -1377,7 +1377,7 @@ def render(modelTA, modelPV, samples_ddim, device, precision, H, W, pixelSize, p
                 if precision == "fp32":
                     x_sample = modelTA.decoder(samples_ddim.to(device).to(torch.float32))
                 else:
-                    x_sample = modelTA.decoder(samples_ddim.to(device).to(fp16_mode))
+                    x_sample = modelTA.decoder(samples_ddim.to(device).to(torch.float16))
             except:
                 x_sample = modelTA.decoder(samples_ddim.to("mps").to(torch.float32))
             x_sample = torch.clamp((x_sample.cpu().float()), min = 0.0, max = 1.0)
