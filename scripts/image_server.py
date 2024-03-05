@@ -230,9 +230,14 @@ def autocast(device, precision, dtype = torch.float16):
         gpu_properties = torch.cuda.get_device_properties(device)
         gpu_name = gpu_properties.name
         if "NVIDIA" in gpu_name:
-            if re.search(r"1[06]\d{2}", gpu_name):
+            if re.search(r"10\d{2}", gpu_name):
                 # Get manual autocast working
-                return torch.autocast("cuda", dtype=dtype, enabled=True)
+                return contextlib.nullcontext()
+            elif re.search(r"16\d{2}", gpu_name):
+                if precision == "fp32":
+                    return contextlib.nullcontext()
+                else:
+                    return torch.autocast("cuda", dtype=dtype, enabled=True)
             else:
                 if precision == "fp32":
                     return contextlib.nullcontext()
