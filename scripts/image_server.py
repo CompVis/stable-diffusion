@@ -1625,6 +1625,8 @@ def prepare_inference(title, prompt, negative, translate, promptTuning, W, H, pi
     precision, fp16_mode, _ = get_precision(device, precision)
     precision_scope = autocast(device, precision, fp16_mode)
 
+    init_image.to(fp16_mode)
+
     # !!! REMEMBER: ALL MODEL FILES ARE BOUND UNDER THE LICENSE AGREEMENTS OUTLINED HERE: https://astropulse.co/#retrodiffusioneula https://astropulse.co/#retrodiffusionmodeleula !!!
     decryptedFiles = []
     fernet = Fernet("I47jl1hqUPug4KbVYd60_zeXhn_IH_ECT3QRGiBxdxo=")
