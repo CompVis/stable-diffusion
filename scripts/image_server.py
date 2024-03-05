@@ -232,7 +232,7 @@ def autocast(device, precision, dtype = torch.float16):
         if "NVIDIA" in gpu_name:
             if re.search(r"1[06]\d{2}", gpu_name):
                 # Get manual autocast working
-                return contextlib.nullcontext()
+                return torch.autocast("cuda", dtype=dtype, enabled=True)
             else:
                 if precision == "fp32":
                     return contextlib.nullcontext()
