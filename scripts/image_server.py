@@ -184,48 +184,63 @@ def play(file):
 
 # Calculate precision mode by gpu
 def get_precision(device, precision):
-    fp16_mode = torch.bfloat16
-    try:
-        fp8_mode = torch.float8_e4m3fn
-    except:
-        if precision == "fp8":
-            precision = "fp16"
-        fp8_mode = torch.bfloat16
-    if device == "cuda" and torch.cuda.is_available():
-        # If GPU is nvidia 10xx force fp32 precision
-        gpu_name = torch.cuda.get_device_name(device)
-        if gpu_name.startswith("NVIDIA GeForce GTX 10"):
-            if device == "cuda" and (precision == "fp8" or precision == "fp16"):
-                precision = "fp32"
+    if device == "cuda" and torch.cuda.is_available() and not precision == "fp32":
 
-        # If GPU is nvidia 16xx, use float16 and enable benchmark mode
-        elif torch.cuda.get_device_capability(device) == (7, 5) and gpu_name.startswith("NVIDIA GeForce GTX 16"):
+        gpu_name = torch.cuda.get_device_name(device)
+
+        # If GPU is nvidia 10xx force fp32 precision
+        if gpu_name.startswith("NVIDIA GeForce GTX 10"):
+            precision = "fp32"
+            model_precision = torch.float32
+            vae_precision = torch.float32
+
+        # If GPU is nvidia 16xx use float16 and enable benchmark mode
+        elif gpu_name.startswith("NVIDIA GeForce GTX 16") and torch.cuda.get_device_capability(device) == (7, 5):
             torch.backends.cudnn.benchmark = True
-            fp16_mode = torch.float16
-            if device == "cuda" and (precision == "fp8" or precision == "fp16"):
-                precision = "fp16"
+            precision = "fp16"
+            model_precision = torch.float16
+            vae_precision = torch.float16
 
         # If GPU is nvidia 20xx disable float8 precision
         elif gpu_name.startswith("NVIDIA GeForce RTX 20"):
-            if device == "cuda" and (precision == "fp8" or precision == "fp16"):
-                fp16_mode = torch.float16
-                precision = "fp16"
+            precision = "fp16"
+            model_precision = torch.float16
+            vae_precision = torch.float16
         
+        # If GPU is nvidia 30xx+ allow float8 and use bfloat16
+        elif gpu_name.startswith("NVIDIA GeForce"):
+            if precision == "fp8":
+                try:
+                    model_precision = torch.float8_e4m3fn
+                    vae_precision = torch.bfloat16
+                except:
+                    precision = "fp16"
+                    model_precision = torch.bfloat16
+                    vae_precision = torch.bfloat16
+            # Float16 precision can be bfloat16
+            elif precision == "fp16":
+                model_precision = torch.bfloat16
+                vae_precision = torch.bfloat16
+
         # If GPU is not nvidia
         elif not "NVIDIA" in gpu_name:
-            fp16_mode = torch.float16
             precision = "fp32"
+            vae_precision = torch.float32
+            model_precision = torch.float32
 
     else:
         # Fallback to fp32 precision
-        fp16_mode = torch.float16
         precision = "fp32"
+        model_precision = torch.float32
+        vae_precision = torch.float32
 
-    return precision, fp16_mode, fp8_mode
+    return precision, model_precision, vae_precision
 
 
 # Determine correct autocast mode
 def autocast(device, precision, dtype = torch.float16):
+    if precision == "fp8":
+        dtype = torch.bfloat16
     if device == "cuda" and torch.cuda.is_available():
         gpu_properties = torch.cuda.get_device_properties(device)
         gpu_name = gpu_properties.name
@@ -753,28 +768,25 @@ def load_model(modelFileString, config, device, precision, optimized, split = Tr
         modelTA = TAESD().to(device)
 
         # Set precision and device settings
-        precision, fp16_mode, fp8_mode = get_precision(device, precision)
-        if device == "cuda" and precision == "fp16":
+        precision, model_precision, vae_precision = get_precision(device, precision)
+
+        # Handle float16 and float32 conditions
+        if device == "cuda" and precision != "fp8":
             if split:
-                model.to(fp16_mode)
-            modelCS.to(fp16_mode)
-            modelTA.to(torch.float16)
-            precision = fp16_mode
-        elif device == "cuda" and precision == "fp8":
+                model.to(model_precision)
+            modelCS.to(model_precision)
+            modelTA.to(vae_precision)
+            precision = model_precision
+        # Handle float8 condition
+        elif device == "cuda":
             if split:
-                model.to(fp8_mode)
+                model.to(model_precision)
             for layer in flatten(modelCS):
                 if isinstance(layer, torch.nn.Linear):
-                    layer.to(fp8_mode)
-            modelTA.to(torch.float16)
-            precision = fp8_mode
+                    layer.to(model_precision)
+            modelTA.to(vae_precision)
+            precision = model_precision
             rprint(f"Applied [#48a971]torch.fp8[/] to model")
-        else:
-            if split:
-                model.to(torch.float32)
-            modelCS.to(torch.float32)
-            modelTA.to(torch.float32)
-            precision = torch.float32
 
         if split:
             assign_lora_names_to_compvis_modules(model, modelCS)
@@ -1369,7 +1381,7 @@ def rembg(images, modelpath):
 
 # Render image from latent usinf Tiny Autoencoder or clustered Pixel VAE
 def render(modelTA, modelPV, samples_ddim, device, precision, H, W, pixelSize, pixelvae, tilingX, tilingY, loras, post):
-    precision, fp16_mode, fp8_mode = get_precision(device, precision)
+    precision, model_precision, vae_precision = get_precision(device, precision)
     if pixelvae:
         # Pixel clustering mode, lower threshold means bigger clusters
         denoise = 0.08
@@ -1379,12 +1391,9 @@ def render(modelTA, modelPV, samples_ddim, device, precision, H, W, pixelSize, p
     else:
         try:
             try:
-                if precision == "fp32":
-                    x_sample = modelTA.decoder(samples_ddim.to(device).to(torch.float32))
-                else:
-                    x_sample = modelTA.decoder(samples_ddim.to(device).to(torch.float16))
+                x_sample = modelTA.decoder(samples_ddim.to(device).to(vae_precision))
             except:
-                x_sample = modelTA.decoder(samples_ddim.to("mps").to(torch.float32))
+                x_sample = modelTA.decoder(samples_ddim.to("mps").to(vae_precision))
             x_sample = torch.clamp((x_sample.cpu().float()), min = 0.0, max = 1.0)
             x_sample = x_sample.cpu().movedim(1, -1)
             x_sample = 255.0 * x_sample[0].cpu().numpy()
@@ -1627,10 +1636,10 @@ def prepare_inference(title, prompt, negative, translate, promptTuning, W, H, pi
     global modelPV
 
     # Set the precision scope based on device and precision
-    precision, fp16_mode, _ = get_precision(device, precision)
-    precision_scope = autocast(device, precision, fp16_mode)
+    precision, model_precision, vae_precision = get_precision(device, precision)
+    precision_scope = autocast(device, precision, model_precision)
 
-    init_image.to(fp16_mode)
+    init_image.to(vae_precision)
 
     # !!! REMEMBER: ALL MODEL FILES ARE BOUND UNDER THE LICENSE AGREEMENTS OUTLINED HERE: https://astropulse.co/#retrodiffusioneula https://astropulse.co/#retrodiffusionmodeleula !!!
     decryptedFiles = []
@@ -1858,8 +1867,8 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
     model, modelTA, modelPV = patch_tiling(tilingX, tilingY, model, modelTA, modelPV)
 
     # Set the precision scope based on device and precision
-    precision, fp16_mode, _ = get_precision(device, precision)
-    precision_scope = autocast(device, precision, fp16_mode)
+    precision, model_precision, vae_precision = get_precision(device, precision)
+    precision_scope = autocast(device, precision, model_precision)
 
     # !!! REMEMBER: ALL MODEL FILES ARE BOUND UNDER THE LICENSE AGREEMENTS OUTLINED HERE: https://astropulse.co/#retrodiffusioneula https://astropulse.co/#retrodiffusionmodeleula !!!
     loadedLoras = []
@@ -2156,7 +2165,7 @@ def neural_inference(modelFileString, title, controlnets, prompt, negative, auto
     rprint(f"[#48a971]Patching model for controlnet")
     model_patcher, cldm_cond, cldm_uncond = load_controlnet(controlnets, W, H, modelFileString, 0, conditioning, negative_conditioning, loras = raw_loras)
 
-    _, fp16_mode, _ = get_precision(device, precision)
+    precision, model_precision, vae_precision = get_precision(device, precision)
 
     with torch.no_grad():
         base_count = 0
@@ -2181,7 +2190,6 @@ def neural_inference(modelFileString, title, controlnets, prompt, negative, auto
                 strength, # denoise strength
                 "normal" # scheduler
             )):
-                samples_ddim = samples_ddim.to(fp16_mode)
                 if preview:
                     # Render and send image previews
                     displayOut = []
@@ -2317,8 +2325,8 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
     model, modelTA, modelPV = patch_tiling(tilingX, tilingY, model, modelTA, modelPV)
 
     # Set the precision scope based on device and precision
-    precision, fp16_mode, _ = get_precision(device, precision)
-    precision_scope = autocast(device, precision, fp16_mode)
+    precision, model_precision, vae_precision = get_precision(device, precision)
+    precision_scope = autocast(device, precision, model_precision)
 
     # !!! REMEMBER: ALL MODEL FILES ARE BOUND UNDER THE LICENSE AGREEMENTS OUTLINED HERE: https://astropulse.co/#retrodiffusioneula https://astropulse.co/#retrodiffusionmodeleula !!!
     loadedLoras = []
@@ -2603,8 +2611,8 @@ def benchmark(device, precision, timeLimit, maxTestSize, errorRange, pixelvae, s
     global modelPV
 
     # Set the precision scope based on device and precision
-    precision, fp16_mode, _ = get_precision(device, precision)
-    precision_scope = autocast(device, precision, fp16_mode)
+    precision, model_precision, vae_precision = get_precision(device, precision)
+    precision_scope = autocast(device, precision, model_precision)
 
     data = [""]
     negative_data = [""]
