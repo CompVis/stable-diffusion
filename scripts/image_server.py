@@ -251,7 +251,7 @@ def get_precision(device, precision):
                     # Check for fp8 support
                     if precision == "fp8":
                         try:
-                            _ = torch.ones(1, dtype=torch.float8_e4m3fn).cuda()
+                            _ = _.to(torch.float8_e4m3fn).cuda()
                             model_precision = torch.float8_e4m3fn
                             vae_precision = torch.bfloat16
                         except:
