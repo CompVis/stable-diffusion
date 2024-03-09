@@ -184,6 +184,8 @@ def play(file):
 
 # Calculate precision mode by gpu
 def get_precision(device, precision):
+    model_precision = torch.float32
+    vae_precision = torch.float32
     if device == "cuda" and torch.cuda.is_available() and not precision == "fp32":
 
         gpu_name = torch.cuda.get_device_name(device)
@@ -225,8 +227,14 @@ def get_precision(device, precision):
         # If GPU is not nvidia
         elif not "NVIDIA" in gpu_name:
             precision = "fp32"
-            vae_precision = torch.float32
             model_precision = torch.float32
+            vae_precision = torch.float32
+
+        # Device IS cuda, cuda IS available, precision IS NOT fp32, fp16, or fp8. Fallback to fp32 precision
+        else:
+            precision = "fp32"
+            model_precision = torch.float32
+            vae_precision = torch.float32
 
     else:
         # Fallback to fp32 precision
