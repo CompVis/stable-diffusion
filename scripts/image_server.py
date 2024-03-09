@@ -1482,7 +1482,7 @@ def paletteGen(prompt, colors, seed, device, precision):
 
     # Generate text-to-image conversion with specified parameters
     for _ in txt2img(prompt, "", False, False, int(width), 512, 1, False, 6, 7.0, {"apply":False}, {"hue":0, "tint":0, "saturation":50, "brightness":70, "contrast":50, "outline":50}, seed, 1, 512, device, precision, [{"file": "some/path/none", "weight": 0}], False, False, False, False, False):
-        image = _
+        image = _[1]
 
     # Perform k-centroid downscaling on the image
     image = decodeImage(image["value"]["images"][0])
@@ -2028,8 +2028,8 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
                             x_sample_image = fastRender(modelPV, samples_ddim[i:i+1], pixelSize, W, H)
                             name = str(seed+i)
                             displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
-                        yield {"action": "display_title", "type": "txt2img", "value": {"text": f"Generating... {step}/{pre_steps} steps in batch {run+1}/{runs}"}}
-                        yield {"action": "display_image", "type": "txt2img", "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}
+                        yield [{"action": "display_title", "type": "txt2img", "value": {"text": f"Generating... {step}/{pre_steps} steps in batch {run+1}/{runs}"}},
+                               {"action": "display_image", "type": "txt2img", "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}]
 
                 if upscale:
                     # Apply 'cropped' lora for enhanced composition at high resolution
@@ -2066,8 +2066,8 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
                                 x_sample_image = fastRender(modelPV, samples_ddim[i:i+1], pixelSize, W, H)
                                 name = str(seed+i)
                                 displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
-                            yield {"action": "display_title", "type": "txt2img", "value": {"text": f"Generating... {step}/{up_steps} steps in batch {run+1}/{runs}"}}
-                            yield {"action": "display_image", "type": "txt2img", "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}
+                            yield [{"action": "display_title", "type": "txt2img", "value": {"text": f"Generating... {step}/{up_steps} steps in batch {run+1}/{runs}"}},
+                                   {"action": "display_image", "type": "txt2img", "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}]
 
                     # Remove crop lora
                     remove_lora_for_inference(loadedLoras[len(loadedLoras)-1])
@@ -2110,7 +2110,7 @@ def txt2img(prompt, negative, translate, promptTuning, W, H, pixelSize, upscale,
             final.append({"name": image["name"], "seed": image["seed"], "format": image["format"], "image": encodeImage(image["image"], "png"), "width": image["width"], "height": image["height"]})
         play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
-        yield {"action": "display_image", "type": "txt2img", "value": {"images": final, "prompts": data, "negatives": negative_data}}
+        yield ["", {"action": "display_image", "type": "txt2img", "value": {"images": final, "prompts": data, "negatives": negative_data}}]
 
 
 def resize_image(original_width, original_height, target_size = 512):
@@ -2197,8 +2197,8 @@ def neural_inference(modelFileString, title, controlnets, prompt, negative, auto
                         x_sample_image = fastRender(modelPV, samples_ddim[i:i+1], pixelSize, W, H)
                         name = str(seed+i)
                         displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
-                    yield {"action": "display_title", "type": title, "value": {"text": f"Generating... {step}/{steps} steps in batch {run+1}/{runs}"}}
-                    yield {"action": "display_image", "type": title, "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}
+                    yield [{"action": "display_title", "type": title, "value": {"text": f"Generating... {step}/{steps} steps in batch {run+1}/{runs}"}},
+                           {"action": "display_image", "type": title, "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}]
             
             for i in range(batch):
                 x_sample_image, post = render(modelTA, modelPV, samples_ddim[i:i+1], device, precision, H, W, pixelSize, pixelvae, False, False, raw_loras, post)
@@ -2250,9 +2250,8 @@ def neural_inference(modelFileString, title, controlnets, prompt, negative, auto
             final.append({"name": image["name"], "seed": image["seed"], "format": image["format"], "image": encodeImage(image["image"], "png"), "width": image["width"], "height": image["height"]})
         play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} [#c4f129]seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
-        yield {"action": "display_image", "type": title, "value": {"images": final, "prompts": data, "negatives": negative_data}}
-
         unload_cldm()
+        yield ["", {"action": "display_image", "type": title, "value": {"images": final, "prompts": data, "negatives": negative_data}}]
 
 
 # Generate image from image+text prompt
@@ -2462,8 +2461,8 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
                             x_sample_image = fastRender(modelPV, samples_ddim[i:i+1], pixelSize, W, H)
                             name = str(seed+i)
                             displayOut.append({"name": name, "seed": seed+i, "format": "bytes", "image": encodeImage(x_sample_image, "bytes"), "width": x_sample_image.width, "height": x_sample_image.height})
-                        yield {"action": "display_title", "type": "img2img", "value": {"text": f"Generating... {step}/{steps} steps in batch {run+1}/{runs}"}}
-                        yield {"action": "display_image", "type": "img2img", "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}
+                        yield [{"action": "display_title", "type": "img2img", "value": {"text": f"Generating... {step}/{steps} steps in batch {run+1}/{runs}"}},
+                               {"action": "display_image", "type": "img2img", "value": {"images": displayOut, "prompts": data, "negatives": negative_data}}]
 
                 # Render final images in batch
                 for i in range(batch):
@@ -2501,7 +2500,7 @@ def img2img(prompt, negative, translate, promptTuning, W, H, pixelSize, quality,
             final.append({"name": image["name"], "seed": image["seed"], "format": image["format"], "image": encodeImage(image["image"], "png"), "width": image["width"], "height": image["height"]})
         play("batch.wav")
         rprint(f"[#c4f129]Image generation completed in [#48a971]{round(time.time()-timer, 2)} seconds\n[#48a971]Seeds: [#494b9b]{', '.join(seeds)}")
-        yield {"action": "display_image", "type": "img2img", "value": {"images": final, "prompts": data, "negatives": negative_data}}
+        yield ["", {"action": "display_image", "type": "img2img", "value": {"images": final, "prompts": data, "negatives": negative_data}}]
 
 
 # Wrapper for prompt manager
@@ -2786,9 +2785,12 @@ async def server(websocket):
                                 init_img
                             ):
                                 if values["send_progress"]:
-                                    await websocket.send(json.dumps(result))
+                                    await websocket.send(json.dumps(result[0]))
+                                    await websocket.send(json.dumps(result[1]))
 
-                            await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": result["value"]["images"]}}))
+                            if values["send_progress"]:
+                                await websocket.send(json.dumps({"action": "display_title", "type": title.lower().replace(' ', '_'), "value": {"text": "Generation complete"}}))
+                            await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": result[1]["value"]["images"]}}))
                         except Exception as e:
                             if "SSLCertVerificationError" in traceback.format_exc():
                                 rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
@@ -2874,9 +2876,12 @@ async def server(websocket):
                                 init_img # Pass original, unscaled image
                             ):
                                 if values["send_progress"]:
-                                    await websocket.send(json.dumps(result))
+                                    await websocket.send(json.dumps(result[0]))
+                                    await websocket.send(json.dumps(result[1]))
 
-                            await websocket.send(json.dumps({"action": "returning","type": "img2img","value": {"images": result["value"]["images"]}}))
+                            if values["send_progress"]:
+                                await websocket.send(json.dumps({"action": "display_title", "type": title.lower().replace(' ', '_'), "value": {"text": "Generation complete"}}))
+                            await websocket.send(json.dumps({"action": "returning","type": "img2img","value": {"images": result[1]["value"]["images"]}}))
                         except Exception as e:
                             if "SSLCertVerificationError" in traceback.format_exc():
                                 rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
@@ -2959,9 +2964,12 @@ async def server(websocket):
                                 init_img # Pass original, unscaled image
                             ):
                                 if values["send_progress"]:
-                                    await websocket.send(json.dumps(result))
+                                    await websocket.send(json.dumps(result[0]))
+                                    await websocket.send(json.dumps(result[1]))
 
-                            await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": result["value"]["images"]}}))
+                            if values["send_progress"]:
+                                await websocket.send(json.dumps({"action": "display_title", "type": title.lower().replace(' ', '_'), "value": {"text": "Generation complete"}}))
+                            await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": result[1]["value"]["images"]}}))
                         except Exception as e:
                             if "SSLCertVerificationError" in traceback.format_exc():
                                 rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
@@ -3042,9 +3050,12 @@ async def server(websocket):
                                 init_img # Pass original, unscaled image
                             ):
                                 if values["send_progress"]:
-                                    await websocket.send(json.dumps(result))
+                                    await websocket.send(json.dumps(result[0]))
+                                    await websocket.send(json.dumps(result[1]))
 
-                            await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": result["value"]["images"]}}))
+                            if values["send_progress"]:
+                                await websocket.send(json.dumps({"action": "display_title", "type": title.lower().replace(' ', '_'), "value": {"text": "Generation complete"}}))
+                            await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": result[1]["value"]["images"]}}))
                         except Exception as e:
                             if "SSLCertVerificationError" in traceback.format_exc():
                                 rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
@@ -3100,9 +3111,12 @@ async def server(websocket):
                                 values["post_process"],
                             ):
                                 if values["send_progress"]:
-                                    await websocket.send(json.dumps(result))
-
-                            await websocket.send(json.dumps({"action": "returning", "type": "txt2img", "value": {"images": result["value"]["images"]}}))
+                                    await websocket.send(json.dumps(result[0]))
+                                    await websocket.send(json.dumps(result[1]))
+                                    
+                            if values["send_progress"]:
+                                await websocket.send(json.dumps({"action": "display_title", "type": "txt2img", "value": {"text": "Generation complete"}}))
+                            await websocket.send(json.dumps({"action": "returning", "type": "txt2img", "value": {"images": result[1]["value"]["images"]}}))
                         except Exception as e:
                             if "SSLCertVerificationError" in traceback.format_exc():
                                 rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
@@ -3159,9 +3173,12 @@ async def server(websocket):
                                 values["post_process"],
                             ):
                                 if values["send_progress"]:
-                                    await websocket.send(json.dumps(result))
+                                    await websocket.send(json.dumps(result[0]))
+                                    await websocket.send(json.dumps(result[1]))
 
-                            await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": result["value"]["images"]}}))
+                            if values["send_progress"]:
+                                await websocket.send(json.dumps({"action": "display_title", "type": img2img, "value": {"text": "Generation complete"}}))
+                            await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": result[1]["value"]["images"]}}))
                         except Exception as e:
                             if "SSLCertVerificationError" in traceback.format_exc():
                                 rprint(f"\n[#ab333d]ERROR: Latent Diffusion Model download failed due to SSL certificate error. Please run 'open /Applications/Python*/Install\ Certificates.command' in a new terminal")
