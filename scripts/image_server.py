@@ -230,11 +230,41 @@ def get_precision(device, precision):
             model_precision = torch.float32
             vae_precision = torch.float32
 
-        # Device IS cuda, cuda IS available, precision IS NOT fp32, fp16, or fp8. Fallback to fp32 precision
+        # Device is not recognized, run manual checks
         else:
-            precision = "fp32"
-            model_precision = torch.float32
-            vae_precision = torch.float32
+            if precision == "fp32":
+                model_precision = torch.float32
+                vae_precision = torch.float32
+            elif precision =="fp16" or precision == "fp8":
+                # Check for FP16 support
+                try:
+                    _ = torch.ones(1, dtype=torch.float16).cuda()
+                    model_precision = torch.float16
+                    vae_precision = torch.float16
+                    # Check for BF16 support
+                    try:
+                        _ = torch.ones(1, dtype=torch.bfloat16).cuda()
+                        model_precision = torch.bfloat16
+                        vae_precision = torch.bfloat16
+                    except:
+                        pass
+                    # Check for fp8 support
+                    if precision == "fp8":
+                        try:
+                            _ = torch.ones(1, dtype=torch.float8_e4m3fn).cuda()
+                            model_precision = torch.float8_e4m3fn
+                            vae_precision = torch.bfloat16
+                        except:
+                            # fp8 is not supported, fallback to fp16
+                            precision = "fp16"
+                            model_precision = torch.float16
+                            vae_precision = torch.float16
+                except:
+                    # fp16 is not supported, fallback to fp32
+                    precision = "fp32"
+                    model_precision = torch.float32
+                    vae_precision = torch.float32
+                    
 
     else:
         # Fallback to fp32 precision
