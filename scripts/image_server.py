@@ -3215,7 +3215,7 @@ async def server(websocket):
                                     await websocket.send(json.dumps(result[1]))
 
                             if values["send_progress"]:
-                                await websocket.send(json.dumps({"action": "display_title", "type": img2img, "value": {"text": "Generation complete"}}))
+                                await websocket.send(json.dumps({"action": "display_title", "type": "img2img", "value": {"text": "Generation complete"}}))
                             await websocket.send(json.dumps({"action": "returning", "type": "img2img", "value": {"images": result[1]["value"]["images"]}}))
                         except Exception as e:
                             if "SSLCertVerificationError" in traceback.format_exc():
