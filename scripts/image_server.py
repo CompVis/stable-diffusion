@@ -2959,7 +2959,7 @@ async def server(websocket):
                             init_img = decodeImage(values["images"][0])
 
                             # Resize image to output dimensions
-                            image = init_img.resize((values["width"], values["height"]), resample=Image.Resampling.BILINEAR)
+                            image = init_img.resize((values["width"], values["height"]), resample=Image.Resampling.BOX)
 
                             # i2i strength
                             strength = 0.9
@@ -3045,7 +3045,7 @@ async def server(websocket):
                             init_img = decodeImage(values["images"][0])
 
                             # Resize image to output dimensions
-                            image = init_img.resize((values["width"], values["height"]), resample=Image.Resampling.BILINEAR)
+                            image = init_img.resize((values["width"], values["height"]), resample=Image.Resampling.BOX)
 
                             # Blur filter for pixelate
                             image_blur = image.filter(ImageFilter.BoxBlur(2))
