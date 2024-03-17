@@ -197,11 +197,17 @@ def get_precision(device, precision):
             vae_precision = torch.float32
 
         # If GPU is nvidia 16xx use float16 and enable benchmark mode
-        elif gpu_name.startswith("NVIDIA GeForce GTX 16") and torch.cuda.get_device_capability(device) == (7, 5):
-            torch.backends.cudnn.benchmark = True
-            precision = "fp16"
-            model_precision = torch.float16
-            vae_precision = torch.float16
+        elif gpu_name.startswith("NVIDIA GeForce GTX 16"):
+            # If GPU doesn't have fp16 support use fp32
+            if torch.cuda.get_device_capability(device) == (7, 5):
+                torch.backends.cudnn.benchmark = True
+                precision = "fp16"
+                model_precision = torch.float16
+                vae_precision = torch.float16
+            else:
+                precision = "fp32"
+                model_precision = torch.float32
+                vae_precision = torch.float32
 
         # If GPU is nvidia 20xx disable float8 precision
         elif gpu_name.startswith("NVIDIA GeForce RTX 20"):
