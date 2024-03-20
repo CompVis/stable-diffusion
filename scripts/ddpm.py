@@ -9,7 +9,7 @@ https://github.com/CompVis/taming-transformers
 from functools import partial
 
 import sys, os, time, math
-
+from io import StringIO
 import numpy as np
 import pytorch_lightning as pl
 import torch
