@@ -20,6 +20,8 @@ from pytorch_lightning.utilities import rank_zero_info
 from ldm.data.base import Txt2ImgIterableBaseDataset
 from ldm.util import instantiate_from_config
 
+# hello, first commit
+# houssem added this line
 
 def get_parser(**parser_kwargs):
     def str2bool(v):
