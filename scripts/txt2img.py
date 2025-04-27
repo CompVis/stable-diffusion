@@ -5,7 +5,7 @@ import numpy as np
 from omegaconf import OmegaConf
 from PIL import Image
 from tqdm import tqdm, trange
-from imwatermark import WatermarkEncoder
+# from imwatermark import WatermarkEncoder
 from itertools import islice
 from einops import rearrange
 from torchvision.utils import make_grid
@@ -18,6 +18,7 @@ from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 from ldm.models.diffusion.dpm_solver import DPMSolverSampler
+from ldm.modules.bounded_attention import enable_bounded_attention, SubjectMask, bounded_attention
 
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
@@ -66,12 +67,12 @@ def load_model_from_config(config, ckpt, verbose=False):
     return model
 
 
-def put_watermark(img, wm_encoder=None):
-    if wm_encoder is not None:
-        img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-        img = wm_encoder.encode(img, 'dwtDct')
-        img = Image.fromarray(img[:, :, ::-1])
-    return img
+# def put_watermark(img, wm_encoder=None):
+#     if wm_encoder is not None:
+#         img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+#         img = wm_encoder.encode(img, 'dwtDct')
+#         img = Image.fromarray(img[:, :, ::-1])
+#     return img
 
 
 def load_replacement(x):
@@ -232,6 +233,11 @@ def main():
         choices=["full", "autocast"],
         default="autocast"
     )
+    parser.add_argument(
+        "--subject_ranges",
+        type=str,
+        help="Comma-separated list of token ranges for subjects in format 'start1-end1,start2-end2,...'",
+    )
     opt = parser.parse_args()
 
     if opt.laion400m:
@@ -239,6 +245,18 @@ def main():
         opt.config = "configs/latent-diffusion/txt2img-1p4B-eval.yaml"
         opt.ckpt = "models/ldm/text2img-large/model.ckpt"
         opt.outdir = "outputs/txt2img-samples-laion400m"
+
+    if opt.subject_ranges:
+        # Parse subject ranges from string like "2-5,5-8" into list of SubjectMask objects
+        try:
+            ranges = [tuple(map(int, r.split('-'))) for r in opt.subject_ranges.split(',')]
+            subject_masks = [SubjectMask(start, end) for start, end in ranges]
+        except:
+            print("Error parsing subject ranges. Format should be 'start1-end1,start2-end2,...'")
+            print("Example: --subject_ranges '2-5,5-8' for two subjects")
+            sys.exit(1)
+    else:
+        subject_masks = None
 
     seed_everything(opt.seed)
 
@@ -259,9 +277,9 @@ def main():
     outpath = opt.outdir
 
     print("Creating invisible watermark encoder (see https://github.com/ShieldMnt/invisible-watermark)...")
-    wm = "StableDiffusionV1"
-    wm_encoder = WatermarkEncoder()
-    wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
+    # wm = "StableDiffusionV1"
+    # wm_encoder = WatermarkEncoder()
+    # wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
 
     batch_size = opt.n_samples
     n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
@@ -286,63 +304,72 @@ def main():
         start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
 
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
-    with torch.no_grad():
-        with precision_scope("cuda"):
-            with model.ema_scope():
-                tic = time.time()
-                all_samples = list()
-                for n in trange(opt.n_iter, desc="Sampling"):
-                    for prompts in tqdm(data, desc="data"):
-                        uc = None
-                        if opt.scale != 1.0:
-                            uc = model.get_learned_conditioning(batch_size * [""])
-                        if isinstance(prompts, tuple):
-                            prompts = list(prompts)
-                        c = model.get_learned_conditioning(prompts)
-                        shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
-                        samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
-                                                         conditioning=c,
-                                                         batch_size=opt.n_samples,
-                                                         shape=shape,
-                                                         verbose=False,
-                                                         unconditional_guidance_scale=opt.scale,
-                                                         unconditional_conditioning=uc,
-                                                         eta=opt.ddim_eta,
-                                                         x_T=start_code)
 
-                        x_samples_ddim = model.decode_first_stage(samples_ddim)
-                        x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
-                        x_samples_ddim = x_samples_ddim.cpu().permute(0, 2, 3, 1).numpy()
+    # Enable bounded attention if subject ranges were provided
+    if subject_masks:
+        print(f"Enabling bounded attention with subjects: {opt.subject_ranges}")
+        context_manager = bounded_attention(model, subject_masks)
+    else:
+        context_manager = nullcontext()
 
-                        x_checked_image, has_nsfw_concept = check_safety(x_samples_ddim)
+    with context_manager:
+        with torch.no_grad():
+            with precision_scope("cuda"):
+                with model.ema_scope():
+                    tic = time.time()
+                    all_samples = list()
+                    for n in trange(opt.n_iter, desc="Sampling"):
+                        for prompts in tqdm(data, desc="data"):
+                            uc = None
+                            if opt.scale != 1.0:
+                                uc = model.get_learned_conditioning(batch_size * [""])
+                            if isinstance(prompts, tuple):
+                                prompts = list(prompts)
+                            c = model.get_learned_conditioning(prompts)
+                            shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
+                            samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
+                                                             conditioning=c,
+                                                             batch_size=opt.n_samples,
+                                                             shape=shape,
+                                                             verbose=False,
+                                                             unconditional_guidance_scale=opt.scale,
+                                                             unconditional_conditioning=uc,
+                                                             eta=opt.ddim_eta,
+                                                             x_T=start_code)
 
-                        x_checked_image_torch = torch.from_numpy(x_checked_image).permute(0, 3, 1, 2)
+                            x_samples_ddim = model.decode_first_stage(samples_ddim)
+                            x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
+                            x_samples_ddim = x_samples_ddim.cpu().permute(0, 2, 3, 1).numpy()
 
-                        if not opt.skip_save:
-                            for x_sample in x_checked_image_torch:
-                                x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                                img = Image.fromarray(x_sample.astype(np.uint8))
-                                img = put_watermark(img, wm_encoder)
-                                img.save(os.path.join(sample_path, f"{base_count:05}.png"))
-                                base_count += 1
+                            x_checked_image, has_nsfw_concept = check_safety(x_samples_ddim)
 
-                        if not opt.skip_grid:
-                            all_samples.append(x_checked_image_torch)
+                            x_checked_image_torch = torch.from_numpy(x_checked_image).permute(0, 3, 1, 2)
 
-                if not opt.skip_grid:
-                    # additionally, save as grid
-                    grid = torch.stack(all_samples, 0)
-                    grid = rearrange(grid, 'n b c h w -> (n b) c h w')
-                    grid = make_grid(grid, nrow=n_rows)
+                            if not opt.skip_save:
+                                for x_sample in x_checked_image_torch:
+                                    x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
+                                    img = Image.fromarray(x_sample.astype(np.uint8))
+                                    # img = put_watermark(img, wm_encoder)
+                                    img.save(os.path.join(sample_path, f"{base_count:05}.png"))
+                                    base_count += 1
 
-                    # to image
-                    grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-                    img = Image.fromarray(grid.astype(np.uint8))
-                    img = put_watermark(img, wm_encoder)
-                    img.save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
-                    grid_count += 1
+                            if not opt.skip_grid:
+                                all_samples.append(x_checked_image_torch)
 
-                toc = time.time()
+                    if not opt.skip_grid:
+                        # additionally, save as grid
+                        grid = torch.stack(all_samples, 0)
+                        grid = rearrange(grid, 'n b c h w -> (n b) c h w')
+                        grid = make_grid(grid, nrow=n_rows)
+
+                        # to image
+                        grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
+                        img = Image.fromarray(grid.astype(np.uint8))
+                        # img = put_watermark(img, wm_encoder)
+                        img.save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
+                        grid_count += 1
+
+                    toc = time.time()
 
     print(f"Your samples are ready and waiting for you here: \n{outpath} \n"
           f" \nEnjoy.")

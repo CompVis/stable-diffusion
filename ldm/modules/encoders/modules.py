@@ -1,10 +1,12 @@
 import torch
 import torch.nn as nn
 from functools import partial
-import clip
+import open_clip as clip
 from einops import rearrange, repeat
 from transformers import CLIPTokenizer, CLIPTextModel
 import kornia
+from ldm.modules.rope_utils import build_rope_cache, apply_rope
+
 
 from ldm.modules.x_transformer import Encoder, TransformerWrapper  # TODO: can we directly rely on lucidrains code and simply add this as a reuirement? --> test
 
@@ -140,9 +142,16 @@ class FrozenCLIPEmbedder(AbstractEncoder):
         super().__init__()
         self.tokenizer = CLIPTokenizer.from_pretrained(version)
         self.transformer = CLIPTextModel.from_pretrained(version)
+        # === Inject RoPE into attention layers ===
+        for name, module in self.transformer.named_modules():
+            if isinstance(module, torch.nn.MultiheadAttention):
+                setattr(self.transformer, name, RoPEAttentionWrapper(module))
+                print(f"[RoPE] Wrapped attention module: {name}")
+
         self.device = device
         self.max_length = max_length
         self.freeze()
+
 
     def freeze(self):
         self.transformer = self.transformer.eval()
@@ -226,6 +235,41 @@ class FrozenClipImageEmbedder(nn.Module):
     def forward(self, x):
         # x is assumed to be in range [-1,1]
         return self.model.encode_image(self.preprocess(x))
+
+class RoPEAttentionWrapper(nn.Module):
+    def __init__(self, attn_layer):
+        super().__init__()
+        self.attn = attn_layer
+        self.rope_cache = None
+
+    def forward(self, x, *args, **kwargs):
+        B, S, C = x.shape  # batch, seq_len, channels
+        device = x.device
+        num_heads = self.attn.num_heads
+        head_dim = C // num_heads
+
+        # Linear projection to get QKV
+        qkv = F.linear(x, self.attn.in_proj_weight, self.attn.in_proj_bias)
+        qkv = qkv.view(B, S, 3, num_heads, head_dim).permute(2, 0, 3, 1, 4)
+        q, k, v = qkv[0], qkv[1], qkv[2]
+
+        # Build rope cache if not existing
+        if self.rope_cache is None or self.rope_cache[0].shape[2] != S:
+            self.rope_cache = build_rope_cache(S, head_dim, device)
+
+        # Apply RoPE
+        q = apply_rope(q, self.rope_cache)
+        k = apply_rope(k, self.rope_cache)
+
+        # Attention calculation
+        attn_weights = torch.matmul(q, k.transpose(-2, -1)) * (head_dim ** -0.5)
+        attn_weights = attn_weights.softmax(dim=-1)
+        attn_output = torch.matmul(attn_weights, v)
+
+        attn_output = attn_output.transpose(1, 2).reshape(B, S, C)
+        output = self.attn.out_proj(attn_output)
+
+        return output
 
 
 if __name__ == "__main__":
