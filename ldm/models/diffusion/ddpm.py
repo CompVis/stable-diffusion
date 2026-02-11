@@ -166,7 +166,7 @@ class DDPM(pl.LightningModule):
         # TODO how to choose this term
         lvlb_weights[0] = lvlb_weights[1]
         self.register_buffer('lvlb_weights', lvlb_weights, persistent=False)
-        assert not torch.isnan(self.lvlb_weights).all()
+        assert not torch.isnan(self.lvlb_weights).any()
 
     @contextmanager
     def ema_scope(self, context=None):
