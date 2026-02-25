@@ -44,7 +44,7 @@ def logs2pil(logs, keys=["sample"]):
             else:
                 print(f"Unknown format for key {k}. ")
                 img = None
-        except:
+        except Exception:
             img = None
         imgs[k] = img
     return imgs

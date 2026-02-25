@@ -9,7 +9,7 @@ def testit(img_path):
     watermark = decoder.decode(bgr, 'dwtDct')
     try:
         dec = watermark.decode('utf-8')
-    except:
+    except Exception:
         dec = "null"
     print(dec)
 
