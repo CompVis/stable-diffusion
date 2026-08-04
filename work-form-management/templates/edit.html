@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>{% if task %}Edit Task{% else %}Add Task{% endif %}</h2>
+  <form method="post">
+    <label>Title<br><input name="title" required value="{{ task.title if task else '' }}"></label><br>
+    <label>Description<br><textarea name="description">{{ task.description if task else '' }}</textarea></label><br>
+    <label>Due date (YYYY-MM-DD)<br><input name="due_date" value="{{ task.due_date if task else '' }}"></label><br>
+    <label>Workflow stage<br><input name="workflow_stage" value="{{ task.workflow_stage if task else 'Backlog' }}"></label><br>
+    <label>Priority (1 high - 5 low)<br><input name="priority" type="number" min="1" max="5" value="{{ task.priority if task else 3 }}"></label><br>
+    <button type="submit">Save</button>
+  </form>
+{% endblock %}

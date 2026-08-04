@@ -1,0 +1,12 @@
+body{font-family:Segoe UI, Arial, sans-serif;background:#f7f7f7;color:#222}
+.container{max-width:900px;margin:24px auto;padding:16px;background:#fff;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+header h1{margin:0}
+nav{margin-top:6px}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+tr.overdue{background:#fff0f0}
+tr.done{color:#888;text-decoration:line-through}
+footer{margin-top:18px;color:#666}
+label{display:block;margin:8px 0}
+input[type=text], textarea, input[type=number]{width:100%;padding:6px;border:1px solid #ddd;border-radius:4px}
+button{background:#0069d9;color:white;padding:8px 12px;border:none;border-radius:4px}

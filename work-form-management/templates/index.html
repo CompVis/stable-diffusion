@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>Tasks</h2>
+  {% if tasks %}
+  <table>
+    <tr><th>Title</th><th>Stage</th><th>Due</th><th>Priority</th><th>Status</th><th>Actions</th></tr>
+    {% for t in tasks %}
+    <tr class="{% if t.status=='done' %}done{% elif t.due_date and t.due_date < today %}overdue{% endif %}">
+      <td>{{ t.title }}</td>
+      <td>{{ t.workflow_stage or 'Backlog' }}</td>
+      <td>{{ t.due_date or '-' }}</td>
+      <td>{{ t.priority or 3 }}</td>
+      <td>{{ t.status }}</td>
+      <td>
+        <a href="/edit/{{ t.id }}">Edit</a> |
+        <a href="/complete/{{ t.id }}">Complete</a> |
+        <a href="/delete/{{ t.id }}" onclick="return confirm('Delete?')">Delete</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+    <p>No tasks yet. <a href="/add">Add one</a>.</p>
+  {% endif %}
+{% endblock %}
